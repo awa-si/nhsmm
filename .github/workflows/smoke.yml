@@ -6,7 +6,6 @@ on:
     branches: [develop]
     paths:
       - ".github/workflows/smoke.yml"
-      - "nhsmm/runtime.py"
 
 jobs:
   smoke:
