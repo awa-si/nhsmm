@@ -25,7 +25,7 @@ The P0 causal/runtime/artifact blockers identified before the historical A/B/C e
 
 For `causal=True`, NHSMM uses a dynamic causal boundary-time hazard contract: the information set `F_t` determines the duration/end hazard for boundary `t -> t+1`. Filter/runtime and causal `forward()`/Viterbi use the same `(latent_state, episode_age)` ordering and do not consume future observations.
 
-The canonical `DefaultEncoder` runtime is incremental. It retains only the bounded convolution history plus LSTM hidden/cell state, so each accepted observation is encoded once. Custom causal encoders without the streaming contract remain on the explicit correctness-first prefix fallback.
+The canonical `DefaultEncoder` runtime is incremental. It retains only the bounded convolution history plus LSTM hidden/cell state, so each accepted observation is encoded once. Custom causal encoders without the streaming contract remain on the explicit correctness-first prefix fallback. The canonical one-timestep path now evaluates its single causal convolution window as the exactly equivalent flattened linear transform and evaluates the single-layer LSTM recurrence directly from the existing `nn.LSTM` parameters, avoiding generic sequence dispatch without changing model parameters or artifact state.
 
 The incremental inference hot path is profiled and optimized. Gaussian emissions use the exact analytical diagonal-Gaussian log density instead of constructing a `MultivariateNormal` per bar, while runtime filtering uses an internal kernel for already-normalized model-produced duration/transition scores. The public validated `filter_step()` remains the external/reference contract.
 
@@ -86,6 +86,8 @@ The maintained automated test contract is now the normal pytest-discovered `test
 - [x] Mutable runtime state is separate from model parameters.
 - [x] Production inference preparation/loading path uses strict `state_dict` loading and default parameter freezing.
 - [x] Canonical `DefaultEncoder` has bounded incremental CNN/LSTM state.
+- [x] Incremental DefaultEncoder convolution reuses the existing Conv1d weights as an exactly equivalent one-window linear transform.
+- [x] Incremental DefaultEncoder LSTM reuses the existing `nn.LSTM` parameters in an exactly equivalent one-step recurrence without adding artifact parameters.
 - [x] Gaussian runtime emission scoring avoids per-step `MultivariateNormal` construction and is numerically equivalent to the diagonal covariance model.
 - [x] Runtime skips redundant duration/transition normalization only for canonical model-produced normalized scores; the public validated filter path remains unchanged semantically.
 - [x] Artifact-loaded CPU latency/allocation benchmark exists and verifies bounded runtime-state size.
@@ -126,7 +128,9 @@ Observed evidence relevant to the current contract:
 - The historical artifact-loaded CPU benchmark from run `36255390273` reported p50 `2.781659 ms`, p95 `2.857897 ms`, mean `2.7841281 ms`, Python traced peak `26,530` bytes, and constant runtime state `151` tensor elements. That latency loop ran under `tracemalloc`; it is retained as historical evidence but is not a clean latency baseline.
 - Local sparse connector-workspace profiling on the same host/runtime shape (`K=3`, `F=4`, `D=5`, batch 1) measured the pre-optimization hot path at approximately mean `1.64 ms`, p50 `1.12 ms`, p95 `1.89 ms`; after direct diagonal-Gaussian scoring plus the normalized runtime filter kernel, repeated measurements were approximately mean `1.00-1.06 ms`, p50 `0.70-0.75 ms`, p95 `1.01-1.17 ms`.
 - The internal normalized runtime filter kernel was compared against public `filter_step()` over 200 randomized normalized duration/transition cases, including impossible-duration support; maximum observed absolute posterior difference was `9.54e-7`.
-- **Smoke run `36257892827`: success; full canonical discovery reported `56 passed in 2.42s`.** The artifact-loaded CPU benchmark after separating latency from allocation tracing reported p50 `1.105176 ms`, p95 `1.170783 ms`, mean `1.113136 ms`, Python traced peak `14,619` bytes, and constant runtime state `151` tensor elements. Hosted-runner timings remain reference measurements, not acceptance thresholds.
+- Smoke run `36257892827`: success; full canonical discovery reported `56 passed in 2.42s`. The artifact-loaded CPU benchmark after separating latency from allocation tracing reported p50 `1.105176 ms`, p95 `1.170783 ms`, mean `1.113136 ms`, Python traced peak `14,619` bytes, and constant runtime state `151` tensor elements.
+- Local profiling of the subsequent one-timestep encoder fast paths measured approximately mean `0.785 ms`, p50 `0.548 ms`, p95 `0.837 ms` on the same sparse-workspace runtime shape. Streamed encoder outputs remained equivalent to full causal encoder outputs with maximum observed absolute difference `2.83e-7` across multiple seeds, batch sizes, and sequence lengths.
+- **Smoke run `36260442193`: success; full canonical discovery reported `56 passed in 2.24s`.** The final artifact-loaded CPU benchmark with the incremental Conv/LSTM fast paths reported p50 `0.987014 ms`, p95 `1.043253 ms`, mean `0.990100 ms`, Python traced peak `14,619` bytes, and constant runtime state `151` tensor elements. Hosted-runner timings remain reference measurements, not acceptance thresholds.
 
 ## Repository housekeeping
 
