@@ -21,7 +21,9 @@ Latent states remain neutral (`0..K-1`) during the core evaluation. Do not map t
 
 **Phase:** pre-test integration readiness.
 
-The causal `(latent_state, episode_age)` filter is wired to canonical NHSMM initial, duration, transition, emission, and causal-context outputs. A correctness-first online runtime now advances the HSMM posterior through `step()` while keeping mutable runtime state separate from model parameters.
+The causal `(latent_state, episode_age)` filter is wired to canonical NHSMM initial, duration, transition, emission, and causal-context outputs. A correctness-first online runtime advances the HSMM posterior through `step()` while keeping mutable runtime state separate from model parameters.
+
+The current model-bound and online-runtime contracts are now verified against the real canonical `NHSMM` in a clean repository checkout. Prefix invariance and repeated `step()` equivalence with `filter_model_sequence(...)` both passed.
 
 The runtime currently retains and re-encodes the causal observation prefix because the encoder does not yet expose incremental hidden/convolution state. This is causally correct and suitable for contract testing, but it is not the final bounded-cost hot path.
 
@@ -93,12 +95,11 @@ Multi-horizon survival/change-hazard outputs remain incomplete.
 - [x] Core posterior normalization.
 - [x] Deterministic/truncated duration support without NaN propagation.
 - [x] Malformed probability rows rejected before posterior contamination.
-- [ ] Real-model prefix invariance observed passing in the current environment.
-- [ ] Real-model streaming equivalence observed passing: repeated `step()` vs `filter_model_sequence(...)`.
+- [x] Real-model prefix invariance: changing only observations after `t` leaves filtered output through `t` unchanged.
+- [x] Real-model streaming equivalence: repeated `step()` matches `filter_model_sequence(...)` within tolerance.
+- [x] Duplicate timestamps are rejected without advancing or replacing runtime state.
 - [ ] Mask/padding invariance for valid prefixes.
 - [ ] Forward/Viterbi/filter/runtime duration indexing verified as one canonical convention.
-
-A lightweight local runtime harness has already shown exact streaming/batch equivalence and duplicate-timestamp non-mutation. The repository real-model tests must still be executed against the current package checkout before these two invariants are marked complete.
 
 ### Inference/runtime
 
@@ -121,18 +122,18 @@ A lightweight local runtime harness has already shown exact streaming/batch equi
 
 Observed:
 
-- GitHub Actions smoke run `36234225103`: success.
+- GitHub Actions smoke run `36234225103`: success; original general functional smoke passed.
 - `tests/filtering.py` local hardening run: `8 passed`.
 - `tests/test_categorical_rsample.py` local targeted run: `1 passed`.
 - Lightweight local model-bound filter harness: passed.
 - Lightweight local online-runtime harness: exact batch/streaming equivalence; duplicate timestamp rejected without mutation.
+- Clean-runner smoke run `36237525927` on commit `09d9a824cf76aa281f90981aceaab8154988d260`: success.
+- In that clean checkout, `tests/general.py` passed and `python -m pytest -q tests/test_model_filter.py tests/test_runtime.py` reported `6 passed in 1.68s`.
+- Those six real-model tests cover normalized model-bound filtering, prefix invariance, causal/eval fail-closed behavior, streaming/batch equivalence, duplicate-timestamp non-mutation, and fixed timestamp mode.
 
-Present but not yet observed passing in a current full NHSMM checkout:
+Diagnostic note:
 
-- `tests/test_model_filter.py`
-- `tests/test_runtime.py`
-
-Do not claim these real-model pytest files pass until actually executed.
+- Preceding run `36237400381` failed only because the workflow had not installed `pytest`; package import and `tests/general.py` were already successful. This was a runner setup failure, not an NHSMM model/runtime test failure.
 
 ## Repository drift / housekeeping
 
@@ -140,8 +141,8 @@ Do not claim these real-model pytest files pass until actually executed.
 - `tests/neural.py`, `tests/ctx_encoder.py`, `scripts/tune.py`, `scripts/tune_gaussian.py`, and related historical consumers still reference removed/obsolete APIs or evaluation semantics.
 - Do not restore obsolete APIs merely to satisfy those files; migrate or remove them after the canonical runtime contract stabilizes.
 - `pyproject.toml` still says `Development Status :: 4 - Beta` while project guidance describes pre-1.0 research status.
-- Broad `torch>=2.2` installation caused the first CI smoke to download a large CUDA distribution despite CPU execution.
-- `.github/workflows/smoke.yml` remains a clean-runner diagnostic; routine small checks should stay local.
+- Broad `torch>=2.2` clean-runner installation currently downloads a large CUDA distribution despite CPU execution; do not use Actions for routine small checks.
+- `.github/workflows/smoke.yml` is a clean-runner integration diagnostic; routine small checks should stay local.
 
 ## Nautilus evaluation gate
 
@@ -169,9 +170,9 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Execute current real-model filtering/runtime tests in a current local checkout.
-2. Add multi-horizon survival/change-hazard outputs to the causal runtime contract.
-3. Verify one canonical duration indexing convention across forward/Viterbi/filter/runtime.
+1. Add multi-horizon survival/change-hazard outputs to the causal runtime contract.
+2. Verify one canonical duration indexing convention across forward/Viterbi/filter/runtime.
+3. Add mask/padding invariance for valid prefixes.
 4. Add incremental encoder state for bounded-cost live inference.
 5. Clean test discovery and migrate/delete stale legacy tests/scripts.
 6. Implement artifact/version/loading contracts before Nautilus production integration.
