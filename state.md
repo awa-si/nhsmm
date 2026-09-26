@@ -21,9 +21,9 @@ NHSMM latent states must remain semantically neutral (`0..K-1`) for this evaluat
 
 **Phase:** pre-test integration readiness
 
-**Last repository scan:** `develop` through `3a34c8f4e0f5adcc4cad0e12478aeb21902b6ebf`.
+**Last repository scan:** `develop` through `b11841b6e489d7c7a8b94dfa662b17123a1ccdb6`.
 
-A standalone causal HSMM filtering core exists over `(latent_state, episode_age)` and has been hardened against malformed/non-finite probability inputs and tensor-contract mismatches. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
+The causal `(latent_state, episode_age)` filter is now wired to the canonical NHSMM initial, duration, transition, emission, and causal-context outputs through a stateless model-bound filtering path. A public mutable/incremental `step()` runtime API and multi-horizon survival/change-hazard outputs are still missing.
 
 The current repository contains both the canonical `NHSMM`/`ModelConfig` implementation and historical scripts/tests that target removed APIs. Those historical consumers are repository drift and are not part of the current model contract.
 
@@ -79,6 +79,22 @@ Commits:
 - `39e726c481c49c5fceb734597029d5e003eecd17`
 - `3ef1d655dffdacdabe111c01cda79a1195e71983`
 
+### Model-bound causal filtering
+
+- [x] `HSMMFilterTrace` represents the padded causal posterior trace as `[B,T,K,D]` plus valid sequence lengths.
+- [x] `filter_model_sequence(...)` obtains emissions from the canonical `_build_sequence_set(...)` path and obtains initial/duration/transition scores from the model's current distribution modules.
+- [x] The boundary from `t-1` to `t` uses duration and transition scores conditioned on information available at `t-1`; observation `x_t` enters only through its emission likelihood after propagation.
+- [x] Model-bound filtering fails closed unless `ModelConfig.causal=True`, distributions are initialized, and the model is in eval mode.
+- [x] Model/distribution output shapes are validated before filtering begins.
+- [x] Padding beyond each sequence length remains outside the normalized filtering trace.
+
+Commits:
+
+- `8eb401f138b1490375a276134372dcf433abaa64` — model-bound causal filter
+- `b11841b6e489d7c7a8b94dfa662b17123a1ccdb6` — current NHSMM integration tests
+
+A local contract harness using the exact model-bound filtering recursion passed and verified deterministic duration progression `age = 1,2,1,2`, posterior normalization, and the `t-1 -> t` timing contract. The repository test `tests/test_model_filter.py` additionally exercises the real `NHSMM` construction, model-bound posterior normalization, prefix invariance, and fail-closed eval/causal requirements; that full repository test has been added but has not yet been executed in a clean/current NHSMM checkout in the ChatGPT runtime.
+
 ### Categorical rsample hardening
 
 - [x] The missing functional symbol used by `Categorical.rsample()` is bound to the module's canonical `torch.nn.functional as nnF` import during `nhsmm.distributions` package initialization.
@@ -98,7 +114,7 @@ The runtime defect is resolved for canonical package imports. `default.py` still
 ### P0 — causal HSMM filtering
 
 - [x] Define an online filtering state over current latent state and current episode age without forcing the active segment to terminate at the current prefix boundary.
-- [ ] Wire the filter core to NHSMM distribution/context outputs.
+- [x] Wire the filter core to NHSMM distribution/context outputs.
 - [ ] Add an incremental `step()` or equivalent causal filtering API.
 - [ ] Ensure repeated processing of the same observation/timestamp cannot advance filter state twice once timestamp semantics are introduced.
 - [ ] Keep filtering distinct from retrospective smoothing and Viterbi decoding at the public API boundary.
@@ -122,7 +138,7 @@ These outputs must not require semantic state labels.
 - [x] Core filter posterior normalizes after repeated updates.
 - [x] Core duration support handles deterministic/truncated support without NaN propagation.
 - [x] Core filtering rejects malformed/non-finite probability rows before they can contaminate posterior state.
-- [ ] Prefix invariance: full NHSMM filtered output at `t` must be unchanged when observations after `t` are modified.
+- [ ] Prefix invariance: full NHSMM filtered output at `t` must be unchanged when observations after `t` are modified. A real-model test exists but has not yet been observed passing.
 - [ ] Streaming equivalence: repeated causal `step()` over a sequence must agree with equivalent causal batch filtering within tolerance.
 - [ ] Mask/padding invariance for valid prefixes.
 - [ ] Forward/Viterbi/filtering duration support must use the same duration indexing and boundary conventions.
@@ -139,7 +155,7 @@ These outputs must not require semantic state labels.
 ### P1 — inference mode
 
 - [ ] Provide an explicit inference preparation path (`eval()` plus inference/no-grad semantics at the integration boundary).
-- [ ] Ensure dropout/training behavior cannot affect production filtering.
+- [x] Model-bound causal filtering refuses training mode and executes under `torch.inference_mode()`.
 - [ ] Keep mutable online filter state separate from trainable model parameters and offline training state.
 
 ## Repository scan findings
@@ -159,7 +175,7 @@ Current package core on `develop`:
 - `nhsmm/distributions/default.py`
 - `nhsmm/models/base.py`
 
-`nhsmm/__init__.py` currently exports `ModelConfig`, `DistributionSet`, `DefaultEncoder`, `Convergence`, and `NHSMM`. The filtering helpers are currently internal/module-level and are not exported through the package root.
+`nhsmm/__init__.py` currently exports `ModelConfig`, `DistributionSet`, `DefaultEncoder`, `Convergence`, and `NHSMM`. The filtering helpers remain module-level under `nhsmm.filtering`; they are not yet presented as the public live-runtime API.
 
 ### Test discovery drift
 
@@ -169,7 +185,7 @@ Consequences:
 
 - `python tests/general.py` and `python tests/filtering.py` are valid explicit smoke executions;
 - targeted `python -m pytest tests/filtering.py` is valid and was used for the filter hardening run;
-- `tests/test_categorical_rsample.py` is now collected by standard pytest discovery;
+- `tests/test_categorical_rsample.py` and `tests/test_model_filter.py` are collected by standard pytest discovery;
 - a plain `pytest -v` still must not be assumed to represent the intended current suite because most canonical/legacy files remain outside standard discovery;
 - test-file naming/discovery must be cleaned before `pytest -v` can be treated as the canonical full-suite command.
 
@@ -228,6 +244,17 @@ Observed GitHub Actions smoke run: `36234225103` — success.
 
 Observed local ChatGPT runtime execution after hardening: `8 passed` on CPU. No GitHub Actions run was used for this slice.
 
+### Model-bound filtering contract
+
+`tests/test_model_filter.py` checks the real canonical `NHSMM` path for:
+
+- normalized `[B,T,K,D]` filtering traces;
+- prefix invariance when only future observations are changed;
+- fail-closed behavior in training mode;
+- rejection of non-causal model configuration.
+
+A local lightweight integration harness for the exact filtering recursion passed. The full real-model pytest file is present but is not yet recorded as executed successfully.
+
 ### Categorical rsample contract
 
 `tests/test_categorical_rsample.py` checks:
@@ -264,7 +291,7 @@ H1 structure accuracy, Hungarian state matching, visual state plausibility, or i
 
 ## Next slices
 
-1. Wire `nhsmm/filtering.py` to the current NHSMM initial/duration/transition/emission/context outputs.
+1. Execute/verify the real-model `tests/test_model_filter.py` when a current local checkout or justified clean-runner test is available.
 2. Add a causal incremental runtime API without reusing retrospective `forward()` semantics.
 3. Add multi-horizon survival/change-hazard outputs and streaming-equivalence tests.
 4. Clean test discovery so the intended current tests are collected by standard `pytest` commands.
