@@ -15,6 +15,7 @@ from nhsmm.survival import (
     HorizonInput,
     active_episode_survival_forecast,
 )
+from nhsmm.transitions import HSMMTransitionForecast, one_step_transition_forecast
 
 
 def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
@@ -166,6 +167,18 @@ class HSMMFilterRuntime:
             self.state.filter_state,
             self.state.duration_log_prob,
             horizons,
+        )
+
+    @torch.inference_mode()
+    def forecast_transition(self) -> HSMMTransitionForecast:
+        """Forecast the next boundary/state transition using only the current information set."""
+
+        if self.state is None:
+            raise RuntimeError("runtime must process at least one observation before forecasting")
+        return one_step_transition_forecast(
+            self.state.filter_state,
+            self.state.duration_log_prob,
+            self.state.transition_log_prob,
         )
 
     @torch.inference_mode()
