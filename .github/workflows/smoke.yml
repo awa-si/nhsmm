@@ -6,6 +6,7 @@ on:
     branches: [develop]
     paths:
       - ".github/workflows/smoke.yml"
+      - "nhsmm/inference.py"
 
 jobs:
   smoke:
