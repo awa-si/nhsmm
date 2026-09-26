@@ -1,0 +1,93 @@
+name: NHSMM smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - ".github/workflows/smoke.yml"
+
+jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Run NHSMM smoke'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare logs
+        shell: bash
+        run: |
+          mkdir -p smoke-logs
+          {
+            echo "event=${GITHUB_EVENT_NAME}"
+            echo "sha=${GITHUB_SHA}"
+            echo "ref=${GITHUB_REF}"
+            echo "runner_os=${RUNNER_OS}"
+            uname -a
+          } | tee smoke-logs/environment.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python diagnostics
+        shell: bash
+        run: |
+          {
+            python --version
+            python -m pip --version
+          } 2>&1 | tee smoke-logs/python.txt
+
+      - name: Install package
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pip install --upgrade pip 2>&1 | tee smoke-logs/pip-upgrade.txt
+          python -m pip install -e . 2>&1 | tee smoke-logs/install.txt
+
+      - name: Import smoke
+        shell: bash
+        run: |
+          set -o pipefail
+          python - <<'PY' 2>&1 | tee smoke-logs/import.txt
+          import torch
+          import nhsmm
+          from nhsmm import ModelConfig, NHSMM
+
+          print("torch", torch.__version__)
+          print("nhsmm", nhsmm.__file__)
+          cfg = ModelConfig(n_states=3, n_features=4, max_duration=5, causal=True, dropout=0.0, seed=7)
+          model = NHSMM(cfg, device="cpu")
+          model.initialize_distributions()
+          print("model_device", model.device)
+          print("causal", model.config.causal)
+          PY
+
+      - name: General functional smoke
+        shell: bash
+        run: |
+          set -o pipefail
+          python tests/general.py 2>&1 | tee smoke-logs/general.txt
+
+      - name: Collect repository state
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "sha=${GITHUB_SHA}"
+            git status --short
+            git log -1 --oneline
+          } 2>&1 | tee smoke-logs/repository.txt
+
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nhsmm-smoke-logs-${{ github.run_id }}
+          path: smoke-logs/
+          if-no-files-found: warn
+          retention-days: 14
