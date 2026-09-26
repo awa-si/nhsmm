@@ -6,7 +6,6 @@ on:
     branches: [develop]
     paths:
       - ".github/workflows/smoke.yml"
-      - "tests/test_model_filter.py"
 
 jobs:
   smoke:
@@ -92,11 +91,6 @@ jobs:
           } 2>&1 | tee smoke-logs/repository.txt
 
       - name: Upload smoke logs
-        if: always()
-        shell: bash
-        run: |
-          true
-      - name: Upload smoke logs artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
