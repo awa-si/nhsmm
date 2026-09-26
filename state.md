@@ -23,7 +23,7 @@ Latent states remain neutral (`0..K-1`) during the core evaluation. Do not map t
 
 The causal `(latent_state, episode_age)` filter is wired to canonical NHSMM initial, duration, transition, emission, and causal-context outputs. A correctness-first online runtime advances the HSMM posterior through `step()` while keeping mutable runtime state separate from model parameters.
 
-The current model-bound and online-runtime contracts are verified against the real canonical `NHSMM` in a clean repository checkout. Prefix invariance and repeated `step()` equivalence with `filter_model_sequence(...)` both passed.
+The current model-bound and online-runtime contracts are verified against the real canonical `NHSMM` in a clean repository checkout. Prefix invariance, right-padding invariance for valid prefixes, and repeated `step()` equivalence with `filter_model_sequence(...)` passed.
 
 Multi-horizon survival/end-within-horizon forecasts are implemented from the current `(state, age)` posterior and current causal duration distribution. Transition forecasts expose episode-boundary mass, next-episode state mass, next-state prior, and state-change probability without mapping latent states to semantic H1 classes. These temporal-output contracts are clean-runner verified.
 
@@ -117,7 +117,7 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 - [x] Duration-dependent Viterbi transitions are indexed by the predecessor segment duration.
 - [x] Duration-context semantics resolved: `causal=True` uses dynamic causal boundary-time hazard under `F_t`; no episode-start freezing.
 - [x] Causal `forward()`/Viterbi use the same dynamic age/hazard boundary ordering as filter/runtime.
-- [ ] Mask/padding invariance for valid prefixes.
+- [x] Right-padding/mask invariance for valid causal context, emission, forward-posterior, and filter prefixes.
 
 ### Inference/runtime
 
@@ -156,6 +156,7 @@ Observed:
 - Focused local causal-hazard harness verified normalized-forward/filter equivalence, deterministic duration-two ages, Viterbi against brute-force dynamic-hazard paths, and finite gradients through the causal recursion.
 - Clean-runner smoke run `36250935387`: failed only because `tests/general.py` still asserted the old finite `NEG_INF` sentinel for impossible t=0 ages; the new causal recursion intentionally uses exact `-inf` support.
 - Clean-runner smoke run `36251179309` on commit `9e4cf795c80c4a2edd2e9d19648d13613e4a099c`: success; general functional smoke passed and the causal inference suite reported `20 passed, 1 warning in 1.83s`. The warning is limited to a brute-force test helper converting a grad-enabled score to `float`.
+- Clean-runner smoke run `36251977802` on commit `56bece5ceddd8d6611a011e8d25b2aaf60ccefa0`: success; general functional smoke and causal temporal output tests passed with the added right-padding invariance regression. The temporary workflow trigger was restored immediately after the run started.
 
 ## Repository drift / housekeeping
 
@@ -192,8 +193,7 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Add mask/padding invariance for valid prefixes.
-2. Decide whether expected remaining duration belongs in the public runtime contract.
-3. Add incremental encoder state for bounded-cost live inference.
-4. Clean test discovery and migrate/delete stale legacy tests/scripts.
-5. Implement artifact/version/loading contracts before Nautilus production integration.
+1. Decide whether expected remaining duration belongs in the public runtime contract.
+2. Add incremental encoder state for bounded-cost live inference.
+3. Clean test discovery and migrate/delete stale legacy tests/scripts.
+4. Implement artifact/version/loading contracts before Nautilus production integration.
