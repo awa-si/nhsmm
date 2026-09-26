@@ -3,7 +3,6 @@ from __future__ import annotations
 import torch
 
 from nhsmm import ModelConfig, NHSMM
-from nhsmm.config import NEG_INF
 
 
 def _make_model(*, causal: bool = True) -> NHSMM:
@@ -52,7 +51,7 @@ def test_general_functional_contracts() -> None:
         alpha = model.forward(seq_set)
 
     assert torch.isfinite(alpha[:, 0, :, 0]).all()
-    assert torch.all(alpha[:, 0, :, 1:] == NEG_INF)
+    assert torch.isneginf(alpha[:, 0, :, 1:]).all()
 
 
 if __name__ == "__main__":
