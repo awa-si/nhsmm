@@ -7,6 +7,7 @@ import torch
 
 from nhsmm.filtering import (
     HSMMFilterState,
+    _filter_step_normalized,
     duration_log_hazard,
     filter_step,
     initialize_filter,
@@ -110,6 +111,34 @@ def test_filter_state_rejects_nan() -> None:
     bad[..., 1] = float("nan")
     with pytest.raises(ValueError, match="NaN"):
         HSMMFilterState(bad)
+
+
+def test_internal_normalized_filter_matches_public_filter() -> None:
+    torch.manual_seed(17)
+    B, K, D = 2, 3, 4
+    state = initialize_filter(torch.randn(B, K), torch.randn(B, K), max_duration=D)
+    emission = torch.randn(B, K)
+
+    duration = torch.randn(B, K, D)
+    duration[:, :, 0] = float("-inf")
+    duration = torch.log_softmax(duration, dim=-1)
+    transition = torch.log_softmax(torch.randn(B, K, D, K), dim=-1)
+
+    reference = filter_step(state, emission, duration, transition)
+    fast = _filter_step_normalized(state, emission, duration, transition)
+
+    assert torch.allclose(
+        fast.log_posterior,
+        reference.log_posterior,
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert torch.allclose(
+        fast.log_posterior.flatten(1).logsumexp(dim=1),
+        torch.zeros(B),
+        atol=1e-6,
+        rtol=1e-6,
+    )
 
 
 def test_filter_posterior_normalizes() -> None:

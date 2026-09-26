@@ -32,6 +32,17 @@ class HSMMFilterState:
         if not torch.isfinite(log_z).all():
             raise ValueError("log_posterior must contain finite probability mass per batch item")
 
+    @classmethod
+    def _from_normalized_unchecked(
+        cls,
+        log_posterior: torch.Tensor,
+    ) -> "HSMMFilterState":
+        """Build internal state after the caller has already normalized it."""
+
+        state = object.__new__(cls)
+        object.__setattr__(state, "log_posterior", log_posterior)
+        return state
+
     @property
     def state_log_posterior(self) -> torch.Tensor:
         return torch.logsumexp(self.log_posterior, dim=-1)
@@ -206,7 +217,7 @@ def _filter_step_normalized(
     flat = posterior.flatten(1)
     log_z = torch.logsumexp(flat, dim=1, keepdim=True)
     posterior = (flat - log_z).reshape_as(posterior)
-    return HSMMFilterState(posterior)
+    return HSMMFilterState._from_normalized_unchecked(posterior)
 
 
 def filter_step(
