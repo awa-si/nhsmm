@@ -43,6 +43,22 @@ def _state_tensor_elements(runtime: HSMMFilterRuntime) -> int:
     return int(total)
 
 
+def _draw_inputs(
+    generator: torch.Generator,
+    *,
+    steps: int,
+    batch_size: int,
+    n_features: int,
+) -> torch.Tensor:
+    return torch.randn(
+        steps,
+        batch_size,
+        n_features,
+        generator=generator,
+        device="cpu",
+    )
+
+
 def benchmark_cpu_runtime(
     model: NHSMM,
     *,
@@ -51,7 +67,12 @@ def benchmark_cpu_runtime(
     batch_size: int = 1,
     seed: Optional[int] = 7,
 ) -> RuntimeBenchmark:
-    """Benchmark incremental CPU runtime latency and Python heap allocation."""
+    """Benchmark incremental CPU latency and Python heap allocation separately.
+
+    Latency is measured without ``tracemalloc`` because Python allocation
+    tracing materially perturbs one-step runtime timings. Heap allocation uses
+    a separate runtime pass over pre-generated observations.
+    """
 
     if model.device.type != "cpu":
         raise ValueError("CPU runtime benchmark requires a model on CPU")
@@ -63,30 +84,59 @@ def benchmark_cpu_runtime(
     generator = torch.Generator(device="cpu")
     if seed is not None:
         generator.manual_seed(seed)
-    runtime = HSMMFilterRuntime(model)
     n_features = int(model.config.n_features)
 
-    for _ in range(warmup_steps):
-        x = torch.randn(batch_size, n_features, generator=generator)
+    warmup_inputs = _draw_inputs(
+        generator,
+        steps=warmup_steps,
+        batch_size=batch_size,
+        n_features=n_features,
+    )
+    latency_inputs = _draw_inputs(
+        generator,
+        steps=steps,
+        batch_size=batch_size,
+        n_features=n_features,
+    )
+    allocation_inputs = _draw_inputs(
+        generator,
+        steps=steps,
+        batch_size=batch_size,
+        n_features=n_features,
+    )
+
+    runtime = HSMMFilterRuntime(model)
+    for x in warmup_inputs:
         runtime.step(x)
     baseline_elements = _state_tensor_elements(runtime)
 
     latencies_ns: list[int] = []
-    tracemalloc.start()
-    try:
-        for _ in range(steps):
-            x = torch.randn(batch_size, n_features, generator=generator)
-            start = time.perf_counter_ns()
-            runtime.step(x)
-            latencies_ns.append(time.perf_counter_ns() - start)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
+    for x in latency_inputs:
+        start = time.perf_counter_ns()
+        runtime.step(x)
+        latencies_ns.append(time.perf_counter_ns() - start)
 
     final_elements = _state_tensor_elements(runtime)
     if final_elements != baseline_elements:
         raise RuntimeError(
             "runtime state size grew with prefix length; incremental bounded-state contract violated"
+        )
+
+    allocation_runtime = HSMMFilterRuntime(model)
+    for x in warmup_inputs:
+        allocation_runtime.step(x)
+    tracemalloc.start()
+    try:
+        for x in allocation_inputs:
+            allocation_runtime.step(x)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    allocation_elements = _state_tensor_elements(allocation_runtime)
+    if allocation_elements != baseline_elements:
+        raise RuntimeError(
+            "runtime state size grew during allocation pass; incremental bounded-state contract violated"
         )
 
     latencies_ms = [value / 1_000_000.0 for value in latencies_ns]

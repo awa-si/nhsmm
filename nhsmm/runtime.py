@@ -7,7 +7,7 @@ import torch
 
 from nhsmm.filtering import (
     HSMMFilterState,
-    filter_step,
+    _filter_step_normalized,
     initialize_filter,
 )
 from nhsmm.survival import (
@@ -161,9 +161,7 @@ def _emission_log_prob(
 ) -> torch.Tensor:
     B = observation.shape[0]
     K = int(model.config.n_states)
-    dist = model.dist.emission.forward(context=context, return_dist=True)
-    expanded = observation.unsqueeze(2).expand(-1, -1, K, -1)
-    log_prob = dist.log_prob(expanded)
+    log_prob = model.dist.emission.log_prob(observation, context=context)
     if log_prob.shape != (B, 1, K):
         raise ValueError(f"emission log_prob must be {(B, 1, K)}, got {log_prob.shape}")
     return log_prob[:, 0]
@@ -328,7 +326,7 @@ class HSMMFilterRuntime:
                 raise RuntimeError("runtime encoder lost its incremental state contract")
             context, encoder_state = encoder.stream_step(obs, previous.encoder_state)
             emission = _emission_log_prob(self.model, obs, context)
-            filter_state = filter_step(
+            filter_state = _filter_step_normalized(
                 previous.filter_state,
                 emission,
                 previous.duration_log_prob,
@@ -358,7 +356,7 @@ class HSMMFilterRuntime:
                 "runtime filtering requires one valid observation per batch item"
             )
 
-        filter_state = filter_step(
+        filter_state = _filter_step_normalized(
             previous.filter_state,
             sequence.log_probs[:, -1],
             previous.duration_log_prob,

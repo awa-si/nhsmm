@@ -112,19 +112,10 @@ def _normalize_filter_posterior(log_values: torch.Tensor) -> torch.Tensor:
     return normalized.reshape_as(log_values)
 
 
-def duration_log_hazard(log_duration: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Convert duration scores into end/continue log hazards.
+def _duration_log_hazard_from_log_p(log_p: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Compute hazards from an already normalized duration log-PMF."""
 
-    ``log_duration`` may contain unnormalized log scores, but every state must
-    retain at least one finite duration. ``-inf`` is permitted for impossible
-    durations; NaN, +inf, and all-impossible state rows are rejected.
-    """
-
-    log_duration = _as_batched(log_duration, 3, "log_duration")
-    log_p = _normalize_log_probs(log_duration, dim=-1, name="log_duration")
     _, _, D = log_p.shape
-
-    # log_survival[..., a] = log P(duration >= a + 1)
     rev_cumsum = torch.logcumsumexp(log_p.flip(-1), dim=-1).flip(-1)
     log_end = torch.full_like(log_p, float("-inf"))
     valid_survival = torch.isfinite(rev_cumsum)
@@ -140,8 +131,20 @@ def duration_log_hazard(log_duration: torch.Tensor) -> tuple[torch.Tensor, torch
             continue_values,
             log_continue[..., :-1],
         )
-
     return log_end, log_continue
+
+
+def duration_log_hazard(log_duration: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Convert duration scores into end/continue log hazards.
+
+    ``log_duration`` may contain unnormalized log scores, but every state must
+    retain at least one finite duration. ``-inf`` is permitted for impossible
+    durations; NaN, +inf, and all-impossible state rows are rejected.
+    """
+
+    log_duration = _as_batched(log_duration, 3, "log_duration")
+    log_p = _normalize_log_probs(log_duration, dim=-1, name="log_duration")
+    return _duration_log_hazard_from_log_p(log_p)
 
 
 def initialize_filter(
@@ -170,6 +173,40 @@ def initialize_filter(
     posterior = log_initial.new_full((B, K, max_duration), float("-inf"))
     posterior[..., 0] = log_initial + emission_log_prob
     return HSMMFilterState(_normalize_filter_posterior(posterior))
+
+
+def _filter_step_normalized(
+    previous: HSMMFilterState,
+    emission_log_prob: torch.Tensor,
+    log_duration: torch.Tensor,
+    transition_log_prob: torch.Tensor,
+) -> HSMMFilterState:
+    """Fast runtime step for model-produced normalized duration/transition scores.
+
+    This is an internal kernel. Callers must provide the canonical model outputs
+    from ``Duration.log_matrix`` and ``Transition.log_matrix``. The public
+    ``filter_step`` remains the validated path for arbitrary external scores.
+    """
+
+    prev = previous.log_posterior
+    B, K, D = prev.shape
+    log_end, log_continue = _duration_log_hazard_from_log_p(log_duration)
+
+    predicted = prev.new_full((B, K, D), float("-inf"))
+    if D > 1:
+        predicted[..., 1:] = prev[..., :-1] + log_continue[..., :-1]
+
+    boundary = prev + log_end
+    predicted[..., 0] = torch.logsumexp(
+        boundary.unsqueeze(-1) + transition_log_prob,
+        dim=(1, 2),
+    )
+
+    posterior = predicted + emission_log_prob.unsqueeze(-1)
+    flat = posterior.flatten(1)
+    log_z = torch.logsumexp(flat, dim=1, keepdim=True)
+    posterior = (flat - log_z).reshape_as(posterior)
+    return HSMMFilterState(posterior)
 
 
 def filter_step(
@@ -216,24 +253,17 @@ def filter_step(
         dim=-1,
         name="transition_log_prob",
     )
-    log_end, log_continue = duration_log_hazard(log_duration)
-
-    predicted = prev.new_full((B, K, D), float("-inf"))
-
-    # Existing episode survives one more timestep: same state, age increments.
-    if D > 1:
-        predicted[..., 1:] = prev[..., :-1] + log_continue[..., :-1]
-
-    # Existing episode ends, then transition into a new episode at age one.
-    boundary = prev + log_end
-    new_episode = torch.logsumexp(
-        boundary.unsqueeze(-1) + transition_log_prob,
-        dim=(1, 2),
-    )  # [B, K_next]
-    predicted[..., 0] = new_episode
-
-    posterior = predicted + emission_log_prob.unsqueeze(-1)
-    return HSMMFilterState(_normalize_filter_posterior(posterior))
+    normalized_duration = _normalize_log_probs(
+        log_duration,
+        dim=-1,
+        name="log_duration",
+    )
+    return _filter_step_normalized(
+        previous,
+        emission_log_prob,
+        normalized_duration,
+        transition_log_prob,
+    )
 
 
 def next_episode_end_probability(

@@ -648,11 +648,35 @@ class Emission(Neural):
         elif x.ndim == 2: x = x.unsqueeze(0)
         B, T, F = x.shape
         K = self.n_states
-        dist = self._get_dist(context=context, temperature=temperature, **dist_kwargs)
         if F != self.n_features:
             raise ValueError(f"Feature mismatch: input F={F}, expected {self.n_features}")
-        x_exp = x[..., None, :].expand(-1, -1, K, -1) if x.shape[-1] == self.n_features else x
-        logp = dist.log_prob(x_exp)
-        if logp.ndim == 4: logp = logp.sum(-1)
+
+        if self.emission_type == "gaussian":
+            loc = self._modulate(
+                context=context,
+                temperature=temperature,
+                **dist_kwargs,
+            )
+            if loc.ndim == 2:
+                loc = loc.unsqueeze(0).unsqueeze(0)
+            loc = loc - loc.mean(dim=2, keepdim=True)
+            var = nnF.softplus(self.log_var).clamp_min(self.min_covar)
+            diff = x[..., None, :] - loc
+            logp = -0.5 * (
+                diff.square() / var
+                + var.log()
+                + math.log(2.0 * math.pi)
+            ).sum(dim=-1)
+        else:
+            dist = self._get_dist(
+                context=context,
+                temperature=temperature,
+                **dist_kwargs,
+            )
+            x_exp = x[..., None, :].expand(-1, -1, K, -1)
+            logp = dist.log_prob(x_exp)
+            if logp.ndim == 4:
+                logp = logp.sum(-1)
+
         assert torch.isfinite(logp).all(), "NaN/Inf in emission log-prob"
         return logp
