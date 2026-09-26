@@ -94,7 +94,7 @@ class IndependentStudentT(Distribution):
         self.loc = loc
         self.scale = scale
         self.df = df
-        self.event_dim = event_dim  # number of trailing dims treated as event
+        self.event_dim = event_dim
 
     @property
     def batch_shape(self):
@@ -273,11 +273,11 @@ class Neural(nn.Module, ABC):
                 f"context_dim mismatch: got {context.shape[-1]}, expected {self.context_dim}"
             )
 
-        if context.ndim == 1:      # (H,)
+        if context.ndim == 1:
             return context.reshape(1, 1, -1)
-        if context.ndim == 2:      # (B,H)
+        if context.ndim == 2:
             return context.unsqueeze(1)
-        return context             # (B,T,H) or (S,B,T,H)
+        return context
 
     def _validate_base(self, base: torch.Tensor) -> torch.Tensor:
         if not torch.isfinite(base).all():
@@ -293,14 +293,14 @@ class Neural(nn.Module, ABC):
         if context is None or self.context_net is None:
             return torch.zeros_like(base)
 
-        ctx = self._prepare_context(context)  # shape: (S,B,T,H) | (B,T,H) | (B,1,H)
+        ctx = self._prepare_context(context)
         if timestep is not None:
-            if ctx.ndim == 4:  # (S,B,T,H)
+            if ctx.ndim == 4:
                 ctx = ctx[:, :, timestep:timestep + 1, :]
-            elif ctx.ndim == 3:  # (B,T,H)
+            elif ctx.ndim == 3:
                 ctx = ctx[:, timestep:timestep + 1, :]
-            elif ctx.ndim == 2:  # (B,1,H) or (1,H)
-                ctx = ctx  # already singleton, no change
+            elif ctx.ndim == 2:
+                ctx = ctx
             else:
                 raise RuntimeError(f"Unsupported context ndim={ctx.ndim}")
 
@@ -333,8 +333,6 @@ class Neural(nn.Module, ABC):
         base = self._tensor_shape(self.base)
         delta = self._apply_context(base, context, timestep)
 
-        # Validate finite trainable/context-modulated logits before applying
-        # structural masks. Masks may intentionally introduce -inf support.
         mod = self._validate_base(base + delta)
         mod = self._apply_temperature(mod, temperature)
         mod = self._apply_constraints(mod, mask=kwargs.get("mask", None))
@@ -491,8 +489,6 @@ class Duration(Neural):
     ):
         if max_duration < 1:
             raise ValueError("max_duration must be >= 1")
-        # Duration-axis contract: index 0 represents total duration 1,
-        # index d-1 represents total duration d.
         self._shape = (n_states, max_duration)
         super().__init__(
             target_dim=n_states * max_duration,
@@ -550,12 +546,21 @@ class Duration(Neural):
 
     def _apply_constraints(self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         logits = logits.clamp(min=MIN_LOGITS, max=MAX_LOGITS)
-
-        if mask is None: return logits
+        if mask is None:
+            return logits
 
         mask = mask.to(device=logits.device, dtype=torch.bool)
-        mask = mask.view((1,) * (logits.ndim - 2) + mask.shape)
-        mask = mask.unsqueeze(0).expand_as(logits)
+        if mask.ndim == 1:
+            if mask.shape[0] != self.max_duration:
+                raise ValueError("duration mask [D] must match max_duration")
+            mask = mask.view(*((1,) * (logits.ndim - 1)), self.max_duration)
+        elif mask.ndim == 2:
+            if mask.shape != (self.n_states, self.max_duration):
+                raise ValueError("duration mask [K,D] must match n_states and max_duration")
+            mask = mask.view(*((1,) * (logits.ndim - 2)), self.n_states, self.max_duration)
+        else:
+            raise ValueError("duration mask must have shape [D] or [K,D]")
+        mask = mask.expand_as(logits)
         return logits.masked_fill(~mask, NEG_INF)
 
     def log_matrix(self,
@@ -611,7 +616,6 @@ class Transition(Neural):
             self._shape = (n_states, n_states)
             self.target_dim = n_states * n_states
         else:
-            # Duration-axis contract: index 0 represents total duration 1.
             self._shape = (n_states, max_duration, n_states)
             self.target_dim = n_states * max_duration * n_states
 
@@ -686,11 +690,7 @@ class Transition(Neural):
         dtype = torch.bool
 
         if self.transition_type == "ergodic":
-            if D is None:
-                constraint = torch.ones(n, n, device=device, dtype=dtype)
-            else:
-                constraint = torch.ones(n, D, n, device=device, dtype=dtype)
-
+            constraint = torch.ones((n, n) if D is None else (n, D, n), device=device, dtype=dtype)
         elif self.transition_type == "semi":
             if D is None:
                 constraint = torch.eye(n, device=device, dtype=dtype)
@@ -702,7 +702,6 @@ class Transition(Neural):
                     constraint[k, :, k] = True
                     if k < n - 1:
                         constraint[k, :, k + 1] = True
-
         elif self.transition_type == "left-to-right":
             if D is None:
                 constraint = torch.triu(torch.ones(n, n, device=device, dtype=dtype), diagonal=0)
@@ -715,13 +714,17 @@ class Transition(Neural):
         else:
             raise ValueError(f"Unsupported transition_type: {self.transition_type}")
 
+        constraint = constraint.view(*((1,) * (logits.ndim - constraint.ndim)), *constraint.shape)
+        constraint = constraint.expand_as(logits)
+
         if mask is not None:
             mask = mask.to(device=device, dtype=dtype)
-            while mask.ndim < logits.ndim:
-                mask = mask.unsqueeze(0)
+            expected = (n, n) if D is None else (n, D, n)
+            if mask.shape != expected:
+                raise ValueError(f"transition mask must have shape {expected}")
+            mask = mask.view(*((1,) * (logits.ndim - mask.ndim)), *mask.shape).expand_as(logits)
             constraint = constraint & mask
 
-        constraint = constraint.view((1,) * (logits.ndim - constraint.ndim) + constraint.shape)
         return logits.masked_fill(~constraint, NEG_INF)
 
     def log_matrix(self,
@@ -729,9 +732,6 @@ class Transition(Neural):
         temperature: Optional[float] = None,
         timestep: Optional[int] = None, T: Optional[int] = None, **kwargs) -> torch.Tensor:
 
-        # Transition probabilities are normalized over destination state.
-        # A duration-only additive gate would cancel under that normalization,
-        # so duration support belongs to Duration rather than Transition.
         mod = self._modulate(context=context, temperature=temperature, timestep=timestep, **kwargs)
         logp = nnF.log_softmax(mod, dim=-1)
 
@@ -852,7 +852,6 @@ class Emission(Neural):
             return tensor
 
         mask = mask.to(dtype=torch.bool, device=tensor.device)
-
         while mask.ndim < tensor.ndim:
             mask = mask.unsqueeze(0)
 
@@ -884,17 +883,12 @@ class Emission(Neural):
             scale = torch.diag_embed(var.sqrt())
             scale = scale[None, None, :, :, :]
             scale = scale.expand(B, T, K, n_feat, n_feat)
-            return {
-                "loc": loc,
-                "scale_tril": scale,
-                **dist_kwargs
-            }
+            return {"loc": loc, "scale_tril": scale, **dist_kwargs}
         elif self.emission_type == "studentt":
             scale = nnF.softplus(self.scale_param).clamp_min(self.min_covar)
             df = nnF.softplus(self.dof) + 2.0
             scale = scale[None, None, :, :].expand(B, T, K, n_feat)
-            df = df[None, None, :, None]
-            df = df.expand(B, T, K, 1)
+            df = df[None, None, :, None].expand(B, T, K, 1)
             return {"loc": loc, "scale": scale, "df": df, **dist_kwargs}
         else:
             raise ValueError(f"Unsupported emission_type: {self.emission_type}")
@@ -930,8 +924,7 @@ class Emission(Neural):
             raise ValueError(f"Feature mismatch: input F={F}, expected {self.n_features}")
 
         if x.shape[-1] == self.n_features:
-            x_exp = x[..., None, :]
-            x_exp = x_exp.expand(-1, -1, K, -1)
+            x_exp = x[..., None, :].expand(-1, -1, K, -1)
         else:
             x_exp = x
 
