@@ -74,7 +74,7 @@ jobs:
           set -o pipefail
           python tests/general.py 2>&1 | tee smoke-logs/general.txt
 
-      - name: Causal model/runtime/survival/transition tests
+      - name: Causal temporal output tests
         shell: bash
         run: |
           set -o pipefail
