@@ -162,9 +162,15 @@ class DefaultEncoder(nn.Module):
                 raise ValueError(f"{name} dtype {tensor.dtype} != input dtype {x.dtype}")
 
         conv_input = torch.cat((state.conv_history, x), dim=1)
-        x_c = conv_input.transpose(1, 2)
-        x_c = nnF.relu(self.conv(x_c))
-        x_c = x_c.transpose(1, 2)
+
+        # In streaming mode ``conv_input`` is exactly one causal convolution
+        # window, so Conv1d would dispatch a general convolution only to emit
+        # one output. The equivalent flattened linear form reuses the same
+        # Conv1d weights/bias without changing parameters or artifact state.
+        conv_flat = conv_input.transpose(1, 2).reshape(B, -1)
+        conv_weight = self.conv.weight.reshape(self.cnn_channels, -1)
+        x_c = nnF.linear(conv_flat, conv_weight, self.conv.bias).unsqueeze(1)
+        x_c = nnF.relu(x_c)
         x_c = self.norm(x_c)
         x_c = self.dropout(x_c)
 
