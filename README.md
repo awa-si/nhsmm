@@ -1,179 +1,164 @@
 # NHSMM — Neural Hidden Semi-Markov Models
 
-* **Repository:** [NHSMM on GitHub](https://github.com/awa-si/NHSMM)
-* **Interfaces:** [NHSMM-INTERFACES on GitHub](https://github.com/awa-si/nhsmm-interfaces)
-* **Documentation:** [NHSMM Wiki](https://github.com/awa-si/NHSMM/wiki)
-* **Article:** [Unlocking Hidden Patterns in Time – Meet NHSMM](https://medium.com/@awa-si/unlocking-hidden-patterns-in-time-meet-nhsmm-the-neural-hidden-semi-markov-model-cd3f1e2428c2)
+- **Repository:** [awa-si/nhsmm](https://github.com/awa-si/nhsmm)
+- **Interfaces:** [awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces)
+- **Documentation:** [NHSMM Wiki](https://github.com/awa-si/nhsmm/wiki)
+- **Article:** [Unlocking Hidden Patterns in Time – Meet NHSMM](https://medium.com/@awa-si/unlocking-hidden-patterns-in-time-meet-nhsmm-the-neural-hidden-semi-markov-model-cd3f1e2428c2)
 
----
+> **Pre-1.0 research stage.** NHSMM is actively evolving. Public APIs and internal model contracts may change before a stable `1.0.0` release.
 
-> ⚠️ **Alpha stage** — NHSMM is a **proof-of-concept** and actively evolving. Public APIs may change before stable `1.0.0`.
+NHSMM is a modular PyTorch library for context-aware latent-state sequence modeling with explicit state durations.
 
-**NHSMM** is a **modular PyTorch library** for **context-aware sequential modeling**, forming the foundation of the **State Aware Engine ([SAE](https://github.com/awa-si/SAE))**.
-**[NHSMM-INTERFACES](https://github.com/awa-si/nhsmm-interfaces)** defines domain-level contracts for integrating NHSMM in diverse systems.
+The current implementation separates four probabilistic components:
 
-Designed for **developers, data scientists, and system integrators**, NHSMM enables rapid understanding, deployment, and extension of **latent state models** for domains such as **finance, IoT, robotics, health, and cybersecurity**.
+- initial state distribution;
+- transition distribution;
+- duration distribution;
+- emission distribution.
 
-[![PyPI](https://img.shields.io/pypi/v/nhsmm.svg)](https://pypi.org/project/nhsmm/) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+A neural context encoder can condition these components on sequence context.
 
----
+[![PyPI](https://img.shields.io/pypi/v/nhsmm.svg)](https://pypi.org/project/nhsmm/) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 
-## 🌟 Highlights
+## Current architecture
 
-* **Neural HSMM** — integrates Hidden Semi-Markov Models with neural parameterization for expressive latent dynamics.
-* **Context-Aware Modulation** — initial, transition, duration, and emission distributions adapt to external covariates.
-* **Flexible Architectures** — supports hierarchical and hybrid models.
-* **PyTorch & GPU Ready** — scalable multi-domain deployment.
-* **Modular Foundation** — for research, experimentation, and production-ready sequence models.
+```text
+Observed sequence
+      ↓
+Context encoder
+      ↓
+Initial / Transition / Duration / Emission parameterization
+      ↓
+HSMM inference
+      ↓
+Likelihood / decoding / training
+```
 
----
+Core implementation areas:
 
-## 🧩 Overview
+```text
+nhsmm/
+├── config.py          # ModelConfig and numerical constants
+├── context.py         # context routing and sequence containers
+├── encoder.py         # default neural context encoder
+├── convergence.py     # convergence handling
+├── data.py            # data utilities
+├── distributions/     # initial, duration, transition, emission components
+└── models/
+    └── base.py        # NHSMM and DistributionSet
+```
 
-NHSMM explicitly models:
+## Model configuration
 
-* **Context-Dependent State Durations** — variable dwell-times per hidden state influenced by covariates.
-* **Context-Dependent Transitions** — dynamic transition probabilities adapting to time-varying features.
+`ModelConfig` is the canonical configuration contract.
 
-Suitable for **non-stationary, heterogeneous, and time-aware sequences** across real-world applications.
+Current configurable model dimensions include:
 
----
+- `n_states` — latent-state count;
+- `n_features` — observation feature count;
+- `max_duration` — maximum explicit state duration;
+- `context_dim` / `hidden_dim` — neural context dimensions;
+- encoder pooling and convolution parameters;
+- transition type;
+- emission family;
+- optimization and convergence parameters.
 
-## NHSMM Project Covenant
+The current configured emission families are:
 
-1. **Forever Open Core** — `nhsmm` remains fully open-source and actively maintained.
-2. **No Hidden Dependencies** — core library uses only open components; experimental modules (`nhsmm-interfaces`) are optional.
-3. **Transparent Evolution** — research previews and pre-release interfaces are clearly marked.
-4. **Community Respect** — contributions are acknowledged; experimental previews may close but knowledge remains accessible.
-5. **Clear Upgrade Path** — experimental work informs SAE; core NHSMM is stable and independent.
+- Gaussian;
+- Student-t.
 
----
+The current configured transition modes are:
 
-## 🚀 Key Features
+- `ergodic`;
+- `semi`;
+- `left-to-right`.
 
-* **Contextual HSMM** — dynamic modulation of initial, transition, duration, and emission probabilities.
-* **Duration Models** — explicit, context-aware state dwell-times.
-* **Emission Models** — Gaussian, Student-t, or discrete outputs; differentiable and context-aware.
-* **Transition Models** — learnable, covariate-aware with gating and temperature scaling; supports low-rank factorization.
-* **Hybrid HSMM-HMM Inference** — forward-backward and Viterbi adapted for neural latent states.
-* **Subclassable Distributions** — extend Initial, Duration, Transition, Emission modules.
-* **Differentiable Training** — gradient-based optimization, temperature annealing, neural modulation.
-* **Neural Context Encoders** — CNN, LSTM, or hybrid encoders for time-varying covariates.
-* **GPU-Ready** — fully batched operations.
-* **Multi-Domain Applicability** — finance, IoT, robotics, health, cybersecurity.
-* **Extensible Architecture** — foundation for SAE interfaces, API integration, and research projects.
-* **Hybrid Update Modes** — neural gradient-based updates, optional alternative schemes.
+## Installation
 
----
-
-## ⚡ Performance & Scalability
-
-* Vectorized forward-backward for **batched likelihood computation**.
-* Optional low-rank transitions for **large state spaces**.
-* Supports **long sequences** efficiently.
-* Memory-efficient Viterbi optimized for GPU.
-* Handles **variable-length sequences** with padding and masking.
-
----
-
-## 📌 Milestones
-
-| Stage               | Status  | Notes                                   |
-| ------------------- | ------- | --------------------------------------- |
-| Proof of Concept    | ✅ Done  | Alpha release (0.0.1-alpha)            |
-| Testing/Enhancement | ⚠️ Todo | Improve performance, extend API         |
-| Production Release  | ⚠️ Todo | Stable 1.0.0 release with documentation |
-
----
-
-## 📦 Installation
-
-### 🔹 From PyPI (alpha stage)
+From PyPI:
 
 ```bash
 pip install nhsmm
 ```
 
-### 🔹 From Source (recommended)
+For development:
 
 ```bash
-git clone https://github.com/awa-si/NHSMM.git
-cd NHSMM
-pip install -e .
+git clone https://github.com/awa-si/nhsmm.git
+cd nhsmm
+pip install -e ".[dev]"
 ```
 
-Editable mode allows modification and testing without reinstalling.
+Python `3.9+` is required by the current package metadata.
 
----
+## Basic construction
 
-## 🧠 Usage Example — Market Regime Detection
-
-See: [State Occupancy & Duration/Transition Diagnostics](docs/test_ohlcv.md)
-
-Works similarly for **IoT signals, health telemetry, robotics, or cybersecurity logs**.
+The current public API is configuration-driven:
 
 ```python
-from nhsmm.models import HSMM
-model = HSMM(n_states=3, n_features=5)
-seq_features, canonical = model.encoder.encode(sequences)
+from nhsmm import ModelConfig, NHSMM
+
+config = ModelConfig(
+    n_states=3,
+    n_features=5,
+    max_duration=35,
+)
+
+model = NHSMM(config=config)
 ```
 
----
+Do not rely on historical examples using `HSMM`, `NeuralHSMM`, `GaussianHSMM`, or older constructor signatures unless the current package exports explicitly provide them.
 
-## 🔍 Conceptual Flow
+## Context-aware modeling
 
-```text
-External Input → Neural Initial Module (π)
-                → Neural Transition Module (A)
-                → Neural Duration Module (D)
-                → Emission Module (Gaussian/Student-t/Discrete)
-                → Forward-Backward / Viterbi → Backprop
-```
+NHSMM can derive neural context from observed sequences and use it to parameterize latent-state distributions.
 
-* **External Input:** features, covariates, embeddings.
-* **Neural Modules:** context-conditioned initial, transition, duration, and emission distributions.
-* **Inference:** latent states inferred via forward-backward and Viterbi.
-* **Backpropagation:** updates all neural modules jointly.
+The implementation distinguishes:
 
----
+- observed sequences;
+- masks and sequence lengths;
+- per-timestep context;
+- canonical/global context;
+- latent-state distribution parameters.
 
-## 🌐 Multi-Domain Applicability
+This separation is important for variable-length batching and for keeping the probabilistic model contract explicit.
 
-* **Security & Cyber-Physical Systems:** anomaly and hidden state detection.
-* **Finance & Trading:** regime detection, forecasting, adaptive strategies.
-* **IoT & Industrial:** predictive maintenance, fault detection.
-* **Health & Wearables:** activity and state tracking, multimodal fusion.
-* **Robotics:** behavior monitoring, safe human-robot interaction.
-* **Telecommunications & Energy:** latent state monitoring, resource optimization.
-* **Research & AI:** temporal modeling, neural-probabilistic experiments.
+## Temporal semantics
 
----
+NHSMM supports retrospective sequence inference. When using NHSMM in forecasting, online inference, or trading systems, callers must preserve causal data flow themselves and distinguish filtering from full-sequence smoothing.
 
-## ⚙️ Development
+A result obtained using future observations must not be interpreted as a causal online state estimate.
 
-> Contributions welcome! Bug reports, feature suggestions, or documentation improvements strengthen NHSMM.
+## Development
+
+Install development dependencies and run the relevant checks:
 
 ```bash
-git clone https://github.com/awa-si/NHSMM.git
-cd NHSMM
 pip install -e ".[dev]"
 pytest -v
-black nhsmm
-ruff check nhsmm
+ruff check nhsmm tests scripts
+black --check nhsmm tests scripts
 ```
 
----
+Some historical scripts and tests may target older APIs. Before changing the core model to satisfy one of those consumers, verify whether the consumer or the implementation reflects the intended current contract.
 
-## Support
+Repository-specific engineering instructions are in [`agent.md`](./agent.md).
 
-Development is supported via **GitHub Sponsors, Patreon, Medium**.
-See [FUNDING.md](./FUNDING.md) for details.
+## Documentation
 
----
+- [Model / project governance](docs/model.md)
+- [OHLCV experiment notes](docs/test_ohlcv.md)
+- [Tier notes](docs/tier.md)
 
-## 🧾 License
+Documentation should describe implemented behavior. Performance, causal, production-readiness, or scalability claims require corresponding implementation or benchmark evidence.
 
-Apache License 2.0 © 2024 **AWA.SI**
-Full terms: [LICENSE](https://github.com/awa-si/NHSMM/blob/develop/LICENSE)
+## Project relationship
 
-If used in academic work, please cite the repository.
+NHSMM is the open probabilistic-modeling foundation associated with the broader State Aware Engine (SAE) work. Domain/integration contracts are kept separate from the core model implementation.
+
+## License
+
+Apache License 2.0 © AWA.SI.
+
+See [LICENSE](./LICENSE) for the full terms.
