@@ -27,6 +27,8 @@ For `causal=True`, NHSMM uses a dynamic causal boundary-time hazard contract: th
 
 The canonical `DefaultEncoder` runtime is incremental. It retains only the bounded convolution history plus LSTM hidden/cell state, so each accepted observation is encoded once. Custom causal encoders without the streaming contract remain on the explicit correctness-first prefix fallback.
 
+The incremental inference hot path is profiled and optimized. Gaussian emissions use the exact analytical diagonal-Gaussian log density instead of constructing a `MultivariateNormal` per bar, while runtime filtering uses an internal kernel for already-normalized model-produced duration/transition scores. The public validated `filter_step()` remains the external/reference contract.
+
 Production artifact v1 persists resolved `ModelConfig`, canonical `DefaultEncoder` configuration, redundant schema metadata, and the complete model/distribution `state_dict`. Loading is fail-closed and strictly validates artifact version, feature/state/duration dimensions, causal mode, distribution types, encoder metadata, and model state compatibility.
 
 The maintained automated test contract is now the normal pytest-discovered `tests/test_*.py` suite. Historical tests and experiments targeting removed constructors or obsolete evaluation semantics have been removed rather than used to restore stale APIs. `.github/workflows/smoke.yml` runs the full discovered suite and the artifact-loaded CPU runtime benchmark on a clean runner. Testing policy is documented in `docs/testing.md`.
@@ -69,7 +71,7 @@ The maintained automated test contract is now the normal pytest-discovered `test
 
 - [x] Current latent-state posterior.
 - [x] Current state-age posterior.
-- [x] One-step active-episode end probability.
+ [x] One-step active-episode end probability.
 - [x] Configurable-horizon survival probability.
 - [x] Configurable-horizon end-within probability.
 - [x] Boundary transition joint mass `[B,K,K]`.
@@ -84,7 +86,10 @@ The maintained automated test contract is now the normal pytest-discovered `test
 - [x] Mutable runtime state is separate from model parameters.
 - [x] Production inference preparation/loading path uses strict `state_dict` loading and default parameter freezing.
 - [x] Canonical `DefaultEncoder` has bounded incremental CNN/LSTM state.
+- [x] Gaussian runtime emission scoring avoids per-step `MultivariateNormal` construction and is numerically equivalent to the diagonal covariance model.
+- [x] Runtime skips redundant duration/transition normalization only for canonical model-produced normalized scores; the public validated filter path remains unchanged semantically.
 - [x] Artifact-loaded CPU latency/allocation benchmark exists and verifies bounded runtime-state size.
+- [x] Benchmark latency and allocation passes are separated so `tracemalloc` does not contaminate latency measurements.
 
 ### Artifact contract
 
@@ -117,13 +122,16 @@ Observed evidence relevant to the current contract:
 - Smoke run `36252656161`: strict inference loading and round-trip inference equivalence passed.
 - Smoke run `36253244202`: incremental encoder/runtime integration passed; prior focused suite reported `27 passed`.
 - Smoke run `36254069155`: artifact v1 plus production benchmark integration passed; prior focused suite reported `31 passed`.
-- **Smoke run `36255390273` on commit `284468dcc62f00f3a77d7fe1f130425bd0fee52d`: success; full canonical discovery reported `56 passed in 2.27s` with no pytest warnings.**
-- The same run's artifact-loaded CPU benchmark (`K=3`, `F=4`, `D=5`, batch 1, 16 warmup + 128 measured steps) reported p50 `2.781659 ms`, p95 `2.857897 ms`, mean `2.7841281 ms`, Python traced peak `26,530` bytes, and constant runtime state `151` tensor elements. Hosted-runner timings are reference measurements, not acceptance thresholds.
+- Smoke run `36255390273` on commit `284468dcc62f00f3a77d7fe1f130425bd0fee52d`: success; full canonical discovery reported `56 passed in 2.27s` with no pytest warnings.
+- The historical artifact-loaded CPU benchmark from run `36255390273` reported p50 `2.781659 ms`, p95 `2.857897 ms`, mean `2.7841281 ms`, Python traced peak `26,530` bytes, and constant runtime state `151` tensor elements. That latency loop ran under `tracemalloc`; it is retained as historical evidence but is not a clean latency baseline.
+- Local sparse connector-workspace profiling on the same host/runtime shape (`K=3`, `F=4`, `D=5`, batch 1) measured the pre-optimization hot path at approximately mean `1.64 ms`, p50 `1.12 ms`, p95 `1.89 ms`; after direct diagonal-Gaussian scoring plus the normalized runtime filter kernel, repeated measurements were approximately mean `1.00-1.06 ms`, p50 `0.70-0.75 ms`, p95 `1.01-1.17 ms`.
+- The internal normalized runtime filter kernel was compared against public `filter_step()` over 200 randomized normalized duration/transition cases, including impossible-duration support; maximum observed absolute posterior difference was `9.54e-7`.
+- **Smoke run `36257892827`: success; full canonical discovery reported `56 passed in 2.42s`.** The artifact-loaded CPU benchmark after separating latency from allocation tracing reported p50 `1.105176 ms`, p95 `1.170783 ms`, mean `1.113136 ms`, Python traced peak `14,619` bytes, and constant runtime state `151` tensor elements. Hosted-runner timings remain reference measurements, not acceptance thresholds.
 
 ## Repository housekeeping
 
 - Broad `torch>=2.2` clean-runner installation currently resolves a large CUDA distribution despite CPU execution; GitHub Actions should remain an integration diagnostic, not the routine edit/test loop.
-- Static checks remain part of the repository verification contract: `ruff check nhsmm tests scripts` and `black --check nhsmm tests scripts`. They were not executed in the cleanup smoke because the workflow installs the runtime package plus pytest, not the dev extra.
+- Static checks remain part of the repository verification contract: `ruff check nhsmm tests scripts` and `black --check nhsmm tests scripts`. They were not executed in the performance smoke because the workflow installs the runtime package plus pytest, not the dev extra.
 
 ## Nautilus evaluation gate
 
