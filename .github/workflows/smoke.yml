@@ -6,6 +6,8 @@ on:
     branches: [develop]
     paths:
       - ".github/workflows/smoke.yml"
+      - "nhsmm/encoder.py"
+      - "tests/test_incremental_runtime.py"
 
 jobs:
   smoke:
