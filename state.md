@@ -35,6 +35,10 @@ Production inference now has an explicit preparation/loading path separate from 
 
 The canonical causal `DefaultEncoder` now exposes bounded incremental state: the last `cnn_kernel - 1` raw observations plus LSTM hidden/cell state. `HSMMFilterRuntime.step(...)` uses that state so each new bar is encoded exactly once and no longer re-encodes or retains the full prefix on the default production path. Custom causal encoders that do not expose the incremental-state API remain on the explicit correctness-first full-prefix fallback.
 
+Production artifact v1 is now explicit and fail-closed. It persists resolved `ModelConfig`, canonical `DefaultEncoder` configuration, redundant feature/state/duration/causal/distribution schema metadata, and the full model/distribution `state_dict`. Loading uses `torch.load(..., weights_only=True)`, validates metadata before model construction, strictly loads state, and rejects unsupported versions, schema mismatches, encoder mismatches, and non-canonical custom encoders. Artifact v1 intentionally supports only the reconstructible canonical `DefaultEncoder`.
+
+The production CPU runtime benchmark now executes against a model that has been saved and reloaded through artifact v1. The clean-runner reference measurement for `K=3`, `F=4`, `D=5`, batch size 1 was p50 `2.718 ms`, p95 `2.820 ms`, mean `2.730 ms` over 128 measured steps after 16 warmup steps. Python traced peak allocation was `27,200` bytes and bounded runtime state remained constant at `151` tensor elements. These numbers are reference measurements, not acceptance thresholds.
+
 ## Completed
 
 ### Causal model foundation
@@ -129,16 +133,16 @@ The canonical causal `DefaultEncoder` now exposes bounded incremental state: the
 - [x] Mutable online state is separate from model parameters.
 - [x] Explicit production inference preparation/loading path with strict `state_dict` loading, causal-mode guard, eval preparation, and default parameter freezing.
 - [x] Incremental encoder state for the canonical `DefaultEncoder`; live default runtime no longer re-encodes the full prefix.
-- [ ] CPU latency/allocation benchmark after semantics stabilize.
+- [x] CPU latency/allocation benchmark on the artifact-loaded bounded incremental runtime.
 
 ### Artifact contract
 
-- [ ] Version artifacts.
-- [ ] Persist `ModelConfig` and encoder configuration.
-- [ ] Persist causal/non-causal mode.
-- [ ] Persist distribution/model state consistently.
-- [ ] Validate feature/state/duration/schema metadata on load.
-- [ ] Fail closed on incompatible artifacts.
+- [x] Version artifacts (`artifact_version == 1`).
+- [x] Persist resolved `ModelConfig` and canonical `DefaultEncoder` configuration.
+- [x] Persist causal/non-causal mode redundantly in config, encoder metadata, and schema metadata.
+- [x] Persist distribution/model state consistently through the full `state_dict`.
+- [x] Validate feature/state/duration/schema and encoder metadata on load.
+- [x] Fail closed on unknown versions, incompatible schema/config/encoder metadata, malformed state mappings, and strict state-load mismatches.
 
 ## Verification
 
@@ -166,6 +170,9 @@ Observed:
 - Clean-runner smoke run `36252656161` on commit `7568672a0f2b774717bf2c5d8b8ad77131e9ffe8`: success; import smoke, general functional smoke, and causal temporal/inference tests all passed, including strict-load rejection and round-trip inference-output equivalence.
 - Local incremental-encoder harness: causal `DefaultEncoder.forward(...)` and repeated `stream_step(...)` produced identical per-timestep contexts with max absolute difference `0.0`.
 - Clean-runner smoke run `36253244202` on commit `9fc9f98f64be5ffe9058d8237a7ee99409732d32`: success; general functional smoke passed and the causal temporal/inference/incremental-runtime suite reported `27 passed, 1 warning in 1.99s`. The warning remains limited to the existing brute-force test helper converting a grad-enabled score to `float`.
+- Local production artifact/benchmark module syntax validation passed for `nhsmm/artifact.py`, `nhsmm/benchmark.py`, `scripts/benchmark_runtime.py`, and their focused tests.
+- Clean-runner smoke run `36253907613` on commit `c5875c9ea826194ebc19aab3563612e3c4824e67`: success; artifact v1 round-trip/fail-closed tests and bounded-state benchmark contract passed with the existing causal/runtime suite.
+- Clean-runner smoke run `36254069155` on commit `cb8fa8ec89c122196ba76ffcd8044dd47c48ccc2`: success; `31 passed, 1 warning in 1.98s`. The artifact-loaded CPU benchmark reported p50 `2.7177515 ms`, p95 `2.819508 ms`, mean `2.7303501 ms`, Python peak `27,200` bytes, and constant runtime state `151` tensor elements over 128 measured steps after 16 warmup steps.
 
 ## Repository drift / housekeeping
 
@@ -202,6 +209,5 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Benchmark CPU latency/allocation for the bounded incremental runtime.
-2. Clean test discovery and migrate/delete stale legacy tests/scripts.
-3. Implement artifact/version/loading contracts before Nautilus production integration.
+1. Clean test discovery and migrate/delete stale legacy tests/scripts.
+2. Define the Nautilus-facing evaluation harness around artifact-loaded causal NHSMM inference without mapping latent states to H1 classes.
