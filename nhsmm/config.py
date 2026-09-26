@@ -43,6 +43,7 @@ class ModelConfig:
     hidden_dim: Optional[int] = None
     context_dim: Optional[int] = None
     pool: Literal["mean", "last", "max", "attn", "mha"] = "mean"
+    causal: bool = False
 
     # -----------------------------
     # HMM / Distribution
