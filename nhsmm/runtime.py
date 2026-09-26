@@ -29,16 +29,17 @@ def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str
 class HSMMRuntimeState:
     """Online causal filtering state kept separate from model parameters.
 
-    The current encoder does not expose an incremental hidden-state API, so
-    ``observations`` retains the processed prefix. Duration and transition
-    scores are conditioned on the latest processed prefix and are consumed by
-    the next boundary update.
+    For encoders that expose ``stream_step``, ``encoder_state`` carries only
+    bounded causal CNN/LSTM state and ``observations`` stores the latest accepted
+    timestep. Encoders without that contract fall back to retained-prefix
+    re-encoding and keep the full observation prefix in ``observations``.
     """
 
     filter_state: HSMMFilterState
-    observations: torch.Tensor  # [B,T,F]
+    observations: torch.Tensor  # [B,T,F], T==1 for incremental default encoder
     duration_log_prob: torch.Tensor  # [B,K,D]
     transition_log_prob: torch.Tensor  # [B,K,D,K]
+    encoder_state: Optional[Any] = None
     last_timestamp: Optional[Any] = None
     uses_timestamps: bool = False
 
@@ -141,12 +142,40 @@ def _boundary_scores(
     return duration, transition
 
 
-class HSMMFilterRuntime:
-    """Correctness-first live causal HSMM filter.
+def _stream_encoder(model: Any) -> Optional[Any]:
+    context_encoder = getattr(model, "encoder", None)
+    encoder = getattr(context_encoder, "encoder", None)
+    if encoder is None:
+        return None
+    if not callable(getattr(encoder, "stream_step", None)):
+        return None
+    if not callable(getattr(encoder, "initial_stream_state", None)):
+        return None
+    return encoder
 
-    ``step`` is semantically incremental, but until the encoder exposes its own
-    incremental state it re-encodes the retained causal observation prefix.
-    The HSMM posterior itself is advanced exactly once per accepted timestamp.
+
+def _emission_log_prob(
+    model: Any,
+    observation: torch.Tensor,
+    context: torch.Tensor,
+) -> torch.Tensor:
+    B = observation.shape[0]
+    K = int(model.config.n_states)
+    dist = model.dist.emission.forward(context=context, return_dist=True)
+    expanded = observation.unsqueeze(2).expand(-1, -1, K, -1)
+    log_prob = dist.log_prob(expanded)
+    if log_prob.shape != (B, 1, K):
+        raise ValueError(f"emission log_prob must be {(B, 1, K)}, got {log_prob.shape}")
+    return log_prob[:, 0]
+
+
+class HSMMFilterRuntime:
+    """Live causal HSMM filter with bounded encoder state when supported.
+
+    The canonical ``DefaultEncoder(causal=True)`` exposes incremental causal
+    CNN/LSTM state, so each accepted observation is encoded exactly once.
+    Custom causal encoders without that API retain the correctness-first
+    full-prefix fallback.
     """
 
     def __init__(self, model: Any, temperature: Optional[float] = None) -> None:
@@ -193,8 +222,53 @@ class HSMMFilterRuntime:
             observation,
             n_features=int(self.model.config.n_features),
         )
+        obs = obs.to(
+            device=self.model.duration_logits_bias.device,
+            dtype=self.model.duration_logits_bias.dtype,
+        )
+        encoder = _stream_encoder(self.model)
 
         if self.state is None:
+            if encoder is not None:
+                encoder_state = encoder.initial_stream_state(
+                    obs.shape[0],
+                    device=obs.device,
+                    dtype=obs.dtype,
+                )
+                context, encoder_state = encoder.stream_step(obs, encoder_state)
+                emission = _emission_log_prob(self.model, obs, context)
+                B = context.shape[0]
+                K = int(self.model.config.n_states)
+                initial = self.model.dist.initial.log_matrix(
+                    context=context,
+                    temperature=self.temperature,
+                    T=1,
+                )
+                if initial.shape != (B, 1, K):
+                    raise ValueError(
+                        f"initial logits must be {(B, 1, K)}, got {initial.shape}"
+                    )
+                filter_state = initialize_filter(
+                    initial[:, 0],
+                    emission,
+                    int(self.model.dist.duration.max_duration),
+                )
+                duration, transition = _boundary_scores(
+                    self.model,
+                    context,
+                    temperature=self.temperature,
+                )
+                self.state = HSMMRuntimeState(
+                    filter_state=filter_state,
+                    observations=obs.clone(),
+                    duration_log_prob=duration,
+                    transition_log_prob=transition,
+                    encoder_state=encoder_state,
+                    last_timestamp=timestamp,
+                    uses_timestamps=timestamp is not None,
+                )
+                return filter_state
+
             sequence = self.model._build_sequence_set(obs)
             B, T, K = sequence.log_probs.shape
             if T != 1:
@@ -225,6 +299,7 @@ class HSMMFilterRuntime:
                 observations=sequence.sequences.clone(),
                 duration_log_prob=duration,
                 transition_log_prob=transition,
+                encoder_state=None,
                 last_timestamp=timestamp,
                 uses_timestamps=timestamp is not None,
             )
@@ -247,6 +322,33 @@ class HSMMFilterRuntime:
         if obs.shape[0] != previous.observations.shape[0]:
             raise ValueError("streaming batch size cannot change without reset")
         _require_compatible(previous.observations, obs, "observation")
+
+        if previous.encoder_state is not None:
+            if encoder is None:
+                raise RuntimeError("runtime encoder lost its incremental state contract")
+            context, encoder_state = encoder.stream_step(obs, previous.encoder_state)
+            emission = _emission_log_prob(self.model, obs, context)
+            filter_state = filter_step(
+                previous.filter_state,
+                emission,
+                previous.duration_log_prob,
+                previous.transition_log_prob,
+            )
+            duration, transition = _boundary_scores(
+                self.model,
+                context,
+                temperature=self.temperature,
+            )
+            self.state = HSMMRuntimeState(
+                filter_state=filter_state,
+                observations=obs.clone(),
+                duration_log_prob=duration,
+                transition_log_prob=transition,
+                encoder_state=encoder_state,
+                last_timestamp=timestamp if previous.uses_timestamps else None,
+                uses_timestamps=previous.uses_timestamps,
+            )
+            return filter_state
 
         observations = torch.cat((previous.observations, obs), dim=1)
         sequence = self.model._build_sequence_set(observations)
@@ -272,6 +374,7 @@ class HSMMFilterRuntime:
             observations=sequence.sequences.clone(),
             duration_log_prob=duration,
             transition_log_prob=transition,
+            encoder_state=None,
             last_timestamp=timestamp if previous.uses_timestamps else None,
             uses_timestamps=previous.uses_timestamps,
         )
