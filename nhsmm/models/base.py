@@ -106,7 +106,15 @@ class NHSMM(nn.Module):
                 cnn_channels=self.config.cnn_channels,
                 cnn_kernel=self.config.cnn_kernel,
                 hidden_dim=hidden_dim,
+                bidirectional=not self.config.causal,
+                causal=self.config.causal,
             )
+        elif self.config.causal:
+            raw_encoder = encoder.encoder if isinstance(encoder, ContextEncoder) else encoder
+            if not bool(getattr(raw_encoder, "causal", False)):
+                raise ValueError(
+                    "ModelConfig.causal=True requires an encoder that explicitly declares causal=True."
+                )
 
         self.encoder = encoder if isinstance(encoder, ContextEncoder) else ContextEncoder(
             encoder=encoder,
@@ -117,7 +125,9 @@ class NHSMM(nn.Module):
 
         try:
             self.encoder.eval()
-            dummy = torch.zeros(1, 16, self.config.n_features)
+            dummy = torch.zeros(
+                1, 16, self.config.n_features, device=self.device, dtype=DTYPE
+            )
             try:
                 _, ctx, _ = self.encoder(dummy, return_context=True, return_sequence=True)
                 inferred_dim = ctx.shape[-1]
@@ -169,6 +179,8 @@ class NHSMM(nn.Module):
         # --- Build context ---
         if context is None:
             context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
+            if self.config.causal:
+                canonical = context_tensor[:, :1]
         else:
             context_tensor = self._ensure_tensor(context)  # [B,T,C] or broadcasted
             if context_tensor.ndim == 2:
