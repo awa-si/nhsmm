@@ -175,7 +175,6 @@ class DefaultEncoder(nn.Module):
         x_c = nnF.linear(conv_flat, conv_weight, self.conv.bias).unsqueeze(1)
         x_c = nnF.relu(x_c)
         x_c = self.norm(x_c)
-        x_c = self.dropout(x_c)
 
         # ``stream_step`` always processes exactly one timestep. Calling
         # ``nn.LSTM`` for a length-one sequence pays the generic recurrent
@@ -232,10 +231,10 @@ class DefaultEncoder(nn.Module):
         hidden_t = torch.sigmoid(output_gate) * torch.tanh(cell_t)
         hidden = hidden_t.unsqueeze(0)
         cell = cell_t.unsqueeze(0)
-        out = self.dropout(hidden_t.unsqueeze(1))
+        out = hidden_t.unsqueeze(1)
 
         if self.cnn_kernel > 1:
-            history = conv_input[:, -(self.cnn_kernel - 1):].clone()
+            history = conv_input[:, -(self.cnn_kernel - 1):]
         else:
             history = x.new_empty(B, 0, self.n_features)
 
