@@ -21,9 +21,9 @@ NHSMM latent states must remain semantically neutral (`0..K-1`) for this evaluat
 
 **Phase:** pre-test integration readiness
 
-**Last repository scan:** `develop` at `6556e44caf8d260f4e7db1ceffe86b53b04bf981`.
+**Last repository scan:** `develop` through `3ef1d655dffdacdabe111c01cda79a1195e71983`.
 
-A standalone causal HSMM filtering core exists over `(latent_state, episode_age)`. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
+A standalone causal HSMM filtering core exists over `(latent_state, episode_age)` and has now been hardened against malformed/non-finite probability inputs and tensor-contract mismatches. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
 
 The current repository contains both the canonical `NHSMM`/`ModelConfig` implementation and historical scripts/tests that target removed APIs. Those historical consumers are repository drift and are not part of the current model contract.
 
@@ -68,11 +68,16 @@ Commit: `ba0848f771de1da8f337fa0047029a189ca7b144`
 - [x] Current state posterior and age posterior are directly available from the filter state.
 - [x] One-step probability that the current episode ends before the next observation is available.
 - [x] Deterministic-duration, boundary-transition, normalization, and numerical-support contracts were exercised locally on CPU.
+- [x] Filter state rejects invalid rank, non-floating tensors, NaN/+inf, empty dimensions, and zero total mass.
+- [x] Duration and transition inputs reject all-impossible probability rows rather than allowing NaN normalization.
+- [x] Filter updates enforce dtype/device compatibility across posterior, emissions, durations, and transitions.
 
 Commits:
 
 - `5998c639408990075b1dc55e28f0c73a1a60f5d0`
 - `d63981a8d17a551c54f127cb3bbdf7162138100e`
+- `39e726c481c49c5fceb734597029d5e003eecd17`
+- `3ef1d655dffdacdabe111c01cda79a1195e71983`
 
 ## Pre-test blockers
 
@@ -102,6 +107,7 @@ These outputs must not require semantic state labels.
 
 - [x] Core filter posterior normalizes after repeated updates.
 - [x] Core duration support handles deterministic/truncated support without NaN propagation.
+- [x] Core filtering rejects malformed/non-finite probability rows before they can contaminate posterior state.
 - [ ] Prefix invariance: full NHSMM filtered output at `t` must be unchanged when observations after `t` are modified.
 - [ ] Streaming equivalence: repeated causal `step()` over a sequence must agree with equivalent causal batch filtering within tolerance.
 - [ ] Mask/padding invariance for valid prefixes.
@@ -148,6 +154,7 @@ The repository test files are named without the normal `pytest` `test_*.py` / `*
 Consequences:
 
 - `python tests/general.py` and `python tests/filtering.py` are valid explicit smoke executions;
+- targeted `python -m pytest tests/filtering.py` is valid and was used for the filter hardening run;
 - a plain `pytest -v` must not currently be assumed to collect these files;
 - test-file naming/discovery must be cleaned before `pytest -v` can be treated as the canonical full-suite command.
 
@@ -163,7 +170,7 @@ Do not use these scripts for Nautilus evaluation until they are migrated to the 
 
 `nhsmm/distributions/default.py` imports `torch.nn.functional` as `nnF`, but `Categorical.rsample()` currently calls `F.gumbel_softmax(...)`. That path will raise `NameError` if exercised.
 
-This is a verified implementation defect, but it is not currently established as part of the causal Nautilus inference path. Fix it before relying on `Categorical.rsample()` or claiming the custom categorical distribution is fully operational/reparameterizable.
+This remains an open implementation defect. It is not currently established as part of the causal Nautilus inference path, so it was not mixed into the causal-filter hardening commit. Fix it as its own small distribution slice before relying on `Categorical.rsample()` or claiming the custom categorical distribution is fully operational/reparameterizable.
 
 ### Packaging/status drift
 
@@ -193,14 +200,18 @@ Observed GitHub Actions smoke run: `36234225103` — success.
 
 ### Causal filtering contracts
 
-`tests/filtering.py` checks:
+`tests/filtering.py` now checks:
 
 - deterministic duration hazard conversion;
 - episode-age progression and reset;
 - transitions only at episode boundaries;
-- repeated posterior normalization.
+- repeated posterior normalization;
+- rejection of zero-mass duration rows;
+- rejection of zero-mass transition rows;
+- dtype compatibility enforcement;
+- rejection of NaN filter state.
 
-Observed local ChatGPT runtime execution: success on CPU.
+Observed local ChatGPT runtime execution after hardening: `8 passed` on CPU. No GitHub Actions run was used for this slice.
 
 ## Nautilus evaluation gate
 
@@ -228,11 +239,11 @@ H1 structure accuracy, Hungarian state matching, visual state plausibility, or i
 
 ## Next slices
 
-1. Wire `nhsmm/filtering.py` to the current NHSMM initial/duration/transition/emission/context outputs.
-2. Add a causal incremental runtime API without reusing retrospective `forward()` semantics.
-3. Add multi-horizon survival/change-hazard outputs and streaming-equivalence tests.
-4. Clean test discovery so the intended current tests are collected by standard `pytest` commands.
-5. Fix the verified `Categorical.rsample()` functional alias defect before that path is used.
+1. Fix the verified `Categorical.rsample()` functional alias defect as an isolated distribution hardening change.
+2. Wire `nhsmm/filtering.py` to the current NHSMM initial/duration/transition/emission/context outputs.
+3. Add a causal incremental runtime API without reusing retrospective `forward()` semantics.
+4. Add multi-horizon survival/change-hazard outputs and streaming-equivalence tests.
+5. Clean test discovery so the intended current tests are collected by standard `pytest` commands.
 6. Migrate or delete stale legacy tests/scripts once the canonical runtime path is stable.
 7. Implement artifact/version/inference contracts before production Nautilus integration.
 
