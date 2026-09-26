@@ -27,6 +27,8 @@ The current model-bound and online-runtime contracts are verified against the re
 
 Multi-horizon survival/end-within-horizon forecasts are implemented from the current `(state, age)` posterior and current causal duration distribution. Transition forecasts expose episode-boundary mass, next-episode state mass, next-state prior, and state-change probability without mapping latent states to semantic H1 classes. These temporal-output contracts are clean-runner verified.
 
+For `causal=True`, duration context is now explicitly defined as a **dynamic causal hazard** contract: the current information set `F_t` determines the duration/end hazard used for boundary `t -> t+1`. The duration law is not frozen at episode start. Filter/runtime already implement this ordering. Causal `forward()`/Viterbi still need to be aligned from retrospective endpoint segment scoring to the same age/hazard semantics.
+
 The runtime currently retains and re-encodes the causal observation prefix because the encoder does not yet expose incremental hidden/convolution state. This is causally correct and suitable for contract testing, but it is not the final bounded-cost hot path.
 
 ## Completed
@@ -84,6 +86,7 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 - [x] Gaussian and Student-t emission construction/log-probability contracts are covered by focused tests.
 - [x] `nhsmm/distributions/README.md` documents the current `default.py` shapes and semantics.
 - [x] `tests/test_default_distributions.py` covers the focused distribution contract.
+- [x] Causal duration-context semantics are explicitly documented as dynamic boundary-time hazard semantics under `F_t`.
 
 ## P0 blockers before historical A/B/C evaluation
 
@@ -112,8 +115,9 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 - [x] Forward/Viterbi/filter/runtime use one canonical duration convention: duration index `0 == d=1`, age index `0 == age=1`.
 - [x] Initial segments are transition-independent in forward/Viterbi recursion.
 - [x] Duration-dependent Viterbi transitions are indexed by the predecessor segment duration.
+- [x] Duration-context semantics resolved: `causal=True` uses dynamic causal boundary-time hazard under `F_t`; no episode-start freezing.
+- [ ] Align causal `forward()`/Viterbi with the dynamic age/hazard contract already used by filter/runtime.
 - [ ] Mask/padding invariance for valid prefixes.
-- [ ] Resolve duration-context semantics: freeze the duration law at episode start or intentionally update it with current causal context during an active episode.
 
 ### Inference/runtime
 
@@ -148,6 +152,8 @@ Observed:
 - Focused `default.py` distribution contract run: `tests/test_default_distributions.py` reported `10 passed in 2.16s`.
 - Duration-indexing run `36248255531`: `1 failed, 4 passed`; the strengthened test exposed that a first segment with `d>1` incorrectly depended on transition logits.
 - Duration-indexing run `36248632077`: success after recursion fixes; `tests/test_duration_indexing.py` reported `5 passed in 1.48s`.
+- Duration-context contract review: current filter/runtime consume duration/transition from `F_t` for boundary `t -> t+1`; current causal `forward()`/Viterbi still use endpoint segment scoring and therefore require an implementation alignment slice.
+- Local workspace checkout for that alignment was attempted and failed with `Could not resolve host: github.com`; no unverified recursion rewrite was performed.
 
 ## Repository drift / housekeeping
 
@@ -184,7 +190,7 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Resolve duration-context semantics for active episodes.
+1. Align causal `forward()`/Viterbi with the dynamic age/hazard contract used by filter/runtime.
 2. Add mask/padding invariance for valid prefixes.
 3. Decide whether expected remaining duration belongs in the public runtime contract.
 4. Add incremental encoder state for bounded-cost live inference.
