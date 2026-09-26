@@ -78,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m pytest -q tests/test_model_filter.py tests/test_runtime.py tests/test_survival.py tests/test_transitions.py tests/test_runtime_transition.py 2>&1 | tee smoke-logs/causal-runtime.txt
+          python -m pytest -q tests/test_model_filter.py tests/test_runtime.py tests/test_survival.py tests/test_transitions.py tests/test_runtime_transition.py tests/test_causal_dynamic_hazard.py 2>&1 | tee smoke-logs/causal-runtime.txt
 
       - name: Collect repository state
         if: always()
