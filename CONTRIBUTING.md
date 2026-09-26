@@ -6,9 +6,16 @@ Contributions may include bug fixes, documentation, numerical-stability improvem
 
 ## Before you change code
 
-Read [`agent.md`](./agent.md). It defines the repository-specific engineering, probabilistic, causal, verification, and GitHub workflow rules.
+Use the repository control layers according to their ownership:
+
+1. Read [`agent.md`](./agent.md) for AI-facing behavior, reasoning, source resolution, and decision/completion gates.
+2. Read [`docs/agent-domain.md`](docs/agent-domain.md) when the change touches probabilistic semantics, tensor contracts, causality, API evolution, testing, or research methodology.
+3. Read [`docs/model.md`](docs/model.md) and the current implementation when the change depends on model/project behavior.
+4. Apply the global repository workflow from `awa-si/admin/workflow.md` for editing, verification, CI, and write-back.
 
 The current implementation is authoritative. Historical scripts, tests, and documentation may contain obsolete API names or constructor patterns, so inspect the relevant package code before changing behavior.
+
+`agent.md` is not a substitute for the substantive model/domain contracts; it routes AI work to the relevant owners.
 
 ## Getting started
 
@@ -38,7 +45,7 @@ Never report a test, benchmark, training run, or empirical result as successful 
 
 ## Model changes
 
-NHSMM is an explicit-duration probabilistic sequence model. Changes must preserve or intentionally redefine the affected mathematical contract.
+NHSMM is an explicit-duration probabilistic sequence model. The canonical repository-wide invariants for model changes live in [`docs/agent-domain.md`](docs/agent-domain.md). Changes must preserve or intentionally redefine the affected mathematical contract.
 
 Check, as applicable:
 
@@ -77,19 +84,9 @@ Examples must use imports and constructor signatures that exist in the current p
 
 ## Repository workflow
 
-GitHub Patch is the preferred repository editing workflow when the plugin/skill is available. Use it for precise diffs, atomic multi-file changes, post-commit verification, and CI/status inspection when relevant.
+Repository editing, workspace selection, GitHub Patch/Workspace routing, CI/Actions escalation, concurrency protection, and remote verification are governed by `awa-si/admin/workflow.md` rather than duplicated here.
 
-Otherwise, use the closest available GitHub workflow while preserving the same rules:
-
-- read before writing;
-- minimal coherent changes;
-- concise factual commits;
-- direct work on `develop` unless another branch is requested;
-- no force pushes;
-- verify the resulting commit and changed files;
-- do not create a pull request unless requested or direct writing is unavailable and a PR is an authorized fallback.
-
-Do not use GitHub Actions or workflow modifications merely as a mechanism for editing repository content.
+For this repository, `develop` is the default branch and the repository-specific verification commands are documented in `agent.md` / `docs/agent-domain.md`.
 
 ## Pull requests
 
