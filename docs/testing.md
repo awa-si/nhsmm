@@ -31,6 +31,25 @@ The benchmark reports step-latency statistics, Python heap peak, and bounded run
 
 Absolute hosted-runner timings are measurements, not pass/fail thresholds. Performance work should use a local editable install and before/after measurements on the same host; the clean runner is only a final integration reference.
 
+## Performance profiling workflow
+
+Performance optimization is local-first and measurement-driven.
+
+1. Materialize the current `develop` state into a local workspace, preferably `/tmp/nhsmm`.
+2. Prefer an editable install. When build isolation cannot access package indexes, `pip install -e . --no-deps --no-build-isolation` is acceptable only when the local environment already contains the required dependencies; it is not a clean dependency-install validation.
+3. Measure the complete steady-state `HSMMFilterRuntime.step()` path before changing code.
+4. Attribute time to the major runtime components before selecting a target: encoder, emission scoring, duration/transition scoring, normalized filtering, and runtime state/validation handling.
+5. Compare before/after on the same host with the same model dimensions, batch size, warmup, number of iterations, device, dtype, and inference mode.
+6. Report at least mean, p50, and p95 when the measurement is stable enough to support them.
+7. Keep latency and allocation measurements in separate passes.
+8. Validate optimized private kernels against the public/reference path within the repository tolerance contract.
+9. Do not claim a speedup from hosted-runner comparisons across different runners.
+10. Run the full discovered pytest suite before completion; use the smoke workflow only as the final clean-runner integration check.
+
+Microbenchmarks are diagnostic evidence, not sufficient justification by themselves. A micro-optimization that improves an isolated kernel but does not improve its real caller should be rejected. Preserve probabilistic semantics, temporal causality, tensor-shape contracts, public APIs, artifact/state-dict compatibility, and bounded streaming state unless the task explicitly changes one of those contracts.
+
+The immediate performance continuation point and rejected recent candidates are recorded in `docs/handoff.md`. `docs/state.md` remains the status/readiness owner.
+
 ## Integration smoke
 
 `.github/workflows/smoke.yml` is a clean-runner integration diagnostic. It installs the package, imports the public API, runs the full discovered pytest suite, and executes the artifact-loaded CPU runtime benchmark.
