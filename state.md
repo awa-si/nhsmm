@@ -25,7 +25,7 @@ The causal `(latent_state, episode_age)` filter is wired to canonical NHSMM init
 
 The current model-bound and online-runtime contracts are verified against the real canonical `NHSMM` in a clean repository checkout. Prefix invariance and repeated `step()` equivalence with `filter_model_sequence(...)` both passed.
 
-Multi-horizon survival/end-within-horizon forecasts are implemented from the current `(state, age)` posterior and current causal duration distribution. Transition forecasts expose episode-boundary mass, next-episode state mass, next-state prior, and state-change probability without mapping latent states to semantic H1 classes.
+Multi-horizon survival/end-within-horizon forecasts are implemented from the current `(state, age)` posterior and current causal duration distribution. Transition forecasts expose episode-boundary mass, next-episode state mass, next-state prior, and state-change probability without mapping latent states to semantic H1 classes. These temporal-output contracts are clean-runner verified.
 
 The runtime currently retains and re-encodes the causal observation prefix because the encoder does not yet expose incremental hidden/convolution state. This is causally correct and suitable for contract testing, but it is not the final bounded-cost hot path.
 
@@ -89,7 +89,7 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 - [x] One-step active-episode end probability.
 - [x] Survival probabilities at configurable future horizons.
 - [x] Probability current episode ends within configurable future horizons.
-- [x] Transition outputs exposed for downstream evaluation:
+- [x] Transition outputs exposed and clean-runner verified for downstream evaluation:
   - boundary transition joint mass `[B,K,K]`;
   - next-episode state joint mass `[B,K]`;
   - next-state prior before `x_{t+1}` `[B,K]`;
@@ -135,7 +135,8 @@ Observed:
 - Lightweight local online-runtime harness: exact batch/streaming equivalence; duplicate timestamp rejected without mutation.
 - Clean-runner smoke run `36237525927`: success; model-filter/runtime tests reported `6 passed in 1.68s`.
 - Clean-runner smoke run `36244181797`: success; `tests/test_model_filter.py`, `tests/test_runtime.py`, and `tests/test_survival.py` reported `11 passed in 1.32s`.
-- Transition forecast tests are present but must still be observed passing on a clean current checkout before the new transition slice is considered fully verified.
+- Clean-runner smoke run `36244797811`: `16 passed, 1 failed`; the only failure was a transition test-fixture axis-indexing mistake, not an implementation failure. The fixture was corrected to index `[batch, source_state, duration, destination_state]` explicitly.
+- Clean-runner smoke run `36244956483` on commit `4d80000a0d6f8398746ea65aaa6c621c782ad238`: success; `tests/test_model_filter.py`, `tests/test_runtime.py`, `tests/test_survival.py`, `tests/test_transitions.py`, and `tests/test_runtime_transition.py` reported `17 passed in 1.84s`.
 
 ## Repository drift / housekeeping
 
@@ -172,10 +173,9 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Run the current transition forecast tests in a clean checkout and fix only observed contract errors.
-2. Verify one canonical duration indexing convention across forward/Viterbi/filter/runtime.
-3. Add mask/padding invariance for valid prefixes.
-4. Decide whether expected remaining duration belongs in the public runtime contract.
-5. Add incremental encoder state for bounded-cost live inference.
-6. Clean test discovery and migrate/delete stale legacy tests/scripts.
-7. Implement artifact/version/loading contracts before Nautilus production integration.
+1. Verify one canonical duration indexing convention across forward/Viterbi/filter/runtime.
+2. Add mask/padding invariance for valid prefixes.
+3. Decide whether expected remaining duration belongs in the public runtime contract.
+4. Add incremental encoder state for bounded-cost live inference.
+5. Clean test discovery and migrate/delete stale legacy tests/scripts.
+6. Implement artifact/version/loading contracts before Nautilus production integration.
