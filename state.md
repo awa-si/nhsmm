@@ -21,9 +21,9 @@ NHSMM latent states must remain semantically neutral (`0..K-1`) for this evaluat
 
 **Phase:** pre-test integration readiness
 
-**Last repository scan:** `develop` through `3ef1d655dffdacdabe111c01cda79a1195e71983`.
+**Last repository scan:** `develop` through `3a34c8f4e0f5adcc4cad0e12478aeb21902b6ebf`.
 
-A standalone causal HSMM filtering core exists over `(latent_state, episode_age)` and has now been hardened against malformed/non-finite probability inputs and tensor-contract mismatches. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
+A standalone causal HSMM filtering core exists over `(latent_state, episode_age)` and has been hardened against malformed/non-finite probability inputs and tensor-contract mismatches. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
 
 The current repository contains both the canonical `NHSMM`/`ModelConfig` implementation and historical scripts/tests that target removed APIs. Those historical consumers are repository drift and are not part of the current model contract.
 
@@ -78,6 +78,20 @@ Commits:
 - `d63981a8d17a551c54f127cb3bbdf7162138100e`
 - `39e726c481c49c5fceb734597029d5e003eecd17`
 - `3ef1d655dffdacdabe111c01cda79a1195e71983`
+
+### Categorical rsample hardening
+
+- [x] The missing functional symbol used by `Categorical.rsample()` is bound to the module's canonical `torch.nn.functional as nnF` import during `nhsmm.distributions` package initialization.
+- [x] A current pytest-discoverable test covers soft Gumbel-Softmax output, gradient flow, and hard one-hot output.
+- [x] The attempted whole-file Contents API rewrite was reverted to the exact original `default.py` blob after it introduced line-ending-only diff noise.
+
+Commits:
+
+- `0106c7e1f76b601281805c3c7bc5c03dd6d5e87e` — targeted test
+- `eeebdceb8e1953df05546ec2240d89725238ddad` — restore exact original `default.py` blob after noisy rewrite
+- `3a34c8f4e0f5adcc4cad0e12478aeb21902b6ebf` — functional alias binding
+
+The runtime defect is resolved for canonical package imports. `default.py` still references `F` implicitly and therefore remains coupled to package initialization; remove that coupling later with a line-preserving direct patch rather than another full-file newline rewrite.
 
 ## Pre-test blockers
 
@@ -149,13 +163,14 @@ Current package core on `develop`:
 
 ### Test discovery drift
 
-The repository test files are named without the normal `pytest` `test_*.py` / `*_test.py` pattern, including the new `tests/general.py` and `tests/filtering.py`.
+Most historical/current test files are named without the normal `pytest` `test_*.py` / `*_test.py` pattern, including `tests/general.py` and `tests/filtering.py`.
 
 Consequences:
 
 - `python tests/general.py` and `python tests/filtering.py` are valid explicit smoke executions;
 - targeted `python -m pytest tests/filtering.py` is valid and was used for the filter hardening run;
-- a plain `pytest -v` must not currently be assumed to collect these files;
+- `tests/test_categorical_rsample.py` is now collected by standard pytest discovery;
+- a plain `pytest -v` still must not be assumed to represent the intended current suite because most canonical/legacy files remain outside standard discovery;
 - test-file naming/discovery must be cleaned before `pytest -v` can be treated as the canonical full-suite command.
 
 Historical test drift remains. For example, `tests/neural.py` imports removed modules/types such as `nhsmm.models.neural.NeuralHSMM`, `NHSMMConfig`, and `nhsmm.defaults.DTYPE`; `tests/ctx_encoder.py` also uses stale constructor arguments. These files must be migrated or removed rather than driving the canonical API backward.
@@ -166,11 +181,11 @@ Historical test drift remains. For example, `tests/neural.py` imports removed mo
 
 Do not use these scripts for Nautilus evaluation until they are migrated to the canonical `ModelConfig` + `NHSMM` API and causal evaluation semantics.
 
-### Distribution issue found by scan
+### Distribution hardening status
 
-`nhsmm/distributions/default.py` imports `torch.nn.functional` as `nnF`, but `Categorical.rsample()` currently calls `F.gumbel_softmax(...)`. That path will raise `NameError` if exercised.
+The `Categorical.rsample()` NameError path found in the repository scan is operationally fixed for canonical package imports and covered by `tests/test_categorical_rsample.py`.
 
-This remains an open implementation defect. It is not currently established as part of the causal Nautilus inference path, so it was not mixed into the causal-filter hardening commit. Fix it as its own small distribution slice before relying on `Categorical.rsample()` or claiming the custom categorical distribution is fully operational/reparameterizable.
+Remaining cleanup: `nhsmm/distributions/default.py` still calls `F.gumbel_softmax(...)` while importing the functional namespace as `nnF`; package initialization currently binds `F = nnF` in that module. This is safe for normal package imports but is non-local coupling. Replace the call directly with `nnF.gumbel_softmax(...)` once a line-preserving patch path is available.
 
 ### Packaging/status drift
 
@@ -213,6 +228,16 @@ Observed GitHub Actions smoke run: `36234225103` — success.
 
 Observed local ChatGPT runtime execution after hardening: `8 passed` on CPU. No GitHub Actions run was used for this slice.
 
+### Categorical rsample contract
+
+`tests/test_categorical_rsample.py` checks:
+
+- soft Gumbel-Softmax output shape and normalization;
+- finite gradient flow to logits;
+- hard Gumbel-Softmax one-hot output.
+
+Observed local ChatGPT runtime execution of the same package-import path: `1 passed` on CPU. No GitHub Actions run was used.
+
 ## Nautilus evaluation gate
 
 Do not start the main historical model comparison until all P0 items above are complete.
@@ -239,13 +264,13 @@ H1 structure accuracy, Hungarian state matching, visual state plausibility, or i
 
 ## Next slices
 
-1. Fix the verified `Categorical.rsample()` functional alias defect as an isolated distribution hardening change.
-2. Wire `nhsmm/filtering.py` to the current NHSMM initial/duration/transition/emission/context outputs.
-3. Add a causal incremental runtime API without reusing retrospective `forward()` semantics.
-4. Add multi-horizon survival/change-hazard outputs and streaming-equivalence tests.
-5. Clean test discovery so the intended current tests are collected by standard `pytest` commands.
-6. Migrate or delete stale legacy tests/scripts once the canonical runtime path is stable.
-7. Implement artifact/version/inference contracts before production Nautilus integration.
+1. Wire `nhsmm/filtering.py` to the current NHSMM initial/duration/transition/emission/context outputs.
+2. Add a causal incremental runtime API without reusing retrospective `forward()` semantics.
+3. Add multi-horizon survival/change-hazard outputs and streaming-equivalence tests.
+4. Clean test discovery so the intended current tests are collected by standard `pytest` commands.
+5. Migrate or delete stale legacy tests/scripts once the canonical runtime path is stable.
+6. Implement artifact/version/inference contracts before production Nautilus integration.
+7. Remove the remaining non-local `Categorical.rsample()` alias coupling with a line-preserving direct patch.
 
 ## Later work
 
