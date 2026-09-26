@@ -34,7 +34,7 @@ source_resolution:
 - domain_contract_helper: docs/agent-domain.md
 - model_documentation_owner: docs/model.md
 - global_workflow_owner: awa-si/admin/workflow.md
-- project_workflow_delta: none_currently
+- project_workflow_delta: awa-si/admin/projects/nhsmm/workflow.md
 
 startup:
 - read: agent.md
