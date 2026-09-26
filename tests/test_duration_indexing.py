@@ -33,6 +33,40 @@ def _deterministic_duration_model(duration: int = 2) -> NHSMM:
     return model
 
 
+def _two_state_model() -> NHSMM:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=1,
+        max_duration=3,
+        causal=True,
+        transition_type="ergodic",
+        seed=11,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions(jitter=0.0)
+    model.eval()
+
+    with torch.no_grad():
+        model.duration_logits_bias.fill_(20.0)
+        model.dist.initial.logits.copy_(torch.tensor([0.0, -40.0]))
+        model.dist.duration.logits.fill_(-1000.0)
+        # state 0 prefers d=1; state 1 prefers d=2
+        model.dist.duration.logits[0, 0] = 0.0
+        model.dist.duration.logits[1, 1] = 0.0
+
+        model.dist.transition.logits.fill_(-40.0)
+        # From state 0 after d=1, go to state 1.
+        model.dist.transition.logits[0, 0, 1] = 40.0
+        # From state 0 after d=2, stay in state 0.
+        model.dist.transition.logits[0, 1, 0] = 40.0
+        # State 1 self-transition for all durations.
+        model.dist.transition.logits[1, :, 1] = 40.0
+
+        model.dist.emission.mu.copy_(torch.tensor([[0.0], [10.0]]))
+        model.dist.emission.log_var.fill_(-8.0)
+    return model
+
+
 def test_duration_index_zero_means_total_duration_one() -> None:
     model = _deterministic_duration_model(duration=2)
     logp = model.dist.duration.log_matrix(T=1)
@@ -41,22 +75,59 @@ def test_duration_index_zero_means_total_duration_one() -> None:
     assert probs[1].item() == 1.0
 
 
-def test_forward_accepts_first_segment_of_duration_two() -> None:
+def test_forward_first_segment_score_is_transition_independent() -> None:
     model = _deterministic_duration_model(duration=2)
+    # Need two states so transition probabilities are non-trivial.
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=1,
+        max_duration=3,
+        causal=True,
+        transition_type="ergodic",
+        seed=13,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions(jitter=0.0)
+    model.eval()
+    with torch.no_grad():
+        model.duration_logits_bias.fill_(20.0)
+        model.dist.initial.logits.copy_(torch.tensor([0.0, -40.0]))
+        model.dist.duration.logits.fill_(-1000.0)
+        model.dist.duration.logits[:, 1] = 0.0
+        model.dist.emission.mu.zero_()
+        model.dist.emission.log_var.zero_()
+
     x = torch.zeros(1, 2, 1)
     seq = model._build_sequence_set(x)
-    alpha = model.forward(seq)
 
-    # Endpoint t=1 with total duration 2 must be a valid first segment.
-    assert torch.isfinite(alpha[0, 1, 0, 1])
+    with torch.no_grad():
+        model.dist.transition.logits.zero_()
+    alpha_a = model.forward(seq)
+    score_a = alpha_a[0, 1, 0, 1].clone()
+
+    with torch.no_grad():
+        model.dist.transition.logits.copy_(torch.tensor([
+            [[40.0, -40.0], [40.0, -40.0], [40.0, -40.0]],
+            [[-40.0, 40.0], [-40.0, 40.0], [-40.0, 40.0]],
+        ]))
+    alpha_b = model.forward(seq)
+    score_b = alpha_b[0, 1, 0, 1]
+
+    # A first segment starting at t=0 has no predecessor transition.
+    assert torch.allclose(score_a, score_b, atol=1e-6, rtol=1e-6)
 
 
-def test_viterbi_and_filter_runtime_share_duration_two_boundaries() -> None:
+def test_viterbi_uses_previous_segment_duration_for_transition() -> None:
+    model = _two_state_model()
+    # Correct segmentation: state 0 for one bar, then state 1 for two bars.
+    x = torch.tensor([[[0.0], [10.0], [10.0]]])
+    path = model.decode(x, first_only=True, verbose=False)
+    assert path.tolist() == [0, 1, 1]
+
+
+def test_filter_runtime_share_duration_two_boundaries() -> None:
     model = _deterministic_duration_model(duration=2)
     x = torch.zeros(1, 4, 1)
-
-    path = model.decode(x, first_only=True, verbose=False)
-    assert path.shape == (4,)
 
     trace = filter_model_sequence(model, x)
     ages = trace.log_posterior[0].exp().sum(dim=1).argmax(dim=-1) + 1
