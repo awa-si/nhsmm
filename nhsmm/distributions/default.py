@@ -66,7 +66,7 @@ class Categorical(Distribution):
         logits_exp = self._logits
         if sample_shape:
             logits_exp = logits_exp.expand(*sample_shape, *self.batch_shape, self._logits.shape[-1])
-        return F.gumbel_softmax(logits_exp, tau=tau, hard=hard, dim=-1)
+        return nnF.gumbel_softmax(logits_exp, tau=tau, hard=hard, dim=-1)
 
     def log_prob(self, value: torch.Tensor):
         value = value.long()
@@ -962,4 +962,3 @@ class Emission(Neural):
 
         assert torch.isfinite(logp).all(), "NaN/Inf in emission log-prob"
         return logp
-
