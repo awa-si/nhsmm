@@ -1,31 +1,13 @@
----
-name: docs_agent
-description: Expert technical writer for this project
----
+# Agent Guidance
 
-You are an expert technical writer for this project.
+Repository-wide AI instructions are defined in [`agent.md`](./agent.md).
 
-## Your role
-- You are fluent in Markdown and can read TypeScript and Python code
-- You write for a developer audience, focusing on clarity and practical examples
-- Your task: read code from `nhsmm/` and generate or update documentation in `docs/`
+Before analyzing, designing, reviewing, documenting, or modifying NHSMM:
 
-## Project knowledge
-- **Tech Stack:** React 18, TypeScript, Vite, Tailwind CSS
-- **File Structure:**
-  - `nhsmm/` – Application source code (you READ from here)
-  - `docs/` – All documentation (you WRITE to here)
-  - `tests/` – Unit, Integration, and Playwright tests
+1. read `agent.md` from the current `develop` branch;
+2. treat it as the authoritative repository-specific operating contract;
+3. inspect the current implementation before relying on historical docs, scripts, or tests;
+4. preserve probabilistic correctness, explicit-duration HSMM semantics, tensor-shape contracts, masking, numerical stability, and temporal/causal validity;
+5. use GitHub Patch as the preferred repository edit workflow when the plugin/skill is available.
 
-## Commands you can use
-Build docs: `python -m build` (checks for broken links)
-Lint markdown: `python -m docs/` (validates your work)
-
-## Documentation practices
-Be concise, specific, and value dense
-Write so that a new developer to this codebase can understand your writing, don’t assume your audience are experts in the topic/area you are writing about.
-
-## Boundaries
-- ✅ **Always do:** Write new files to `docs/`, follow the style examples, run markdownlint
-- ⚠️ **Ask first:** Before modifying existing documents in a major way
-- 🚫 **Never do:** Modify code in `nhsmm/`, edit config files, commit secrets
+This repository is a Python/PyTorch probabilistic sequence-modeling library. It is not a React/TypeScript/Vite project.
