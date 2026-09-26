@@ -25,11 +25,9 @@ The causal `(latent_state, episode_age)` filter is wired to canonical NHSMM init
 
 The current model-bound and online-runtime contracts are verified against the real canonical `NHSMM` in a clean repository checkout. Prefix invariance and repeated `step()` equivalence with `filter_model_sequence(...)` both passed.
 
-Multi-horizon current-episode survival and cumulative end-within-h outputs are now implemented and clean-runner verified. Forecasts use only the current information set: the duration distribution available at `F_t` is frozen across requested horizons; future context is not synthesized or leaked into the forecast.
+Multi-horizon survival/end-within-horizon forecasts are implemented from the current `(state, age)` posterior and current causal duration distribution. Transition forecasts expose episode-boundary mass, next-episode state mass, next-state prior, and state-change probability without mapping latent states to semantic H1 classes.
 
 The runtime currently retains and re-encodes the causal observation prefix because the encoder does not yet expose incremental hidden/convolution state. This is causally correct and suitable for contract testing, but it is not the final bounded-cost hot path.
-
-Transition outputs and remaining inference/artifact contracts are still incomplete.
 
 ## Completed
 
@@ -73,17 +71,8 @@ Transition outputs and remaining inference/artifact contracts are still incomple
 - [x] Timestamp mode cannot silently switch after initialization; `reset()` is required.
 - [x] Runtime accepts one timestep at a time with fixed batch size.
 - [x] Current reference runtime re-encodes retained prefix until the encoder gets an incremental-state contract.
-
-### Survival / change-risk outputs
-
-- [x] `HSMMSurvivalForecast` exposes requested horizons plus `[B,H]` survival and end-within probabilities.
-- [x] `active_episode_survival_forecast(...)` averages conditional duration survival over the current joint `(state, age)` posterior.
-- [x] Horizon one is contractually equivalent to the existing one-step episode-end probability.
-- [x] Survival is non-increasing and cumulative end-within probability is non-decreasing across strictly increasing horizons.
-- [x] Horizons beyond duration support resolve to zero survival / unit cumulative end probability.
-- [x] `HSMMFilterRuntime.forecast_survival(...)` exposes the causal forecast from current runtime state.
-- [x] Forecasting before the first accepted observation fails closed.
-- [x] Forecast semantics explicitly freeze the current `F_t` duration distribution rather than inventing future context.
+- [x] `forecast_survival(...)` exposes configurable-horizon current-episode survival/end risk from `F_t`.
+- [x] `forecast_transition()` exposes one-step episode-boundary and latent-state transition quantities from `F_t`.
 
 ### Distribution hardening
 
@@ -100,7 +89,11 @@ Transition outputs and remaining inference/artifact contracts are still incomple
 - [x] One-step active-episode end probability.
 - [x] Survival probabilities at configurable future horizons.
 - [x] Probability current episode ends within configurable future horizons.
-- [ ] Transition outputs exposed in the runtime result contract for downstream evaluation.
+- [x] Transition outputs exposed for downstream evaluation:
+  - boundary transition joint mass `[B,K,K]`;
+  - next-episode state joint mass `[B,K]`;
+  - next-state prior before `x_{t+1}` `[B,K]`;
+  - state-change probability `[B]` distinct from episode-end probability.
 - [ ] Expected remaining duration, if retained after contract review.
 
 ### Causal invariants
@@ -111,7 +104,6 @@ Transition outputs and remaining inference/artifact contracts are still incomple
 - [x] Real-model prefix invariance: changing only observations after `t` leaves filtered output through `t` unchanged.
 - [x] Real-model streaming equivalence: repeated `step()` matches `filter_model_sequence(...)` within tolerance.
 - [x] Duplicate timestamps are rejected without advancing or replacing runtime state.
-- [x] Multi-horizon survival/end-within monotonicity and one-step equivalence.
 - [ ] Mask/padding invariance for valid prefixes.
 - [ ] Forward/Viterbi/filter/runtime duration indexing verified as one canonical convention.
 
@@ -141,15 +133,9 @@ Observed:
 - `tests/test_categorical_rsample.py` local targeted run: `1 passed`.
 - Lightweight local model-bound filter harness: passed.
 - Lightweight local online-runtime harness: exact batch/streaming equivalence; duplicate timestamp rejected without mutation.
-- Clean-runner smoke run `36237525927` on commit `09d9a824cf76aa281f90981aceaab8154988d260`: success; model-filter/runtime tests reported `6 passed in 1.68s`.
-- Local multi-horizon formula harness: deterministic duration support, monotonic survival/end-within, and `h=1` equivalence passed.
-- Clean-runner smoke run `36244181797` on commit `b050517afde3c4c9a397e54a4b7728ed88694d2d`: success.
-- In that clean checkout, `tests/general.py` passed and `python -m pytest -q tests/test_model_filter.py tests/test_runtime.py tests/test_survival.py` reported `11 passed in 1.32s`.
-- Those eleven tests jointly cover normalized model-bound filtering, prefix invariance, causal/eval fail-closed behavior, streaming/batch equivalence, timestamp contracts, deterministic multi-horizon duration survival, one-step hazard equivalence, monotonic cumulative end risk, invalid-horizon rejection, and runtime survival forecasting.
-
-Diagnostic note:
-
-- Run `36237400381` failed only because the workflow had not installed `pytest`; package import and `tests/general.py` were already successful. This was a runner setup failure, not an NHSMM model/runtime test failure.
+- Clean-runner smoke run `36237525927`: success; model-filter/runtime tests reported `6 passed in 1.68s`.
+- Clean-runner smoke run `36244181797`: success; `tests/test_model_filter.py`, `tests/test_runtime.py`, and `tests/test_survival.py` reported `11 passed in 1.32s`.
+- Transition forecast tests are present but must still be observed passing on a clean current checkout before the new transition slice is considered fully verified.
 
 ## Repository drift / housekeeping
 
@@ -179,17 +165,17 @@ Primary evaluation:
 
 - predictive OOS log score / likelihood where comparable;
 - duration/survival calibration;
-- cumulative end-within-h Brier score and log loss at fixed horizons;
+- change-hazard Brier score and log loss at fixed horizons;
 - downstream incremental information after controlling for current observations, HMM posterior uncertainty, and existing HMM age/persistence information.
 
 H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sample likelihood alone are not acceptance criteria.
 
 ## Next slices
 
-1. Expose transition outputs in the runtime result contract for downstream evaluation.
+1. Run the current transition forecast tests in a clean checkout and fix only observed contract errors.
 2. Verify one canonical duration indexing convention across forward/Viterbi/filter/runtime.
 3. Add mask/padding invariance for valid prefixes.
-4. Decide whether expected remaining duration belongs in the stable output contract.
+4. Decide whether expected remaining duration belongs in the public runtime contract.
 5. Add incremental encoder state for bounded-cost live inference.
 6. Clean test discovery and migrate/delete stale legacy tests/scripts.
 7. Implement artifact/version/loading contracts before Nautilus production integration.
