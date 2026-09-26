@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 
 from nhsmm import ModelConfig, NHSMM
-from nhsmm.filtering import filter_model_sequence
+from nhsmm.filtering import filter_model_sequence, next_episode_end_probability
 from nhsmm.runtime import HSMMFilterRuntime
 
 
@@ -79,3 +79,35 @@ def test_timestamp_mode_is_fixed_until_reset() -> None:
     runtime.step(torch.randn(1, model.config.n_features), timestamp=1)
     assert runtime.state is not None
     assert runtime.state.uses_timestamps is True
+
+
+def test_runtime_survival_forecast_uses_current_filter_state() -> None:
+    torch.manual_seed(37)
+    model = _make_model()
+    runtime = HSMMFilterRuntime(model)
+
+    try:
+        runtime.forecast_survival((1, 3))
+    except RuntimeError as exc:
+        assert "at least one observation" in str(exc)
+    else:
+        raise AssertionError("forecasting before initialization must fail")
+
+    runtime.step(torch.randn(1, model.config.n_features), timestamp=1)
+    assert runtime.state is not None
+
+    forecast = runtime.forecast_survival((1, 3, 6))
+    one_step = next_episode_end_probability(
+        runtime.state.filter_state,
+        runtime.state.duration_log_prob,
+    )
+
+    assert forecast.horizons.tolist() == [1, 3, 6]
+    assert forecast.survival_probability.shape == (1, 3)
+    assert forecast.end_within_probability.shape == (1, 3)
+    assert torch.allclose(
+        forecast.end_within_probability[:, 0],
+        one_step,
+        atol=1e-6,
+        rtol=1e-6,
+    )

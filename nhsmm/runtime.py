@@ -10,6 +10,11 @@ from nhsmm.filtering import (
     filter_step,
     initialize_filter,
 )
+from nhsmm.survival import (
+    HSMMSurvivalForecast,
+    HorizonInput,
+    active_episode_survival_forecast,
+)
 
 
 def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
@@ -150,6 +155,18 @@ class HSMMFilterRuntime:
 
     def reset(self) -> None:
         self.state = None
+
+    @torch.inference_mode()
+    def forecast_survival(self, horizons: HorizonInput) -> HSMMSurvivalForecast:
+        """Forecast current-episode survival using only the current information set."""
+
+        if self.state is None:
+            raise RuntimeError("runtime must process at least one observation before forecasting")
+        return active_episode_survival_forecast(
+            self.state.filter_state,
+            self.state.duration_log_prob,
+            horizons,
+        )
 
     @torch.inference_mode()
     def step(
