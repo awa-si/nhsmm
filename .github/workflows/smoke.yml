@@ -80,6 +80,29 @@ jobs:
           set -o pipefail
           python -m pytest -q tests/test_model_filter.py tests/test_runtime.py tests/test_survival.py tests/test_transitions.py tests/test_runtime_transition.py tests/test_causal_dynamic_hazard.py tests/test_inference.py tests/test_incremental_runtime.py tests/test_artifact.py tests/test_benchmark.py 2>&1 | tee smoke-logs/causal-runtime.txt
 
+      - name: Production CPU runtime benchmark
+        shell: bash
+        run: |
+          set -o pipefail
+          python - <<'PY'
+          from nhsmm import ModelConfig, NHSMM, save_artifact
+
+          config = ModelConfig(
+              n_states=3,
+              n_features=4,
+              max_duration=5,
+              causal=True,
+              dropout=0.0,
+              seed=61,
+          )
+          model = NHSMM(config, device="cpu")
+          model.initialize_distributions()
+          model.eval()
+          save_artifact(model, "/tmp/nhsmm-smoke-model.pt")
+          PY
+          python scripts/benchmark_runtime.py /tmp/nhsmm-smoke-model.pt --steps 128 --warmup 16 --batch-size 1 \
+            | tee smoke-logs/runtime-benchmark.json
+
       - name: Collect repository state
         if: always()
         shell: bash
