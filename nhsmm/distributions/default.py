@@ -85,11 +85,16 @@ class IndependentStudentT(Distribution):
     }
 
     def __init__(self, loc, scale, df, event_dim=1, validate_args=None):
-        super().__init__(validate_args=validate_args)
         self.loc = loc
         self.scale = scale
         self.df = df
         self.event_dim = event_dim
+        shape = torch.broadcast_shapes(self.loc.shape, self.scale.shape, self.df.shape)
+        if event_dim < 0 or event_dim > len(shape):
+            raise ValueError("event_dim must be between 0 and parameter rank")
+        batch_shape = torch.Size(shape[:-event_dim]) if event_dim else torch.Size(shape)
+        event_shape = torch.Size(shape[-event_dim:]) if event_dim else torch.Size()
+        super().__init__(batch_shape=batch_shape, event_shape=event_shape, validate_args=validate_args)
 
     @property
     def batch_shape(self):
