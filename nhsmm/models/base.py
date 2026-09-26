@@ -242,8 +242,8 @@ class NHSMM(nn.Module):
         # --- Initialize alpha tensor ---
         alpha = torch.full((B, T, K, Dmax), NEG_INF, device=device)
 
-        # Compute alpha[:, 0, :, :Dmax] in a vectorized way
-        max_d0 = min(Dmax, T)
+        # At t=0 only a duration of one observed timestep is valid.
+        max_d0 = min(Dmax, 1)
         alpha[:, 0, :, :max_d0] = (
             initial_logits.squeeze(1).unsqueeze(-1)      # [B, K, 1]
             + duration_logits[:, 0, :, :max_d0]         # [B, K, max_d0]
@@ -257,7 +257,6 @@ class NHSMM(nn.Module):
 
         # Combine with router sequence mask and expand
         duration_mask = duration_mask.expand(B, T, K, Dmax) & router.mask.unsqueeze(-1)
-
         for t in range(1, T):
             max_d = min(Dmax, t + 1)
             valid_d = d_idx[0,0,0,:max_d]  # [max_d]
@@ -271,7 +270,7 @@ class NHSMM(nn.Module):
             else:
                 # duration-dependent transitions: [B, T, K, D, K]
                 alpha_prev = alpha_prev  # shape already [B, max_d, K, D]
-                trans_t = transition_logits[:, t, :, :max_d, :]  # [B, K, D, K]
+                trans_t = transition_logits[:, t, :, :max_d, :]  # [B, K, D,K]
                 alpha_trans = torch.logsumexp(alpha_prev.unsqueeze(-1) + trans_t.unsqueeze(1), dim=(2,3))
 
             # --- Permute and add duration + emission logits ---
@@ -662,4 +661,3 @@ class NHSMM(nn.Module):
             self._restore_best_params()
 
         return self
-
