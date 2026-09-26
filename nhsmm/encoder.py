@@ -12,6 +12,9 @@ class DefaultEncoder(nn.Module):
     """
     Default CNN + LSTM encoder for sequences.
     Returns per-timestep features and pooled canonical context.
+
+    When ``causal=True``, the CNN uses left-only padding and the LSTM is
+    unidirectional so timestep ``t`` cannot consume observations after ``t``.
     """
 
     def __init__(
@@ -24,14 +27,16 @@ class DefaultEncoder(nn.Module):
         return_sequence: bool = True,
         use_packed: bool = True,
         dropout: float = 0.05,
+        causal: bool = False,
     ):
         super().__init__()
         self.n_features = n_features
         self.hidden_dim = hidden_dim
         self.cnn_channels = cnn_channels
         self.cnn_kernel = cnn_kernel
-        self.padding = cnn_kernel // 2
-        self.bidirectional = bidirectional
+        self.causal = bool(causal)
+        self.padding = 0 if self.causal else cnn_kernel // 2
+        self.bidirectional = False if self.causal else bidirectional
         self.return_sequence = return_sequence
         self.use_packed = use_packed
 
@@ -45,10 +50,10 @@ class DefaultEncoder(nn.Module):
             cnn_channels,
             hidden_dim,
             batch_first=True,
-            bidirectional=bidirectional
+            bidirectional=self.bidirectional
         )
         self.dropout = nn.Dropout(dropout)
-        self.out_dim = hidden_dim * (2 if bidirectional else 1)
+        self.out_dim = hidden_dim * (2 if self.bidirectional else 1)
 
         self._context = None
 
@@ -75,6 +80,8 @@ class DefaultEncoder(nn.Module):
 
         # --- CNN ---
         x_c = x.transpose(1, 2)  # [B,F,T]
+        if self.causal and self.cnn_kernel > 1:
+            x_c = nnF.pad(x_c, (self.cnn_kernel - 1, 0))
         x_c = nnF.relu(self.conv(x_c))
         x_c = x_c.transpose(1, 2)  # [B,T,F]
         x_c = self.norm(x_c)
@@ -105,6 +112,6 @@ class DefaultEncoder(nn.Module):
             return out
         if mask is not None:
             idx = mask.sum(dim=1).clamp_min(1) - 1
-            return out[torch.arange(B), idx]
+            return out[torch.arange(B, device=out.device), idx]
         return out[:, -1, :]
 
