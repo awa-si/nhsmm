@@ -168,8 +168,31 @@ class DefaultEncoder(nn.Module):
         x_c = self.norm(x_c)
         x_c = self.dropout(x_c)
 
-        out, (hidden, cell) = self.lstm(x_c, (state.hidden, state.cell))
-        out = self.dropout(out)
+        # ``stream_step`` always processes exactly one timestep. Calling
+        # ``nn.LSTM`` for a length-one sequence pays the generic recurrent
+        # sequence dispatcher cost on every bar, so evaluate the same single
+        # layer LSTM equations directly with the existing LSTM parameters.
+        x_t = x_c[:, 0]
+        hidden_prev = state.hidden[0]
+        cell_prev = state.cell[0]
+        gates = nnF.linear(
+            x_t,
+            self.lstm.weight_ih_l0,
+            self.lstm.bias_ih_l0,
+        ) + nnF.linear(
+            hidden_prev,
+            self.lstm.weight_hh_l0,
+            self.lstm.bias_hh_l0,
+        )
+        input_gate, forget_gate, cell_gate, output_gate = gates.chunk(4, dim=-1)
+        cell_t = (
+            torch.sigmoid(forget_gate) * cell_prev
+            + torch.sigmoid(input_gate) * torch.tanh(cell_gate)
+        )
+        hidden_t = torch.sigmoid(output_gate) * torch.tanh(cell_t)
+        hidden = hidden_t.unsqueeze(0)
+        cell = cell_t.unsqueeze(0)
+        out = self.dropout(hidden_t.unsqueeze(1))
 
         if self.cnn_kernel > 1:
             history = conv_input[:, -(self.cnn_kernel - 1):].clone()
