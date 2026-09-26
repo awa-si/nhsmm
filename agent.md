@@ -43,6 +43,7 @@ model_semantics:
 - components: initial|transition|duration|emission
 - pipeline: sequence -> context_encoder -> component_parameterization -> HSMM_inference -> objective_decoding_training
 - explicit_duration_semantics: preserve
+- do_not_silently_convert_HSMM_to_HMM: true
 - verify_on_inference_changes: tensor_dimensions|normalization_axes|batch_time_semantics|variable_lengths|masks|log_space|start_end_boundaries|duration_truncation|indexing
 - shape_symbols: B_batch|T_time|F_observed_features|C_context|K_states|D_max_duration
 - ambiguous_implicit_broadcasting: avoid
@@ -50,6 +51,7 @@ model_semantics:
 configuration:
 - configured_emissions: gaussian|student_t
 - transition_modes: ergodic|semi|left_to_right
+- transition_mask_or_self_transition_changes: verify_against_explicit_duration_semantics
 - unsupported_families: do_not_document_as_current
 
 distributions:
@@ -65,6 +67,7 @@ distributions:
 context_encoder:
 - distinguish: observations|masks_lengths|per_timestep_context|global_context|encoder_outputs|derived_distribution_parameters
 - padding_must_not_become_information: true
+- encoder_change_inspect: ContextEncoder|ContextRouter|SequenceSet|model_initialization|all_context_consuming_distributions
 - dimensionality_changes_propagate_to: ModelConfig|distribution_construction|context_routing|tests
 
 causality:
@@ -78,11 +81,12 @@ training:
 - heuristic_loss_terms_require: statistical_or_operational_purpose
 - preserve_separation: model_parameters|initialization|optimizer_state|scheduler_state|convergence_logic
 - verify: gradient_flow|restart_initialization|seed_behavior|independent_best_run_state|convergence_vs_early_stopping_vs_scheduler|graph_retention
+- best_run_state_must_not_leak_across_independent_initializations: true
 - estimator_change: state_explicitly_if_statistical_estimator_changes
 
 numerics:
 - support_targets: cpu|cuda_when_supported
-- verify: dtype|device|short_sequences|max_duration_boundaries|extreme_log_probs|degenerate_scales|extreme_logits|nan_inf|batched_vs_single
+- verify: dtype|device|zero_length_where_api_permits|short_sequences|max_duration_boundaries|extreme_log_probs|degenerate_scales|extreme_logits|nan_inf|batched_vs_single
 - implicit_cpu_tensor_in_cuda_path: prohibited
 - construct_from_existing_tensor_or_explicit_device_dtype: preferred
 
@@ -105,6 +109,7 @@ research:
 - separate: implementation_verification|empirical_validation
 - empirical_report_requires: dataset|chronological_split|seed|hyperparameters|metric_definition|evaluation_protocol
 - financial_experiments: chronological_only
+- temporal_separation_required_between: feature_construction|fit|model_selection|inference|downstream_trading_evaluation
 - unsupervised_representation_tuned_against_pnl: treat_as_supervised_model_selection
 - evaluate_when_relevant: occupancy|duration_distributions|transitions|likelihood_generalization|seed_stability|downstream_OOS_behavior
 
@@ -116,14 +121,11 @@ implementation:
 - comments: non_obvious_math_or_architecture_only
 
 workflow:
+- global_policy_owner: awa-si/admin/workflow.md
+- project_workflow_delta: none_currently
 - default_branch: develop
-- preferred_workspace: /tmp/nhsmm
-- local_first: imports|smoke_tests|focused_pytest|shape_invariants|deterministic_cpu_checks
-- github_actions: only_when_material_additional_evidence
-- github_patch_or_precise_remote_edit: preferred_for_remote_write
-- direct_commit_to_selected_branch: default_unless_user_requests_pr
-- force_push: prohibited
-- post_write_remote_verification: required
+- agent_scope: probabilistic_model|tensor|causal|api|research_contracts_only
+- repository_specific_verification_commands: pytest_-v|ruff_check_nhsmm_tests_scripts|black_--check_nhsmm_tests_scripts
 
 documentation:
 - describe_actual_current_behavior_only: true
