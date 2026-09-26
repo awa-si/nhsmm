@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
-
 import torch
 
 from nhsmm import ModelConfig, NHSMM, prepare_inference
