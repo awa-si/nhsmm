@@ -74,11 +74,11 @@ jobs:
           set -o pipefail
           python tests/general.py 2>&1 | tee smoke-logs/general.txt
 
-      - name: Causal model/runtime tests
+      - name: Causal model/runtime/survival tests
         shell: bash
         run: |
           set -o pipefail
-          python -m pytest -q tests/test_model_filter.py tests/test_runtime.py 2>&1 | tee smoke-logs/causal-runtime.txt
+          python -m pytest -q tests/test_model_filter.py tests/test_runtime.py tests/test_survival.py 2>&1 | tee smoke-logs/causal-runtime.txt
 
       - name: Collect repository state
         if: always()
