@@ -63,16 +63,7 @@ Current configurable model dimensions include:
 - emission family;
 - optimization and convergence parameters.
 
-The current configured emission families are:
-
-- Gaussian;
-- Student-t.
-
-The current configured transition modes are:
-
-- `ergodic`;
-- `semi`;
-- `left-to-right`.
+The current configured emission families are Gaussian and Student-t. The current configured transition modes are `ergodic`, `semi`, and `left-to-right`.
 
 ## Installation
 
@@ -112,17 +103,7 @@ Do not rely on historical examples using `HSMM`, `NeuralHSMM`, `GaussianHSMM`, o
 
 ## Context-aware modeling
 
-NHSMM can derive neural context from observed sequences and use it to parameterize latent-state distributions.
-
-The implementation distinguishes:
-
-- observed sequences;
-- masks and sequence lengths;
-- per-timestep context;
-- canonical/global context;
-- latent-state distribution parameters.
-
-This separation is important for variable-length batching and for keeping the probabilistic model contract explicit.
+NHSMM can derive neural context from observed sequences and use it to parameterize latent-state distributions. The implementation distinguishes observed sequences, masks and sequence lengths, per-timestep context, canonical/global context, and latent-state distribution parameters.
 
 ## Temporal semantics
 
@@ -143,7 +124,7 @@ ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 ```
 
-Maintained automated tests live under `tests/test_*.py`; see [Testing and verification](docs/testing.md) for discovery, integration-smoke, and runtime-benchmark policy.
+Maintained automated tests live under `tests/test_*.py`; see [Testing and verification](docs/testing.md) for discovery, integration-smoke, and runtime-benchmark policy. Contribution guidance lives in [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md).
 
 Repository control is split deliberately:
 
@@ -152,10 +133,11 @@ Repository control is split deliberately:
 - [`docs/model.md`](docs/model.md) documents the model/project contract for human-facing repository guidance;
 - the global Git/edit/CI workflow is owned by `awa-si/admin/workflow.md`.
 
-`agent.md` is therefore not the substantive model specification. It routes AI work to the relevant contract owners.
+`agent.md` routes AI work to the relevant contract owners; it is not the substantive model specification.
 
 ## Documentation
 
+- [Project/evaluation state](docs/state.md)
 - [AI-facing domain contract](docs/agent-domain.md)
 - [Model / project governance](docs/model.md)
 - [Testing and verification](docs/testing.md)
