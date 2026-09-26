@@ -280,9 +280,22 @@ class Neural(nn.Module, ABC):
             elif ctx.ndim != 2:
                 raise RuntimeError(f"Unsupported context ndim={ctx.ndim}")
         flat_ctx = ctx.reshape(-1, ctx.shape[-1])
-        if self._proj is not None:
-            flat_ctx = self._proj(flat_ctx)
-        delta = self.context_net(flat_ctx)
+        fused_weight = getattr(self, "_inference_context_weight", None)
+        fused_bias = getattr(self, "_inference_context_bias", None)
+        if (
+            not self.training
+            and fused_weight is not None
+            and isinstance(self.context_net, nn.Sequential)
+            and len(self.context_net) == 4
+        ):
+            delta = nnF.linear(flat_ctx, fused_weight, fused_bias)
+            delta = self.context_net[1](delta)
+            delta = self.context_net[2](delta)
+            delta = self.context_net[3](delta)
+        else:
+            if self._proj is not None:
+                flat_ctx = self._proj(flat_ctx)
+            delta = self.context_net(flat_ctx)
         delta = delta.reshape(*ctx.shape[:-1], *self._shape)
         delta = self.final_activation_fn(delta)
         if grad_scale is not None:

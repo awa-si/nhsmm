@@ -4,9 +4,56 @@ from collections.abc import Mapping
 from typing import Optional, Union
 
 import torch
+import torch.nn as nn
 
 from nhsmm.config import ModelConfig
 from nhsmm.models import NHSMM
+
+
+_INFERENCE_CONTEXT_WEIGHT = "_inference_context_weight"
+_INFERENCE_CONTEXT_BIAS = "_inference_context_bias"
+
+
+def _set_nonpersistent_buffer(module: nn.Module, name: str, value: Optional[torch.Tensor]) -> None:
+    if name in module._buffers:
+        module._buffers[name] = value
+        return
+    module.register_buffer(name, value, persistent=False)
+
+
+def _prepare_context_fastpath(component: nn.Module, *, enabled: bool) -> None:
+    """Prepare an inference-only fused context affine without changing state_dict."""
+
+    if not enabled:
+        if _INFERENCE_CONTEXT_WEIGHT in component._buffers:
+            component._buffers[_INFERENCE_CONTEXT_WEIGHT] = None
+        if _INFERENCE_CONTEXT_BIAS in component._buffers:
+            component._buffers[_INFERENCE_CONTEXT_BIAS] = None
+        return
+
+    projection = getattr(component, "_proj", None)
+    context_net = getattr(component, "context_net", None)
+    if not isinstance(projection, nn.Linear):
+        return
+    if not isinstance(context_net, nn.Sequential) or len(context_net) != 4:
+        return
+    first = context_net[0]
+    if not isinstance(first, nn.Linear):
+        return
+
+    with torch.no_grad():
+        weight = first.weight @ projection.weight
+        bias: Optional[torch.Tensor]
+        if first.bias is None:
+            bias = None
+        else:
+            bias = first.bias.clone()
+        if projection.bias is not None:
+            projected_bias = first.weight @ projection.bias
+            bias = projected_bias if bias is None else bias + projected_bias
+
+    _set_nonpersistent_buffer(component, _INFERENCE_CONTEXT_WEIGHT, weight)
+    _set_nonpersistent_buffer(component, _INFERENCE_CONTEXT_BIAS, bias)
 
 
 def prepare_inference(model: NHSMM, *, freeze: bool = True) -> NHSMM:
@@ -31,6 +78,9 @@ def prepare_inference(model: NHSMM, *, freeze: bool = True) -> NHSMM:
     model.eval()
     if freeze:
         model.requires_grad_(False)
+
+    for component in model.dist.children():
+        _prepare_context_fastpath(component, enabled=freeze)
     return model
 
 
