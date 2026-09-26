@@ -177,20 +177,19 @@ class NHSMM(nn.Module):
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[torch.Tensor] = None) -> SequenceSet:
 
-        X, mask = self._ensure_tensor(X, return_mask=True)  # X: [B,T,F], mask: [B,T]
+        X, mask = self._ensure_tensor(X, return_mask=True)
         B, T, F = X.shape
         device = X.device
 
         if F != self.config.n_features:
             raise ValueError(f"Feature dimension mismatch: expected {self.config.n_features}, got {F}")
 
-        # --- Build context ---
         if context is None:
             context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
             if self.config.causal:
                 canonical = context_tensor[:, :1]
         else:
-            context_tensor = self._ensure_tensor(context)  # [B,T,C] or broadcasted
+            context_tensor = self._ensure_tensor(context)
             if context_tensor.ndim == 2:
                 context_tensor = context_tensor.unsqueeze(0).expand(B, T, -1)
             elif context_tensor.ndim == 3:
@@ -200,14 +199,13 @@ class NHSMM(nn.Module):
                 raise ValueError(f"Unsupported context ndim {context_tensor.ndim}")
             canonical = context_tensor[:, :1]
 
-        # --- Compute emission log-probs ---
         K = self.config.n_states
         if T == 0:
             log_probs = X.new_empty(B, 0, K)
         else:
             dist = self.dist.emission.forward(context=context_tensor, return_dist=True)
-            X_exp = X.unsqueeze(2).expand(-1, -1, K, -1)  # [B,T,K,F]
-            log_probs = dist.log_prob(X_exp)               # [B,T,K]
+            X_exp = X.unsqueeze(2).expand(-1, -1, K, -1)
+            log_probs = dist.log_prob(X_exp)
             log_probs = log_probs.masked_fill(~mask.unsqueeze(-1), float("-inf"))
 
         return SequenceSet(
@@ -255,7 +253,6 @@ class NHSMM(nn.Module):
         emit_sums = emit_sums.clamp(min=MIN_LOGITS, max=MAX_LOGITS)
 
         alpha = torch.full((B, T, K, Dmax), NEG_INF, device=device)
-
         alpha[:, 0, :, 0] = (
             initial_logits.squeeze(1)
             + duration_logits[:, 0, :, 0]
@@ -279,16 +276,16 @@ class NHSMM(nn.Module):
                     predecessor = initial_logits.squeeze(1)
                 else:
                     prev_t = start - 1
-                    prev_alpha = alpha[:, prev_t]  # [B,K,D]
+                    prev_alpha = alpha[:, prev_t]
                     if self.dist.transition.max_duration is None:
                         prev_state = torch.logsumexp(prev_alpha, dim=-1)
-                        trans = transition_logits[:, prev_t]  # [B,K_src,K_dst]
+                        trans = transition_logits[:, prev_t]
                         predecessor = torch.logsumexp(
                             prev_state.unsqueeze(-1) + trans,
                             dim=1,
                         )
                     else:
-                        trans = transition_logits[:, prev_t]  # [B,K_src,D_prev,K_dst]
+                        trans = transition_logits[:, prev_t]
                         predecessor = torch.logsumexp(
                             prev_alpha.unsqueeze(-1) + trans,
                             dim=(1, 2),
@@ -580,7 +577,6 @@ class NHSMM(nn.Module):
                 module.load_state_dict(self._best_state[name])
 
     def _compute_loss(self,
-        self,
         X: torch.Tensor, context: torch.Tensor = None,
         loss_bias: float = 1e-3, it: int = 0, max_iter: int = 20,
         t_min: float = 0.3, t_max: float = 1.0) -> tuple[torch.Tensor, torch.Tensor]:
