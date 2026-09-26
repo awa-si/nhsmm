@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Optional, Union
 
 import torch
 
@@ -42,6 +43,39 @@ class HSMMFilterState:
     @property
     def age_posterior(self) -> torch.Tensor:
         return torch.logsumexp(self.log_posterior, dim=-2).exp()
+
+
+@dataclass(frozen=True)
+class HSMMFilterTrace:
+    """Causal filtering trace over a padded batch.
+
+    ``log_posterior[b, t, k, a]`` stores the normalized posterior over
+    current latent state and current episode age for every valid timestep.
+    Timesteps beyond ``lengths[b]`` remain ``-inf``.
+    """
+
+    log_posterior: torch.Tensor  # [B, T, K, D]
+    lengths: torch.Tensor  # [B]
+
+    def __post_init__(self) -> None:
+        value = self.log_posterior
+        lengths = self.lengths
+        if not isinstance(value, torch.Tensor):
+            raise TypeError("log_posterior must be a torch.Tensor")
+        if value.ndim != 4:
+            raise ValueError(f"log_posterior must be [B,T,K,D], got {value.shape}")
+        if not value.is_floating_point():
+            raise TypeError("log_posterior must use a floating dtype")
+        if not isinstance(lengths, torch.Tensor):
+            raise TypeError("lengths must be a torch.Tensor")
+        if lengths.ndim != 1 or lengths.shape[0] != value.shape[0]:
+            raise ValueError(f"lengths must be [B], got {lengths.shape}")
+        if (lengths < 0).any() or (lengths > value.shape[1]).any():
+            raise ValueError("lengths contain values outside the trace time dimension")
+
+    @property
+    def state_posterior(self) -> torch.Tensor:
+        return torch.logsumexp(self.log_posterior, dim=-1).exp()
 
 
 def _as_batched(tensor: torch.Tensor, ndim: int, name: str) -> torch.Tensor:
@@ -222,3 +256,96 @@ def next_episode_end_probability(
     if not torch.isfinite(result).all():
         raise ValueError("episode-end probability is non-finite")
     return result
+
+
+def filter_model_sequence(
+    model: Any,
+    X: Union[torch.Tensor, list[torch.Tensor]],
+    context: Optional[torch.Tensor] = None,
+    temperature: Optional[float] = None,
+) -> HSMMFilterTrace:
+    """Run the causal `(state, age)` filter using an initialized NHSMM.
+
+    The boundary decision between observations ``t-1`` and ``t`` uses the
+    duration and transition distributions conditioned only on information
+    available at ``t-1``. The observation at ``t`` enters only through its
+    emission likelihood after that boundary propagation. This ordering avoids
+    using ``x_t`` to decide whether the preceding episode had already ended.
+
+    This function is intentionally stateless. It establishes the model-bound
+    filtering semantics before a mutable live ``step()`` adapter is added.
+    """
+
+    config = getattr(model, "config", None)
+    if not bool(getattr(config, "causal", False)):
+        raise ValueError("causal model filtering requires ModelConfig.causal=True")
+    if bool(getattr(model, "training", False)):
+        raise RuntimeError("model must be in eval mode before causal filtering")
+    if getattr(model, "dist", None) is None:
+        raise RuntimeError("model distributions are not initialized")
+
+    with torch.inference_mode():
+        sequence = model._build_sequence_set(X, context=context)
+        B, T, K = sequence.log_probs.shape
+        D = int(model.dist.duration.max_duration)
+        trace = sequence.log_probs.new_full((B, T, K, D), float("-inf"))
+
+        if T == 0:
+            return HSMMFilterTrace(trace, sequence.lengths.clone())
+
+        initial_logits = model.dist.initial.log_matrix(
+            context=sequence.canonical,
+            temperature=temperature,
+            T=T,
+        )
+        duration_logits = model.dist.duration.log_matrix(
+            context=sequence.contexts,
+            temperature=temperature,
+            T=T,
+            soft_dmax=model.duration_logits_bias,
+        )
+        transition_logits = model.dist.transition.log_matrix(
+            context=sequence.contexts,
+            temperature=temperature,
+            T=T,
+            soft_dmax=model.duration_logits_bias,
+        )
+
+        expected_initial = (B, 1, K)
+        expected_duration = (B, T, K, D)
+        expected_transition = (B, T, K, D, K)
+        if initial_logits.shape != expected_initial:
+            raise ValueError(
+                f"initial logits must be {expected_initial}, got {initial_logits.shape}"
+            )
+        if duration_logits.shape != expected_duration:
+            raise ValueError(
+                f"duration logits must be {expected_duration}, got {duration_logits.shape}"
+            )
+        if transition_logits.shape != expected_transition:
+            raise ValueError(
+                f"transition logits must be {expected_transition}, got {transition_logits.shape}"
+            )
+
+        for b in range(B):
+            length = int(sequence.lengths[b].item())
+            if length == 0:
+                continue
+
+            state = initialize_filter(
+                initial_logits[b, 0],
+                sequence.log_probs[b, 0],
+                D,
+            )
+            trace[b, 0] = state.log_posterior[0]
+
+            for t in range(1, length):
+                state = filter_step(
+                    state,
+                    sequence.log_probs[b, t],
+                    duration_logits[b, t - 1],
+                    transition_logits[b, t - 1],
+                )
+                trace[b, t] = state.log_posterior[0]
+
+        return HSMMFilterTrace(trace, sequence.lengths.clone())
