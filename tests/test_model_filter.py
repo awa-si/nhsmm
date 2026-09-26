@@ -53,6 +53,43 @@ def test_model_filter_is_prefix_invariant() -> None:
     )
 
 
+def test_causal_outputs_are_invariant_to_right_padding() -> None:
+    torch.manual_seed(29)
+    model = _make_model()
+    short = torch.randn(4, model.config.n_features)
+    long = torch.randn(7, model.config.n_features)
+
+    single = model._build_sequence_set([short])
+    batched = model._build_sequence_set([short, long])
+
+    assert torch.equal(single.lengths, torch.tensor([4]))
+    assert torch.equal(batched.lengths, torch.tensor([4, 7]))
+    assert torch.allclose(single.contexts[0], batched.contexts[0, :4], atol=1e-6, rtol=1e-6)
+    assert torch.allclose(single.log_probs[0], batched.log_probs[0, :4], atol=1e-6, rtol=1e-6)
+
+    with torch.inference_mode():
+        alpha_single = model.forward(single)
+        alpha_batched = model.forward(batched)
+
+    posterior_single = alpha_single[0, :4] - torch.logsumexp(
+        alpha_single[0, :4].flatten(1), dim=1
+    ).view(4, 1, 1)
+    posterior_batched = alpha_batched[0, :4] - torch.logsumexp(
+        alpha_batched[0, :4].flatten(1), dim=1
+    ).view(4, 1, 1)
+    assert torch.allclose(posterior_single, posterior_batched, atol=1e-6, rtol=1e-6)
+
+    trace_single = filter_model_sequence(model, [short])
+    trace_batched = filter_model_sequence(model, [short, long])
+    assert torch.allclose(
+        trace_single.log_posterior[0, :4],
+        trace_batched.log_posterior[0, :4],
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert torch.isneginf(trace_batched.log_posterior[0, 4:]).all()
+
+
 def test_model_filter_requires_eval_and_causal_mode() -> None:
     model = _make_model()
     x = torch.randn(1, 3, model.config.n_features)
