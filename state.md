@@ -21,7 +21,11 @@ NHSMM latent states must remain semantically neutral (`0..K-1`) for this evaluat
 
 **Phase:** pre-test integration readiness
 
-A standalone causal HSMM filtering core now exists over `(latent_state, episode_age)`. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
+**Last repository scan:** `develop` at `6556e44caf8d260f4e7db1ceffe86b53b04bf981`.
+
+A standalone causal HSMM filtering core exists over `(latent_state, episode_age)`. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
+
+The current repository contains both the canonical `NHSMM`/`ModelConfig` implementation and historical scripts/tests that target removed APIs. Those historical consumers are repository drift and are not part of the current model contract.
 
 ## Completed
 
@@ -80,7 +84,7 @@ Commits:
 - [ ] Ensure repeated processing of the same observation/timestamp cannot advance filter state twice once timestamp semantics are introduced.
 - [ ] Keep filtering distinct from retrospective smoothing and Viterbi decoding at the public API boundary.
 
-The existing sequence `forward()` remains an endpoint/segment recursion. The new causal filter is a separate recursion and must remain semantically distinct.
+The existing sequence `forward()` remains an endpoint/segment recursion. The causal filter is a separate recursion and must remain semantically distinct.
 
 ### P0 — temporal outputs
 
@@ -118,11 +122,66 @@ These outputs must not require semantic state labels.
 - [ ] Ensure dropout/training behavior cannot affect production filtering.
 - [ ] Keep mutable online filter state separate from trainable model parameters and offline training state.
 
+## Repository scan findings
+
+These items are verified repository state but are not evidence of NHSMM model quality.
+
+### Canonical source surface
+
+Current package core on `develop`:
+
+- `nhsmm/config.py`
+- `nhsmm/context.py`
+- `nhsmm/convergence.py`
+- `nhsmm/data.py`
+- `nhsmm/encoder.py`
+- `nhsmm/filtering.py`
+- `nhsmm/distributions/default.py`
+- `nhsmm/models/base.py`
+
+`nhsmm/__init__.py` currently exports `ModelConfig`, `DistributionSet`, `DefaultEncoder`, `Convergence`, and `NHSMM`. The filtering helpers are currently internal/module-level and are not exported through the package root.
+
+### Test discovery drift
+
+The repository test files are named without the normal `pytest` `test_*.py` / `*_test.py` pattern, including the new `tests/general.py` and `tests/filtering.py`.
+
+Consequences:
+
+- `python tests/general.py` and `python tests/filtering.py` are valid explicit smoke executions;
+- a plain `pytest -v` must not currently be assumed to collect these files;
+- test-file naming/discovery must be cleaned before `pytest -v` can be treated as the canonical full-suite command.
+
+Historical test drift remains. For example, `tests/neural.py` imports removed modules/types such as `nhsmm.models.neural.NeuralHSMM`, `NHSMMConfig`, and `nhsmm.defaults.DTYPE`; `tests/ctx_encoder.py` also uses stale constructor arguments. These files must be migrated or removed rather than driving the canonical API backward.
+
+### Script drift
+
+`scripts/tune.py` still targets historical APIs including `NeuralHSMM`, `NHSMMConfig`, `nhsmm.utilities`, and `nhsmm.defaults`, and contains best-permutation/Hungarian state accuracy logic. `scripts/tune_gaussian.py` and other historical consumers require the same current-contract review before use.
+
+Do not use these scripts for Nautilus evaluation until they are migrated to the canonical `ModelConfig` + `NHSMM` API and causal evaluation semantics.
+
+### Distribution issue found by scan
+
+`nhsmm/distributions/default.py` imports `torch.nn.functional` as `nnF`, but `Categorical.rsample()` currently calls `F.gumbel_softmax(...)`. That path will raise `NameError` if exercised.
+
+This is a verified implementation defect, but it is not currently established as part of the causal Nautilus inference path. Fix it before relying on `Categorical.rsample()` or claiming the custom categorical distribution is fully operational/reparameterizable.
+
+### Packaging/status drift
+
+`README.md` and project guidance describe NHSMM as pre-1.0 research-stage, while `pyproject.toml` still declares `Development Status :: 4 - Beta`.
+
+`pyproject.toml` also uses broad lower-bounded dependencies such as `torch>=2.2`; the first GitHub smoke therefore installed the current CUDA-enabled PyTorch distribution and large CUDA dependency set even though the smoke explicitly ran the model on CPU. This is operationally expensive for frequent CI and should not be repeated for routine local checks.
+
+### Workflow state
+
+`.github/workflows/smoke.yml` remains in the repository from the first clean-run smoke. It supports manual `workflow_dispatch`; its push trigger is restricted to changes to the workflow file itself and the job additionally requires the bootstrap commit message, so ordinary `develop` source commits do not run it automatically.
+
+Use local ChatGPT/container tests for routine small changes. Keep the workflow only as a clean-runner/integration diagnostic unless it no longer provides useful additional evidence.
+
 ## Verification
 
 ### General functional smoke
 
-`tests/general.py` verifies the small deterministic contracts introduced during pre-test preparation:
+`tests/general.py` checks:
 
 - explicit CPU device ownership;
 - causal encoder is unidirectional;
@@ -134,14 +193,14 @@ Observed GitHub Actions smoke run: `36234225103` — success.
 
 ### Causal filtering contracts
 
-`tests/filtering.py` verifies:
+`tests/filtering.py` checks:
 
 - deterministic duration hazard conversion;
 - episode-age progression and reset;
 - transitions only at episode boundaries;
 - repeated posterior normalization.
 
-Observed local ChatGPT runtime execution: success on CPU with PyTorch `2.10.0+cpu`.
+Observed local ChatGPT runtime execution: success on CPU.
 
 ## Nautilus evaluation gate
 
@@ -167,6 +226,16 @@ Primary evaluation families:
 
 H1 structure accuracy, Hungarian state matching, visual state plausibility, or in-sample likelihood alone are not acceptance criteria.
 
+## Next slices
+
+1. Wire `nhsmm/filtering.py` to the current NHSMM initial/duration/transition/emission/context outputs.
+2. Add a causal incremental runtime API without reusing retrospective `forward()` semantics.
+3. Add multi-horizon survival/change-hazard outputs and streaming-equivalence tests.
+4. Clean test discovery so the intended current tests are collected by standard `pytest` commands.
+5. Fix the verified `Categorical.rsample()` functional alias defect before that path is used.
+6. Migrate or delete stale legacy tests/scripts once the canonical runtime path is stable.
+7. Implement artifact/version/inference contracts before production Nautilus integration.
+
 ## Later work
 
 After causal correctness and the first research comparison are established:
@@ -174,5 +243,4 @@ After causal correctness and the first research comparison are established:
 - optimize online filtering to bounded `O(K * D)`-class state where practical;
 - benchmark CPU inference latency and allocations;
 - harden serialization/runtime compatibility;
-- clean or migrate stale legacy tests/scripts;
 - update public documentation from measured behavior rather than capability claims.
