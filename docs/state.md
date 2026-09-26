@@ -71,7 +71,7 @@ The maintained automated test contract is now the normal pytest-discovered `test
 
 - [x] Current latent-state posterior.
 - [x] Current state-age posterior.
- [x] One-step active-episode end probability.
+- [x] One-step active-episode end probability.
 - [x] Configurable-horizon survival probability.
 - [x] Configurable-horizon end-within probability.
 - [x] Boundary transition joint mass `[B,K,K]`.
