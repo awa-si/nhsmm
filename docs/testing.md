@@ -27,7 +27,9 @@ The production-reference CPU runtime benchmark operates on a saved NHSMM artifac
 python scripts/benchmark_runtime.py MODEL_ARTIFACT --steps 128 --warmup 16 --batch-size 1
 ```
 
-The benchmark reports step-latency statistics, Python heap peak, and bounded runtime-state tensor size. Absolute hosted-runner timings are measurements, not pass/fail thresholds.
+The benchmark reports step-latency statistics, Python heap peak, and bounded runtime-state tensor size. Latency and Python-allocation measurements use separate passes: `tracemalloc` is not active during the latency pass because allocation tracing materially perturbs one-step timing. Benchmark inputs are generated before the measured loops so RNG/allocation setup is not included in step latency.
+
+Absolute hosted-runner timings are measurements, not pass/fail thresholds. Performance work should use a local editable install and before/after measurements on the same host; the clean runner is only a final integration reference.
 
 ## Integration smoke
 
