@@ -141,6 +141,22 @@ The component projects and maps context into an additive parameter delta. The de
 
 A `timestep` selects one causal context position where supported.
 
+## Causal duration-context contract
+
+For `ModelConfig.causal=True`, the canonical interpretation is **dynamic causal hazard**, not an episode-start duration draw that is frozen for the lifetime of the episode.
+
+At filtered timestep `t`, `Duration.log_matrix(...)` under the current information set `F_t` provides the duration law used to derive the end/continue hazard for the currently active episode age. The boundary decision `t -> t+1` must therefore use duration and transition quantities conditioned only on `F_t`.
+
+Consequences:
+
+- the duration law may change at later timesteps as causal context changes;
+- consumers must not use `F_{t+1}` to decide whether the episode already ended between `t` and `t+1`;
+- the runtime/filter contract is boundary-time causal: current context determines the next boundary hazard;
+- a multi-horizon survival forecast may freeze the current `F_t` duration law across its forecast horizon, but that is a forecasting approximation and does not redefine the online update semantics;
+- a causal forward/Viterbi implementation must be mathematically equivalent to this age/hazard interpretation rather than scoring a completed segment from context observed only at its endpoint.
+
+For non-causal retrospective inference, a separate explicitly documented segment-scoring convention may be used; it must not be presented as causal filtering semantics.
+
 ## Temperature
 
 Temperature scaling is applied to finite trainable/context-modulated parameters before structural hard masks are imposed. This ordering preserves exact `-inf` support for impossible durations/transitions.
