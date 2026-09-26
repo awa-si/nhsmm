@@ -10,6 +10,7 @@ from torch.nn.utils.rnn import pad_sequence
 from nhsmm import Convergence, DefaultEncoder
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet
 from nhsmm.distributions import Initial, Duration, Transition, Emission
+from nhsmm.filtering import duration_log_hazard
 from nhsmm.config import DTYPE, EPS, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
 
 
@@ -217,12 +218,113 @@ class NHSMM(nn.Module):
             log_probs=log_probs
         )
 
+    def _forward_causal_hazard(
+        self,
+        X: SequenceSet,
+        router: ContextRouter,
+        temperature: Optional[float] = None,
+    ) -> torch.Tensor:
+        """Unnormalized causal forward recursion over ``(state, episode_age)``.
+
+        Boundary ``t-1 -> t`` uses duration and transition quantities conditioned
+        only on ``F_{t-1}``; ``x_t`` enters after propagation through its emission.
+        """
+
+        B, T, K = router.log_probs.shape[:3]
+        D = int(self.dist.duration.max_duration)
+        alpha = router.log_probs.new_full((B, T, K, D), float("-inf"))
+        if T == 0:
+            return alpha
+
+        initial_logits = self.dist.initial.log_matrix(
+            context=router.canonical,
+            temperature=temperature,
+            T=T,
+        )
+        duration_logits = self.dist.duration.log_matrix(
+            context=router.context,
+            temperature=temperature,
+            T=T,
+            soft_dmax=self.duration_logits_bias,
+        )
+        transition_logits = self.dist.transition.log_matrix(
+            context=router.context,
+            temperature=temperature,
+            T=T,
+            soft_dmax=self.duration_logits_bias,
+        )
+
+        expected_initial = (B, 1, K)
+        expected_duration = (B, T, K, D)
+        if initial_logits.shape != expected_initial:
+            raise ValueError(f"initial logits must be {expected_initial}, got {initial_logits.shape}")
+        if duration_logits.shape != expected_duration:
+            raise ValueError(f"duration logits must be {expected_duration}, got {duration_logits.shape}")
+
+        duration_dependent_transition = self.dist.transition.max_duration is not None
+        expected_transition = (B, T, K, D, K) if duration_dependent_transition else (B, T, K, K)
+        if transition_logits.shape != expected_transition:
+            raise ValueError(
+                f"transition logits must be {expected_transition}, got {transition_logits.shape}"
+            )
+
+        log_end, log_continue = duration_log_hazard(
+            duration_logits.reshape(B * T, K, D)
+        )
+        log_end = log_end.reshape(B, T, K, D)
+        log_continue = log_continue.reshape(B, T, K, D)
+
+        valid0 = X.lengths > 0
+        alpha[valid0, 0, :, 0] = (
+            initial_logits[valid0, 0] + router.log_probs[valid0, 0]
+        )
+
+        for t in range(1, T):
+            valid = t < X.lengths
+            if not bool(valid.any()):
+                break
+
+            previous = alpha[:, t - 1]
+            predicted = previous.new_full((B, K, D), float("-inf"))
+
+            if D > 1:
+                predicted[..., 1:] = (
+                    previous[..., :-1] + log_continue[:, t - 1, :, :-1]
+                )
+
+            boundary = previous + log_end[:, t - 1]
+            if duration_dependent_transition:
+                new_episode = torch.logsumexp(
+                    boundary.unsqueeze(-1) + transition_logits[:, t - 1],
+                    dim=(1, 2),
+                )
+            else:
+                boundary_state = torch.logsumexp(boundary, dim=-1)
+                new_episode = torch.logsumexp(
+                    boundary_state.unsqueeze(-1) + transition_logits[:, t - 1],
+                    dim=1,
+                )
+            predicted[..., 0] = new_episode
+            candidate = predicted + router.log_probs[:, t].unsqueeze(-1)
+            alpha[:, t] = torch.where(
+                valid.view(B, 1, 1),
+                candidate,
+                alpha[:, t],
+            )
+
+        return alpha
+
     def forward(self,
         X: SequenceSet,
         context: Optional[Union[torch.Tensor, ContextRouter]] = None,
         temperature: Optional[float] = None, timestep: Optional[int] = None) -> torch.Tensor:
 
         router = ContextRouter.from_tensor(X, context=context) if not isinstance(context, ContextRouter) else context
+        if self.config.causal:
+            if timestep is not None:
+                raise ValueError("timestep is not supported by the full causal forward recursion")
+            return self._forward_causal_hazard(X, router, temperature=temperature)
+
         Dmax = self.dist.duration.max_duration
         B, T, K = router.log_probs.shape[:3]
         device = router.log_probs.device
@@ -305,6 +407,92 @@ class NHSMM(nn.Module):
         alpha = alpha.masked_fill(~length_mask.unsqueeze(-1).unsqueeze(-1), NEG_INF)
         return alpha
 
+    def _viterbi_causal_hazard(
+        self,
+        X: SequenceSet,
+        router: ContextRouter,
+    ) -> List[torch.Tensor]:
+        """MAP causal decoding over ``(state, episode_age)`` under dynamic hazards."""
+
+        K = self.config.n_states
+        D = int(self.dist.duration.max_duration)
+        predicted: List[torch.Tensor] = []
+
+        for b in range(router.log_probs.shape[0]):
+            L = int(X.lengths[b].item())
+            if L == 0:
+                predicted.append(router.log_probs.new_empty(0, dtype=torch.long))
+                continue
+
+            initial_logits = self.dist.initial.log_matrix(
+                context=router.canonical[b:b + 1], T=L
+            )[0, 0]
+            duration_logits = self.dist.duration.log_matrix(
+                context=router.context[b:b + 1, :L],
+                T=L,
+                soft_dmax=self.duration_logits_bias,
+            )[0]
+            transition_logits = self.dist.transition.log_matrix(
+                context=router.context[b:b + 1, :L],
+                T=L,
+                soft_dmax=self.duration_logits_bias,
+            )[0]
+            log_end, log_continue = duration_log_hazard(duration_logits)
+
+            score = router.log_probs.new_full((L, K, D), float("-inf"))
+            prev_state = torch.full((L, K, D), -1, dtype=torch.long, device=score.device)
+            prev_age = torch.full((L, K, D), -1, dtype=torch.long, device=score.device)
+            score[0, :, 0] = initial_logits + router.log_probs[b, 0]
+
+            state_indices = torch.arange(K, device=score.device).view(K, 1)
+            age_indices = torch.arange(max(D - 1, 0), device=score.device).view(1, -1)
+            duration_dependent_transition = self.dist.transition.max_duration is not None
+
+            for t in range(1, L):
+                if D > 1:
+                    continuation = (
+                        score[t - 1, :, :-1] + log_continue[t - 1, :, :-1]
+                    )
+                    score[t, :, 1:] = continuation + router.log_probs[b, t].unsqueeze(-1)
+                    prev_state[t, :, 1:] = state_indices.expand(K, D - 1)
+                    prev_age[t, :, 1:] = age_indices.expand(K, D - 1)
+
+                boundary = score[t - 1] + log_end[t - 1]
+                if duration_dependent_transition:
+                    candidates = boundary.unsqueeze(-1) + transition_logits[t - 1]
+                    flat = candidates.reshape(K * D, K)
+                    boundary_score, flat_index = flat.max(dim=0)
+                    boundary_prev_state = flat_index // D
+                    boundary_prev_age = flat_index % D
+                else:
+                    boundary_state, boundary_age = boundary.max(dim=-1)
+                    candidates = boundary_state.unsqueeze(-1) + transition_logits[t - 1]
+                    boundary_score, boundary_prev_state = candidates.max(dim=0)
+                    boundary_prev_age = boundary_age[boundary_prev_state]
+
+                score[t, :, 0] = boundary_score + router.log_probs[b, t]
+                prev_state[t, :, 0] = boundary_prev_state
+                prev_age[t, :, 0] = boundary_prev_age
+
+            flat_index = int(score[L - 1].reshape(-1).argmax().item())
+            state = flat_index // D
+            age = flat_index % D
+            path = torch.empty(L, dtype=torch.long, device=score.device)
+
+            for t in range(L - 1, -1, -1):
+                path[t] = state
+                if t == 0:
+                    break
+                state_next = int(prev_state[t, state, age].item())
+                age_next = int(prev_age[t, state, age].item())
+                if state_next < 0 or age_next < 0:
+                    raise RuntimeError("causal Viterbi backpointer is incomplete")
+                state, age = state_next, age_next
+
+            predicted.append(path)
+
+        return predicted
+
     def _viterbi(self,
         X: SequenceSet,
         context: Optional[Union[torch.Tensor, ContextRouter]] = None) -> List[torch.Tensor]:
@@ -313,6 +501,9 @@ class NHSMM(nn.Module):
         Dmax = self.dist.duration.max_duration
 
         router = context if isinstance(context, ContextRouter) else ContextRouter.from_tensor(X, context=context)
+        if self.config.causal:
+            return self._viterbi_causal_hazard(X, router)
+
         B, T_max, _ = router.log_probs.shape
         device = router.log_probs.device
 
