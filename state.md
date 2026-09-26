@@ -76,9 +76,14 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 
 ### Distribution hardening
 
-- [x] Canonical package import fixes the `Categorical.rsample()` functional alias defect.
-- [x] A pytest-discoverable categorical rsample test covers soft output, hard one-hot output, and gradient flow.
-- [ ] Remove the remaining non-local `F = nnF` package-init coupling with a line-preserving direct patch.
+- [x] `Categorical.rsample()` calls `nnF.gumbel_softmax(...)` directly; the previous package-init alias coupling is no longer required.
+- [x] `Categorical.sample(...)` and `IndependentStudentT.rsample()` preserve sample/batch shape contracts.
+- [x] Duration and transition structural masks are hard zero-support masks after normalization.
+- [x] Duration index `i` denotes total duration `i + 1`; transition duration axes use the same convention.
+- [x] `Transition(max_duration=None)` and `max_duration=1` are supported consistently.
+- [x] Gaussian and Student-t emission construction/log-probability contracts are covered by focused tests.
+- [x] `nhsmm/distributions/README.md` documents the current `default.py` shapes and semantics.
+- [x] `tests/test_default_distributions.py` covers the focused distribution contract.
 
 ## P0 blockers before historical A/B/C evaluation
 
@@ -104,8 +109,11 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 - [x] Real-model prefix invariance: changing only observations after `t` leaves filtered output through `t` unchanged.
 - [x] Real-model streaming equivalence: repeated `step()` matches `filter_model_sequence(...)` within tolerance.
 - [x] Duplicate timestamps are rejected without advancing or replacing runtime state.
+- [x] Forward/Viterbi/filter/runtime use one canonical duration convention: duration index `0 == d=1`, age index `0 == age=1`.
+- [x] Initial segments are transition-independent in forward/Viterbi recursion.
+- [x] Duration-dependent Viterbi transitions are indexed by the predecessor segment duration.
 - [ ] Mask/padding invariance for valid prefixes.
-- [ ] Forward/Viterbi/filter/runtime duration indexing verified as one canonical convention.
+- [ ] Resolve duration-context semantics: freeze the duration law at episode start or intentionally update it with current causal context during an active episode.
 
 ### Inference/runtime
 
@@ -137,6 +145,9 @@ Observed:
 - Clean-runner smoke run `36244181797`: success; `tests/test_model_filter.py`, `tests/test_runtime.py`, and `tests/test_survival.py` reported `11 passed in 1.32s`.
 - Clean-runner smoke run `36244797811`: `16 passed, 1 failed`; the only failure was a transition test-fixture axis-indexing mistake, not an implementation failure. The fixture was corrected to index `[batch, source_state, duration, destination_state]` explicitly.
 - Clean-runner smoke run `36244956483` on commit `4d80000a0d6f8398746ea65aaa6c621c782ad238`: success; `tests/test_model_filter.py`, `tests/test_runtime.py`, `tests/test_survival.py`, `tests/test_transitions.py`, and `tests/test_runtime_transition.py` reported `17 passed in 1.84s`.
+- Focused `default.py` distribution contract run: `tests/test_default_distributions.py` reported `10 passed in 2.16s`.
+- Duration-indexing run `36248255531`: `1 failed, 4 passed`; the strengthened test exposed that a first segment with `d>1` incorrectly depended on transition logits.
+- Duration-indexing run `36248632077`: success after recursion fixes; `tests/test_duration_indexing.py` reported `5 passed in 1.48s`.
 
 ## Repository drift / housekeeping
 
@@ -173,7 +184,7 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Verify one canonical duration indexing convention across forward/Viterbi/filter/runtime.
+1. Resolve duration-context semantics for active episodes.
 2. Add mask/padding invariance for valid prefixes.
 3. Decide whether expected remaining duration belongs in the public runtime contract.
 4. Add incremental encoder state for bounded-cost live inference.
