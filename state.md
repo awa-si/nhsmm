@@ -29,6 +29,8 @@ Multi-horizon survival/end-within-horizon forecasts are implemented from the cur
 
 For `causal=True`, duration context is explicitly defined as a **dynamic causal hazard** contract: the current information set `F_t` determines the duration/end hazard used for boundary `t -> t+1`. The duration law is not frozen at episode start. Filter/runtime and causal `forward()`/Viterbi now use the same age/hazard ordering. The non-causal retrospective segment DP remains a separate inference path.
 
+`expected remaining duration` is intentionally not part of the public runtime contract. Under dynamic causal hazard semantics, a scalar expectation would require freezing the current duration law into the future and would therefore be only a lossy derived summary of the canonical survival/end-within-horizon curve. It may be computed as an optional diagnostic under that explicit frozen-current-`F_t` assumption, but it is not a primary model output.
+
 The runtime currently retains and re-encodes the causal observation prefix because the encoder does not yet expose incremental hidden/convolution state. This is causally correct and suitable for contract testing, but it is not the final bounded-cost hot path.
 
 ## Completed
@@ -102,7 +104,7 @@ The runtime currently retains and re-encodes the causal observation prefix becau
   - next-episode state joint mass `[B,K]`;
   - next-state prior before `x_{t+1}` `[B,K]`;
   - state-change probability `[B]` distinct from episode-end probability.
-- [ ] Expected remaining duration, if retained after contract review.
+- [x] Expected remaining duration contract reviewed: excluded from the public runtime API; optional derived diagnostic only under an explicit frozen-current-`F_t` assumption.
 
 ### Causal invariants
 
@@ -157,6 +159,7 @@ Observed:
 - Clean-runner smoke run `36250935387`: failed only because `tests/general.py` still asserted the old finite `NEG_INF` sentinel for impossible t=0 ages; the new causal recursion intentionally uses exact `-inf` support.
 - Clean-runner smoke run `36251179309` on commit `9e4cf795c80c4a2edd2e9d19648d13613e4a099c`: success; general functional smoke passed and the causal inference suite reported `20 passed, 1 warning in 1.83s`. The warning is limited to a brute-force test helper converting a grad-enabled score to `float`.
 - Clean-runner smoke run `36251977802` on commit `56bece5ceddd8d6611a011e8d25b2aaf60ccefa0`: success; general functional smoke and causal temporal output tests passed with the added right-padding invariance regression. The temporary workflow trigger was restored immediately after the run started.
+- Expected remaining duration review: excluded from the public runtime contract because under dynamic causal hazard semantics it would require freezing the current duration law into future boundaries and would duplicate the canonical survival curve as a lossy scalar summary.
 
 ## Repository drift / housekeeping
 
@@ -193,7 +196,8 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Decide whether expected remaining duration belongs in the public runtime contract.
+1. Add explicit production inference preparation/loading path.
 2. Add incremental encoder state for bounded-cost live inference.
-3. Clean test discovery and migrate/delete stale legacy tests/scripts.
-4. Implement artifact/version/loading contracts before Nautilus production integration.
+3. Benchmark CPU latency/allocation after incremental encoder semantics stabilize.
+4. Clean test discovery and migrate/delete stale legacy tests/scripts.
+5. Implement artifact/version/loading contracts before Nautilus production integration.
