@@ -95,6 +95,39 @@ def test_streaming_lstm_gate_cache_invalidates_without_changing_state_dict() -> 
     )
 
 
+def test_streaming_lstm_cache_buffers_follow_dtype_move_without_rebuild() -> None:
+    torch.manual_seed(50)
+    model = _make_model()
+    encoder = model.encoder.encoder
+    x = torch.randn(2, model.config.n_features)
+
+    with torch.inference_mode():
+        state = encoder.initial_stream_state(
+            x.shape[0],
+            device=x.device,
+            dtype=x.dtype,
+        )
+        encoder.stream_step(x, state)
+    first_key = encoder._stream_lstm_cache_key
+
+    model = model.to(dtype=torch.float64)
+    encoder = model.encoder.encoder
+    x64 = x.to(dtype=torch.float64)
+    with torch.inference_mode():
+        state = encoder.initial_stream_state(
+            x64.shape[0],
+            device=x64.device,
+            dtype=x64.dtype,
+        )
+        encoder.stream_step(x64, state)
+
+    assert encoder._stream_lstm_cache_key == first_key
+    assert encoder._stream_lstm_weight is not None
+    assert encoder._stream_lstm_bias is not None
+    assert encoder._stream_lstm_weight.dtype == torch.float64
+    assert encoder._stream_lstm_bias.dtype == torch.float64
+
+
 def test_streaming_lstm_grad_enabled_path_remains_differentiable() -> None:
     torch.manual_seed(51)
     model = _make_model()
