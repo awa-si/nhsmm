@@ -143,10 +143,18 @@ black --check nhsmm tests scripts
 
 Some historical scripts and tests may target older APIs. Before changing the core model to satisfy one of those consumers, verify whether the consumer or the implementation reflects the intended current contract.
 
-Repository-specific engineering instructions are in [`agent.md`](./agent.md).
+Repository control is split deliberately:
+
+- [`agent.md`](./agent.md) defines AI behavior, reasoning, source resolution, and decision/completion gates for work in this repository;
+- [`docs/agent-domain.md`](docs/agent-domain.md) owns the repository-wide probabilistic, tensor, causal, API-evolution, testing, and research contracts that the AI must load when material;
+- [`docs/model.md`](docs/model.md) documents the model/project contract for human-facing repository guidance;
+- the global Git/edit/CI workflow is owned by `awa-si/admin/workflow.md`.
+
+`agent.md` is therefore not the substantive model specification. It routes AI work to the relevant contract owners.
 
 ## Documentation
 
+- [AI-facing domain contract](docs/agent-domain.md)
 - [Model / project governance](docs/model.md)
 - [OHLCV experiment notes](docs/test_ohlcv.md)
 - [Tier notes](docs/tier.md)
