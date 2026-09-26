@@ -68,17 +68,11 @@ jobs:
           print("causal", model.config.causal)
           PY
 
-      - name: General functional smoke
+      - name: Pytest suite
         shell: bash
         run: |
           set -o pipefail
-          python tests/general.py 2>&1 | tee smoke-logs/general.txt
-
-      - name: Causal temporal output tests
-        shell: bash
-        run: |
-          set -o pipefail
-          python -m pytest -q tests/test_model_filter.py tests/test_runtime.py tests/test_survival.py tests/test_transitions.py tests/test_runtime_transition.py tests/test_causal_dynamic_hazard.py tests/test_inference.py tests/test_incremental_runtime.py tests/test_artifact.py tests/test_benchmark.py 2>&1 | tee smoke-logs/causal-runtime.txt
+          python -m pytest -q 2>&1 | tee smoke-logs/pytest.txt
 
       - name: Production CPU runtime benchmark
         shell: bash

@@ -52,8 +52,3 @@ def test_general_functional_contracts() -> None:
 
     assert torch.isfinite(alpha[:, 0, :, 0]).all()
     assert torch.isneginf(alpha[:, 0, :, 1:]).all()
-
-
-if __name__ == "__main__":
-    test_general_functional_contracts()
-    print("general functional contracts passed")

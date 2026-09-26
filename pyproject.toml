@@ -31,7 +31,7 @@ keywords = [
 ]
 
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
@@ -81,3 +81,7 @@ Documentation = "https://github.com/awa-si/NHSMM/wiki"
 version_scheme = "guess-next-dev"
 local_scheme = "no-local-version"
 tag_regex = "^v(?P<version>\\d+\\.\\d+\\.\\d+(?:[-a-z0-9\\.]+)?)$"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

@@ -129,15 +129,3 @@ def test_filter_posterior_normalizes() -> None:
             atol=1e-6,
             rtol=1e-6,
         )
-
-
-if __name__ == "__main__":
-    test_duration_hazard_deterministic()
-    test_duration_rejects_zero_mass_rows()
-    test_filter_age_progression_and_reset()
-    test_transition_occurs_only_at_episode_boundary()
-    test_filter_rejects_zero_mass_transition_rows()
-    test_filter_rejects_dtype_mismatch()
-    test_filter_state_rejects_nan()
-    test_filter_posterior_normalizes()
-    print("causal HSMM filtering contracts passed")

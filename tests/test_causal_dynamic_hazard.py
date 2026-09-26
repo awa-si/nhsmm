@@ -69,7 +69,7 @@ def _brute_force_dynamic_hazard_path(model: NHSMM, x: torch.Tensor) -> list[int]
                         ))
         frontier = next_frontier
 
-    return max(frontier, key=lambda item: float(item[3]))[0]
+    return max(frontier, key=lambda item: float(item[3].detach()))[0]
 
 
 def test_causal_forward_normalizes_to_filter_trace() -> None:

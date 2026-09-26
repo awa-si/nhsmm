@@ -13,7 +13,7 @@ Use the repository control layers according to their ownership:
 3. Read [`docs/model.md`](docs/model.md) and the current implementation when the change depends on model/project behavior.
 4. Apply the global repository workflow from `awa-si/admin/workflow.md` for editing, verification, CI, and write-back.
 
-The current implementation is authoritative. Historical scripts, tests, and documentation may contain obsolete API names or constructor patterns, so inspect the relevant package code before changing behavior.
+The current implementation and discovered `tests/test_*.py` suite are authoritative. Do not reintroduce historical constructors or compatibility paths solely to satisfy removed consumers.
 
 `agent.md` is not a substitute for the substantive model/domain contracts; it routes AI work to the relevant owners.
 
@@ -34,10 +34,12 @@ Keep changes focused and update dependent contracts together when behavior chang
 Run the smallest checks that materially validate your change, then expand where necessary.
 
 ```bash
-pytest -v
+pytest -q
 ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 ```
+
+Test discovery and verification policy is documented in [`docs/testing.md`](docs/testing.md).
 
 For shared inference, distribution, context, configuration, or training changes, run the broader relevant test set.
 

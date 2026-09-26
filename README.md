@@ -126,22 +126,24 @@ This separation is important for variable-length batching and for keeping the pr
 
 ## Temporal semantics
 
-NHSMM supports retrospective sequence inference. When using NHSMM in forecasting, online inference, or trading systems, callers must preserve causal data flow themselves and distinguish filtering from full-sequence smoothing.
+NHSMM supports both retrospective sequence inference and an explicit causal online path.
 
-A result obtained using future observations must not be interpreted as a causal online state estimate.
+With `ModelConfig(causal=True)`, the encoder is causal and the model-bound filter/runtime maintain a `(latent_state, episode_age)` posterior without consuming future observations. Duration is interpreted with dynamic causal boundary-time hazard semantics: `F_t` determines the duration/end hazard for boundary `t -> t+1`.
+
+The canonical `DefaultEncoder` runtime carries bounded convolution/LSTM state so each accepted observation is encoded once. Retrospective/non-causal inference remains a separate path and must not be interpreted as an online filtered estimate.
 
 ## Development
 
-Install development dependencies and run the relevant checks:
+Install development dependencies and run the canonical discovered test suite and static checks:
 
 ```bash
 pip install -e ".[dev]"
-pytest -v
+pytest -q
 ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 ```
 
-Some historical scripts and tests may target older APIs. Before changing the core model to satisfy one of those consumers, verify whether the consumer or the implementation reflects the intended current contract.
+Maintained automated tests live under `tests/test_*.py`; see [Testing and verification](docs/testing.md) for discovery, integration-smoke, and runtime-benchmark policy.
 
 Repository control is split deliberately:
 
@@ -156,7 +158,7 @@ Repository control is split deliberately:
 
 - [AI-facing domain contract](docs/agent-domain.md)
 - [Model / project governance](docs/model.md)
-- [OHLCV experiment notes](docs/test_ohlcv.md)
+- [Testing and verification](docs/testing.md)
 - [Tier notes](docs/tier.md)
 
 Documentation should describe implemented behavior. Performance, causal, production-readiness, or scalability claims require corresponding implementation or benchmark evidence.
