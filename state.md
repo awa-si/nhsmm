@@ -31,6 +31,8 @@ For `causal=True`, duration context is explicitly defined as a **dynamic causal 
 
 `expected remaining duration` is intentionally not part of the public runtime contract. Under dynamic causal hazard semantics, a scalar expectation would require freezing the current duration law into the future and would therefore be only a lossy derived summary of the canonical survival/end-within-horizon curve. It may be computed as an optional diagnostic under that explicit frozen-current-`F_t` assumption, but it is not a primary model output.
 
+Production inference now has an explicit preparation/loading path separate from artifact deserialization. `prepare_inference(...)` requires initialized distributions, rejects non-finite model parameters, switches the model to eval mode, and freezes parameters by default. `load_inference_model(...)` constructs through the canonical `ModelConfig -> NHSMM` path, initializes canonical distributions, strictly loads a caller-deserialized `state_dict`, can require causal mode, and returns only an inference-prepared model.
+
 The runtime currently retains and re-encodes the causal observation prefix because the encoder does not yet expose incremental hidden/convolution state. This is causally correct and suitable for contract testing, but it is not the final bounded-cost hot path.
 
 ## Completed
@@ -125,7 +127,7 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 
 - [x] Model-bound filtering refuses training mode and runs under `torch.inference_mode()`.
 - [x] Mutable online state is separate from model parameters.
-- [ ] Explicit production inference preparation/loading path.
+- [x] Explicit production inference preparation/loading path with strict `state_dict` loading, causal-mode guard, eval preparation, and default parameter freezing.
 - [ ] Incremental encoder state so the live path no longer re-encodes full prefix.
 - [ ] CPU latency/allocation benchmark after semantics stabilize.
 
@@ -160,6 +162,8 @@ Observed:
 - Clean-runner smoke run `36251179309` on commit `9e4cf795c80c4a2edd2e9d19648d13613e4a099c`: success; general functional smoke passed and the causal inference suite reported `20 passed, 1 warning in 1.83s`. The warning is limited to a brute-force test helper converting a grad-enabled score to `float`.
 - Clean-runner smoke run `36251977802` on commit `56bece5ceddd8d6611a011e8d25b2aaf60ccefa0`: success; general functional smoke and causal temporal output tests passed with the added right-padding invariance regression. The temporary workflow trigger was restored immediately after the run started.
 - Expected remaining duration review: excluded from the public runtime contract because under dynamic causal hazard semantics it would require freezing the current duration law into future boundaries and would duplicate the canonical survival curve as a lossy scalar summary.
+- Local inference helper syntax validation: `nhsmm/inference.py` and `tests/test_inference.py` compile successfully.
+- Clean-runner smoke run `36252656161` on commit `7568672a0f2b774717bf2c5d8b8ad77131e9ffe8`: success; import smoke, general functional smoke, and causal temporal/inference tests all passed, including strict-load rejection and round-trip inference-output equivalence.
 
 ## Repository drift / housekeeping
 
@@ -196,8 +200,7 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Add explicit production inference preparation/loading path.
-2. Add incremental encoder state for bounded-cost live inference.
-3. Benchmark CPU latency/allocation after incremental encoder semantics stabilize.
-4. Clean test discovery and migrate/delete stale legacy tests/scripts.
-5. Implement artifact/version/loading contracts before Nautilus production integration.
+1. Add incremental encoder state for bounded-cost live inference.
+2. Benchmark CPU latency/allocation after incremental encoder semantics stabilize.
+3. Clean test discovery and migrate/delete stale legacy tests/scripts.
+4. Implement artifact/version/loading contracts before Nautilus production integration.
