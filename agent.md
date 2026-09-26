@@ -1,3 +1,18 @@
+# NHSMM — AGENT
+
+> AI operating directives for probabilistic-model reasoning, source resolution and implementation decisions in the NHSMM repository.
+
+**File:** `agent.md`  
+**Owner:** NHSMM AI repository operating rules  
+**Scope:** AI role, mathematical/probabilistic reasoning priorities, source routing, implementation behavior and completion gates  
+**Status:** Canonical  
+**Repository:** `awa-si/nhsmm`  
+**Branch:** `develop`  
+**Mode:** normative machine directives  
+**AI Instruction:** Apply this file first for NHSMM work; load `docs/agent-domain.md`, `docs/model.md` or other helpers only when material, and keep substantive probabilistic/model/API contracts in their canonical owners.
+
+---
+
 scope: repository_agent
 repository: awa-si/nhsmm
 branch: develop
