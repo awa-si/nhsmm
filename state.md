@@ -33,7 +33,7 @@ For `causal=True`, duration context is explicitly defined as a **dynamic causal 
 
 Production inference now has an explicit preparation/loading path separate from artifact deserialization. `prepare_inference(...)` requires initialized distributions, rejects non-finite model parameters, switches the model to eval mode, and freezes parameters by default. `load_inference_model(...)` constructs through the canonical `ModelConfig -> NHSMM` path, initializes canonical distributions, strictly loads a caller-deserialized `state_dict`, can require causal mode, and returns only an inference-prepared model.
 
-The runtime currently retains and re-encodes the causal observation prefix because the encoder does not yet expose incremental hidden/convolution state. This is causally correct and suitable for contract testing, but it is not the final bounded-cost hot path.
+The canonical causal `DefaultEncoder` now exposes bounded incremental state: the last `cnn_kernel - 1` raw observations plus LSTM hidden/cell state. `HSMMFilterRuntime.step(...)` uses that state so each new bar is encoded exactly once and no longer re-encodes or retains the full prefix on the default production path. Custom causal encoders that do not expose the incremental-state API remain on the explicit correctness-first full-prefix fallback.
 
 ## Completed
 
@@ -76,7 +76,7 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 - [x] Duplicate or older timestamps are rejected before runtime mutation.
 - [x] Timestamp mode cannot silently switch after initialization; `reset()` is required.
 - [x] Runtime accepts one timestep at a time with fixed batch size.
-- [x] Current reference runtime re-encodes retained prefix until the encoder gets an incremental-state contract.
+- [x] Canonical `DefaultEncoder` runtime uses bounded causal CNN/LSTM state and encodes each accepted observation once; custom encoders without the stream API use the explicit full-prefix fallback.
 - [x] `forecast_survival(...)` exposes configurable-horizon current-episode survival/end risk from `F_t`.
 - [x] `forecast_transition()` exposes one-step episode-boundary and latent-state transition quantities from `F_t`.
 
@@ -128,7 +128,7 @@ The runtime currently retains and re-encodes the causal observation prefix becau
 - [x] Model-bound filtering refuses training mode and runs under `torch.inference_mode()`.
 - [x] Mutable online state is separate from model parameters.
 - [x] Explicit production inference preparation/loading path with strict `state_dict` loading, causal-mode guard, eval preparation, and default parameter freezing.
-- [ ] Incremental encoder state so the live path no longer re-encodes full prefix.
+- [x] Incremental encoder state for the canonical `DefaultEncoder`; live default runtime no longer re-encodes the full prefix.
 - [ ] CPU latency/allocation benchmark after semantics stabilize.
 
 ### Artifact contract
@@ -164,6 +164,8 @@ Observed:
 - Expected remaining duration review: excluded from the public runtime contract because under dynamic causal hazard semantics it would require freezing the current duration law into future boundaries and would duplicate the canonical survival curve as a lossy scalar summary.
 - Local inference helper syntax validation: `nhsmm/inference.py` and `tests/test_inference.py` compile successfully.
 - Clean-runner smoke run `36252656161` on commit `7568672a0f2b774717bf2c5d8b8ad77131e9ffe8`: success; import smoke, general functional smoke, and causal temporal/inference tests all passed, including strict-load rejection and round-trip inference-output equivalence.
+- Local incremental-encoder harness: causal `DefaultEncoder.forward(...)` and repeated `stream_step(...)` produced identical per-timestep contexts with max absolute difference `0.0`.
+- Clean-runner smoke run `36253244202` on commit `9fc9f98f64be5ffe9058d8237a7ee99409732d32`: success; general functional smoke passed and the causal temporal/inference/incremental-runtime suite reported `27 passed, 1 warning in 1.99s`. The warning remains limited to the existing brute-force test helper converting a grad-enabled score to `float`.
 
 ## Repository drift / housekeeping
 
@@ -200,7 +202,6 @@ H1 structure accuracy, Hungarian matching, state-plot plausibility, and in-sampl
 
 ## Next slices
 
-1. Add incremental encoder state for bounded-cost live inference.
-2. Benchmark CPU latency/allocation after incremental encoder semantics stabilize.
-3. Clean test discovery and migrate/delete stale legacy tests/scripts.
-4. Implement artifact/version/loading contracts before Nautilus production integration.
+1. Benchmark CPU latency/allocation for the bounded incremental runtime.
+2. Clean test discovery and migrate/delete stale legacy tests/scripts.
+3. Implement artifact/version/loading contracts before Nautilus production integration.
