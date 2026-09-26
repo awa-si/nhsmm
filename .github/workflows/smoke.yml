@@ -48,6 +48,7 @@ jobs:
           set -o pipefail
           python -m pip install --upgrade pip 2>&1 | tee smoke-logs/pip-upgrade.txt
           python -m pip install -e . 2>&1 | tee smoke-logs/install.txt
+          python -m pip install pytest 2>&1 | tee smoke-logs/pytest-install.txt
 
       - name: Import smoke
         shell: bash
