@@ -24,7 +24,7 @@ def _deterministic_duration_model(duration: int = 2) -> NHSMM:
 
     with torch.no_grad():
         model.dist.initial.logits.zero_()
-        model.dist.duration.logits.fill_(float("-inf"))
+        model.dist.duration.logits.fill_(-1000.0)
         model.dist.duration.logits[0, duration - 1] = 0.0
         model.dist.transition.logits.zero_()
         model.dist.emission.mu.zero_()
