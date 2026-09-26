@@ -130,7 +130,7 @@ Repository control is split deliberately:
 
 - [`agent.md`](./agent.md) defines AI behavior, reasoning, source resolution, and decision/completion gates for work in this repository;
 - [`docs/agent-domain.md`](docs/agent-domain.md) owns the repository-wide probabilistic, tensor, causal, API-evolution, testing, and research contracts that the AI must load when material;
-- [`docs/model.md`](docs/model.md) documents the model/project contract for human-facing repository guidance;
+- [`docs/model.md`](docs/model.md) owns the human-facing model/runtime contract;
 - the global Git/edit/CI workflow is owned by `awa-si/admin/workflow.md`.
 
 `agent.md` routes AI work to the relevant contract owners; it is not the substantive model specification.
@@ -138,10 +138,9 @@ Repository control is split deliberately:
 ## Documentation
 
 - [Project/evaluation state](docs/state.md)
+- [Model/runtime contract](docs/model.md)
 - [AI-facing domain contract](docs/agent-domain.md)
-- [Model / project governance](docs/model.md)
 - [Testing and verification](docs/testing.md)
-- [Tier notes](docs/tier.md)
 
 Documentation should describe implemented behavior. Performance, causal, production-readiness, or scalability claims require corresponding implementation or benchmark evidence.
 
