@@ -21,14 +21,14 @@ NHSMM latent states must remain semantically neutral (`0..K-1`) for this evaluat
 
 **Phase:** pre-test integration readiness
 
-The repository is not yet ready for the Nautilus historical A/B/C evaluation. Core HSMM sequence inference exists, but a causal online HSMM filtering contract and first-class survival/change-hazard outputs are still missing.
+A standalone causal HSMM filtering core now exists over `(latent_state, episode_age)`. It is not yet wired into `NHSMM` as a public/incremental runtime API, and multi-horizon survival/change-hazard outputs are still missing.
 
 ## Completed
 
 ### HSMM duration boundary
 
 - [x] `forward()` only permits duration `d=1` at `t=0`.
-- [x] The initial duration boundary is now consistent with the existing Viterbi endpoint constraint `d <= t + 1`.
+- [x] The initial duration boundary is consistent with the existing Viterbi endpoint constraint `d <= t + 1`.
 
 Commit: `3042bbc96fe2bff83153b1a6aab0f03ac4e3477a`
 
@@ -54,31 +54,51 @@ Commits:
 
 Commit: `ba0848f771de1da8f337fa0047029a189ca7b144`
 
+### Causal HSMM filter core
+
+- [x] `HSMMFilterState` represents the normalized posterior over current latent state and current episode age as `[B,K,D]`.
+- [x] Duration PMFs are converted to conditional end/continue hazards with impossible ages kept at zero probability rather than producing NaNs.
+- [x] Continuation increments episode age without a transition.
+- [x] Episode termination applies the duration hazard and only then the duration-conditioned transition matrix.
+- [x] Self-transition starts a new episode of the same latent state with age reset to one.
+- [x] Current state posterior and age posterior are directly available from the filter state.
+- [x] One-step probability that the current episode ends before the next observation is available.
+- [x] Deterministic-duration, boundary-transition, normalization, and numerical-support contracts were exercised locally on CPU.
+
+Commits:
+
+- `5998c639408990075b1dc55e28f0c73a1a60f5d0`
+- `d63981a8d17a551c54f127cb3bbdf7162138100e`
+
 ## Pre-test blockers
 
 ### P0 — causal HSMM filtering
 
-- [ ] Define an online filtering state that represents the posterior over current latent state and current episode age/residual duration without forcing the active segment to terminate at the current prefix boundary.
+- [x] Define an online filtering state over current latent state and current episode age without forcing the active segment to terminate at the current prefix boundary.
+- [ ] Wire the filter core to NHSMM distribution/context outputs.
 - [ ] Add an incremental `step()` or equivalent causal filtering API.
 - [ ] Ensure repeated processing of the same observation/timestamp cannot advance filter state twice once timestamp semantics are introduced.
-- [ ] Keep filtering distinct from retrospective smoothing and Viterbi decoding.
+- [ ] Keep filtering distinct from retrospective smoothing and Viterbi decoding at the public API boundary.
 
-The existing sequence `forward()` is an endpoint/segment recursion and must not be wrapped directly as a live `step()` implementation without deriving the correct active-segment filtering recursion.
+The existing sequence `forward()` remains an endpoint/segment recursion. The new causal filter is a separate recursion and must remain semantically distinct.
 
 ### P0 — temporal outputs
 
-- [ ] Expose current latent-state posterior.
-- [ ] Expose posterior state-age or an equivalent state-duration sufficient statistic.
+- [x] Expose current latent-state posterior at filter-core level.
+- [x] Expose posterior state-age at filter-core level.
+- [x] Expose one-step active-episode end probability at filter-core level.
 - [ ] Expose survival probabilities for configurable future horizons.
 - [ ] Expose change hazard / probability that the current episode ends within configurable future horizons.
-- [ ] Expose transition probabilities needed for downstream evaluation.
+- [ ] Expose transition probabilities needed for downstream evaluation through the NHSMM runtime API.
 - [ ] Define expected remaining duration if it is mathematically well-defined under the selected duration contract.
 
 These outputs must not require semantic state labels.
 
 ### P0 — causal invariants
 
-- [ ] Prefix invariance: output at `t` must be unchanged when observations after `t` are modified.
+- [x] Core filter posterior normalizes after repeated updates.
+- [x] Core duration support handles deterministic/truncated support without NaN propagation.
+- [ ] Prefix invariance: full NHSMM filtered output at `t` must be unchanged when observations after `t` are modified.
 - [ ] Streaming equivalence: repeated causal `step()` over a sequence must agree with equivalent causal batch filtering within tolerance.
 - [ ] Mask/padding invariance for valid prefixes.
 - [ ] Forward/Viterbi/filtering duration support must use the same duration indexing and boundary conventions.
@@ -98,11 +118,11 @@ These outputs must not require semantic state labels.
 - [ ] Ensure dropout/training behavior cannot affect production filtering.
 - [ ] Keep mutable online filter state separate from trainable model parameters and offline training state.
 
-## General functional smoke test
+## Verification
 
-`tests/general.py` tracks the small deterministic contracts introduced during pre-test preparation. It is intentionally not a full statistical/model-quality test suite.
+### General functional smoke
 
-Current intended checks:
+`tests/general.py` verifies the small deterministic contracts introduced during pre-test preparation:
 
 - explicit CPU device ownership;
 - causal encoder is unidirectional;
@@ -110,7 +130,18 @@ Current intended checks:
 - causal prefix outputs do not change when only future observations change;
 - HSMM `forward()` permits only duration `1` at `t=0`.
 
-The test file is repository scaffolding until it is actually executed. Do not report it as passing until execution has occurred and the result was observed.
+Observed GitHub Actions smoke run: `36234225103` — success.
+
+### Causal filtering contracts
+
+`tests/filtering.py` verifies:
+
+- deterministic duration hazard conversion;
+- episode-age progression and reset;
+- transitions only at episode boundaries;
+- repeated posterior normalization.
+
+Observed local ChatGPT runtime execution: success on CPU with PyTorch `2.10.0+cpu`.
 
 ## Nautilus evaluation gate
 
