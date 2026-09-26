@@ -282,9 +282,30 @@ Keep comments focused on non-obvious mathematical or architectural intent. Do no
 
 Use `develop` as the default target branch unless the user explicitly specifies another branch or repository state establishes a newer canonical workflow.
 
+### Preferred local workspace workflow
+
+For implementation, debugging, review, and targeted verification, prefer working from a fresh local repository checkout in a temporary workspace such as `/tmp/nhsmm` when the execution environment can access the repository.
+
+Default sequence:
+
+1. clone or refresh `awa-si/nhsmm` into a temporary local workspace;
+2. check out the current `develop` branch and verify the base commit;
+3. read the current target files and material dependencies from that checkout;
+4. make edits locally using normal patch/edit tools;
+5. run the smallest useful local smoke/unit test set before broader validation;
+6. inspect `git diff`, `git status`, and the exact changed files;
+7. create a focused local commit only after the local diff is coherent;
+8. publish that exact change to GitHub and verify the resulting remote commit/diff.
+
+Prefer local/container execution for cheap, fast functional checks such as imports, smoke tests, focused `pytest` targets, shape/invariant checks, and deterministic CPU tests. Do not spend GitHub Actions capacity on every small iteration when equivalent local verification is available.
+
+Use GitHub Actions when it provides material additional evidence, including runner-specific behavior, clean-environment packaging, cross-environment reproducibility, CI integration, artifact capture, or longer experiments that should be independently reproducible. A local test and a GitHub Actions run are different forms of evidence; do not claim one was performed when only the other ran.
+
+If direct `git clone`, network access, authentication, or push access is unavailable in the local execution environment, fall back to the connected GitHub tools without blocking the task. Preserve the same read-before-write, minimal-diff, targeted-local-verification-where-possible, and post-change verification discipline.
+
 ### Preferred edit workflow: GitHub Patch
 
-For repository modifications, **GitHub Patch is the preferred workflow** when the plugin/skill is available.
+For repository modifications, **GitHub Patch is the preferred remote edit workflow** when the plugin/skill is available.
 
 Use GitHub Patch for:
 
