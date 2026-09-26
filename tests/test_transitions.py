@@ -35,8 +35,8 @@ def test_continuing_episode_keeps_state_prior() -> None:
 def test_boundary_transition_and_state_change_are_distinct() -> None:
     state = _state(0, 2)
     transition = torch.full((1, 2, 2, 2), float("-inf"), dtype=torch.float64)
-    transition[..., 0, 1] = 0.0
-    transition[..., 1, 1] = 0.0
+    transition[0, 0, :, 1] = 0.0
+    transition[0, 1, :, 1] = 0.0
 
     forecast = one_step_transition_forecast(state, _duration_d2(), transition)
 
@@ -50,8 +50,8 @@ def test_boundary_transition_and_state_change_are_distinct() -> None:
 def test_self_transition_is_boundary_but_not_state_change() -> None:
     state = _state(0, 2)
     transition = torch.full((1, 2, 2, 2), float("-inf"), dtype=torch.float64)
-    transition[..., 0, 0] = 0.0
-    transition[..., 1, 1] = 0.0
+    transition[0, 0, :, 0] = 0.0
+    transition[0, 1, :, 1] = 0.0
 
     forecast = one_step_transition_forecast(state, _duration_d2(), transition)
 
