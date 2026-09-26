@@ -200,10 +200,7 @@ class DefaultEncoder(nn.Module):
                 self.lstm.bias_ih_l0,
                 self.lstm.bias_hh_l0,
             )
-            cache_key = tuple(
-                (int(parameter._version), parameter.device, parameter.dtype)
-                for parameter in parameters
-            )
+            cache_key = tuple(int(parameter._version) for parameter in parameters)
             if (
                 self._stream_lstm_weight is None
                 or self._stream_lstm_bias is None
