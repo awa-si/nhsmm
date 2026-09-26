@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import math
 
+import pytest
 import torch
 
 from nhsmm.filtering import (
+    HSMMFilterState,
     duration_log_hazard,
     filter_step,
     initialize_filter,
@@ -33,6 +35,11 @@ def test_duration_hazard_deterministic() -> None:
     assert torch.isneginf(log_end[0, 0, 3])
     assert torch.allclose(log_continue.exp()[0, 0, :2], torch.tensor([1.0, 1.0]))
     assert torch.isneginf(log_continue[0, 0, 2:]).all()
+
+
+def test_duration_rejects_zero_mass_rows() -> None:
+    with pytest.raises(ValueError, match="log_duration has zero or non-finite probability mass"):
+        duration_log_hazard(torch.full((1, 2, 3), float("-inf")))
 
 
 def test_filter_age_progression_and_reset() -> None:
@@ -76,6 +83,35 @@ def test_transition_occurs_only_at_episode_boundary() -> None:
     assert torch.allclose(state.age_posterior, torch.tensor([[1.0, 0.0]]))
 
 
+def test_filter_rejects_zero_mass_transition_rows() -> None:
+    state = initialize_filter(torch.zeros(1, 1), torch.zeros(1, 1), max_duration=2)
+    with pytest.raises(ValueError, match="transition_log_prob has zero or non-finite probability mass"):
+        filter_step(
+            state,
+            torch.zeros(1, 1),
+            _deterministic_duration(K=1, D=2, duration=2),
+            torch.full((1, 1, 2, 1), float("-inf")),
+        )
+
+
+def test_filter_rejects_dtype_mismatch() -> None:
+    state = initialize_filter(torch.zeros(1, 1), torch.zeros(1, 1), max_duration=2)
+    with pytest.raises(ValueError, match="dtype"):
+        filter_step(
+            state,
+            torch.zeros(1, 1, dtype=torch.float64),
+            _deterministic_duration(K=1, D=2, duration=2),
+            _identity_transition(K=1, D=2),
+        )
+
+
+def test_filter_state_rejects_nan() -> None:
+    bad = torch.zeros(1, 1, 2)
+    bad[..., 1] = float("nan")
+    with pytest.raises(ValueError, match="NaN"):
+        HSMMFilterState(bad)
+
+
 def test_filter_posterior_normalizes() -> None:
     torch.manual_seed(11)
     B, K, D = 3, 4, 5
@@ -97,7 +133,11 @@ def test_filter_posterior_normalizes() -> None:
 
 if __name__ == "__main__":
     test_duration_hazard_deterministic()
+    test_duration_rejects_zero_mass_rows()
     test_filter_age_progression_and_reset()
     test_transition_occurs_only_at_episode_boundary()
+    test_filter_rejects_zero_mass_transition_rows()
+    test_filter_rejects_dtype_mismatch()
+    test_filter_state_rejects_nan()
     test_filter_posterior_normalizes()
     print("causal HSMM filtering contracts passed")
