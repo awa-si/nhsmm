@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Optional
+import math
 
 import torch
 
+from nhsmm.config import EPS
 from nhsmm.filtering import (
     HSMMFilterState,
     _filter_step_normalized,
@@ -23,6 +25,46 @@ def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str
         raise ValueError(f"{name} device {tensor.device} != expected {reference.device}")
     if tensor.dtype != reference.dtype:
         raise ValueError(f"{name} dtype {tensor.dtype} != expected {reference.dtype}")
+
+
+class _RuntimeScoreCache:
+    """Version-aware cache for static terms used by canonical runtime scorers."""
+
+    def __init__(self) -> None:
+        self._duration_key: Optional[tuple[int, torch.device, torch.dtype]] = None
+        self._duration_gate_log: Optional[torch.Tensor] = None
+        self._emission_key: Optional[tuple[int, torch.device, torch.dtype]] = None
+        self._emission_var: Optional[torch.Tensor] = None
+        self._emission_log_norm: Optional[torch.Tensor] = None
+
+    def duration_gate_log(self, bias: torch.Tensor) -> torch.Tensor:
+        key = (int(bias._version), bias.device, bias.dtype)
+        if self._duration_gate_log is None or key != self._duration_key:
+            with torch.no_grad():
+                self._duration_gate_log = torch.sigmoid(bias).clamp_min(EPS).log()
+            self._duration_key = key
+        return self._duration_gate_log
+
+    def gaussian_terms(
+        self,
+        log_var: torch.Tensor,
+        *,
+        min_covar: float,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        key = (int(log_var._version), log_var.device, log_var.dtype)
+        if self._emission_var is None or key != self._emission_key:
+            with torch.no_grad():
+                var = torch.nn.functional.softplus(log_var).clamp_min(min_covar)
+                self._emission_var = var
+                self._emission_log_norm = var.log() + math.log(2.0 * math.pi)
+            self._emission_key = key
+        assert self._emission_log_norm is not None
+        return self._emission_var, self._emission_log_norm
+
+
+def _is_default_distribution(value: Any, class_name: str) -> bool:
+    cls = type(value)
+    return cls.__module__ == "nhsmm.distributions.default" and cls.__name__ == class_name
 
 
 @dataclass(frozen=True)
@@ -116,19 +158,61 @@ def _boundary_scores(
     context: torch.Tensor,
     *,
     temperature: Optional[float],
+    cache: Optional[_RuntimeScoreCache] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    duration = model.dist.duration.log_matrix(
-        context=context,
-        temperature=temperature,
-        T=1,
-        soft_dmax=model.duration_logits_bias,
-    )[:, 0]
-    transition = model.dist.transition.log_matrix(
-        context=context,
-        temperature=temperature,
-        T=1,
-        soft_dmax=model.duration_logits_bias,
-    )[:, 0]
+    duration_dist = model.dist.duration
+    duration_bias = model.duration_logits_bias
+    if (
+        cache is not None
+        and _is_default_distribution(duration_dist, "Duration")
+        and duration_bias.shape
+        == (int(model.config.n_states), int(duration_dist.max_duration))
+    ):
+        duration_mod = duration_dist._modulate(
+            context=context,
+            temperature=temperature,
+        )
+        gate_log = cache.duration_gate_log(duration_bias)
+        duration = torch.log_softmax(
+            duration_mod + gate_log.view(1, 1, *gate_log.shape),
+            dim=-1,
+        )
+        while duration.ndim < 4:
+            duration = duration.unsqueeze(0)
+        duration = duration[:, 0]
+    else:
+        duration = duration_dist.log_matrix(
+            context=context,
+            temperature=temperature,
+            T=1,
+            soft_dmax=duration_bias,
+        )[:, 0]
+
+    transition_dist = model.dist.transition
+    if (
+        cache is not None
+        and _is_default_distribution(transition_dist, "Transition")
+        and getattr(transition_dist, "transition_type", None) == "ergodic"
+        and getattr(transition_dist, "max_duration", None) is not None
+    ):
+        base = transition_dist._tensor_shape(transition_dist.base)
+        delta = transition_dist._apply_context(base, context)
+        transition_mod = transition_dist._validate_base(base + delta)
+        transition_mod = transition_dist._apply_temperature(
+            transition_mod,
+            temperature,
+        )
+        transition = torch.log_softmax(transition_mod, dim=-1)
+        while transition.ndim < 5:
+            transition = transition.unsqueeze(0)
+        transition = transition[:, 0]
+    else:
+        transition = transition_dist.log_matrix(
+            context=context,
+            temperature=temperature,
+            T=1,
+            soft_dmax=duration_bias,
+        )[:, 0]
 
     B = context.shape[0]
     K = int(model.config.n_states)
@@ -158,10 +242,30 @@ def _emission_log_prob(
     model: Any,
     observation: torch.Tensor,
     context: torch.Tensor,
+    cache: Optional[_RuntimeScoreCache] = None,
 ) -> torch.Tensor:
     B = observation.shape[0]
     K = int(model.config.n_states)
-    log_prob = model.dist.emission.log_prob(observation, context=context)
+    emission = model.dist.emission
+    if (
+        cache is not None
+        and _is_default_distribution(emission, "Emission")
+        and getattr(emission, "emission_type", None) == "gaussian"
+    ):
+        loc = emission._modulate(context=context)
+        if loc.ndim == 2:
+            loc = loc.unsqueeze(0).unsqueeze(0)
+        loc = loc - loc.mean(dim=2, keepdim=True)
+        var, log_norm = cache.gaussian_terms(
+            emission.log_var,
+            min_covar=float(emission.min_covar),
+        )
+        diff = observation[..., None, :] - loc
+        log_prob = -0.5 * (diff.square() / var + log_norm).sum(dim=-1)
+        if not torch.isfinite(log_prob).all():
+            raise ValueError("emission log_prob contains NaN/Inf")
+    else:
+        log_prob = emission.log_prob(observation, context=context)
     if log_prob.shape != (B, 1, K):
         raise ValueError(f"emission log_prob must be {(B, 1, K)}, got {log_prob.shape}")
     return log_prob[:, 0]
@@ -180,6 +284,7 @@ class HSMMFilterRuntime:
         self.model = model
         self.temperature = temperature
         self.state: Optional[HSMMRuntimeState] = None
+        self._score_cache = _RuntimeScoreCache()
 
     def reset(self) -> None:
         self.state = None
@@ -234,7 +339,12 @@ class HSMMFilterRuntime:
                     dtype=obs.dtype,
                 )
                 context, encoder_state = encoder.stream_step(obs, encoder_state)
-                emission = _emission_log_prob(self.model, obs, context)
+                emission = _emission_log_prob(
+                    self.model,
+                    obs,
+                    context,
+                    self._score_cache,
+                )
                 B = context.shape[0]
                 K = int(self.model.config.n_states)
                 initial = self.model.dist.initial.log_matrix(
@@ -255,6 +365,7 @@ class HSMMFilterRuntime:
                     self.model,
                     context,
                     temperature=self.temperature,
+                    cache=self._score_cache,
                 )
                 self.state = HSMMRuntimeState(
                     filter_state=filter_state,
@@ -291,6 +402,7 @@ class HSMMFilterRuntime:
                 self.model,
                 sequence.contexts[:, -1:],
                 temperature=self.temperature,
+                cache=self._score_cache,
             )
             self.state = HSMMRuntimeState(
                 filter_state=filter_state,
@@ -325,7 +437,12 @@ class HSMMFilterRuntime:
             if encoder is None:
                 raise RuntimeError("runtime encoder lost its incremental state contract")
             context, encoder_state = encoder.stream_step(obs, previous.encoder_state)
-            emission = _emission_log_prob(self.model, obs, context)
+            emission = _emission_log_prob(
+                self.model,
+                obs,
+                context,
+                self._score_cache,
+            )
             filter_state = _filter_step_normalized(
                 previous.filter_state,
                 emission,
@@ -336,6 +453,7 @@ class HSMMFilterRuntime:
                 self.model,
                 context,
                 temperature=self.temperature,
+                cache=self._score_cache,
             )
             self.state = HSMMRuntimeState(
                 filter_state=filter_state,
@@ -366,6 +484,7 @@ class HSMMFilterRuntime:
             self.model,
             sequence.contexts[:, -1:],
             temperature=self.temperature,
+            cache=self._score_cache,
         )
         self.state = HSMMRuntimeState(
             filter_state=filter_state,
