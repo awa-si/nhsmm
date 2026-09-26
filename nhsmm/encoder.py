@@ -68,6 +68,9 @@ class DefaultEncoder(nn.Module):
         self.out_dim = hidden_dim * (2 if self.bidirectional else 1)
 
         self._context = None
+        self.register_buffer("_stream_lstm_weight", None, persistent=False)
+        self.register_buffer("_stream_lstm_bias", None, persistent=False)
+        self._stream_lstm_cache_key = None
 
     def initial_stream_state(
         self,
@@ -181,15 +184,46 @@ class DefaultEncoder(nn.Module):
         x_t = x_c[:, 0]
         hidden_prev = state.hidden[0]
         cell_prev = state.cell[0]
-        gates = nnF.linear(
-            x_t,
-            self.lstm.weight_ih_l0,
-            self.lstm.bias_ih_l0,
-        ) + nnF.linear(
-            hidden_prev,
-            self.lstm.weight_hh_l0,
-            self.lstm.bias_hh_l0,
-        )
+        if torch.is_grad_enabled():
+            gates = nnF.linear(
+                x_t,
+                self.lstm.weight_ih_l0,
+                self.lstm.bias_ih_l0,
+            ) + nnF.linear(
+                hidden_prev,
+                self.lstm.weight_hh_l0,
+                self.lstm.bias_hh_l0,
+            )
+        else:
+            parameters = (
+                self.lstm.weight_ih_l0,
+                self.lstm.weight_hh_l0,
+                self.lstm.bias_ih_l0,
+                self.lstm.bias_hh_l0,
+            )
+            cache_key = tuple(
+                (int(parameter._version), parameter.device, parameter.dtype)
+                for parameter in parameters
+            )
+            if (
+                self._stream_lstm_weight is None
+                or self._stream_lstm_bias is None
+                or cache_key != self._stream_lstm_cache_key
+            ):
+                self._stream_lstm_weight = torch.cat(
+                    (self.lstm.weight_ih_l0, self.lstm.weight_hh_l0),
+                    dim=1,
+                )
+                self._stream_lstm_bias = (
+                    self.lstm.bias_ih_l0 + self.lstm.bias_hh_l0
+                )
+                self._stream_lstm_cache_key = cache_key
+            recurrent_input = torch.cat((x_t, hidden_prev), dim=-1)
+            gates = nnF.linear(
+                recurrent_input,
+                self._stream_lstm_weight,
+                self._stream_lstm_bias,
+            )
         input_gate, forget_gate, cell_gate, output_gate = gates.chunk(4, dim=-1)
         cell_t = (
             torch.sigmoid(forget_gate) * cell_prev
