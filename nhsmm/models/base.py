@@ -76,11 +76,18 @@ class DistributionSet(nn.Module):
 
 class NHSMM(nn.Module):
 
-    def __init__(self, config: ModelConfig, encoder: Optional[nn.Module] = None):
+    def __init__(
+        self,
+        config: ModelConfig,
+        encoder: Optional[nn.Module] = None,
+        device: Optional[Union[str, torch.device]] = None,
+    ):
         super().__init__()
 
         self.config = config
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(device) if device is not None else torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
         if self.config.seed is not None:
             torch.manual_seed(self.config.seed)
@@ -121,7 +128,8 @@ class NHSMM(nn.Module):
             pool=self.config.pool,
             n_heads=self.config.n_heads,
             dropout=self.config.dropout,
-        ).to(device=self.device, dtype=DTYPE)
+        )
+        self.encoder = self.encoder.to(device=self.device, dtype=DTYPE)
 
         try:
             self.encoder.eval()
