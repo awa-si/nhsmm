@@ -20,5 +20,5 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install pytest
-      - name: Test duration indexing contracts only
+      - name: Test strengthened duration indexing contracts
         run: python -m pytest -q tests/test_duration_indexing.py
