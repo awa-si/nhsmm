@@ -162,3 +162,118 @@ def test_optimize_runs_multiple_restarts_without_warm_start_errors() -> None:
 
     assert set(model._best_state) >= {"dist", "encoder", "duration_logits_bias"}
     assert torch.isfinite(model.log_likelihood(x, reduce=True))
+
+
+def test_scalar_external_context_uses_non_degenerate_distribution_hidden_space() -> None:
+    torch.manual_seed(31)
+    cfg = ModelConfig(
+        n_states=3,
+        n_features=3,
+        max_duration=1,
+        causal=True,
+        context_dim=1,
+        seed=31,
+        n_init=1,
+        max_iter=1,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+        dropout=0.0,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+
+    first = model.dist.transition.context_net[0]
+    assert first.out_features >= 16
+
+    x = torch.randn(2, 12, cfg.n_features)
+    context = torch.randint(0, 2, (2, 12, 1), dtype=torch.float32)
+    model.optimize(x, context=context)
+
+    probs = model.dist.transition.expected_probs(
+        context=torch.tensor([[[0.0]], [[1.0]]])
+    )
+    assert torch.isfinite(probs).all()
+    assert probs.shape[-3:] == (cfg.n_states, cfg.max_duration, cfg.n_states)
+
+
+def test_transition_refinement_only_updates_context_modulation() -> None:
+    torch.manual_seed(37)
+    cfg = ModelConfig(
+        n_states=3,
+        n_features=3,
+        max_duration=1,
+        causal=True,
+        context_dim=1,
+        seed=37,
+        n_init=1,
+        max_iter=2,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+        dropout=0.0,
+        transition_context_max_delta=1.5,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    x = torch.randn(3, 20, cfg.n_features)
+    context = torch.randint(0, 2, (3, 20, 1), dtype=torch.float32)
+    model.optimize(x, context=context)
+
+    transition = model.dist.transition
+    refined_ids = {id(p) for p in transition.context_net.parameters()} | {
+        id(transition.delta_scale)
+    }
+    frozen_before = {
+        name: p.detach().clone()
+        for name, p in model.named_parameters()
+        if id(p) not in refined_ids
+    }
+    refined_before = [
+        p.detach().clone()
+        for p in [*transition.context_net.parameters(), transition.delta_scale]
+    ]
+
+    ll = model._refine_transition_likelihood(
+        x,
+        context,
+        steps=3,
+        lr=1e-2,
+    )
+
+    assert torch.isfinite(torch.tensor(ll))
+    assert all(
+        torch.equal(frozen_before[name], p.detach())
+        for name, p in model.named_parameters()
+        if id(p) not in refined_ids
+    )
+    assert any(
+        not torch.equal(before, after.detach())
+        for before, after in zip(
+            refined_before,
+            [*transition.context_net.parameters(), transition.delta_scale],
+        )
+    )
+
+def test_transition_refinement_is_opt_in() -> None:
+    cfg = ModelConfig(n_states=2, n_features=3)
+    assert cfg.transition_refine_steps == 0
+    assert cfg.transition_refine_lr == 3e-2
+    assert cfg.transition_context_max_delta == 0.5
+
+
+def test_transition_context_capacity_is_transition_specific() -> None:
+    cfg = ModelConfig(
+        n_states=3,
+        n_features=3,
+        context_dim=2,
+        hidden_dim=2,
+        transition_context_max_delta=1.5,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+
+    assert model.dist.transition.max_delta == 1.5
+    assert model.dist.initial.max_delta == 0.5
+    assert model.dist.duration.max_delta == 0.5
+    assert model.dist.emission.max_delta == 0.5

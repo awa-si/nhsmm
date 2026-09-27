@@ -1,75 +1,80 @@
-# Package validation: duration and latent-state recovery
+# Package validation: duration, state, and transition-context recovery
 
 ## Scope
 
-This document records package-level empirical evidence for NHSMM training under controlled synthetic ground truth. It is independent of Nautilus, market data, trading targets, and downstream supervised models.
+This document records controlled package-level empirical evidence. It is independent of Nautilus, market data, trading targets, and downstream supervised models. The claims are mechanism-specific and do not establish external-domain utility.
 
-The claims here are intentionally narrow: they validate package mechanisms under known generators, not usefulness in an external domain.
+## Duration-context recovery
 
-**Verified code baseline:** `89bf5aea144cde5e3331971d00df76191bfb088f` (`training: add robust state-recovery initialization`).
+The duration benchmark uses two latent states and an observed context that changes episode-duration ground truth. Training uses causal NHSMM, `K=2`, `D=30`, `max_iter=40`, and independent evaluation sequences. The main diagnostic is the difference in mean probability of ending within five steps between short- and long-duration contexts. The null guard requires both absolute median and mean gaps to stay at or below `0.015`.
 
-## Context-conditioned duration recovery
-
-The maintained duration benchmark uses two latent states and an observable context that changes the episode-duration distribution. Training uses a causal `DefaultEncoder`, `K=2`, `D=30`, `max_iter=40`, one initialization per seed, and separately generated evaluation sequences.
-
-The primary diagnostic is
-
-`mean P(end within 5 | short-duration context) - mean P(end within 5 | long-duration context)`.
-
-A positive value is the expected direction. State occupancy rejects trivial collapse. The null-context scenario requires both absolute median and absolute mean gaps to remain at or below `0.015`.
-
-Latest regression on seeds 201-215 after the restart/K-Means training changes, with the default `emission_init_mode="spread"`:
+Seeds `201..215`, default `emission_init_mode="spread"`:
 
 | Scenario | Positive gap | Gap >= 0.02 | Median gap | Mean gap | Non-collapsed |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| strong, duration means 6 vs 18 | 14/15 | 14/15 | 0.09954 | 0.09166 | 15/15 |
-| moderate, duration means 9 vs 15 | 13/15 | 9/15 | 0.02434 | 0.03218 | 15/15 |
-| null, duration means 12 vs 12 | 9/15 | 7/15 | 0.01370 | 0.01184 | 15/15 |
+| strong, means 6 vs 18 | 14/15 | 14/15 | 0.09954 | 0.09166 | 15/15 |
+| moderate, means 9 vs 15 | 13/15 | 9/15 | 0.02434 | 0.03218 | 15/15 |
+| null, means 12 vs 12 | 9/15 | 7/15 | 0.01370 | 0.01184 | 15/15 |
 
-Acceptance result: **PASS** for strong context, moderate context, and the null-context no-spurious-separation gate.
+Acceptance: **PASS**.
 
 ## Permutation-invariant latent-state recovery
 
-The state benchmark uses `K=3`, three observed coordinates, explicit-duration state episodes, and state-dependent Gaussian means. State labels are evaluated only up to permutation. Training uses `emission_init_mode="kmeans"`, `max_iter=40`, and one initialization per data seed; evaluation uses separately generated sequences.
+The state benchmark uses `K=3`, three observed coordinates, explicit-duration episodes, and state-dependent Gaussian means. Labels are scored only up to permutation. The benchmark explicitly opts into `emission_init_mode="kmeans"`; the package default remains `spread`.
 
-Predefined gates:
+Predefined gates: strong median accuracy >= `0.90`, ARI >= `0.80`; moderate accuracy >= `0.70`, ARI >= `0.40`; null accuracy <= `0.45` and |median ARI| <= `0.10`; strong/moderate require at least 14/15 non-collapsed runs.
 
-- strong separation: median matched accuracy >= `0.90`, median ARI >= `0.80`, at least 14/15 non-collapsed;
-- moderate separation: median matched accuracy >= `0.70`, median ARI >= `0.40`, at least 14/15 non-collapsed;
-- null separation: median matched accuracy <= `0.45` and absolute median ARI <= `0.10`.
+Seeds `301..315`:
 
-Latest acceptance on seeds 301-315:
+| Scenario | Median accuracy | Median ARI | Median effective states | Non-collapsed |
+| --- | ---: | ---: | ---: | ---: |
+| strong | 0.99667 | 0.99018 | 2.99070 | 15/15 |
+| moderate | 0.93000 | 0.80182 | 2.99107 | 15/15 |
+| null | 0.36333 | 0.00000 | 1.16304 | descriptive |
 
-| Scenario | Separation | Median matched accuracy | Median ARI | Median effective states | Non-collapsed |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| strong | 4.0 | 0.99667 | 0.99018 | 2.99070 | 15/15 |
-| moderate | 2.0 | 0.93000 | 0.80182 | 2.99107 | 15/15 |
-| null | 0.0 | 0.36333 | 0.00000 | 1.16304 | descriptive |
+Acceptance: **PASS**.
 
-Acceptance result: **PASS** for all three scenarios. The null result is expected to collapse or partition arbitrarily because no state-identifying emission signal exists; the relevant guard is that matched accuracy and ARI stay at chance/no-signal levels.
+The earlier data-independent `spread` initialization could enter persistent two-state local minima on strongly identifiable synthetic data. More iterations and marginal state-usage regularization did not reliably rescue those seeds. Training-time K-Means++/Lloyd initialization did, so K-Means remains an explicit opt-in rather than the global default.
 
-### Initialization finding
+## Transition-context recovery
 
-The previous data-independent `spread` initialization could enter persistent two-state local minima on otherwise strongly identifiable three-state synthetic data. More iterations and marginal state-usage KL regularization did not reliably rescue those seeds. A training-time K-Means++/Lloyd initializer recovered all three states robustly in the controlled benchmark.
+The transition benchmark isolates transition learning with `K=3`, strongly identifiable Gaussian emissions, `max_duration=1`, and a binary causal context `c_t` that selects the known transition law for boundary `t -> t+1`. State identity is aligned up to permutation before transition matrices are scored.
 
-K-Means is therefore exposed as an **explicit opt-in initializer**, not the global default. Making it the global default changed the established duration null-control behavior, while retaining `spread` preserved the duration acceptance gate.
+Two package deficiencies were isolated before final acceptance:
 
-## Restart semantics
+- one-dimensional external context inherited a one-unit distribution hidden layer, so `LayerNorm(1)` erased all context variation; distribution context networks now retain a minimum hidden width of 16;
+- joint training learned transition-effect direction but underfit strong context amplitude. Increasing only clamp size, training budget, learning rate, initial `delta_scale`, or changing activation did not robustly solve it.
 
-`n_init` is now treated as restart semantics rather than iterative warm-starting. Each run receives freshly initialized distributions and the encoder is restored to its pre-optimization baseline. Best-run parameters are deep snapshots and include `duration_logits_bias`, so later restarts cannot mutate the saved candidate by reference.
+Component ablation showed that post-joint refinement needs only `transition.context_net + transition.delta_scale`; base transition logits need not move. The maintained benchmark therefore opts into:
+
+- `transition_context_max_delta=1.5`;
+- `transition_refine_steps=20`;
+- `transition_refine_lr=0.03`;
+- exact marginal sequence likelihood, temperature `1.0`, no duration-bias penalty;
+- all non-refined parameters frozen.
+
+Predefined gates: strong MAE <= `0.15`, delta correlation >= `0.70`, direction >= `0.80`; moderate MAE <= `0.18`, correlation >= `0.45`, direction >= `0.70`; null median absolute learned context delta <= `0.08`; strong/moderate require at least 14/15 non-collapsed runs.
+
+Seeds `401..415`:
+
+| Scenario | Median MAE | Median KL | Delta correlation | Direction | Abs context delta | Non-collapsed |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| strong | 0.01782 | 0.00370 | 0.99999 | 1.000 | 0.47720 | 15/15 |
+| moderate | 0.01833 | 0.00260 | 0.99194 | 1.000 | 0.16448 | 15/15 |
+| null | 0.00524 | 0.00032 | 0.00000 | n/a | 3.04e-7 | 15/15 |
+
+Acceptance: **PASS**. The null control remains far below the `0.08` spurious-effect guard.
 
 ## Interpretation
 
-Current evidence supports two package-level claims under controlled generators:
+Current controlled evidence supports three narrow package claims: duration-context ordering is recoverable without spurious null separation; identifiable latent states are recoverable up to permutation with explicit K-Means initialization; and known context-conditioned transition laws are recoverable with explicit transition capacity/refinement while preserving a near-zero null effect.
 
-1. with the default `spread` initializer, the causal NHSMM recovers context-conditioned duration/hazard ordering without spurious null-context separation;
-2. with explicit `emission_init_mode="kmeans"`, the model robustly recovers identifiable latent states up to permutation while remaining at chance under null separation.
-
-It does **not** establish meaningful state semantics, transition-context recovery, or downstream predictive value in an external domain.
+These results do **not** establish domain semantics or downstream predictive value.
 
 ## Reproduction
 
 ```bash
 python scripts/validate_duration_context.py --output /tmp/nhsmm-duration-context.json
 python scripts/validate_state_recovery.py --scenario all --output /tmp/nhsmm-state-recovery.json
+python scripts/validate_transition_context.py --scenario all --output /tmp/nhsmm-transition-context.json
 ```

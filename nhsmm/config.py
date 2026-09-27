@@ -55,6 +55,7 @@ class ModelConfig:
     initial_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     duration_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     transition_init_mode: Literal["normal", "biased", "uniform"] = "normal"
+    transition_context_max_delta: float = 0.5
     transition_type: Literal["ergodic", "semi", "left-to-right"] = "ergodic"
     activation: Literal["leaky_relu", "identity", "softplus", "gelu", "relu", "tanh"] = "tanh"
     emission_type: Literal["gaussian", "studentt"] = "gaussian"
@@ -72,6 +73,8 @@ class ModelConfig:
     lr: float = 1e-2
     tol: float = 1e-4
     max_iter: int = 40
+    transition_refine_steps: int = 0
+    transition_refine_lr: float = 3e-2
     loss_bias: float = 1e-3
     plateau_window: int = 6
     plateau_tol: float = 1e-4
