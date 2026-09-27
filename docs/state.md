@@ -72,9 +72,21 @@ No frozen gate, threshold, or refinement hyperparameter was retuned.
   - null: selected `3/5`, median context amplitude `0.169`, median MAE `0.038`, only 2/5 null per-seed PASS;
   - **REJECTED** because detector null-generalization failed on the new dev seeds.
 
-See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md) and [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md).
+### Shared-linear + effect-floor candidate — fresh confirmatory FAIL
 
-**Current interpretation:** estimator expressiveness is not the remaining blocker; shared-linear estimation recovers active strong/moderate functional shape well. The unresolved deficiency is robust evidence-based **detection/generalization under multidimensional null context**. The canonical detector produced `0/5` null selections on `731..735` but `3/5` on new dev seeds `741..745`. Do not promote the dual-stage candidate.
+A second candidate used the shared-linear estimator plus a pre-refine functional-amplitude floor. The extra floor was chosen only on development seeds `741..745`, where `0.25` separated active moderate effects from null controls while preserving the existing held-out evidence threshold `delta_ll_per_boundary > -0.07`. The rule was then frozen and tested on fresh seeds `751..755`.
+
+| Scenario | Selected | Accuracy | ARI | Transition corr | Transition MAE | Result |
+|---|---:|---:|---:|---:|---:|---|
+| strong | 5/5 | 1.000 | 1.000 | 0.960 | 0.061 | PASS |
+| moderate | 3/5 | 1.000 | 1.000 | 0.814 | 0.103 | **FAIL** |
+| null | 0/5 | 1.000 | 1.000 | 0.000 | 0.017 | PASS |
+
+The candidate restores null rejection (`0/5`) and preserves excellent strong recovery, but moderate selection falls to `3/5`, below the frozen `>=4/5` requirement. It is therefore **REJECTED**. Do not lower the evidence threshold or the `0.25` effect floor after seeing the confirmatory set.
+
+See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md), [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md), and [`validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md`](validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md).
+
+**Current interpretation:** estimator expressiveness is not the remaining blocker; shared-linear estimation recovers active strong/moderate functional shape well. The unresolved deficiency is robust evidence-based detection/generalization under multidimensional context. Canonical detection can false-positive on null blocks; the effect-floor variant restores null control but loses moderate selection power.
 
 **Status: PACKAGE-CORE PARTIAL / NOT PASS.**
 
@@ -88,7 +100,8 @@ These controlled synthetic results establish mechanism recovery and identifiabil
 
 ## Next research slices
 
-1. **Detector stability:** improve/null-calibrate evidence detection across independent seed blocks without changing the frozen acceptance gate after seeing results; any candidate must preserve strong/moderate detection and null control.
-2. Keep the shared-linear estimator as diagnostic evidence only; do not promote it until detector stability is solved and a fresh confirmatory block passes.
-3. Change package semantics only if a controlled diagnostic identifies a reproducible mechanism deficiency.
-4. **API/design translation** remains deferred until the general-context package gate passes.
+1. **Detector stability / power:** improve evidence detection across independent seed blocks without retuning rejected candidates; the next mechanism must preserve strong detection, recover moderate `>=4/5`, and keep null at `0/5`.
+2. Prefer a mechanism-level improvement to evidence uncertainty/calibration over another global shrinkage or a lower post-hoc threshold.
+3. Any new candidate must use a new development block and a separate fresh confirmatory block.
+4. Keep the shared-linear estimator as diagnostic evidence only until detector stability is solved.
+5. **API/design translation** remains deferred until the general-context package gate passes.
