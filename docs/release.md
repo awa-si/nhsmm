@@ -11,7 +11,7 @@ NHSMM uses `setuptools`/PEP 517 packaging, `setuptools_scm` for tag-derived vers
 - publish workflow: `.github/workflows/release.yml`
 - publish target: PyPI project `nhsmm`
 
-The release workflow is tag-only. It does not run on ordinary pushes or pull requests.
+The workflow can be started manually as a **build/install dry run**. Manual runs never publish. Production publishing happens only for pushed `v*` tags.
 
 ## One-time PyPI setup
 
@@ -26,16 +26,25 @@ Create the GitHub environment `pypi`. A manual approval rule is recommended for 
 
 No long-lived PyPI API token is required when Trusted Publishing is configured.
 
-## Pre-release checklist
+## Pre-release dry run
 
-Before creating a release tag:
+Before creating a release tag, run the GitHub workflow `NHSMM release` manually. The manual run performs all packaging checks but skips the publish job.
 
-1. Use a complete checkout of the intended release commit.
-2. Run the complete discovered pytest suite.
-3. Confirm `git status` is clean.
-4. Confirm README/package metadata describe the current public API.
-5. Confirm the release version is new on PyPI.
-6. Run a local package build when possible:
+It verifies:
+
+1. full-history checkout for `setuptools_scm`;
+2. sdist + wheel build;
+3. `twine check` metadata validation;
+4. installation of the built wheel into a fresh venv;
+5. import of the installed package from outside the source checkout;
+6. canonical public context API smoke for `initial`, `duration`, `emission`, and `transition`;
+7. artifact creation for the exact verified distributions.
+
+Also run the complete package pytest suite from a complete local checkout before release.
+
+## Local build check
+
+When a complete checkout is available locally:
 
 ```bash
 python -m pip install --upgrade build twine
@@ -57,18 +66,14 @@ git push origin v0.0.5a0
 
 Pushing the tag starts `.github/workflows/release.yml`.
 
-The workflow:
+The tag-triggered workflow:
 
-1. checks out full Git history/tags for `setuptools_scm`;
-2. builds sdist + wheel;
-3. runs `twine check`;
-4. installs the built wheel into a fresh virtual environment;
-5. verifies installed package version equals the pushed tag;
-6. runs a public-API import/context-effect smoke against the installed wheel;
-7. uploads the exact verified distributions as an artifact;
-8. publishes those same distributions through PyPI Trusted Publishing.
+1. repeats the complete build/install verification;
+2. verifies the installed package version exactly equals the pushed tag without its `v` prefix;
+3. uploads the exact verified distributions as an artifact;
+4. publishes those same distributions through PyPI Trusted Publishing.
 
-A publish job cannot run unless the build/verification job passes.
+A publish job cannot run unless the build/verification job passes, and the publish job is gated to `refs/tags/v*`.
 
 ## Versioning
 
@@ -77,6 +82,14 @@ Do not manually edit a source version constant for releases. `pyproject.toml` de
 `nhsmm.__version__` is read from installed package metadata.
 
 For a release build from tag `vX.Y.Z`, the installed version must be exactly `X.Y.Z`. The release workflow checks this before publishing.
+
+The configured tag pattern accepts examples such as:
+
+```text
+v0.0.5a0
+v0.1.0a0
+v0.1.0
+```
 
 ## Failure handling
 
