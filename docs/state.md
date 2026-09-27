@@ -4,21 +4,11 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, transition-context, and multi-component identifiability are verified. **Multi-component identifiability is PACKAGE-CORE PASS across the full frozen 15-seed A/B/C/D gate.** General-context detect→refine package confirmation is **PARTIAL / NOT PASS**: strong and null pass, while moderate-strength 2D transition-function recovery misses only the frozen median-correlation gate.
+**Phase:** duration-context, latent-state, transition-context, and multi-component identifiability are verified. **Multi-component identifiability is PACKAGE-CORE PASS across the full frozen 15-seed A/B/C/D gate.** General-context package confirmation remains **PARTIAL / NOT PASS**.
 
 Package-core confirmation uses a SHA-pinned sparse local workspace reconstructed from `develop` sources. The exercised paths are canonical training, causal likelihood recursion, duration/transition/emission distributions, transition-only refinement, and causal filtering. External context is supplied explicitly, so encoder/import glue is inert for these validators. No CI is used for this research loop.
 
-## Verified training baseline
-
-- [x] `NHSMM.optimize()` covers all trainable parameters, including the causal encoder.
-- [x] Default joint-training maximum is `40` iterations.
-- [x] `n_init` uses independent restarts; best-run snapshots include `duration_logits_bias`.
-- [x] Explicit `kmeans` emission initialization is available for state-identifiability-sensitive training.
-- [x] Scalar external context retains a distribution hidden width >=16.
-- [x] Transition context capacity is independently configurable.
-- [x] Optional transition refinement updates only transition context modulation against exact sequence likelihood.
-
-## Accepted / provisional evidence
+## Accepted evidence
 
 ### Duration context — seeds 201..215
 
@@ -34,8 +24,6 @@ Binary external-context transition recovery at `max_duration=1`: **PASS** for st
 
 ### Multi-component identifiability — PACKAGE-CORE PASS
 
-The initial failed joint benchmark is not accepted as evidence because it used a `semi` topology against cyclic ground truth and contained duration/transition scoring errors. A later isolated-C diagnostic was also invalid because duration-context ground truth remained active while duration context was disabled in the model. The corrected component-matched package gate nulls omitted mechanisms in both generator and model while leaving full-joint D unchanged.
-
 Package source pinned for this confirmation: `efd4826ddc48586c47debf075d1c6332596cb0de`; frozen seeds `501..515`; `K=3`, `D=24`, ergodic transition support.
 
 | Scenario | A | B | C | D |
@@ -45,9 +33,8 @@ Package source pinned for this confirmation: `efd4826ddc48586c47debf075d1c633259
 | null | PASS | PASS | PASS | PASS |
 
 Representative medians:
-
-- strong C: accuracy/ARI `1.000/1.000`, transition MAE `0.184`, corr `0.996`, noncollapsed `15/15`;
-- strong D: accuracy/ARI `1.000/1.000`, duration gap `4.383`, transition MAE `0.169`, corr `0.997`, noncollapsed `15/15`;
+- strong C: transition MAE `0.184`, corr `0.996`, noncollapsed `15/15`;
+- strong D: duration gap `4.383`, transition MAE `0.169`, corr `0.997`, noncollapsed `15/15`;
 - moderate C: transition MAE `0.162`, corr `0.963`, noncollapsed `15/15`;
 - moderate D: duration gap `2.273`, transition MAE `0.132`, corr `0.938`, noncollapsed `15/15`;
 - null C: null transition delta `0.044`, noncollapsed `13/15`;
@@ -57,13 +44,11 @@ See [`validation/multicomponent-component-matched-package-15seed-2026-09-27.md`]
 
 **Status: PACKAGE-CORE PASS.** The multi-component research question is closed unless a future package change invalidates the frozen gate.
 
-### General-context robustness — package-core confirmation
+## General-context robustness — active package boundary
 
-Independent-reference work had provisionally accepted the frozen detect→refine mechanism on seeds `731..735` with selection threshold `-0.07` nats/validation-boundary and 20 transition-context-only refinement steps at lr `0.03`.
+Frozen reference spec SHA256: `632d120c60847ffbe180e5f62e0d1c3820a5332b2b69830b7c5f55a712426389`.
 
-For package transfer, Initial/Duration/Emission context modulation is disabled so the package harness isolates the same transition-context question. The frozen reference generator has no self-boundary transitions, while package `ergodic` permits them; recovery metrics therefore condition learned destination probabilities on an actual state change (remove diagonal and renormalize off-diagonal). Selection evidence remains the canonical package likelihood without metric transformation.
-
-Package source: `efd4826ddc48586c47debf075d1c6332596cb0de`. Frozen reference spec SHA256: `632d120c60847ffbe180e5f62e0d1c3820a5332b2b69830b7c5f55a712426389`.
+Canonical package detect→refine result on seeds `731..735`:
 
 | Scenario | Selected | Accuracy | ARI | Transition corr | Transition MAE | Context amp | Result |
 |---|---:|---:|---:|---:|---:|---:|---|
@@ -71,11 +56,27 @@ Package source: `efd4826ddc48586c47debf075d1c6332596cb0de`. Frozen reference spe
 | moderate | 4/5 | 1.000 | 1.000 | 0.730 | 0.098 | 0.474 | FAIL |
 | null | 0/5 | 1.000 | 1.000 | 0.000 | 0.018 | 0.000 | PASS |
 
-The moderate package run satisfies the frozen selection-count gate (`4/5`), the frozen median-MAE gate (`0.098 <= 0.100`), and the per-seed recovery requirement (`4/5` seeds). It fails only median transition-function correlation (`0.730 < 0.800`). The selected-only median correlation is also below `0.800`, so the result is not explained solely by the one unselected seed.
+The moderate package run passes selection count, MAE, and per-seed recovery, but misses only the frozen median-correlation gate (`0.730 < 0.800`). Topology-equivalent recovery scoring conditions package `ergodic` destinations on an actual state change; selection evidence remains canonical package likelihood.
 
-See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md).
+### Diagnostics after the partial gate
 
-**Status: PACKAGE-CORE PARTIAL / NOT PASS.** The open deficiency is narrowly localized to moderate-strength 2D transition-function shape fidelity. State recovery, null rejection, strong recovery, selection count, and moderate MAE all pass. No frozen gate, threshold, or refinement hyperparameter was changed.
+No frozen gate, threshold, or refinement hyperparameter was retuned.
+
+- pre-vs-post refinement: moderate corr is already ~`0.754` before refinement and ~`0.730` after; refinement is not the primary cause;
+- no-self topology: rejected (`3/5` moderate selected, corr ~`0.600`);
+- shared-duration context: rejected (moderate corr ~`0.644`, MAE ~`0.134`);
+- reference-equivalent shared-linear estimator: strong `corr~0.985/MAE~0.039`, moderate `corr~0.877/MAE~0.084`, but when used as its own detector it selects null `5/5` and is rejected;
+- dual-stage canonical-MLP detector → shared-linear estimator on new dev seeds `741..745`:
+  - strong: selected `5/5`, median corr `0.984`, MAE `0.044`, 5/5 per-seed recovery PASS;
+  - moderate: selected `5/5`, median corr `0.923`, MAE `0.076`, 5/5 per-seed recovery PASS;
+  - null: selected `3/5`, median context amplitude `0.169`, median MAE `0.038`, only 2/5 null per-seed PASS;
+  - **REJECTED** because detector null-generalization failed on the new dev seeds.
+
+See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md) and [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md).
+
+**Current interpretation:** estimator expressiveness is not the remaining blocker; shared-linear estimation recovers active strong/moderate functional shape well. The unresolved deficiency is robust evidence-based **detection/generalization under multidimensional null context**. The canonical detector produced `0/5` null selections on `731..735` but `3/5` on new dev seeds `741..745`. Do not promote the dual-stage candidate.
+
+**Status: PACKAGE-CORE PARTIAL / NOT PASS.**
 
 ## Verification limits
 
@@ -87,6 +88,7 @@ These controlled synthetic results establish mechanism recovery and identifiabil
 
 ## Next research slices
 
-1. **Moderate 2D context fidelity diagnostic:** without retuning the frozen gate, compare pre-vs-post refinement functional correlation, package context-network parameterization, and duration/self-boundary identifiability to locate the `0.730 < 0.800` gap.
-2. Change package semantics only if a controlled diagnostic identifies a reproducible mechanism deficiency; any candidate fix must preserve strong and null gates.
-3. **API/design translation** remains deferred until the general-context package gate passes; do not promote evidence selection blindly into core model semantics.
+1. **Detector stability:** improve/null-calibrate evidence detection across independent seed blocks without changing the frozen acceptance gate after seeing results; any candidate must preserve strong/moderate detection and null control.
+2. Keep the shared-linear estimator as diagnostic evidence only; do not promote it until detector stability is solved and a fresh confirmatory block passes.
+3. Change package semantics only if a controlled diagnostic identifies a reproducible mechanism deficiency.
+4. **API/design translation** remains deferred until the general-context package gate passes.
