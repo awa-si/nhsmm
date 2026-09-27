@@ -4,9 +4,11 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability remains provisionally accepted.** General-context robustness is **provisionally accepted at reference level** using the frozen detect→refine mechanism. Package confirmation is now the active boundary.
+**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability remains provisionally accepted.** General-context robustness remains **provisionally accepted at reference level** using the frozen detect→refine mechanism. **Package confirmation is active and has now started against the actual package core locally.**
 
-The corrected multi-component reference remains a provisional PASS only: package-level confirmation against the actual `nhsmm` implementation is still outstanding because the current connector does not provide repository materialization into the local runtime. No CI is used for this research loop.
+The previously missing package-materialization boundary has been partially removed by reconstructing the exact dependency closure needed for the validator from SHA-pinned `develop` sources into a sparse local workspace. The real package training/filtering path imports successfully with `K=3`, `D=24`, `causal=True`. No CI is used for this research loop.
+
+A first real-package A/B/C/D smoke on one strong seed is numerically stable: state recovery is `1.000/1.000` accuracy/ARI in all four ablations, the learned duration and transition effects have the correct direction, and full-joint D is inside the strong transition-MAE gate. The transition-only C case on this single smoke seed has MAE `0.225`, slightly above the production median gate; this is not a gate failure because the production decision is median-based across the frozen multi-seed set. The displayed noncollapsed failure in the 1-seed smoke is likewise not interpretable against the production `>=13/15` gate. **No package-level PASS has been declared yet.** The next step is the unchanged 3-seed package run, followed by the full frozen gate if stable.
 
 General-context robustness exposed one specific defect in the ungated reference: multidimensional null context could retain spurious transition modulation despite perfect state recovery. Global L2 shrinkage and shared-duration/tied context were rejected. The accepted reference design separates detection from estimation: paired cross-fitted held-out evidence is computed on the same unrefined fitted model with transition context on vs off; context is selected at median ΔLL/boundary `> -0.07`; only selected context is then refined for 20 `tctx`-only steps. On fresh confirmatory seeds 731..735 this selected strong 5/5, moderate 5/5, null 0/5 and all per-seed recovery/null gates passed. This is a **PROVISIONAL PASS**, not package-level acceptance.
 
@@ -55,7 +57,20 @@ Validation config: `max_duration=1`, explicit binary external context, `transiti
 
 The corrected independent local causal-HSMM reference used `K=3`, `D=24`, seeds `501..503`, explicit A/B/C/D ablations, and an ergodic topology. Strong and moderate full-joint cases retained matched accuracy/ARI `1.000`; null A-D retained state identity without material spurious context. Reintroducing the old `semi` support reproduced the collapse. See [`validation/multicomponent-reference-deep-dive-2026-09-27.md`](validation/multicomponent-reference-deep-dive-2026-09-27.md).
 
-**Status:** PROVISIONAL PASS. Package-level acceptance still requires a corrected local v2 run against the actual package implementation.
+**Status:** PROVISIONAL PASS. Package-level confirmation is now in progress against the actual package core.
+
+### Package confirmation — in progress
+
+Current pinned package head for the local sparse confirmation workspace: `efd4826ddc48586c47debf075d1c6332596cb0de`.
+
+Real package components materialized for the validator include the package configuration, context/router, convergence, distributions, causal filtering, and the canonical `models/base.py` + `models/training.py` path. The first one-seed strong A/B/C/D smoke completed with:
+
+- A state-only: matched accuracy/ARI `1.000/1.000`;
+- B state + duration: matched accuracy/ARI `1.000/1.000`, duration effect direction correct;
+- C state + transition: matched accuracy/ARI `1.000/1.000`, transition effect direction correct, single-seed MAE `0.225`;
+- D full joint: matched accuracy/ARI `1.000/1.000`, transition MAE inside the strong gate.
+
+**Interpretation:** smoke PASS for numerical/package-path viability only. This does not promote the provisional research result. The unchanged 3-seed run is next; only then may the full 15-seed gate be executed and evaluated.
 
 ### General-context robustness — current boundary
 
@@ -78,7 +93,7 @@ Current status:
 
 ## Verification limits
 
-The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. The general-context work is independent local reference evidence until corresponding package-level harnesses are materialized and run locally.
+The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. The current package confirmation is intentionally scoped to the exact dependency closure required by the multi-component validator.
 
 ## Package boundary
 
@@ -86,6 +101,7 @@ These controlled results establish mechanism recovery under known synthetic grou
 
 ## Next research slices
 
-1. **Package confirmation:** when local package materialization becomes available, run corrected v2 multi-component and detect→refine general-context validators against the actual `nhsmm` implementation.
-2. **API/design translation:** only after package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration; do not promote the reference mechanism blindly into core model semantics.
-3. Change objectives or parameterizations only if the controlled package-level gates expose a reproducible deficiency.
+1. **Package confirmation:** run the unchanged 3-seed multi-component package gate locally against the materialized package core; if stable, execute the full frozen 15-seed gate and either promote to package-level PASS or reopen the deficiency.
+2. **General-context package confirmation:** after multi-component package confirmation, translate the frozen detect→refine reference gate to the actual package implementation and run it locally.
+3. **API/design translation:** only after package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration; do not promote the reference mechanism blindly into core model semantics.
+4. Change objectives or parameterizations only if the controlled package-level gates expose a reproducible deficiency.
