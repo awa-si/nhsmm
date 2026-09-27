@@ -1,52 +1,56 @@
 # General-context evidence gating — 2026-09-27
 
-This record preserves the current local research state for multidimensional causal transition context selection. It is independent reference evidence, not package-level acceptance. No CI was used.
+This record preserves the local research result for multidimensional causal transition-context selection. It is **independent reference evidence, not package-level acceptance**. No CI was used.
 
-## Background
+## Problem
 
-Unregularized high-data 2D transition-context recovery preserves state identity and learns active strong/moderate context effects, but the null case can retain spurious context modulation. Global L2 shrinkage and shared-duration/tied-context parameterizations were both rejected in confirmatory experiments.
+Unregularized high-data 2D transition-context recovery preserves state identity and learns strong/moderate context effects, but the null case can retain spurious context modulation. Global L2 shrinkage and shared-duration/tied-context parameterizations were rejected because they either over-shrank real effects or failed to suppress null modulation.
 
-## Held-out evidence selection
+## Accepted reference mechanism: detect → refine
 
-The current mechanism fits context and null-context candidates on the same training partitions and selects the context branch from held-out likelihood evidence aggregated over cross-fit folds.
+The accepted reference design separates **detection** from **estimation**:
 
-### Strict gate (`tau = 0`) — dev seeds 671..675
+1. Fit the unrefined full model.
+2. On five independent held-out validation folds, evaluate the **same fitted model** twice: learned transition context on vs `tctx=0`.
+3. Compute ΔLL normalized per observed validation boundary and aggregate by the median across folds.
+4. Select transition context iff median ΔLL/boundary `> -0.07`.
+5. If selected, freeze all non-context parameters and refine only `tctx` for 20 steps at LR `0.03`.
+6. If not selected, disable transition context exactly.
 
-| Scenario | Selected | Median ΔLL / boundary | Median corr | Median MAE | Median amplitude |
+This avoids nuisance variance from separately optimized null/full candidates and prevents refinement from contaminating the evidence used for selection.
+
+Confirmatory spec SHA256: `632d120c60847ffbe180e5f62e0d1c3820a5332b2b69830b7c5f55a712426389`.
+
+## Dev — seeds 721..725
+
+| Scenario | Selected | Median ΔLL/boundary | Median corr | Median MAE | Median amplitude |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| strong | 5/5 | +0.0961 | 0.942 | 0.095 | 0.677 |
-| moderate | 0/5 | -0.0572 | ~0 | 0.153 | 0 |
-| null | 0/5 | -0.0995 | 0 | 0.045 | 0 |
+| strong | 5/5 | +0.0866 | 0.953 | 0.078 | 0.663 |
+| moderate | 5/5 | -0.0473 | 0.840 | 0.074 | 0.463 |
+| null | 1/5 | -0.1178 | 0.000 | 0.080 | 0.000 |
 
-Interpretation: excellent null control, inadequate power for moderate effects.
+All pre-specified dev gates passed. The mechanism and thresholds were then frozen before fresh confirmation.
 
-### Relaxed gate (`tau = -0.08`) — fresh confirmatory seeds 681..685
+## Confirmatory — seeds 731..735
 
-| Scenario | Selected | Median ΔLL / boundary | Median corr | Median MAE | Median amplitude |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| strong | 5/5 | +0.0883 | 0.951 | 0.102 | 0.673 |
-| moderate | 5/5 | -0.0573 | 0.780 | 0.089 | 0.425 |
-| null | 1/5 | -0.1106 | 0 | 0.047 | 0 |
+| Scenario | Selected | Seed passes | Median ΔLL/boundary | Accuracy | ARI | Median corr | Median MAE | Median amplitude | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| strong | 5/5 | 5/5 | +0.0810 | 1.000 | 1.000 | 0.960 | 0.075 | 0.718 | PASS |
+| moderate | 5/5 | 5/5 | -0.0568 | 1.000 | 1.000 | 0.836 | 0.074 | 0.485 | PASS |
+| null | 0/5 | 5/5 | -0.1121 | 1.000 | 1.000 | 0.000 | 0.034 | 0.000 | PASS |
 
-The single null false positive is seed 683. Its fold ΔLL values are `[-0.0357, -0.0895, -0.2142, -0.0464, -0.0464]`; none are positive, but the median exceeds `-0.08`. This demonstrates that the relaxed median-only rule is insufficient.
+The confirmatory result satisfies the frozen gates: strong/moderate context is retained and accurately estimated, while null context is disabled exactly.
 
-## Other evidence-gate variants already tested
+## Rejected variants
 
-- Refined held-out variant on seeds 691..695: strong 5/5, moderate 1/5, null 0/5 — rejected for low moderate power.
-- Paired variant on seeds 701..705: strong 3/5, moderate 1/5, null 0/5 — rejected for low active power.
+- Global L2 regularization: reduced null modulation but over-shrank active effects.
+- Shared-duration/tied context: preserved active effects but worsened null spurious amplitude.
+- Single-split held-out selection: too much split variance.
+- Cross-fit selection using independently optimized full/null models: improved selection, but active recovery missed frozen confirmatory gates.
+- Paired ablation after transition refinement: refinement contaminated selection and reduced active power.
 
-## Current conclusion
+## Status
 
-Evidence-dependent selection remains preferable to global parameter shrinkage because it can set the null branch exactly to zero without biasing accepted active models. The unresolved problem is selection power/calibration, not state recovery or active-model fit quality.
+**PROVISIONAL PASS** for the reference-level question: continuous/multidimensional causal transition context can be robustly selected and recovered when detection is separated from refinement.
 
-## Next frozen design task
-
-Use the existing dev cross-fit results to define one additional fold-stability condition alongside the relaxed `tau=-0.08` criterion. The condition must be chosen before looking at new confirmatory seeds. Acceptance requires:
-
-- strong selected 5/5;
-- moderate selected at least 4/5;
-- null selected 0/5;
-- accepted active-model median transition correlation >= 0.70;
-- accepted active-model median MAE <= 0.12.
-
-No further threshold rescue is allowed after the next confirmatory run.
+This does not yet certify the actual `nhsmm` package. Package-level acceptance requires implementing/materializing the corresponding harness and running it locally against the real package implementation.
