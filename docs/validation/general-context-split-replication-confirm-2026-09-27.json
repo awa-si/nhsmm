@@ -1,0 +1,46 @@
+{
+  "status": "PACKAGE-CORE PASS",
+  "development_seeds": [841, 842, 843, 844, 845],
+  "confirmatory_seeds": [851, 852, 853, 854, 855],
+  "detector": {
+    "replication_corr_min": 0.55,
+    "min_half_amplitude_min": 0.50,
+    "state_alignment": "learned emission centers only",
+    "truth_free_detection": true
+  },
+  "confirmatory": {
+    "strong": {
+      "selected": 5,
+      "total": 5,
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_transition_corr": 0.9760677877794839,
+      "median_transition_mae": 0.05146803173137155,
+      "median_replication_corr": 0.9328051957273394,
+      "median_min_half_amplitude": 0.8001990080681556,
+      "result": "PASS"
+    },
+    "moderate": {
+      "selected": 4,
+      "total": 5,
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_transition_corr": 0.9141837917155677,
+      "median_transition_mae": 0.0706234458543138,
+      "median_replication_corr": 0.771405758235063,
+      "median_min_half_amplitude": 0.5160598392460387,
+      "result": "PASS"
+    },
+    "null": {
+      "selected": 0,
+      "total": 5,
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_transition_corr": 0.0,
+      "median_transition_mae": 0.027654045815217465,
+      "median_replication_corr": 0.42607489297960677,
+      "median_min_half_amplitude": 0.3633386161097132,
+      "result": "PASS"
+    }
+  }
+}
