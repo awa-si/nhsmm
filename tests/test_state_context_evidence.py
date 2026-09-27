@@ -115,3 +115,29 @@ def test_emission_adapter_returns_state_feature_means_and_preserves_mode():
     assert value.shape == (3, 2)
     assert np.isfinite(value).all()
     assert model.training
+
+
+def test_initial_adapter_returns_normalized_state_prior_and_preserves_mode():
+    from nhsmm.validation.state_effect import initial_context_tensor
+
+    model = _model()
+    model.train()
+    value = initial_context_tensor(model, [0.25, -0.5])
+
+    assert value.shape == (3,)
+    assert np.isfinite(value).all()
+    assert np.all(value >= 0.0)
+    assert np.isclose(value.sum(), 1.0)
+    assert model.training
+
+
+def test_initial_adapter_rejects_context_dimension_mismatch():
+    from nhsmm.validation.state_effect import initial_context_tensor
+
+    model = _model()
+    try:
+        initial_context_tensor(model, [0.25])
+    except ValueError as exc:
+        assert "context dimension mismatch" in str(exc)
+    else:
+        raise AssertionError("expected context dimension mismatch")
