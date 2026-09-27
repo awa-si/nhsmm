@@ -1,10 +1,9 @@
 from __future__ import annotations
-from typing import Optional, Literal, Dict, Any
+from typing import Optional, Literal
 from dataclasses import dataclass
 import logging
 
 import torch
-import torch.nn as nn
 
 logger = logging.getLogger("NHSMM")
 
