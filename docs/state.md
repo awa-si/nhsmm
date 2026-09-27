@@ -4,9 +4,12 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, transition-context, and multi-component identifiability are verified. **Multi-component identifiability is PACKAGE-CORE PASS across the full frozen 15-seed A/B/C/D gate.** General-context package confirmation remains **PARTIAL / NOT PASS**.
+**Phase:** duration-context, latent-state, transition-context, multi-component identifiability, and general-context robustness are verified at package-core level.
 
-Package-core confirmation uses a SHA-pinned sparse local workspace reconstructed from `develop` sources. The exercised paths are canonical training, causal likelihood recursion, duration/transition/emission distributions, transition-only refinement, and causal filtering. External context is supplied explicitly, so encoder/import glue is inert for these validators. No CI is used for this research loop.
+- **Multi-component identifiability: PACKAGE-CORE PASS** across the frozen 15-seed A/B/C/D gate.
+- **General-context robustness: PACKAGE-CORE PASS** using split-fit direction replication.
+- No CI is used for this research loop; confirmation was run locally against the SHA-pinned package core with explicit external context.
+- The active boundary is now **API/design translation**, not further detector tuning.
 
 ## Accepted evidence
 
@@ -24,7 +27,7 @@ Binary external-context transition recovery at `max_duration=1`: **PASS** for st
 
 ### Multi-component identifiability — PACKAGE-CORE PASS
 
-Package source pinned for this confirmation: `efd4826ddc48586c47debf075d1c6332596cb0de`; frozen seeds `501..515`; `K=3`, `D=24`, ergodic transition support.
+Package source pinned for confirmation: `efd4826ddc48586c47debf075d1c6332596cb0de`; frozen seeds `501..515`; `K=3`, `D=24`, ergodic transition support.
 
 | Scenario | A | B | C | D |
 |---|---|---|---|---|
@@ -33,6 +36,7 @@ Package source pinned for this confirmation: `efd4826ddc48586c47debf075d1c633259
 | null | PASS | PASS | PASS | PASS |
 
 Representative medians:
+
 - strong C: transition MAE `0.184`, corr `0.996`, noncollapsed `15/15`;
 - strong D: duration gap `4.383`, transition MAE `0.169`, corr `0.997`, noncollapsed `15/15`;
 - moderate C: transition MAE `0.162`, corr `0.963`, noncollapsed `15/15`;
@@ -44,65 +48,46 @@ See [`validation/multicomponent-component-matched-package-15seed-2026-09-27.md`]
 
 **Status: PACKAGE-CORE PASS.** The multi-component research question is closed unless a future package change invalidates the frozen gate.
 
-## General-context robustness — active package boundary
+## General-context robustness — PACKAGE-CORE PASS
 
-Frozen reference spec SHA256: `632d120c60847ffbe180e5f62e0d1c3820a5332b2b69830b7c5f55a712426389`.
+The original package detect→refine gate on seeds `731..735` was only partial: strong and null passed, but moderate transition-shape correlation was `0.730 < 0.800`. A sequence of detector candidates was tested with strict dev→fresh-confirmatory separation and no post-hoc threshold relaxation.
 
-Canonical package detect→refine result on seeds `731..735`:
+Rejected candidates include:
 
-| Scenario | Selected | Accuracy | ARI | Transition corr | Transition MAE | Context amp | Result |
-|---|---:|---:|---:|---:|---:|---:|---|
-| strong | 5/5 | 1.000 | 1.000 | 0.919 | 0.092 | 0.706 | PASS |
-| moderate | 4/5 | 1.000 | 1.000 | 0.730 | 0.098 | 0.474 | FAIL |
-| null | 0/5 | 1.000 | 1.000 | 0.000 | 0.018 | 0.000 | PASS |
+- no-self topology;
+- shared-duration context;
+- shared-linear estimator as detector;
+- shared-linear + effect-floor;
+- fold-sign / fold-stability rules;
+- single-permutation evidence;
+- permutation evidence + effect-floor;
+- permutation-rank/binomial detector;
+- Fisher fold-permutation detector.
 
-The moderate package run passes selection count, MAE, and per-seed recovery, but misses only the frozen median-correlation gate (`0.730 < 0.800`). Topology-equivalent recovery scoring conditions package `ergodic` destinations on an actual state change; selection evidence remains canonical package likelihood.
+These remain rejected and must not be revived by retuning on their confirmatory blocks.
 
-### Rejected candidates
+### Accepted detector: split-fit direction replication
 
-No frozen gate, threshold, or refinement hyperparameter was retuned after confirmatory runs.
+The accepted detector requires the context effect to reproduce across **two independent fits on disjoint training halves**. Detection is truth-free: latent-state alignment uses learned emission centers only, then the learned context-induced transition-delta functions are compared on a fixed context grid.
 
-- pre-vs-post refinement: moderate corr ~`0.754` before and ~`0.730` after; refinement is not the primary cause;
-- no-self topology: rejected (`3/5` moderate selected, corr ~`0.600`);
-- shared-duration context: rejected (moderate corr ~`0.644`, MAE ~`0.134`);
-- shared-linear estimator alone: excellent active recovery but null selected `5/5`; rejected as detector;
-- shared-linear + effect-floor (`>=0.25`) confirmatory `751..755`: strong `5/5`, moderate `3/5`, null `0/5`; **REJECTED**;
-- fold-stability / effect-floor candidate confirmatory `771..775`: strong `5/5`, moderate `3/5`, null `0/5`; **REJECTED**;
-- single-permutation evidence dev `781..785`: strong `5/5`, moderate `5/5`, null `3/5`; **REJECTED on development**;
-- permutation evidence AND effect-floor confirmatory `791..795`: moderate `2/5`; **REJECTED early**;
-- permutation-rank exact test (5 folds × 7 cyclic permutations, one-sided exact Binomial vs 50/50, `alpha=0.05`):
-  - dev `801..805`: strong `5/5`, moderate `5/5`, null `0/5`;
-  - confirmatory `811..815`: strong `5/5`, moderate `5/5`, median corr `0.890`, median MAE `0.082`, but null `1/5` false-positive (seed `813`, exact `p=0.0083`);
-  - **REJECTED**. Do not tighten `alpha` after observing the confirmatory block.
+Frozen on development seeds `841..845`:
 
-### Fisher fold-permutation candidate — current checkpoint
+- `replication_corr >= 0.55`;
+- `min(amplitude_half1, amplitude_half2) >= 0.50`.
 
-The current Rapid-mode candidate corrects the dependence problem in the permutation-rank detector. Rather than treating 35 within-fold cyclic comparisons as independent Bernoulli trials, it computes a Monte-Carlo permutation p-value separately inside each of 5 held-out folds and combines the 5 fold-level p-values with Fisher's method.
+Fresh confirmatory seeds: `851..855`.
 
-Development block `821..825`:
+| Scenario | Selected | Accuracy | ARI | Transition corr | Transition MAE | Replication corr | Min half-amplitude | Result |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| strong | 5/5 | 1.000 | 1.000 | 0.976 | 0.051 | 0.933 | 0.800 | PASS |
+| moderate | 4/5 | 1.000 | 1.000 | 0.914 | 0.071 | 0.771 | 0.516 | PASS |
+| null | 0/5 | 1.000 | 1.000 | 0.000 | 0.028 | 0.426 | 0.363 | PASS |
 
-- strong: selected `5/5`;
-- moderate: selected `4/5`;
-- null: selected `0/5`;
-- strong median corr/MAE about `0.979 / 0.050`;
-- moderate median corr/MAE about `0.898 / 0.070`.
+The full frozen gate is satisfied: strong detection is preserved, moderate selection reaches the required `>=4/5`, null remains `0/5`, and selected active cases retain high functional transition recovery with perfect state recovery.
 
-The frozen rule is purely statistical: combine the 5 fold-level permutation p-values with Fisher's method and select when the combined p-value is `< 0.05`. No extra amplitude or likelihood threshold was added.
+See [`validation/general-context-split-replication-confirm-2026-09-27.md`](validation/general-context-split-replication-confirm-2026-09-27.md) and the machine-readable companion JSON.
 
-Fresh confirmatory block `831..835` is in progress but is already decisive for moderate power:
-
-- moderate: only **3/5 selected** (required `>=4/5`) → candidate is already a **confirmatory FAIL**;
-- selected moderate seeds retain strong functional recovery (median corr ~`0.888`, MAE ~`0.076`);
-- null block finalization is still pending and should be completed only to close the record cleanly;
-- no post-hoc threshold change is allowed.
-
-**Interpretation:** Fisher calibration improves the statistical semantics of the detector, but still loses too much moderate-effect power on a fresh seed block. It cannot be accepted even if null finishes `0/5`.
-
-See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md), [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md), [`validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md`](validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md), and [`validation/general-context-detector-rapid-2026-09-27.md`](validation/general-context-detector-rapid-2026-09-27.md).
-
-**Current interpretation:** estimator expressiveness is not the remaining blocker. The open problem remains detector generalization: keep null at `0/5` while preserving moderate power `>=4/5` across independent seed blocks.
-
-**Status: PACKAGE-CORE PARTIAL / NOT PASS.**
+**Status: PACKAGE-CORE PASS.** The detector-stability research boundary is closed unless a future package change invalidates the frozen gate.
 
 ## Verification limits
 
@@ -114,8 +99,8 @@ These controlled synthetic results establish mechanism recovery and identifiabil
 
 ## Next research slice
 
-1. Finish null `831..835` only to close the Fisher candidate record.
-2. Mark Fisher fold-permutation as REJECTED regardless of null outcome because moderate confirmatory power is `3/5`.
-3. Next candidate should add independent reproducibility information (for example split-fit direction replication) rather than another global magnitude or p-value threshold.
-4. Use a new development block and a separate fresh confirmatory block.
-5. API/design translation remains deferred until the general-context package gate passes.
+1. **API/design translation:** decide where split-fit evidence selection belongs: core training API, validation utility, or consumer orchestration.
+2. Preserve the accepted semantics: independent split fits, emission-based state alignment, direction replication, and minimum replicated effect size.
+3. Do not promote rejected detector variants or relax frozen gates.
+4. After API placement is decided, add focused package tests for the accepted detector semantics and then run the local test suite relevant to the changed surface.
+5. Downstream Nautilus integration remains a separate empirical validation boundary.
