@@ -27,6 +27,8 @@ def _context_tensor(model: Any, context: Any) -> torch.Tensor:
         value = value.reshape(1)
     if value.ndim != 1:
         raise ValueError("a single evidence context must be scalar or one-dimensional")
+    if not torch.isfinite(value).all():
+        raise ValueError("evidence context must contain only finite values")
     expected = getattr(model, "context_dim", None)
     if expected is not None and value.shape[0] != int(expected):
         raise ValueError(
@@ -64,6 +66,10 @@ def transition_context_matrix(model: Any, context: Any) -> np.ndarray:
                 ).exp()
                 if duration_p.ndim != 4:
                     raise ValueError("duration log_matrix must return [B,T,K,D]")
+                if duration_p.shape[:4] != transition_p.shape[:4]:
+                    raise ValueError(
+                        "duration and transition outputs must agree on [B,T,K,D]"
+                    )
                 matrix = (duration_p.unsqueeze(-1) * transition_p).sum(dim=-2)[0, 0]
             elif transition_p.ndim == 4:
                 matrix = transition_p[0, 0]
