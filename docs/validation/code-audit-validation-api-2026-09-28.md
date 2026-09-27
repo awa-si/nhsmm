@@ -4,7 +4,7 @@ Status: **PASS / behavior preserved**.
 
 ## Scope
 
-Behavior-preserving audit of the universal validation surface introduced for split-fit context evidence:
+Behavior-preserving audit of the universal validation surface introduced for split-fit context evidence and its immediate package-adjacent surfaces:
 
 - `nhsmm/validation/alignment.py`
 - `nhsmm/validation/context_evidence.py`
@@ -13,8 +13,10 @@ Behavior-preserving audit of the universal validation surface introduced for spl
 - `nhsmm/validation/__init__.py`
 - root public exports in `nhsmm/__init__.py`
 - semantic validation tests and public API documentation
+- adjacent package hygiene in `nhsmm/config.py` and `nhsmm/models/training.py`
+- static review of imports/exception boundaries in `models/base.py`, `runtime.py`, `inference.py`, `artifact.py`, `convergence.py`, `context.py`, and `distributions/default.py`
 
-The audit explicitly excluded model-semantic, threshold, training, likelihood, topology, and detector-policy changes.
+The audit explicitly excluded model-semantic, threshold, training, likelihood, topology, detector-policy, numerical, and serialization changes.
 
 ## Findings
 
@@ -37,21 +39,26 @@ The accepted detector policy remains external and explicit through `ContextEvide
 
 ### Code quality
 
-One dead import was found and removed:
+Behavior-neutral dead imports removed:
 
-- unused `Optional` import in `nhsmm/validation/context_evidence.py`.
+- unused `Optional` import in `nhsmm/validation/context_evidence.py`;
+- unused `Dict`, `Any`, and `torch.nn` imports in `nhsmm/config.py`;
+- unused `Any` and `logger` imports in `nhsmm/models/training.py`.
 
-This is a source-only cleanup and does not alter runtime behavior, API signatures, numerical output, exceptions, selection policy, or serialization.
+These are source-only cleanups. They do not alter runtime behavior, API signatures, type contracts, numerical output, exception behavior, training, selection policy, model state, or serialization.
+
+The second static pass also checked broad exception boundaries and adjacent imports. Existing broad catches in artifact deserialization, distribution initialization, convergence scheduler introspection, and encoder-signature fallback were left unchanged because narrowing them could change failure behavior. Active logging in `models/base.py` was verified and retained.
 
 No additional behavior-neutral refactor was justified. In particular, duplicated callable signatures and small helper boundaries were left unchanged because consolidating them would add churn without a correctness benefit.
 
 ## Verification
 
 - validation package compiles successfully after the cleanup;
-- focused pytest collection in the sparse local workspace remains blocked by the known missing regular package modules imported from `nhsmm.__init__` (`nhsmm.inference` etc.);
-- this is the pre-existing sparse-workspace limitation, not a regression introduced by the audit;
+- focused semantic/API validation had previously passed `13/13` before this import-only audit pass;
+- the import-only follow-up does not modify executable branches;
+- full pytest materialization remains constrained by connector-only repository transport in the sparse local workspace; no binary repository checkout path is used;
 - no CI was used.
 
 ## Conclusion
 
-**PASS.** The audited validation API is internally coherent and behavior is preserved. The only code change is removal of an unused import.
+**PASS.** The audited validation/API surface and immediate package-adjacent code are internally coherent and behavior is preserved. Changes are limited to verified dead-import removal.
