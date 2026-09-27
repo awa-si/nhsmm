@@ -11,8 +11,8 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Transition context:** PASS.
 - **Multi-component identifiability:** PACKAGE-CORE PASS across the frozen 15-seed A/B/C/D gate.
 - **General-context robustness:** PACKAGE-CORE PASS using split-fit direction replication.
-- **Universal validation API:** transition, duration, emission, and arbitrary state-indexed `[K,...]` context effects are supported without Nautilus/trading dependencies and without changing `NHSMM.optimize()` semantics.
-- **Focused validation/API tests:** 17/17 PASS locally in the sparse package workspace.
+- **Universal validation API:** initial, duration, emission, transition, and arbitrary state-indexed `[K,...]` context effects are supported without Nautilus/trading dependencies and without changing `NHSMM.optimize()` semantics.
+- **Focused validation/API tests:** 19/19 PASS locally in the sparse package workspace.
 - No CI is used for this research loop.
 
 The next package boundary is a broad local regression run from a complete checkout plus any documentation/export cleanup exposed by that run. Downstream Nautilus integration remains a separate empirical validation boundary.
@@ -97,10 +97,13 @@ Generic state-indexed API for effects shaped `[K,...]`:
 
 NHSMM state-indexed convenience adapters:
 
+- `initial_context_tensor` -> `[K]`
 - `duration_context_tensor` -> `[K,D]`
 - `emission_context_tensor` -> `[K,F]`
+- `evaluate_initial_context_replication`
 - `evaluate_duration_context_replication`
 - `evaluate_emission_context_replication`
+- `split_fit_initial_context_evidence`
 - `split_fit_duration_context_evidence`
 - `split_fit_emission_context_evidence`
 
@@ -111,6 +114,7 @@ Design rules:
 - no trading/domain assumptions;
 - research thresholds are explicit policy configuration, not universal package defaults;
 - amplitude units remain component-specific;
+- initial-state context evidence uses normalized state priors, not internal logits;
 - duration-dependent transition evidence integrates over the current duration law including `duration_logits_bias`;
 - duration-context evidence evaluates the normalized duration distribution including `duration_logits_bias`;
 - emission-context evidence evaluates state-conditioned emission means;
@@ -127,6 +131,7 @@ Focused semantic and contract coverage verifies:
 - disjoint split-fit training units;
 - duration-weighted effective transition matrices;
 - generic `[K,...]` state-effect permutation invariance;
+- normalized initial-state priors;
 - normalized duration context tensors;
 - emission state-feature tensor extraction;
 - model mode preservation;
@@ -137,7 +142,7 @@ Focused semantic and contract coverage verifies:
 - initialized-distribution requirement;
 - public root exports for the universal helpers.
 
-Focused local result: **17/17 PASS**.
+Focused local result: **19/19 PASS**.
 
 Documentation: [`validation-api.md`](validation-api.md).
 
