@@ -12,7 +12,8 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Multi-component identifiability:** PACKAGE-CORE PASS across the frozen 15-seed A/B/C/D gate.
 - **General-context robustness:** PACKAGE-CORE PASS using split-fit direction replication.
 - **Universal validation API:** initial, duration, emission, transition, and arbitrary state-indexed `[K,...]` context effects are supported without Nautilus/trading dependencies and without changing `NHSMM.optimize()` semantics.
-- **Focused validation/API tests:** 19/19 PASS locally in the sparse package workspace.
+- **Normalized public facade:** canonical `component=` API implemented for extraction, replica evaluation, and split-fit evidence; component-specific helpers remain behavior-compatible.
+- **Focused validation/API tests:** 23/23 PASS locally in the sparse package workspace.
 - No CI is used for this research loop.
 
 The next package boundary is a broad local regression run from a complete checkout plus any documentation/export cleanup exposed by that run. Downstream Nautilus integration remains a separate empirical validation boundary.
@@ -77,35 +78,43 @@ See [`validation/general-context-split-replication-confirm-2026-09-27.md`](valid
 
 The accepted semantics are exposed as a domain-neutral validation layer under `nhsmm.validation` and via public package exports.
 
-Shared result/policy API:
+### Canonical facade
+
+Normal callers should use:
+
+- `ContextComponent = Literal["initial", "duration", "emission", "transition"]`
+- `context_effect(model, context, component=...)`
+- `evaluate_context_effect_replication(model_a, model_b, contexts, component=..., config=...)`
+- `split_fit_context_effect_evidence(observations, context, component=..., fit_model=..., evidence_contexts=..., config=...)`
+
+Shared result/policy types remain:
 
 - `ContextEvidenceConfig`
 - `ContextEvidence`
 - `SplitFitEvidence`
+
+Canonical semantic shapes:
+
+- `initial` -> `[K]` normalized state prior;
+- `duration` -> `[K,D]` normalized duration law;
+- `emission` -> `[K,F]` state-conditioned means;
+- `transition` -> `[K,K]` effective boundary-transition law.
+
+### Compatibility/advanced helpers
+
+Existing component-specific helpers remain available without behavior changes:
+
+- `initial_context_tensor`, `duration_context_tensor`, `emission_context_tensor`, `transition_context_matrix`;
+- `evaluate_*_context_replication` component helpers;
+- `split_fit_*_context_evidence` component helpers.
+
+Advanced generic helpers remain under `nhsmm.validation` for custom adapters:
+
 - `align_state_centers`
-
-Transition-specific API:
-
-- `transition_context_matrix`
-- `evaluate_transition_context_replication`
-- `split_fit_transition_context_evidence`
-
-Generic state-indexed API for effects shaped `[K,...]`:
-
 - `evaluate_state_context_replication`
 - `split_fit_state_context_evidence`
-
-NHSMM state-indexed convenience adapters:
-
-- `initial_context_tensor` -> `[K]`
-- `duration_context_tensor` -> `[K,D]`
-- `emission_context_tensor` -> `[K,F]`
-- `evaluate_initial_context_replication`
-- `evaluate_duration_context_replication`
-- `evaluate_emission_context_replication`
-- `split_fit_initial_context_evidence`
-- `split_fit_duration_context_evidence`
-- `split_fit_emission_context_evidence`
+- `evaluate_context_replication`
+- `split_fit_context_evidence`
 
 Design rules:
 
@@ -140,9 +149,12 @@ Focused semantic and contract coverage verifies:
 - non-finite evidence-policy threshold rejection;
 - non-finite effect-matrix rejection;
 - initialized-distribution requirement;
-- public root exports for the universal helpers.
+- normalized facade dispatch equivalence against all component-specific helpers;
+- normalized split-fit facade preserves the two-replica contract;
+- invalid component names fail explicitly;
+- root exports expose the canonical facade.
 
-Focused local result: **19/19 PASS**.
+Focused local result: **23/23 PASS**.
 
 Documentation: [`validation-api.md`](validation-api.md).
 
