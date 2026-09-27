@@ -84,6 +84,17 @@ A second candidate used the shared-linear estimator plus a pre-refine functional
 
 The candidate restores null rejection (`0/5`) and preserves excellent strong recovery, but moderate selection falls to `3/5`, below the frozen `>=4/5` requirement. It is therefore **REJECTED**. Do not lower the evidence threshold or the `0.25` effect floor after seeing the confirmatory set.
 
+### Rapid-mode detector candidate — checkpoint only
+
+The next candidate targets **detector stability/power**, not estimator shrinkage. Planned statistic: fold-direction agreement / variance-aware evidence over the existing shared-linear context estimator. The intent is to reject null fits whose learned transition-context directions are unstable across cross-fit folds while retaining genuine moderate effects.
+
+- development seeds: `761..765`
+- if a rule is chosen, it must be frozen on that development block only;
+- confirmatory seeds: `771..775`
+- no result has been accepted yet;
+- no thresholds have been changed yet;
+- this is a checkpoint only, not evidence of PASS.
+
 See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md), [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md), and [`validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md`](validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md).
 
 **Current interpretation:** estimator expressiveness is not the remaining blocker; shared-linear estimation recovers active strong/moderate functional shape well. The unresolved deficiency is robust evidence-based detection/generalization under multidimensional context. Canonical detection can false-positive on null blocks; the effect-floor variant restores null control but loses moderate selection power.
@@ -100,8 +111,8 @@ These controlled synthetic results establish mechanism recovery and identifiabil
 
 ## Next research slices
 
-1. **Detector stability / power:** improve evidence detection across independent seed blocks without retuning rejected candidates; the next mechanism must preserve strong detection, recover moderate `>=4/5`, and keep null at `0/5`.
-2. Prefer a mechanism-level improvement to evidence uncertainty/calibration over another global shrinkage or a lower post-hoc threshold.
-3. Any new candidate must use a new development block and a separate fresh confirmatory block.
+1. **Detector stability / power:** run fold-direction-agreement / variance-aware evidence candidate on dev seeds `761..765`; if viable, freeze once and confirm on `771..775`.
+2. Preserve strong detection, recover moderate `>=4/5`, and keep null at `0/5`.
+3. Prefer mechanism-level evidence uncertainty/calibration over another global shrinkage or lower post-hoc threshold.
 4. Keep the shared-linear estimator as diagnostic evidence only until detector stability is solved.
 5. **API/design translation** remains deferred until the general-context package gate passes.
