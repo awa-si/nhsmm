@@ -1,6 +1,7 @@
 name: NHSMM release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -42,7 +43,8 @@ jobs:
           /tmp/nhsmm-release-venv/bin/python -m pip install --upgrade pip
           /tmp/nhsmm-release-venv/bin/python -m pip install dist/*.whl
 
-      - name: Verify installed version and public API
+      - name: Verify installed release version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           cd /tmp
@@ -50,7 +52,20 @@ jobs:
           from importlib.metadata import version
           import os
 
-          import nhsmm
+          expected = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          installed = version("nhsmm")
+          if installed != expected:
+              raise RuntimeError(f"tag/version mismatch: tag={expected!r}, wheel={installed!r}")
+          print("nhsmm", installed)
+          PY
+
+      - name: Verify installed public API
+        shell: bash
+        run: |
+          cd /tmp
+          /tmp/nhsmm-release-venv/bin/python - <<'PY'
+          from importlib.metadata import version
+
           from nhsmm import (
               ContextEvidenceConfig,
               ModelConfig,
@@ -59,11 +74,6 @@ jobs:
               evaluate_context_effect_replication,
               split_fit_context_effect_evidence,
           )
-
-          expected = os.environ["GITHUB_REF_NAME"].removeprefix("v")
-          installed = version("nhsmm")
-          if installed != expected:
-              raise RuntimeError(f"tag/version mismatch: tag={expected!r}, wheel={installed!r}")
 
           cfg = ModelConfig(
               n_states=3,
@@ -85,7 +95,7 @@ jobs:
           assert ContextEvidenceConfig
           assert evaluate_context_effect_replication
           assert split_fit_context_effect_evidence
-          print("nhsmm", installed)
+          print("nhsmm", version("nhsmm"))
           print("public_api", "ok")
           PY
 
@@ -99,6 +109,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
