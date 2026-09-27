@@ -14,6 +14,7 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Universal validation API:** initial, duration, emission, transition, and arbitrary state-indexed `[K,...]` context effects are supported without Nautilus/trading dependencies and without changing `NHSMM.optimize()` semantics.
 - **Normalized public facade:** canonical `component=` API implemented for extraction, replica evaluation, and split-fit evidence; component-specific helpers remain behavior-compatible.
 - **Focused validation/API tests:** 23/23 PASS locally in the sparse package workspace.
+- **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
 - No CI is used for this research loop.
 
 The next package boundary is a broad local regression run from a complete checkout plus any documentation/export cleanup exposed by that run. Downstream Nautilus integration remains a separate empirical validation boundary.
@@ -155,6 +156,24 @@ Focused semantic and contract coverage verifies:
 - root exports expose the canonical facade.
 
 Focused local result: **23/23 PASS**.
+
+### Public API stress
+
+A dedicated local stress run against the normalized facade completed successfully:
+
+- 40 initialized NHSMM models across seeds `100..139`;
+- 15 context points per model;
+- 4,800 repeated semantic effect extractions across all four components;
+- 160 replica-evidence evaluations;
+- 16 real `NHSMM.optimize()` split-fit evaluations across all four components;
+- exact repeated-call determinism checked for effect extraction;
+- train/eval mode restoration checked throughout;
+- initial/duration/transition normalization checked throughout;
+- no NaN/Inf or shape-contract failure observed.
+
+Observed local runtime: `22.421 s`; Python-tracked peak memory: `53.47 MiB`.
+
+See [`validation/public-api-stress-2026-09-28.md`](validation/public-api-stress-2026-09-28.md).
 
 Documentation: [`validation-api.md`](validation-api.md).
 
