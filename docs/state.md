@@ -4,9 +4,13 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability is provisionally accepted** on the basis of the corrected local independent causal-HSMM reference deep dive recorded in [`validation/multicomponent-reference-deep-dive-2026-09-27.md`](validation/multicomponent-reference-deep-dive-2026-09-27.md).
+**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability remains provisionally accepted.** General-context robustness is now the active research boundary.
 
-This provisional acceptance is intentionally narrower than package-level acceptance: the corrected v2 validator still needs to run locally against the actual `nhsmm` package implementation. Until that run is available, no package objective or parameterization change is justified by the original failed CI benchmark.
+The corrected multi-component reference remains a provisional PASS only: package-level confirmation against the actual `nhsmm` implementation is still outstanding because the current connector does not provide repository materialization into the local runtime. No CI is used for this research loop.
+
+General-context robustness has a narrower unresolved issue: scalar and active 2D causal transition contexts recover well, but a 2D null context can produce spurious transition modulation. Global L2 shrinkage and shared-duration context parameterization were both tested and rejected because they either over-shrank active effects or failed to remove null modulation.
+
+The current best direction is **evidence-dependent context selection**. Cross-fit held-out likelihood cleanly separates strong from null context, but moderate effects sit near the decision boundary. With `tau=0`, dev selected strong 5/5, moderate 0/5, null 0/5. A relaxed `tau=-0.08` promoted moderate recovery but on fresh confirmatory seeds selected strong 5/5, moderate 5/5, and null 1/5. This is not accepted yet. The next step is a second fold-stability/evidence condition that removes the residual null false positive without sacrificing moderate power.
 
 Package validation remains independent of Nautilus, market data, trading labels, and downstream supervised models.
 
@@ -21,21 +25,7 @@ Package validation remains independent of Nautilus, market data, trading labels,
 - [x] Optional transition refinement updates only `transition.context_net + transition.delta_scale` against exact sequence likelihood; it is disabled by default.
 - [x] No auxiliary supervised transition loss or alternative duration parameterization is required by the current controlled gates.
 
-## Latest local evidence
-
-Focused training regression:
-
-```text
-PYTHONPATH=. pytest -q tests/test_training.py
-10 passed
-```
-
-Syntax compilation:
-
-```text
-python -m compileall -q nhsmm scripts/validate_duration_context.py scripts/validate_state_recovery.py scripts/validate_transition_context.py tests/test_training.py
-PASS
-```
+## Accepted / provisional evidence
 
 ### Duration context — seeds 201..215
 
@@ -65,17 +55,28 @@ Validation config: `max_duration=1`, explicit binary external context, `transiti
 
 ### Multi-component identifiability — provisional acceptance
 
-The original joint benchmark is not accepted as evidence because it was structurally misspecified: it used `transition_type="semi"` against a cyclic generator that required broader support, scored duration-dependent transition tensors incorrectly, and omitted `duration_logits_bias` from duration scoring.
+The corrected independent local causal-HSMM reference used `K=3`, `D=24`, seeds `501..503`, explicit A/B/C/D ablations, and an ergodic topology. Strong and moderate full-joint cases retained matched accuracy/ARI `1.000`; null A-D retained state identity without material spurious context. Reintroducing the old `semi` support reproduced the collapse. See [`validation/multicomponent-reference-deep-dive-2026-09-27.md`](validation/multicomponent-reference-deep-dive-2026-09-27.md).
 
-The corrected independent local causal-HSMM reference used `K=3`, `D=24`, seeds `501..503`, explicit A/B/C/D ablations, and an ergodic topology. It preserved state recovery across strong, moderate, and null scenarios. Strong full-joint D reached median matched accuracy `1.000`, median ARI `1.000`, median effective states `2.968`, median duration gap `2.699`, and median transition-delta correlation `0.987`. Moderate full-joint D likewise retained accuracy/ARI `1.000` with median transition correlation `0.861`. Null A-D retained state identity without a material spurious context effect.
+**Status:** PROVISIONAL PASS. Package-level acceptance still requires a corrected local v2 run against the actual package implementation.
 
-A counterfactual rerun with the old `semi` support reproduced the collapse pattern: strong full-joint D fell to median matched accuracy `0.603`, median ARI `0.234`, median effective states `2.121`, and median transition correlation `0.571`.
+### General-context robustness — current boundary
 
-**Status:** PROVISIONAL PASS for the research question "is joint state + duration-context + transition-context identification structurally possible under the corrected benchmark?" This does **not** yet certify the actual package training implementation. Package-level acceptance requires one corrected local v2 run against `nhsmm` itself.
+See [`validation/general-context-robustness-2026-09-27.md`](validation/general-context-robustness-2026-09-27.md), [`validation/general-context-shared-duration-ablation-2026-09-27.md`](validation/general-context-shared-duration-ablation-2026-09-27.md), and [`validation/general-context-evidence-gating-2026-09-27.md`](validation/general-context-evidence-gating-2026-09-27.md).
+
+Current status:
+
+- scalar strong/moderate/null: controlled recovery acceptable;
+- 2D strong/moderate: controlled recovery acceptable;
+- 2D null: unresolved without selection/gating;
+- L2 rescue: rejected;
+- shared-duration/tied-context rescue: rejected;
+- cross-fit evidence gate `tau=0`: strong 5/5, moderate 0/5, null 0/5 on dev;
+- relaxed cross-fit gate `tau=-0.08`: strong 5/5, moderate 5/5, null 1/5 on fresh confirmatory seeds;
+- therefore evidence gating is promising but **not accepted** yet.
 
 ## Verification limits
 
-The full discovered pytest suite was not rerun because the local workspace is sparse and only directly affected tests were materialized. `ruff` and `black` are not installed in the available local Python runtime. No GitHub Actions run was started for the deep-dive acceptance.
+The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. The general-context work is independent local reference evidence until corresponding package-level harnesses are materialized and run locally.
 
 ## Package boundary
 
@@ -83,6 +84,6 @@ These controlled results establish mechanism recovery under known synthetic grou
 
 ## Next research slices
 
-1. **Package confirmation:** run the corrected v2 multi-component validator locally against the actual `nhsmm` package and either promote provisional acceptance to package-level PASS or reopen the deficiency if the package diverges from the corrected reference.
-2. **General-context robustness:** transition recovery with continuous and multi-dimensional causal contexts.
-3. Change objectives or parameterizations only if the corrected package-level gate exposes a reproducible package deficiency.
+1. **Evidence-gate refinement:** add a pre-specified fold-stability condition to the relaxed cross-fit gate, chosen on dev data and frozen before fresh confirmation. Hard requirement: retain moderate power while returning null selection to zero.
+2. **Package confirmation:** when local package materialization becomes available, run corrected v2 multi-component and general-context validators against the actual `nhsmm` implementation.
+3. Change objectives or parameterizations only if the controlled package-level gates expose a reproducible deficiency.
