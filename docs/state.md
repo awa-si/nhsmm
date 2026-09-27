@@ -4,13 +4,11 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability remains provisionally accepted.** General-context robustness is now the active research boundary.
+**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability remains provisionally accepted.** General-context robustness is **provisionally accepted at reference level** using the frozen detect→refine mechanism. Package confirmation is now the active boundary.
 
 The corrected multi-component reference remains a provisional PASS only: package-level confirmation against the actual `nhsmm` implementation is still outstanding because the current connector does not provide repository materialization into the local runtime. No CI is used for this research loop.
 
-General-context robustness has a narrower unresolved issue: scalar and active 2D causal transition contexts recover well, but a 2D null context can produce spurious transition modulation. Global L2 shrinkage and shared-duration context parameterization were both tested and rejected because they either over-shrank active effects or failed to remove null modulation.
-
-The current best direction is **evidence-dependent context selection**. Cross-fit held-out likelihood cleanly separates strong from null context, but moderate effects sit near the decision boundary. With `tau=0`, dev selected strong 5/5, moderate 0/5, null 0/5. A relaxed `tau=-0.08` promoted moderate recovery but on fresh confirmatory seeds selected strong 5/5, moderate 5/5, and null 1/5. This is not accepted yet. The next step is a second fold-stability/evidence condition that removes the residual null false positive without sacrificing moderate power.
+General-context robustness exposed one specific defect in the ungated reference: multidimensional null context could retain spurious transition modulation despite perfect state recovery. Global L2 shrinkage and shared-duration/tied context were rejected. The accepted reference design separates detection from estimation: paired cross-fitted held-out evidence is computed on the same unrefined fitted model with transition context on vs off; context is selected at median ΔLL/boundary `> -0.07`; only selected context is then refined for 20 `tctx`-only steps. On fresh confirmatory seeds 731..735 this selected strong 5/5, moderate 5/5, null 0/5 and all per-seed recovery/null gates passed. This is a **PROVISIONAL PASS**, not package-level acceptance.
 
 Package validation remains independent of Nautilus, market data, trading labels, and downstream supervised models.
 
@@ -66,13 +64,17 @@ See [`validation/general-context-robustness-2026-09-27.md`](validation/general-c
 Current status:
 
 - scalar strong/moderate/null: controlled recovery acceptable;
-- 2D strong/moderate: controlled recovery acceptable;
-- 2D null: unresolved without selection/gating;
+- ungated 2D null: spurious context modulation reproduced;
 - L2 rescue: rejected;
 - shared-duration/tied-context rescue: rejected;
-- cross-fit evidence gate `tau=0`: strong 5/5, moderate 0/5, null 0/5 on dev;
-- relaxed cross-fit gate `tau=-0.08`: strong 5/5, moderate 5/5, null 1/5 on fresh confirmatory seeds;
-- therefore evidence gating is promising but **not accepted** yet.
+- independent full-vs-null evidence gates: rejected for selection/recovery instability;
+- **detect→refine paired cross-fit gate: PROVISIONAL PASS**;
+- confirmatory seeds `731..735`: strong selected 5/5, moderate selected 5/5, null selected 0/5;
+- strong median corr `0.960`, MAE `0.075`;
+- moderate median corr `0.836`, MAE `0.074`;
+- null context amplitude `0.000`, median MAE `0.034`.
+
+**Status:** PROVISIONAL PASS at independent-reference level. Package-level acceptance still requires a local run against the actual `nhsmm` implementation.
 
 ## Verification limits
 
@@ -84,6 +86,6 @@ These controlled results establish mechanism recovery under known synthetic grou
 
 ## Next research slices
 
-1. **Evidence-gate refinement:** add a pre-specified fold-stability condition to the relaxed cross-fit gate, chosen on dev data and frozen before fresh confirmation. Hard requirement: retain moderate power while returning null selection to zero.
-2. **Package confirmation:** when local package materialization becomes available, run corrected v2 multi-component and general-context validators against the actual `nhsmm` implementation.
+1. **Package confirmation:** when local package materialization becomes available, run corrected v2 multi-component and detect→refine general-context validators against the actual `nhsmm` implementation.
+2. **API/design translation:** only after package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration; do not promote the reference mechanism blindly into core model semantics.
 3. Change objectives or parameterizations only if the controlled package-level gates expose a reproducible deficiency.
