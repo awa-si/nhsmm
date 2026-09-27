@@ -4,9 +4,9 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, transition-context, and multi-component identifiability are verified. **Multi-component identifiability is now PACKAGE-CORE PASS across the full frozen 15-seed A/B/C/D gate.** General-context robustness remains **provisionally accepted at independent-reference level** using the frozen detect→refine mechanism; package confirmation of that mechanism is now the active research boundary.
+**Phase:** duration-context, latent-state, transition-context, and multi-component identifiability are verified. **Multi-component identifiability is PACKAGE-CORE PASS across the full frozen 15-seed A/B/C/D gate.** General-context detect→refine package confirmation is **PARTIAL / NOT PASS**: strong and null pass, while moderate-strength 2D transition-function recovery misses only the frozen median-correlation gate.
 
-Package-core confirmation uses a SHA-pinned sparse local workspace reconstructed from `develop` sources. The exercised paths are canonical training, causal likelihood recursion, duration/transition/emission distributions, and causal filtering. External context is supplied explicitly, so encoder/import glue is inert for these validators. No CI is used for this research loop.
+Package-core confirmation uses a SHA-pinned sparse local workspace reconstructed from `develop` sources. The exercised paths are canonical training, causal likelihood recursion, duration/transition/emission distributions, transition-only refinement, and causal filtering. External context is supplied explicitly, so encoder/import glue is inert for these validators. No CI is used for this research loop.
 
 ## Verified training baseline
 
@@ -57,22 +57,25 @@ See [`validation/multicomponent-component-matched-package-15seed-2026-09-27.md`]
 
 **Status: PACKAGE-CORE PASS.** The multi-component research question is closed unless a future package change invalidates the frozen gate.
 
-### General-context robustness — current boundary
+### General-context robustness — package-core confirmation
 
-Independent-reference work established:
+Independent-reference work had provisionally accepted the frozen detect→refine mechanism on seeds `731..735` with selection threshold `-0.07` nats/validation-boundary and 20 transition-context-only refinement steps at lr `0.03`.
 
-- scalar strong/moderate/null controlled recovery acceptable;
-- ungated 2D null spurious context modulation reproduced;
-- global L2 rescue rejected;
-- shared-duration/tied-context rescue rejected;
-- independent full-vs-null evidence gates rejected;
-- **detect→refine paired cross-fit gate: PROVISIONAL PASS**;
-- confirmatory seeds `731..735`: strong selected `5/5`, moderate `5/5`, null `0/5`;
-- strong median corr `0.960`, MAE `0.075`;
-- moderate median corr `0.836`, MAE `0.074`;
-- null context amplitude `0.000`, median MAE `0.034`.
+For package transfer, Initial/Duration/Emission context modulation is disabled so the package harness isolates the same transition-context question. The frozen reference generator has no self-boundary transitions, while package `ergodic` permits them; recovery metrics therefore condition learned destination probabilities on an actual state change (remove diagonal and renormalize off-diagonal). Selection evidence remains the canonical package likelihood without metric transformation.
 
-**Status:** PROVISIONAL PASS at independent-reference level. Package-level confirmation remains outstanding.
+Package source: `efd4826ddc48586c47debf075d1c6332596cb0de`. Frozen reference spec SHA256: `632d120c60847ffbe180e5f62e0d1c3820a5332b2b69830b7c5f55a712426389`.
+
+| Scenario | Selected | Accuracy | ARI | Transition corr | Transition MAE | Context amp | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| strong | 5/5 | 1.000 | 1.000 | 0.919 | 0.092 | 0.706 | PASS |
+| moderate | 4/5 | 1.000 | 1.000 | 0.730 | 0.098 | 0.474 | FAIL |
+| null | 0/5 | 1.000 | 1.000 | 0.000 | 0.018 | 0.000 | PASS |
+
+The moderate package run satisfies the frozen selection-count gate (`4/5`), the frozen median-MAE gate (`0.098 <= 0.100`), and the per-seed recovery requirement (`4/5` seeds). It fails only median transition-function correlation (`0.730 < 0.800`). The selected-only median correlation is also below `0.800`, so the result is not explained solely by the one unselected seed.
+
+See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md).
+
+**Status: PACKAGE-CORE PARTIAL / NOT PASS.** The open deficiency is narrowly localized to moderate-strength 2D transition-function shape fidelity. State recovery, null rejection, strong recovery, selection count, and moderate MAE all pass. No frozen gate, threshold, or refinement hyperparameter was changed.
 
 ## Verification limits
 
@@ -84,6 +87,6 @@ These controlled synthetic results establish mechanism recovery and identifiabil
 
 ## Next research slices
 
-1. **General-context package confirmation:** translate the frozen detect→refine reference gate to the actual package core and run it locally without retuning thresholds.
-2. **API/design translation:** only after package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration.
-3. Change objectives or parameterizations only if a controlled package-level gate exposes a reproducible deficiency.
+1. **Moderate 2D context fidelity diagnostic:** without retuning the frozen gate, compare pre-vs-post refinement functional correlation, package context-network parameterization, and duration/self-boundary identifiability to locate the `0.730 < 0.800` gap.
+2. Change package semantics only if a controlled diagnostic identifies a reproducible mechanism deficiency; any candidate fix must preserve strong and null gates.
+3. **API/design translation** remains deferred until the general-context package gate passes; do not promote evidence selection blindly into core model semantics.
