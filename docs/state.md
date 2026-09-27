@@ -1,15 +1,21 @@
 # NHSMM State
 
-Current package readiness and next package-level research boundary. Detailed semantics: [`model.md`](model.md). Controlled evidence: [`package-validation.md`](package-validation.md). Verification policy: [`testing.md`](testing.md).
+Current package readiness and next package-level boundary. Detailed semantics: [`model.md`](model.md). Controlled evidence: [`package-validation.md`](package-validation.md). Verification policy: [`testing.md`](testing.md).
 
 ## Current status
 
-**Phase:** duration-context, latent-state, transition-context, multi-component identifiability, and general-context robustness are verified at package-core level.
+**Phase:** package-core mechanism research and universal validation API translation are complete.
 
-- **Multi-component identifiability: PACKAGE-CORE PASS** across the frozen 15-seed A/B/C/D gate.
-- **General-context robustness: PACKAGE-CORE PASS** using split-fit direction replication.
-- No CI is used for this research loop; confirmation was run locally against the SHA-pinned package core with explicit external context.
-- The active boundary is now **API/design translation**, not further detector tuning.
+- **Duration context:** PASS.
+- **Latent-state recovery:** PASS.
+- **Transition context:** PASS.
+- **Multi-component identifiability:** PACKAGE-CORE PASS across the frozen 15-seed A/B/C/D gate.
+- **General-context robustness:** PACKAGE-CORE PASS using split-fit direction replication.
+- **Universal validation API:** implemented and hardened; no Nautilus/trading dependency and no change to `NHSMM.optimize()` semantics.
+- **Focused validation/API tests:** 13/13 PASS locally in the sparse package workspace.
+- No CI is used for this research loop.
+
+The next package boundary is a broad local regression run from a complete checkout plus any documentation/export cleanup exposed by that run. Downstream Nautilus integration remains a separate empirical validation boundary.
 
 ## Accepted evidence
 
@@ -46,27 +52,7 @@ Representative medians:
 
 See [`validation/multicomponent-component-matched-package-15seed-2026-09-27.md`](validation/multicomponent-component-matched-package-15seed-2026-09-27.md).
 
-**Status: PACKAGE-CORE PASS.** The multi-component research question is closed unless a future package change invalidates the frozen gate.
-
-## General-context robustness — PACKAGE-CORE PASS
-
-The original package detect→refine gate on seeds `731..735` was only partial: strong and null passed, but moderate transition-shape correlation was `0.730 < 0.800`. A sequence of detector candidates was tested with strict dev→fresh-confirmatory separation and no post-hoc threshold relaxation.
-
-Rejected candidates include:
-
-- no-self topology;
-- shared-duration context;
-- shared-linear estimator as detector;
-- shared-linear + effect-floor;
-- fold-sign / fold-stability rules;
-- single-permutation evidence;
-- permutation evidence + effect-floor;
-- permutation-rank/binomial detector;
-- Fisher fold-permutation detector.
-
-These remain rejected and must not be revived by retuning on their confirmatory blocks.
-
-### Accepted detector: split-fit direction replication
+### General-context robustness — PACKAGE-CORE PASS
 
 The accepted detector requires the context effect to reproduce across **two independent fits on disjoint training halves**. Detection is truth-free: latent-state alignment uses learned emission centers only, then the learned context-induced transition-delta functions are compared on a fixed context grid.
 
@@ -83,24 +69,73 @@ Fresh confirmatory seeds: `851..855`.
 | moderate | 4/5 | 1.000 | 1.000 | 0.914 | 0.071 | 0.771 | 0.516 | PASS |
 | null | 0/5 | 1.000 | 1.000 | 0.000 | 0.028 | 0.426 | 0.363 | PASS |
 
-The full frozen gate is satisfied: strong detection is preserved, moderate selection reaches the required `>=4/5`, null remains `0/5`, and selected active cases retain high functional transition recovery with perfect state recovery.
+Rejected detector variants remain rejected and must not be revived by retuning on their confirmatory blocks: no-self topology, shared-duration context, shared-linear as detector, effect-floor variants, fold-sign/stability rules, permutation variants, permutation-rank/binomial, and Fisher fold-permutation.
 
 See [`validation/general-context-split-replication-confirm-2026-09-27.md`](validation/general-context-split-replication-confirm-2026-09-27.md) and the machine-readable companion JSON.
 
-**Status: PACKAGE-CORE PASS.** The detector-stability research boundary is closed unless a future package change invalidates the frozen gate.
+## Universal validation API
+
+The accepted semantics are exposed as a domain-neutral validation layer under `nhsmm.validation` and via public package exports.
+
+Core API:
+
+- `ContextEvidenceConfig`
+- `ContextEvidence`
+- `SplitFitEvidence`
+- `align_state_centers`
+- `evaluate_context_replication`
+- `split_fit_context_evidence`
+
+NHSMM transition convenience API:
+
+- `transition_context_matrix`
+- `evaluate_transition_context_replication`
+- `split_fit_transition_context_evidence`
+
+Design rules:
+
+- validation does not call or modify `NHSMM.optimize()`;
+- training policy remains consumer-owned through `fit_model(...)`;
+- no trading/domain assumptions;
+- research thresholds are explicit policy configuration, not universal package defaults;
+- duration-dependent transition evidence integrates over the current duration law including `duration_logits_bias`;
+- model training/eval mode is preserved by the adapter;
+- state alignment is semantic via learned emission centers rather than latent truth labels.
+
+### API hardening
+
+Focused semantic and contract coverage now verifies:
+
+- latent-state permutation invariance;
+- inconsistent replicated direction rejection;
+- null-effect rejection;
+- disjoint split-fit training units;
+- duration-weighted effective transition matrices;
+- model mode preservation;
+- explicit context-dimension errors;
+- non-finite context rejection;
+- non-finite evidence-policy threshold rejection;
+- non-finite effect-matrix rejection;
+- initialized-distribution requirement.
+
+Focused local result: **13/13 PASS**.
+
+Documentation: [`validation-api.md`](validation-api.md).
 
 ## Verification limits
 
-The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. Package-core evidence is scoped to the exact external-context dependency closure exercised by the validators.
+The full discovered pytest suite has not yet been rerun after the validation API work because the active local workspace is a sparse source reconstruction and lacks several regular package modules imported by the root package. Temporary local import stubs were used only to isolate the focused validation tests; they are not repository changes.
+
+No GitHub Actions run is used for this research loop. A complete local checkout is the required environment for the next broad regression run.
 
 ## Package boundary
 
-These controlled synthetic results establish mechanism recovery and identifiability. They do not establish domain semantics or downstream predictive value for Nautilus or any other consumer.
+These controlled synthetic results establish mechanism recovery, identifiability, and validation semantics. They do not establish domain semantics or downstream predictive value for Nautilus or any other consumer.
 
-## Next research slice
+## Next slice
 
-1. **API/design translation:** decide where split-fit evidence selection belongs: core training API, validation utility, or consumer orchestration.
-2. Preserve the accepted semantics: independent split fits, emission-based state alignment, direction replication, and minimum replicated effect size.
-3. Do not promote rejected detector variants or relax frozen gates.
-4. After API placement is decided, add focused package tests for the accepted detector semantics and then run the local test suite relevant to the changed surface.
-5. Downstream Nautilus integration remains a separate empirical validation boundary.
+1. Materialize/use a complete local checkout of `develop` and run the broad local test suite.
+2. Fix only regressions exposed by that complete-package run; preserve accepted probabilistic and validation semantics.
+3. Consolidate README/public examples if the broad run exposes export or usability gaps.
+4. Keep all validation thresholds explicit and domain/profile-owned.
+5. Treat downstream Nautilus integration as a separate empirical validation task.
