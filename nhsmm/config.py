@@ -71,7 +71,7 @@ class ModelConfig:
     n_init: int = 3
     lr: float = 1e-2
     tol: float = 1e-4
-    max_iter: int = 5
+    max_iter: int = 40
     loss_bias: float = 1e-3
     plateau_window: int = 6
     plateau_tol: float = 1e-4

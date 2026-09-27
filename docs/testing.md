@@ -12,12 +12,27 @@ pytest -q
 
 During development, focused pytest invocations are appropriate for the affected contract. Shared inference, distributions, context, configuration, training, artifact, or runtime changes should also be verified with the full discovered suite before completion.
 
+The training regression in `tests/test_training.py` verifies two package-level contracts:
+
+- `NHSMM.optimize()` includes trainable causal-encoder parameters and actually updates at least one encoder parameter;
+- the default training iteration budget is `40`.
+
 ## Static checks
 
 ```bash
 ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 ```
+
+## Controlled duration-context acceptance
+
+Expensive package-level empirical validation is separate from routine pytest. The synthetic duration-context acceptance harness uses known ground truth, independent train/evaluation sequences, multiple seeds, strong/moderate context effects, and a null-context negative control.
+
+```bash
+python scripts/validate_duration_context.py --output /tmp/nhsmm-duration-context.json
+```
+
+The maintained acceptance thresholds and the latest validated evidence are documented in [`package-validation.md`](package-validation.md). Re-run this harness after material changes to the training objective, duration parameterization, context encoder, optimizer coverage, causal filter, or survival semantics.
 
 ## Runtime benchmark
 

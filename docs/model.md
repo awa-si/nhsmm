@@ -24,6 +24,14 @@ model.initialize_distributions()
 
 Historical `HSMM`, `NeuralHSMM`, `GaussianHSMM`, and older constructor APIs are not canonical contracts.
 
+## Training contract
+
+`NHSMM.optimize()` optimizes every trainable model parameter returned by `model.parameters()`. This includes the context encoder as well as initial, duration, transition, emission, and duration-bias parameters. A context encoder that participates in the likelihood graph must not remain fixed at random initialization during normal optimization.
+
+The default maximum iteration budget is `40`. Convergence stopping and scheduling remain configurable, so this is a maximum budget rather than a requirement to execute exactly 40 updates. The default was raised after controlled package-level duration-context recovery showed that short budgets could learn the correct duration direction weakly but fail multi-seed hazard robustness, while the unchanged 40-iteration model passed the package acceptance gate.
+
+The empirical package evidence and its limits are recorded in [`package-validation.md`](package-validation.md).
+
 ## Duration semantics
 
 Duration index `i` denotes total duration `i + 1`. Episode-age index `i` likewise denotes age `i + 1`.
@@ -62,10 +70,10 @@ Loading is fail-closed for unsupported versions, incompatible schema/config/enco
 
 ## Evaluation boundary
 
-NHSMM latent states remain semantically neutral unless an external evaluation explicitly defines a mapping. For the Nautilus temporal-model comparison, states remain `0..K-1`; they are not assigned to H1 structure classes.
+NHSMM latent states remain semantically neutral unless an external evaluation explicitly defines a mapping. Package-level synthetic validation establishes recovery of known context-conditioned duration structure; it does not establish downstream utility in any particular domain.
 
-Evaluation must use causally available observations and chronological out-of-sample windows. In-sample likelihood, state-plot plausibility, or semantic state matching alone are not acceptance criteria.
+External evaluation must use causally available observations and appropriate out-of-sample data. In-sample likelihood, state-plot plausibility, or semantic state matching alone are not acceptance criteria.
 
 ## Verification
 
-Maintained tests use standard pytest discovery under `tests/test_*.py`. See [`testing.md`](testing.md) for the verification contract and [`state.md`](state.md) for current evaluation readiness.
+Maintained tests use standard pytest discovery under `tests/test_*.py`. See [`testing.md`](testing.md) for the verification contract, [`package-validation.md`](package-validation.md) for controlled package-level empirical evidence, and [`state.md`](state.md) for current repository readiness.

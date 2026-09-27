@@ -830,12 +830,12 @@ class NHSMM(nn.Module):
             if cfg.verbose:
                 logger.info(f"\n=== Run {run_idx + 1}/{cfg.n_init} ===")
 
-            params = [
-                p
-                for name in ("initial", "transition", "duration", "emission")
-                for p in getattr(self.dist, name).parameters()
-                if p.requires_grad
-            ] + [self.duration_logits_bias]
+            # Optimize every trainable model parameter. The causal context
+            # encoder participates in the likelihood graph and must be updated
+            # alongside the probabilistic components.
+            params = [p for p in self.parameters() if p.requires_grad]
+            if not params:
+                raise RuntimeError("NHSMM has no trainable parameters")
 
             self._optimizer = torch.optim.Adam(params, lr=cfg.lr)
             if cfg.use_scheduler:
