@@ -75,9 +75,32 @@ No frozen gate, threshold, or refinement hyperparameter was retuned after confir
   - confirmatory `811..815`: strong `5/5`, moderate `5/5`, median corr `0.890`, median MAE `0.082`, but null `1/5` false-positive (seed `813`, exact `p=0.0083`);
   - **REJECTED**. Do not tighten `alpha` after observing the confirmatory block.
 
+### Fisher fold-permutation candidate — current checkpoint
+
+The current Rapid-mode candidate corrects the dependence problem in the permutation-rank detector. Rather than treating 35 within-fold cyclic comparisons as independent Bernoulli trials, it computes a Monte-Carlo permutation p-value separately inside each of 5 held-out folds and combines the 5 fold-level p-values with Fisher's method.
+
+Development block `821..825`:
+
+- strong: selected `5/5`;
+- moderate: selected `4/5`;
+- null: selected `0/5`;
+- strong median corr/MAE about `0.979 / 0.050`;
+- moderate median corr/MAE about `0.898 / 0.070`.
+
+The frozen rule is purely statistical: combine the 5 fold-level permutation p-values with Fisher's method and select when the combined p-value is `< 0.05`. No extra amplitude or likelihood threshold was added.
+
+Fresh confirmatory block `831..835` is in progress but is already decisive for moderate power:
+
+- moderate: only **3/5 selected** (required `>=4/5`) → candidate is already a **confirmatory FAIL**;
+- selected moderate seeds retain strong functional recovery (median corr ~`0.888`, MAE ~`0.076`);
+- null block finalization is still pending and should be completed only to close the record cleanly;
+- no post-hoc threshold change is allowed.
+
+**Interpretation:** Fisher calibration improves the statistical semantics of the detector, but still loses too much moderate-effect power on a fresh seed block. It cannot be accepted even if null finishes `0/5`.
+
 See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md), [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md), [`validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md`](validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md), and [`validation/general-context-detector-rapid-2026-09-27.md`](validation/general-context-detector-rapid-2026-09-27.md).
 
-**Current interpretation:** estimator expressiveness is not the remaining blocker. The permutation-rank detector restored full moderate power and good shape fidelity but still missed strict null control by one confirmatory seed. The open problem is replication-calibrated null control.
+**Current interpretation:** estimator expressiveness is not the remaining blocker. The open problem remains detector generalization: keep null at `0/5` while preserving moderate power `>=4/5` across independent seed blocks.
 
 **Status: PACKAGE-CORE PARTIAL / NOT PASS.**
 
@@ -91,10 +114,8 @@ These controlled synthetic results establish mechanism recovery and identifiabil
 
 ## Next research slice
 
-**Split-fit direction replication** is the active candidate. Two independent fits on disjoint training halves must recover the same context-delta direction after state alignment. This adds an independent reproducibility condition rather than another magnitude threshold.
-
-- development seeds: `821..825`;
-- if viable, freeze once on that block;
-- fresh confirmatory seeds: `831..835`;
-- no result has been accepted yet;
-- API/design translation remains deferred until the general-context package gate passes.
+1. Finish null `831..835` only to close the Fisher candidate record.
+2. Mark Fisher fold-permutation as REJECTED regardless of null outcome because moderate confirmatory power is `3/5`.
+3. Next candidate should add independent reproducibility information (for example split-fit direction replication) rather than another global magnitude or p-value threshold.
+4. Use a new development block and a separate fresh confirmatory block.
+5. API/design translation remains deferred until the general-context package gate passes.
