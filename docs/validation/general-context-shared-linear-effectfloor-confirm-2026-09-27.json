@@ -1,0 +1,40 @@
+{
+  "effect_floor": 0.25,
+  "failure": "multi_moderate selection 3/5 < required 4/5",
+  "scenarios": {
+    "multi_moderate": {
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_delta_ll_per_boundary": -0.002630060369318182,
+      "median_pre_context_amplitude": 0.30985868110356946,
+      "median_transition_corr": 0.813514579120147,
+      "median_transition_mae": 0.10306541009190234,
+      "n": 5,
+      "selected": 3
+    },
+    "multi_null": {
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_delta_ll_per_boundary": -0.03904691655585106,
+      "median_pre_context_amplitude": 0.11598760320196604,
+      "median_transition_corr": 0.0,
+      "median_transition_mae": 0.01697985187365188,
+      "n": 5,
+      "selected": 0
+    },
+    "multi_strong": {
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_delta_ll_per_boundary": 0.09687967503324468,
+      "median_pre_context_amplitude": 0.5958862167674784,
+      "median_transition_corr": 0.9599151554935261,
+      "median_transition_mae": 0.06091458832202315,
+      "n": 5,
+      "selected": 5
+    }
+  },
+  "schema": "nhsmm-general-context-shared-linear-effectfloor-confirm-v1",
+  "seeds": [751, 752, 753, 754, 755],
+  "tau": -0.07,
+  "verdict": "FAIL"
+}
