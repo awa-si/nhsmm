@@ -1,0 +1,77 @@
+{
+  "ci_used": false,
+  "date": "2026-09-27",
+  "diagnostic": {
+    "strong_C": {
+      "ablation": "C",
+      "failure_reasons": ["transition_mae"],
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_duration_direction": 0.0,
+      "median_duration_gap": 0.0,
+      "median_null_transition_abs_delta": 0.27700918912887573,
+      "median_transition_corr": 0.9942223095827947,
+      "median_transition_direction": 1.0,
+      "median_transition_mae": 0.23028236735198232,
+      "n": 15,
+      "noncollapsed": 15,
+      "passed": false,
+      "scenario": "strong"
+    }
+  },
+  "full_joint": {
+    "moderate": {
+      "ablation": "D",
+      "failure_reasons": [],
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_duration_direction": 1.0,
+      "median_duration_gap": 2.2732957312837243,
+      "median_null_transition_abs_delta": 0.15311475263701546,
+      "median_transition_corr": 0.9376417664735105,
+      "median_transition_direction": 1.0,
+      "median_transition_mae": 0.13215345326397154,
+      "n": 15,
+      "noncollapsed": 15,
+      "passed": true,
+      "scenario": "moderate"
+    },
+    "null": {
+      "ablation": "D",
+      "failure_reasons": [],
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_duration_direction": 0.3333333333333333,
+      "median_duration_gap": -0.11624749874075253,
+      "median_null_transition_abs_delta": 0.04027406540181902,
+      "median_transition_corr": 0.0,
+      "median_transition_direction": null,
+      "median_transition_mae": 0.13012508799632388,
+      "n": 15,
+      "noncollapsed": 13,
+      "passed": true,
+      "scenario": "null"
+    },
+    "strong": {
+      "ablation": "D",
+      "failure_reasons": [],
+      "median_accuracy": 1.0,
+      "median_ari": 1.0,
+      "median_duration_direction": 1.0,
+      "median_duration_gap": 4.3834728834529715,
+      "median_null_transition_abs_delta": 0.3063922996322314,
+      "median_transition_corr": 0.9971489200750624,
+      "median_transition_direction": 1.0,
+      "median_transition_mae": 0.16920911388264762,
+      "n": 15,
+      "noncollapsed": 15,
+      "passed": true,
+      "scenario": "strong"
+    }
+  },
+  "full_joint_pass": true,
+  "interpretation": "Full-joint D passes strong/moderate/null. Strong C absolute transition MAE fails because C disables duration context in the model while the generator still contains duration-context effects; package uses valid self-boundary transitions to absorb omitted duration structure. Treat as ablation-design misspecification, not joint-identifiability failure.",
+  "mirror_scope": "core training/likelihood/distributions/filtering from pinned package; inert encoder/import shim because all validation paths use explicit external context",
+  "schema": "nhsmm-multicomponent-package-core-confirmation-v1",
+  "source_commit": "efd4826ddc48586c47debf075d1c6332596cb0de"
+}
