@@ -28,7 +28,11 @@ Historical `HSMM`, `NeuralHSMM`, `GaussianHSMM`, and older constructor APIs are 
 
 `NHSMM.optimize()` optimizes every trainable model parameter returned by `model.parameters()`. This includes the context encoder as well as initial, duration, transition, emission, and duration-bias parameters. A context encoder that participates in the likelihood graph must not remain fixed at random initialization during normal optimization.
 
-The default maximum iteration budget is `40`. Convergence stopping and scheduling remain configurable, so this is a maximum budget rather than a requirement to execute exactly 40 updates. The default was raised after controlled package-level duration-context recovery showed that short budgets could learn the correct duration direction weakly but fail multi-seed hazard robustness, while the unchanged 40-iteration model passed the package acceptance gate.
+The default maximum iteration budget is `40`. Convergence stopping and scheduling remain configurable, so this is a maximum budget rather than a requirement to execute exactly 40 updates. Controlled duration-context recovery showed that shorter budgets could learn the correct direction weakly while failing multi-seed hazard robustness.
+
+`n_init` denotes separate optimization restarts. Each restart receives freshly initialized probabilistic distributions and the encoder is restored to the same pre-optimization baseline state rather than warm-started from the previous run. The best run is stored as an independent deep snapshot, including `duration_logits_bias`, before later restarts can mutate model state.
+
+The default emission initializer remains `spread`. `emission_init_mode="kmeans"` is an explicit training-time option that derives K-Means++/Lloyd centers from the training observations before optimization. It is useful when latent-state identifiability matters and separated emission structure is expected. It is not the global default because package validation found that changing the default initializer materially altered the established duration-context null-control behavior.
 
 The empirical package evidence and its limits are recorded in [`package-validation.md`](package-validation.md).
 
@@ -70,9 +74,9 @@ Loading is fail-closed for unsupported versions, incompatible schema/config/enco
 
 ## Evaluation boundary
 
-NHSMM latent states remain semantically neutral unless an external evaluation explicitly defines a mapping. Package-level synthetic validation establishes recovery of known context-conditioned duration structure; it does not establish downstream utility in any particular domain.
+NHSMM latent states remain semantically neutral unless an external evaluation explicitly defines a mapping. Package-level synthetic validation establishes permutation-invariant recovery under controlled ground truth; it does not assign domain semantics to state IDs.
 
-External evaluation must use causally available observations and appropriate out-of-sample data. In-sample likelihood, state-plot plausibility, or semantic state matching alone are not acceptance criteria.
+External evaluation must use causally available observations and appropriate out-of-sample data. In-sample likelihood, state-plot plausibility, or semantic state naming alone are not acceptance criteria.
 
 ## Verification
 

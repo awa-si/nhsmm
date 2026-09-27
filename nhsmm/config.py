@@ -51,7 +51,7 @@ class ModelConfig:
     max_duration: int = 35
     min_covar: float = 1e-6
     temperature: float = 1.0
-    emission_init_mode: Literal["randome", "spread"] = "spread"
+    emission_init_mode: Literal["randome", "spread", "kmeans"] = "spread"
     initial_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     duration_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     transition_init_mode: Literal["normal", "biased", "uniform"] = "normal"

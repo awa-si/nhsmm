@@ -1,83 +1,65 @@
 # NHSMM State
 
-Current package readiness and the next package-level research boundary. Detailed model semantics live in [`model.md`](model.md); controlled duration-context evidence lives in [`package-validation.md`](package-validation.md); verification policy lives in [`testing.md`](testing.md).
+Current package readiness and the next package-level research boundary. Detailed model semantics live in [`model.md`](model.md); controlled empirical evidence lives in [`package-validation.md`](package-validation.md); verification policy lives in [`testing.md`](testing.md).
 
 ## Current status
 
-**Phase:** package baseline verified; next research target is latent-state and transition-context recovery under controlled ground truth.
+**Phase:** duration-context and latent-state recovery baselines verified; next research target is transition-context recovery under controlled ground truth.
 
-The current `develop` baseline includes the causal runtime/artifact contracts, full encoder participation in `NHSMM.optimize()`, and a default `max_iter=40` training budget. Package-level validation is intentionally independent of Nautilus, market data, trading labels, and downstream supervised models.
+Package validation is independent of Nautilus, market data, trading labels, and downstream supervised models.
 
-The current controlled duration-context baseline is accepted. On synthetic sequences with known duration ground truth, the committed training/runtime path recovers context-conditioned duration/hazard structure across independent seeds while remaining non-collapsed and while the null-context control stays below the configured spurious-separation threshold.
+## Verified training baseline
 
-## Verified baseline
+- [x] `NHSMM.optimize()` covers all trainable parameters, including the causal encoder.
+- [x] Default maximum training budget is `40` iterations.
+- [x] `n_init` no longer warm-starts later runs from the previous best run.
+- [x] Best-run snapshots are independent deep copies and include `duration_logits_bias`.
+- [x] Default emission initialization remains `spread`.
+- [x] Explicit `emission_init_mode="kmeans"` is available for state-identifiability-sensitive training.
+- [x] No new auxiliary loss or duration parameterization is required by the current controlled benchmarks.
 
-### Training
-
-- [x] `NHSMM.optimize()` optimizes every trainable `model.parameters()` entry, including the causal context encoder.
-- [x] Regression coverage verifies encoder parameters are present in the optimizer and at least one encoder parameter changes after optimization.
-- [x] Default `ModelConfig.max_iter == 40`; convergence stopping and scheduling remain configurable.
-- [x] No auxiliary duration objective or alternative duration parameterization is required by the current controlled benchmark.
-
-### Causal model/runtime
-
-- [x] Dynamic causal boundary-time hazard semantics use only information available at `F_t` for boundary `t -> t+1`.
-- [x] Filtering represents normalized `P(z_t, age_t | F_t)` and preserves duration/age indexing semantics.
-- [x] Survival/end-within-horizon outputs are canonical duration forecasts.
-- [x] State-change probability remains distinct from episode-end probability.
-- [x] Prefix causality, probability normalization, survival monotonicity, one-step episode-end consistency, and bounded streaming state are maintained.
-
-### Artifact/inference
-
-- [x] Artifact v1 persists resolved `ModelConfig`, canonical encoder metadata, causal mode, schema metadata, and full model/distribution state.
-- [x] Loading is strict and fail-closed for incompatible artifact/config/schema state.
-- [x] Production inference preparation freezes parameters by default and preserves artifact/state-dict compatibility.
-
-## Current package evidence
-
-Latest local verification was performed against source blobs matching commit `fac6bc46bcdf193e8f289f336d9b668247a9f350`.
+## Latest local evidence
 
 Focused training regression:
 
 ```text
 PYTHONPATH=. pytest -q tests/test_training.py
-2 passed
+6 passed
 ```
 
-Syntax/import compilation:
+Syntax compilation:
 
 ```text
-python -m compileall -q nhsmm scripts/validate_duration_context.py tests/test_training.py
+python -m compileall -q nhsmm scripts/validate_state_recovery.py tests/test_training.py
 PASS
 ```
 
-Controlled 15-seed acceptance, using the committed `_train`, `_generate`, `_evaluate`, and `_summary` functions with CPU intra/inter-op threads limited to one only to fit the local execution budget:
+Duration-context regression, seeds 201-215, default `spread`:
 
-| Scenario | Positive gap | Gap >= 0.02 | Median gap | Mean gap | Non-collapsed |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| strong context, duration means 6 vs 18 | 15/15 | 15/15 | 0.09723 | 0.09305 | 15/15 |
-| moderate context, duration means 9 vs 15 | 14/15 | 12/15 | 0.03588 | 0.03668 | 15/15 |
-| null context, duration means 12 vs 12 | descriptive | 5/15 | 0.00907 | 0.01064 | 15/15 |
+| Scenario | Median gap | Mean gap | Non-collapsed | Result |
+| --- | ---: | ---: | ---: | --- |
+| strong | 0.09954 | 0.09166 | 15/15 | PASS |
+| moderate | 0.02434 | 0.03218 | 15/15 | PASS |
+| null | 0.01370 | 0.01184 | 15/15 | PASS |
 
-Acceptance result: **PASS** for strong context, moderate context, and null-context no-spurious-separation gates.
+Latent-state recovery, seeds 301-315, explicit `kmeans`:
 
-The multi-seed run was chunked only because the local execution tool terminates foreground processes after roughly 30 seconds. Model configuration, seeds, synthetic generator, training logic, evaluation functions, and acceptance thresholds were unchanged. The final aggregate contains exactly seeds `201..215` for each of the three scenarios.
+| Scenario | Median accuracy | Median ARI | Non-collapsed | Result |
+| --- | ---: | ---: | ---: | --- |
+| strong | 0.99667 | 0.99018 | 15/15 | PASS |
+| moderate | 0.93000 | 0.80182 | 15/15 | PASS |
+| null | 0.36333 | 0.00000 | descriptive | PASS |
 
 ## Verification limits
 
-The full discovered pytest suite was **not** rerun on this commit in the current session. The Git-backed AWA workspace was materialized at the correct commit, but both currently allowlisted execution images (`python:3.14-slim` and `alpine:3.22`) were unavailable on the host. The executable `/tmp` package source was therefore hash-checked against the current Git blobs before focused execution.
-
-`ruff` and `black` were not installed in the available local Python runtime, so the repository static-format checks remain unverified for this session. No GitHub Actions run was started; CI is not the local edit/test loop.
+The full discovered pytest suite was not rerun in the current sparse local workspace because only the directly affected tests were materialized. `ruff` and `black` are not installed in the available local Python runtime. No GitHub Actions run was started.
 
 ## Package boundary
 
-The package-level claim is deliberately narrow: NHSMM can recover known context-conditioned episode-duration structure under controlled synthetic ground truth with the current causal training/runtime contract.
-
-This does **not** establish useful state semantics, transition forecasts, or downstream predictive value in any external domain. Nautilus or any other consumer must evaluate those properties independently with its own causally valid out-of-sample contract.
+The package-level claims remain mechanism-specific. The controlled benchmarks establish duration-context recovery and permutation-invariant latent-state recovery under known synthetic ground truth. They do not establish domain semantics, useful transition forecasts, or downstream predictive value for any consumer.
 
 ## Next research slices
 
-1. **Latent-state recovery:** controlled synthetic benchmark with known state identity up to permutation; measure recovery, occupancy robustness, and seed stability without assigning domain semantics.
-2. **Transition-context recovery:** generate known context-dependent transition laws and verify that causal transition forecasts recover direction and effect size, including a null-context control.
-3. **Multi-component identifiability:** combine state-, transition-, and duration-context effects and determine when the package can recover each component without one mechanism absorbing another.
-4. Only if those controlled gates expose a reproducible package deficiency, change the objective or parameterization; otherwise keep the current baseline stable.
+1. **Transition-context recovery:** generate known context-dependent transition laws and verify causal transition forecasts recover direction/effect size, including a null-context control.
+2. **Multi-component identifiability:** combine state-, transition-, and duration-context effects and test whether each mechanism is recoverable without another component absorbing it.
+3. Change objectives or parameterizations only if those controlled gates reveal a reproducible package deficiency.

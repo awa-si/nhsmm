@@ -717,55 +717,142 @@ class NHSMM(nn.Module):
         raise TypeError(f"Unsupported type: {type(X)}")
 
 
-    def _initialize_run_state(self, run_idx: int, context: Optional[torch.Tensor] = None) -> None:
-        """
-        Initialize distributions and encoder for a new run.
-        Warm-starts from previous best parameters if available.
-        Resets convergence flags for this initialization.
-        """
-        for name in ("initial", "transition", "duration", "emission"):
-            module = getattr(self.dist, name)
-            if hasattr(self, "_best_state") and name in self._best_state:
-                module.load_state_dict(self._best_state[name])
+    def _training_observations(
+        self, X: Union[torch.Tensor, List[torch.Tensor]]
+    ) -> torch.Tensor:
+        if torch.is_tensor(X):
+            tensor = self._ensure_tensor(X)
+            return tensor.reshape(-1, tensor.shape[-1])
+        if isinstance(X, list):
+            if not X:
+                raise ValueError("X must contain at least one sequence")
+            rows = [torch.as_tensor(item, device=self.device, dtype=DTYPE) for item in X]
+            return torch.cat(rows, dim=0)
+        raise TypeError(f"Unsupported type: {type(X)}")
+
+    @staticmethod
+    def _kmeans_centers(
+        observations: torch.Tensor, n_states: int, n_iter: int = 20
+    ) -> torch.Tensor:
+        """Return K-Means++/Lloyd centers for training-time emission initialization."""
+        if observations.ndim != 2:
+            raise ValueError("observations must be a [N,F] tensor")
+        if observations.shape[0] < n_states:
+            raise ValueError("observations must contain at least n_states rows")
+        if not torch.isfinite(observations).all():
+            raise ValueError("observations must be finite")
+
+        x = observations.detach()
+        n = x.shape[0]
+        first = int(torch.randint(n, (1,), device=x.device).item())
+        centers = [x[first]]
+        closest = (x - centers[0]).square().sum(dim=-1)
+        for _ in range(1, n_states):
+            total = closest.sum()
+            if not torch.isfinite(total) or float(total) <= 0.0:
+                index = int(torch.randint(n, (1,), device=x.device).item())
             else:
-                module.initialize(context=context)
+                index = int(torch.multinomial(closest / total, 1).item())
+            centers.append(x[index])
+            closest = torch.minimum(
+                closest, (x - centers[-1]).square().sum(dim=-1)
+            )
+
+        current = torch.stack(centers)
+        for _ in range(n_iter):
+            distances = torch.cdist(x, current).square()
+            labels = distances.argmin(dim=-1)
+            nearest = distances.min(dim=-1).values
+            updated = []
+            for state in range(n_states):
+                members = labels == state
+                updated.append(
+                    x[members].mean(dim=0) if bool(members.any()) else x[nearest.argmax()]
+                )
+            candidate = torch.stack(updated)
+            if torch.allclose(candidate, current, atol=1e-5, rtol=1e-5):
+                return candidate
+            current = candidate
+        return current
+
+    @torch.no_grad()
+    def _initialize_emission_from_observations(
+        self, observations: torch.Tensor
+    ) -> None:
+        emission = self.dist.emission
+        observations = observations.to(device=self.device, dtype=DTYPE)
+        centers = self._kmeans_centers(observations, self.config.n_states)
+        if emission.emission_type == "gaussian":
+            emission.mu = nn.Parameter(centers.clone(), requires_grad=True)
+            emission.log_var = nn.Parameter(torch.zeros_like(centers), requires_grad=True)
+        else:
+            emission.loc = nn.Parameter(centers.clone(), requires_grad=True)
+            emission.scale_param = nn.Parameter(torch.ones_like(centers), requires_grad=True)
+            emission.dof.data.clamp_(min=2.1)
+
+    def _initialize_run_state(
+        self,
+        run_idx: int,
+        observations: torch.Tensor,
+        encoder_state: Optional[Dict[str, torch.Tensor]] = None,
+        emission_init_mode: Optional[str] = None,
+        context: Optional[torch.Tensor] = None,
+    ) -> None:
+        """Initialize one optimization run without warm-starting from another run."""
+        dist_type = type(self.dist)
+        self.dist = dist_type(config=self.config).to(device=self.device, dtype=DTYPE)
+
+        init_context = context
+        if init_context is not None:
+            while init_context.ndim > 1:
+                init_context = init_context.mean(dim=0)
+
+        for name in ("initial", "transition", "duration"):
+            getattr(self.dist, name).initialize(context=init_context)
+
+        mode = emission_init_mode or self.config.emission_init_mode
+        emission = self.dist.emission
+        if mode == "kmeans":
+            self._initialize_emission_from_observations(observations)
+        else:
+            if mode == "randome":
+                mode = "random"
+            emission.initialize(mode=mode, context=init_context)
+
+        with torch.no_grad():
+            self.duration_logits_bias.fill_(1.0)
 
         if self.encoder is not None:
-            if hasattr(self, "_best_state") and "encoder" in self._best_state:
-                self.encoder.load_state_dict(self._best_state["encoder"])
-            else:
-                self.encoder.reset()
+            if encoder_state is not None:
+                self.encoder.load_state_dict(encoder_state)
+            self.encoder.reset()
 
         if hasattr(self, "_convergence"):
-            if run_idx >= len(self._convergence.converged_flags):
-                self._convergence.converged_flags = torch.cat([
-                    self._convergence.converged_flags,
-                    torch.zeros(run_idx + 1 - len(self._convergence.converged_flags), dtype=torch.bool)
-                ])
-            else:
-                self._convergence.converged_flags[run_idx] = False
+            self._convergence.converged_flags[run_idx] = False
+
+    @staticmethod
+    def _clone_state_dict(module: nn.Module) -> Dict[str, torch.Tensor]:
+        return {key: value.detach().clone() for key, value in module.state_dict().items()}
 
     def _snapshot_best_params(self):
-        """Save current model parameters for warm-starting and restoring best run."""
+        """Save an independent snapshot of the best optimization run."""
         self._best_state = {
-            name: getattr(self.dist, name).state_dict()
-            for name in ("initial", "duration", "transition", "emission")
+            "dist": self._clone_state_dict(self.dist),
+            "duration_logits_bias": self.duration_logits_bias.detach().clone(),
         }
         if self.encoder is not None:
-            self._best_state["encoder"] = self.encoder.state_dict()
+            self._best_state["encoder"] = self._clone_state_dict(self.encoder)
 
     def _restore_best_params(self):
-        """Restore parameters from the best run."""
+        """Restore parameters from the best independent optimization run."""
         if not hasattr(self, "_best_state"):
             raise RuntimeError("No best parameters snapshot available.")
 
+        self.dist.load_state_dict(self._best_state["dist"])
+        with torch.no_grad():
+            self.duration_logits_bias.copy_(self._best_state["duration_logits_bias"])
         if self.encoder is not None and "encoder" in self._best_state:
             self.encoder.load_state_dict(self._best_state["encoder"])
-
-        for name in ("initial", "transition", "duration", "emission"):
-            module = getattr(self.dist, name)
-            if name in self._best_state:
-                module.load_state_dict(self._best_state[name])
 
     def _compute_loss(self,
         X: torch.Tensor, context: torch.Tensor = None,
@@ -808,6 +895,7 @@ class NHSMM(nn.Module):
             raise RuntimeError("Distributions not initialized.")
 
         cfg = cfg or self.config
+        observations = self._training_observations(X)
         X, context = self._ensure_tensor(X), self._ensure_tensor(context)
 
         self._convergence = Convergence(
@@ -823,9 +911,19 @@ class NHSMM(nn.Module):
             verbose=cfg.verbose,
         )
 
+        encoder_state = (
+            self._clone_state_dict(self.encoder) if self.encoder is not None else None
+        )
+
         best_score = -float("inf")
         for run_idx in range(cfg.n_init):
-            self._initialize_run_state(run_idx, context=context)
+            self._initialize_run_state(
+                run_idx,
+                observations=observations,
+                encoder_state=encoder_state,
+                emission_init_mode=cfg.emission_init_mode,
+                context=context,
+            )
 
             if cfg.verbose:
                 logger.info(f"\n=== Run {run_idx + 1}/{cfg.n_init} ===")

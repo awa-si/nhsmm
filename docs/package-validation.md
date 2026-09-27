@@ -1,72 +1,73 @@
-# Package validation: context-conditioned duration recovery
+# Package validation: duration and latent-state recovery
 
 ## Scope
 
-This document records package-level empirical evidence for NHSMM training and causal duration forecasting. It is independent of Nautilus, market data, trading targets, and downstream supervised models.
+This document records package-level empirical evidence for NHSMM training under controlled synthetic ground truth. It is independent of Nautilus, market data, trading targets, and downstream supervised models.
 
-## Controlled synthetic contract
+The claims here are intentionally narrow: they validate package mechanisms under known generators, not usefulness in an external domain.
 
-Synthetic sequences use three observed coordinates and two latent states. One directly observable context coordinate switches between two regimes. The generator changes the episode-duration distribution by context while state emissions remain separately identifiable. The package is therefore tested against known duration ground truth rather than an inferred external label.
+## Context-conditioned duration recovery
 
-Training uses `NHSMM.optimize()` with a causal `DefaultEncoder`, `K=2`, `D=30`, learning rate `1e-2`, one initialization per seed, and a 40-iteration maximum budget. Evaluation is performed on separately generated sequences.
+The maintained duration benchmark uses two latent states and an observable context that changes the episode-duration distribution. Training uses a causal `DefaultEncoder`, `K=2`, `D=30`, `max_iter=40`, one initialization per seed, and separately generated evaluation sequences.
 
 The primary diagnostic is
 
 `mean P(end within 5 | short-duration context) - mean P(end within 5 | long-duration context)`.
 
-A positive value is the expected direction. State occupancy is also checked to reject a trivial one-state collapse.
+A positive value is the expected direction. State occupancy rejects trivial collapse. The null-context scenario requires both absolute median and absolute mean gaps to remain at or below `0.015`.
 
-## Local package-validation evidence
+Latest regression on seeds 201-215 after the restart/K-Means training changes, with the default `emission_init_mode="spread"`:
 
-The validation sequence was executed locally from package code with no Nautilus dependency.
+| Scenario | Positive gap | Gap >= 0.02 | Median gap | Mean gap | Non-collapsed |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| strong, duration means 6 vs 18 | 14/15 | 14/15 | 0.09954 | 0.09166 | 15/15 |
+| moderate, duration means 9 vs 15 | 13/15 | 9/15 | 0.02434 | 0.03218 | 15/15 |
+| null, duration means 12 vs 12 | 9/15 | 7/15 | 0.01370 | 0.01184 | 15/15 |
 
-### Optimizer coverage
+Acceptance result: **PASS** for strong context, moderate context, and the null-context no-spurious-separation gate.
 
-The causal encoder participates in the likelihood graph and must be part of the optimizer. A regression check snapshots all trainable encoder parameters, runs one optimization step, and verifies that encoder parameters are present in the optimizer and at least one changes.
+## Permutation-invariant latent-state recovery
 
-### Training-budget ablation
+The state benchmark uses `K=3`, three observed coordinates, explicit-duration state episodes, and state-dependent Gaussian means. State labels are evaluated only up to permutation. Training uses `emission_init_mode="kmeans"`, `max_iter=40`, and one initialization per data seed; evaluation uses separately generated sequences.
 
-A nine-seed controlled ablation compared the earlier short training budget with longer training and several duration-context modifications. The unmodified model with `max_iter=40` was selected; no auxiliary duration loss, gradient multiplier, or alternative duration parameterization was required.
+Predefined gates:
 
-For the selected 40-iteration baseline over seeds 101-109:
+- strong separation: median matched accuracy >= `0.90`, median ARI >= `0.80`, at least 14/15 non-collapsed;
+- moderate separation: median matched accuracy >= `0.70`, median ARI >= `0.40`, at least 14/15 non-collapsed;
+- null separation: median matched accuracy <= `0.45` and absolute median ARI <= `0.10`.
 
-- positive short-vs-long hazard direction: 9/9;
-- material hazard gap (`>= 0.02`): 9/9;
-- correct duration-PMF direction: 9/9;
-- non-collapsed latent-state usage: 9/9;
-- median horizon-5 hazard gap: approximately `0.118`;
-- mean validation log likelihood per row: approximately `-2.877`, versus approximately `-3.560` for the 18-iteration baseline.
+Latest acceptance on seeds 301-315:
 
-This identifies insufficient optimization budget, rather than a demonstrated need for a new objective, as the cause of the earlier weak recovery on this controlled task.
+| Scenario | Separation | Median matched accuracy | Median ARI | Median effective states | Non-collapsed |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| strong | 4.0 | 0.99667 | 0.99018 | 2.99070 | 15/15 |
+| moderate | 2.0 | 0.93000 | 0.80182 | 2.99107 | 15/15 |
+| null | 0.0 | 0.36333 | 0.00000 | 1.16304 | descriptive |
 
-### Independent multi-seed acceptance
+Acceptance result: **PASS** for all three scenarios. The null result is expected to collapse or partition arbitrarily because no state-identifying emission signal exists; the relevant guard is that matched accuracy and ARI stay at chance/no-signal levels.
 
-The selected configuration was evaluated on new seeds 201-215 under three separately generated scenarios:
+### Initialization finding
 
-| Scenario | Ground-truth means | Positive gap | Gap >= 0.02 | Median gap | Non-collapsed |
-| --- | --- | ---: | ---: | ---: | ---: |
-| strong context | 6 vs 18 | 14/15 | 14/15 | 0.0923 | 15/15 |
-| moderate context | 9 vs 15 | 13/15 | 10/15 | 0.0380 | 15/15 |
-| null context | 12 vs 12 | descriptive only | 4/15 | 0.00883 | 15/15 |
+The previous data-independent `spread` initialization could enter persistent two-state local minima on otherwise strongly identifiable three-state synthetic data. More iterations and marginal state-usage KL regularization did not reliably rescue those seeds. A training-time K-Means++/Lloyd initializer recovered all three states robustly in the controlled benchmark.
 
-The null-context acceptance guard required both absolute median and absolute mean hazard gaps to remain at or below `0.015`; it passed. This guards against a training procedure that manufactures separation when the generator contains no duration-context effect.
+K-Means is therefore exposed as an **explicit opt-in initializer**, not the global default. Making it the global default changed the established duration null-control behavior, while retaining `spread` preserved the duration acceptance gate.
 
-### Runtime invariants
+## Restart semantics
 
-The selected package path also passed 200/200 randomized survival/transition invariant checks, including probability normalization, horizon monotonicity, one-step episode-end consistency, and causal prefix invariance.
+`n_init` is now treated as restart semantics rather than iterative warm-starting. Each run receives freshly initialized distributions and the encoder is restored to its pre-optimization baseline. Best-run parameters are deep snapshots and include `duration_logits_bias`, so later restarts cannot mutate the saved candidate by reference.
 
 ## Interpretation
 
-The evidence supports a narrow package claim: under controlled synthetic ground truth, the current causal NHSMM can learn context-conditioned episode-duration structure and recover the expected survival/hazard ordering robustly across independent seeds, without latent-state collapse or spurious null-context separation.
+Current evidence supports two package-level claims under controlled generators:
 
-It does **not** establish that an NHSMM will provide useful latent states or hazard forecasts for a particular downstream domain. Domain usefulness remains an external out-of-sample evaluation question.
+1. with the default `spread` initializer, the causal NHSMM recovers context-conditioned duration/hazard ordering without spurious null-context separation;
+2. with explicit `emission_init_mode="kmeans"`, the model robustly recovers identifiable latent states up to permutation while remaining at chance under null separation.
 
-## Reproduction policy
+It does **not** establish meaningful state semantics, transition-context recovery, or downstream predictive value in an external domain.
 
-The maintained unit suite checks optimizer/encoder coverage and the training-budget default. Full multi-seed empirical acceptance is intentionally kept out of routine pytest because it is an expensive research validation. Re-run the controlled acceptance whenever the training objective, duration parameterization, context encoder, causal filter/survival semantics, or optimizer coverage changes materially.
-
-Use:
+## Reproduction
 
 ```bash
 python scripts/validate_duration_context.py --output /tmp/nhsmm-duration-context.json
+python scripts/validate_state_recovery.py --scenario all --output /tmp/nhsmm-state-recovery.json
 ```
