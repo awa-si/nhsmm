@@ -66,25 +66,18 @@ No frozen gate, threshold, or refinement hyperparameter was retuned after confir
 - no-self topology: rejected (`3/5` moderate selected, corr ~`0.600`);
 - shared-duration context: rejected (moderate corr ~`0.644`, MAE ~`0.134`);
 - shared-linear estimator alone: excellent active recovery but null selected `5/5`; rejected as detector;
-- shared-linear + effect-floor (`>=0.25`) on fresh confirmatory `751..755`: strong `5/5`, moderate `3/5`, null `0/5`; **REJECTED**;
-- fold-sign / direction-agreement detector frozen on dev `761..765` as `median ΔLL > -0.07` and at least `4/5` folds with positive ΔLL; confirmatory `771..775`: strong `5/5`, null `0/5`, moderate only `1/5`; **REJECTED**. Do not relax this rule post hoc.
+- shared-linear + effect-floor (`>=0.25`) confirmatory `751..755`: strong `5/5`, moderate `3/5`, null `0/5`; **REJECTED**;
+- fold-stability / effect-floor candidate confirmatory `771..775`: strong `5/5`, moderate `3/5`, null `0/5`; **REJECTED**;
+- single-permutation evidence dev `781..785`: strong `5/5`, moderate `5/5`, null `3/5`; **REJECTED on development**;
+- permutation evidence AND effect-floor confirmatory `791..795`: moderate `2/5`; **REJECTED early**;
+- permutation-rank exact test (5 folds × 7 cyclic permutations, one-sided exact Binomial vs 50/50, `alpha=0.05`):
+  - dev `801..805`: strong `5/5`, moderate `5/5`, null `0/5`;
+  - confirmatory `811..815`: strong `5/5`, moderate `5/5`, median corr `0.890`, median MAE `0.082`, but null `1/5` false-positive (seed `813`, exact `p=0.0083`);
+  - **REJECTED**. Do not tighten `alpha` after observing the confirmatory block.
 
-See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md), [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md), and [`validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md`](validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md).
+See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md), [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md), [`validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md`](validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md), and [`validation/general-context-detector-rapid-2026-09-27.md`](validation/general-context-detector-rapid-2026-09-27.md).
 
-### Rapid-mode detector candidate — permutation calibration checkpoint
-
-Current candidate: **held-out context permutation detector**. It compares validation evidence under the true context alignment against permuted context on the same held-out folds, aiming to calibrate each seed against its own null structure instead of using another global amplitude or likelihood threshold.
-
-- development seeds: `781..785`;
-- strong dev block: **5/5 completed**;
-- moderate dev block: pending;
-- null dev block: pending;
-- if the dev statistic separates active vs null, freeze exactly once;
-- planned fresh confirmatory seeds: `791..795`;
-- no result has been accepted yet;
-- no new threshold has been frozen yet.
-
-**Current interpretation:** estimator expressiveness is not the remaining blocker. The unresolved deficiency is robust evidence-based detection/generalization for moderate multidimensional context while preserving strict null rejection.
+**Current interpretation:** estimator expressiveness is not the remaining blocker. The permutation-rank detector restored full moderate power and good shape fidelity but still missed strict null control by one confirmatory seed. The open problem is replication-calibrated null control.
 
 **Status: PACKAGE-CORE PARTIAL / NOT PASS.**
 
@@ -96,10 +89,12 @@ The full discovered pytest suite was not rerun because the local workspace is sp
 
 These controlled synthetic results establish mechanism recovery and identifiability. They do not establish domain semantics or downstream predictive value for Nautilus or any other consumer.
 
-## Next research slices
+## Next research slice
 
-1. Complete permutation-calibrated detector dev blocks for moderate/null on seeds `781..785`.
-2. If and only if dev separation is clean, freeze once and confirm on fresh seeds `791..795`.
-3. Required outcome remains: strong detection preserved, moderate `>=4/5`, null `0/5`.
-4. Do not revisit rejected effect-floor or fold-sign thresholds.
-5. **API/design translation** remains deferred until the general-context package gate passes.
+**Split-fit direction replication** is the active candidate. Two independent fits on disjoint training halves must recover the same context-delta direction after state alignment. This adds an independent reproducibility condition rather than another magnitude threshold.
+
+- development seeds: `821..825`;
+- if viable, freeze once on that block;
+- fresh confirmatory seeds: `831..835`;
+- no result has been accepted yet;
+- API/design translation remains deferred until the general-context package gate passes.
