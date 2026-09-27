@@ -1,6 +1,6 @@
 # NHSMM handoff
 
-This file is the short operational handoff for the next work session. `docs/state.md` remains the repository readiness/status owner; this file records only the immediate continuation point and recent performance context.
+This file is the short operational handoff for the next work session. `docs/state.md` remains the canonical readiness/status owner.
 
 ## Current continuation point
 
@@ -8,98 +8,149 @@ Repository: `awa-si/nhsmm`
 
 Branch: `develop`
 
-Current verified performance work is complete through the incremental encoder overhead cleanup. The next task is **not another encoder micro-optimization**.
+Snapshot date: `2026-09-28`
 
-Resume with a fresh local profile of the complete steady-state `HSMMFilterRuntime.step()` path and identify the largest remaining end-to-end cost among:
+The package-core mechanism research and the universal validation/API translation are complete. Do not reopen detector tuning or redesign the accepted validation semantics unless a later package change invalidates them.
 
-- incremental encoder;
-- emission scoring;
-- duration/transition boundary scoring;
-- normalized filter update;
-- runtime state/timestamp/validation handling.
+## Current verified state
 
-Only optimize the largest measured block when a same-host before/after benchmark shows a material end-to-end improvement.
+Package-core evidence:
 
-## Latest verified state
+- duration context: PASS;
+- latent-state recovery: PASS;
+- transition context: PASS;
+- multi-component identifiability: PACKAGE-CORE PASS;
+- general-context robustness: PACKAGE-CORE PASS using split-fit direction replication.
 
-The canonical `DefaultEncoder` streaming path now includes:
+Universal validation now covers:
 
-- one-window causal convolution evaluated with the existing Conv1d weights as an equivalent linear operation;
-- direct one-step LSTM recurrence using the existing `nn.LSTM` parameters;
-- inference-only fused input/hidden LSTM gate projection;
-- no eval-mode dropout identity calls;
-- bounded convolution history retained without an unnecessary clone.
+- initial-state context effects `[K]`;
+- duration context effects `[K,D]`;
+- emission context effects `[K,F]`;
+- transition context effects `[K,K]`;
+- arbitrary state-indexed custom effects `[K,...]` through the advanced validation layer.
 
-The distribution/runtime path already includes:
+The normalized public facade is the preferred API:
 
-- analytical diagonal-Gaussian emission scoring;
-- version-keyed cached Gaussian variance/log-normalizer;
-- cached duration gate terms;
-- no-op ergodic transition mask bypass;
-- prepared frozen context-affine fusion;
-- internal normalized filter kernel;
-- internal normalized filter-state construction without duplicate public validation.
-
-Do not reimplement or duplicate these fast paths.
-
-## Latest direct performance evidence
-
-Same-host local encoder A/B for the latest overhead cleanup:
-
-```text
-stream_step()
-mean  ~0.06309 ms -> ~0.05209 ms
-p50   ~0.06385 ms -> ~0.05192 ms
+```python
+context_effect(model, context, component=...)
+evaluate_context_effect_replication(
+    model_a,
+    model_b,
+    contexts,
+    component=...,
+    config=...,
+)
+split_fit_context_effect_evidence(
+    observations,
+    context,
+    component=...,
+    fit_model=...,
+    evidence_contexts=...,
+    config=...,
+)
 ```
 
-This is approximately a 17% encoder-step reduction. Multi-step output, hidden state, cell state, and convolution history matched the previous path exactly in the exercised local comparisons.
-
-Latest clean-runner integration:
+`ContextComponent` is restricted to:
 
 ```text
-GitHub Actions run 36266084169
-62 passed in 2.65s
-artifact-loaded runtime:
-  p50   0.873408 ms
-  p95   0.906474 ms
-  mean  0.877417 ms
-  Python traced peak 23,536 bytes
-  runtime state 151 tensor elements
+initial | duration | emission | transition
 ```
 
-Hosted-runner latency is integration/reference evidence only. Do not compare it causally with a different hosted runner or local machine.
+Component-specific helper functions remain available as compatibility/advanced API and must remain behavior-compatible.
 
-## Rejected / low-value directions
+## Verification status
 
-Do not retry these without new profiling evidence:
-
-- in-place LSTM gate activations: isolated activation microbenchmark improved, but real `stream_step()` became slightly slower;
-- stacking/fusing all distribution context networks into one larger operation: prior local test was slightly slower;
-- naive additional context-linear folding beyond the existing prepared affine fast path: no reliable end-to-end gain;
-- replacing tiny `log_softmax` calls merely because they appear individually expensive: require a demonstrated end-to-end win first.
-
-## Performance workflow
-
-1. Materialize current `develop` into `/tmp/nhsmm` using the GitHub workspace/connector path.
-2. Prefer local editable install. If network/build isolation blocks installation, an existing dependency-complete local runtime may be used for profiling, but do not call that a clean dependency validation.
-3. Establish a fresh steady-state full-runtime baseline before editing.
-4. Attribute the baseline to major components rather than optimizing from source inspection alone.
-5. Compare before/after on the same host, same model shape, same warmup and measurement loop.
-6. Keep latency and `tracemalloc` allocation passes separate.
-7. Preserve probabilistic semantics, causal ordering, public APIs, artifact schema, and state-dict compatibility unless a change is explicitly justified.
-8. Validate optimized private paths against their public/reference implementations.
-9. Run the full discovered pytest suite before completion.
-10. Use GitHub Actions only for the final clean-runner integration check, then restore the canonical workflow trigger immediately.
-
-## After the performance pass
-
-Once full-runtime profiling no longer exposes a clear, low-risk material bottleneck, stop micro-optimizing and proceed to the Nautilus-facing evaluation harness described in `docs/state.md`:
+Focused semantic/API regression:
 
 ```text
-A0  no temporal model
-B1  Nautilus raw HMM forward filter
-B2  HMM + current persistence/duration shaping
-C   causal NHSMM
+23/23 PASS
 ```
 
-Do not map NHSMM latent states to H1 structure classes during the core evaluation.
+Functional end-to-end smoke includes:
+
+- real NHSMM initialization;
+- all four normalized `component=` extraction paths;
+- normalized-facade equality to component-specific helpers;
+- replica-evidence dispatch;
+- split-fit dispatch;
+- a real split-fit callback using `initialize_distributions()` + `NHSMM.optimize()` on disjoint halves.
+
+Stress result:
+
+```text
+STRESS_PASS
+effects=4800
+replications=160
+optimize_splitfits=16
+runtime=22.421 s
+Python-tracked peak memory=53.47 MiB
+```
+
+Stress coverage included:
+
+- 40 initialized models, seeds `100..139`;
+- 15 context points per model;
+- all four public components;
+- exact repeated-call determinism for extraction;
+- train/eval mode restoration;
+- shape contracts;
+- finite values;
+- initial/duration/transition normalization;
+- disjoint split-fit contract.
+
+Persistent stress record:
+
+`docs/validation/public-api-stress-2026-09-28.md`
+
+## Important semantic constraints
+
+Preserve these unless explicitly justified by new research:
+
+- validation remains separate from `NHSMM.optimize()`;
+- training policy is consumer-owned through `fit_model(...)`;
+- no trading/Nautilus assumptions inside NHSMM validation;
+- validation thresholds remain explicit policy, not package-core defaults;
+- state alignment uses learned emission centers, not latent truth;
+- initial-state evidence uses normalized probabilities, not internal logits;
+- duration evidence includes `duration_logits_bias`;
+- effective transition evidence integrates duration-dependent transition laws over the current duration distribution;
+- adapters restore the previous train/eval mode;
+- accepted split-fit transition detector thresholds remain frozen for the recorded research profile and must not be retuned on prior confirmatory seeds.
+
+## Rejected research directions
+
+Do not revive without materially new evidence:
+
+- no-self topology as package fix;
+- shared-duration context;
+- shared-linear estimator as detector;
+- effect-floor detector variants;
+- fold-sign/fold-stability rules;
+- single-permutation and permutation-plus-effect-floor variants;
+- permutation-rank/binomial detector;
+- Fisher fold-permutation detector.
+
+## Current package boundary
+
+The next clean package task is **not more detector/API expansion**.
+
+Proceed in this order:
+
+1. Use a complete local checkout of current `develop` when available.
+2. Run the full discovered pytest suite locally.
+3. Fix only regressions actually exposed by that run; preserve accepted model and validation semantics.
+4. Continue behavior-preserving audit only where there is a concrete correctness/maintenance benefit.
+5. Keep downstream Nautilus integration as a separate empirical boundary.
+
+The current runtime used during validation was a sparse/local reconstruction, so focused and stress validation are authoritative for the new validation API, but they are not a substitute for a full-repository pytest pass.
+
+## Source of truth
+
+For detailed current status and evidence, read:
+
+- `docs/state.md`
+- `docs/validation-api.md`
+- `docs/validation/public-api-stress-2026-09-28.md`
+- `docs/validation/general-context-split-replication-confirm-2026-09-27.md`
+- `docs/validation/multicomponent-component-matched-package-15seed-2026-09-27.md`
