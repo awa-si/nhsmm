@@ -1,0 +1,47 @@
+name: NHSMM package validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - ".github/workflows/package-validation.yml"
+
+jobs:
+  multicomponent-identifiability:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Run NHSMM package validation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Compile validation path
+        run: python -m py_compile scripts/validate_multicomponent_identifiability.py
+
+      - name: Run multi-component identifiability gate
+        run: |
+          mkdir -p validation-results
+          python scripts/validate_multicomponent_identifiability.py \
+            --scenario all \
+            --workers 2 \
+            --output validation-results/multicomponent-identifiability.json
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nhsmm-multicomponent-identifiability-${{ github.run_id }}
+          path: validation-results/
+          if-no-files-found: warn
+          retention-days: 14
