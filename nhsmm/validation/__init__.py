@@ -8,6 +8,16 @@ from .nhsmm import (
     transition_context_matrix,
 )
 from .split_fit import SplitFitEvidence, split_fit_context_evidence
+from .state_effect import (
+    duration_context_tensor,
+    emission_context_tensor,
+    evaluate_duration_context_replication,
+    evaluate_emission_context_replication,
+    evaluate_state_context_replication,
+    split_fit_duration_context_evidence,
+    split_fit_emission_context_evidence,
+    split_fit_state_context_evidence,
+)
 
 __all__ = [
     "ContextEvidence",
@@ -15,11 +25,19 @@ __all__ = [
     "SplitFitEvidence",
     "StateAlignment",
     "align_state_centers",
+    "duration_context_tensor",
     "emission_centers",
+    "emission_context_tensor",
     "evaluate_context_replication",
+    "evaluate_duration_context_replication",
+    "evaluate_emission_context_replication",
+    "evaluate_state_context_replication",
     "evaluate_transition_context_replication",
     "reorder_square_matrix",
     "split_fit_context_evidence",
+    "split_fit_duration_context_evidence",
+    "split_fit_emission_context_evidence",
+    "split_fit_state_context_evidence",
     "split_fit_transition_context_evidence",
     "transition_context_matrix",
 ]
