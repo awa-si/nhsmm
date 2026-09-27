@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
 
-from nhsmm.config import DTYPE, ModelConfig, logger
+from nhsmm.config import DTYPE, ModelConfig
 from nhsmm.distributions import Duration, Emission, Initial, Transition
 from nhsmm.models.base import DistributionSet as BaseDistributionSet
 from nhsmm.models.base import NHSMM as BaseNHSMM
