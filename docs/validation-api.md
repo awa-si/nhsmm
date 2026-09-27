@@ -2,85 +2,64 @@
 
 `nhsmm.validation` provides domain-neutral evidence checks for learned context effects. Validation is deliberately separate from `NHSMM.optimize()`: training policy stays with the caller, while validation tests whether a fitted context effect reproduces across independent fits.
 
-## State-indexed context evidence
+## Canonical public API
 
-The universal path accepts any learned effect tensor whose first axis is latent state:
+For normal application code, use the component-normalized facade exported directly from `nhsmm`:
 
-```text
-[K, ...]
+```python
+from nhsmm import (
+    ContextEvidenceConfig,
+    context_effect,
+    evaluate_context_effect_replication,
+    split_fit_context_effect_evidence,
+)
 ```
 
-Only the first axis is interpreted by validation. Remaining axes belong to the component. State alignment uses learned emission centers; latent truth labels are not required.
+All three operations take the same explicit component selector:
 
-Public helpers:
+```text
+component = "initial" | "duration" | "emission" | "transition"
+```
 
-- `evaluate_state_context_replication(...)`
-- `split_fit_state_context_evidence(...)`
-- `initial_context_tensor(...)`
-- `duration_context_tensor(...)`
-- `emission_context_tensor(...)`
-- `evaluate_initial_context_replication(...)`
-- `evaluate_duration_context_replication(...)`
-- `evaluate_emission_context_replication(...)`
-- `split_fit_initial_context_evidence(...)`
-- `split_fit_duration_context_evidence(...)`
-- `split_fit_emission_context_evidence(...)`
+The canonical operations are:
 
-Initial-state effects are represented as normalized `[K]` probabilities. Duration effects are normalized `[K,D]` distributions including `duration_logits_bias`. Emission effects are state-conditioned means `[K,F]`. All NHSMM adapters preserve the model's prior train/eval mode.
+- `context_effect(model, context, component=...)`
+- `evaluate_context_effect_replication(model_a, model_b, contexts, component=..., config=...)`
+- `split_fit_context_effect_evidence(observations, context, component=..., fit_model=..., evidence_contexts=..., config=...)`
+
+`ContextComponent` is exported as the corresponding typing alias.
+
+Semantic effect shapes are stable by component:
+
+- `initial` -> normalized initial-state probabilities `[K]`;
+- `duration` -> normalized duration probabilities `[K,D]`, including `duration_logits_bias`;
+- `emission` -> state-conditioned emission means `[K,F]`;
+- `transition` -> effective boundary-transition probabilities `[K,K]`, duration-integrated where applicable.
 
 Example:
 
 ```python
-from nhsmm import ContextEvidenceConfig, evaluate_duration_context_replication
+from nhsmm import ContextEvidenceConfig, evaluate_context_effect_replication
 
 policy = ContextEvidenceConfig(
     replication_corr_min=0.55,
     min_replica_amplitude=0.10,
 )
 
-evidence = evaluate_duration_context_replication(
+evidence = evaluate_context_effect_replication(
     model_a,
     model_b,
     contexts=evidence_grid,
+    component="duration",
     config=policy,
 )
 ```
 
-Thresholds are always explicit policy; amplitude units are component-specific and therefore are not package defaults.
-
-## Transition-context evidence
-
-Transitions retain their dedicated validation path because they contain two latent-state axes and have conditional boundary semantics. For a fitted NHSMM, the effective boundary-transition matrix at one context value is available directly:
-
-```python
-from nhsmm import transition_context_matrix
-
-matrix = transition_context_matrix(model, context=[0.2, -0.4])
-```
-
-For duration-dependent models this integrates transition probabilities over the model's duration distribution, including `duration_logits_bias`. The result is a normalized `K x K` boundary-transition matrix.
-
-To compare two independently fitted replicas:
-
-```python
-from nhsmm import ContextEvidenceConfig, evaluate_transition_context_replication
-
-policy = ContextEvidenceConfig(
-    replication_corr_min=0.55,
-    min_replica_amplitude=0.50,
-)
-
-evidence = evaluate_transition_context_replication(
-    model_a,
-    model_b,
-    contexts=[[-1.0, -1.0], [-1.0, 1.0], [1.0, -1.0], [1.0, 1.0]],
-    config=policy,
-)
-```
+Thresholds are always explicit policy. Amplitude units are component-specific and therefore are not universal package defaults.
 
 ## Split-fit validation
 
-Split-fit helpers create two disjoint training partitions and delegate fitting back to the caller. The callback owns initialization, optimization, refinement, seeds, stopping rules, and application-specific training choices. Validation never calls or mutates `NHSMM.optimize()` itself.
+`split_fit_context_effect_evidence(...)` creates two disjoint training partitions and delegates fitting back to the caller. The callback owns initialization, optimization, refinement, seeds, stopping rules, and application-specific training choices. Validation never calls or mutates `NHSMM.optimize()` itself.
 
 ## Semantics
 
@@ -93,16 +72,32 @@ Shared validation semantics are:
 - no latent truth labels are needed;
 - no domain-specific labels or trading assumptions are used.
 
-Transition-specific semantics additionally support conditional-on-state-change normalization and optional self-transition exclusion.
+Transition evidence retains its dedicated internal implementation because it has two latent-state axes and boundary semantics. The normalized facade hides that implementation distinction from normal callers.
 
-Lower-level APIs remain available through `nhsmm.validation`:
+## Compatibility and advanced helpers
 
-- `evaluate_context_replication(...)` for square transition-like effects;
-- `split_fit_context_evidence(...)`;
+The earlier component-specific helpers remain available and behavior-compatible. They are useful for advanced consumers that need the component-specific representation directly:
+
+- `initial_context_tensor(...)`
+- `duration_context_tensor(...)`
+- `emission_context_tensor(...)`
+- `transition_context_matrix(...)`
+- `evaluate_initial_context_replication(...)`
+- `evaluate_duration_context_replication(...)`
+- `evaluate_emission_context_replication(...)`
+- `evaluate_transition_context_replication(...)`
+- corresponding `split_fit_*_context_evidence(...)` helpers.
+
+Lower-level generic machinery remains under `nhsmm.validation`:
+
 - `evaluate_state_context_replication(...)` for arbitrary `[K,...]` effects;
 - `split_fit_state_context_evidence(...)`;
+- `evaluate_context_replication(...)` for square transition-like effects;
+- `split_fit_context_evidence(...)`;
 - `align_state_centers(...)`;
 - `reorder_square_matrix(...)`.
+
+These are not required for the normal public workflow.
 
 ## Result objects
 
