@@ -6,6 +6,8 @@ Current package readiness and the next package-level research boundary. Detailed
 
 **Phase:** duration-context and latent-state recovery baselines verified; next research target is transition-context recovery under controlled ground truth.
 
+**Verified code baseline:** `89bf5aea144cde5e3331971d00df76191bfb088f` (`training: add robust state-recovery initialization`).
+
 Package validation is independent of Nautilus, market data, trading labels, and downstream supervised models.
 
 ## Verified training baseline
