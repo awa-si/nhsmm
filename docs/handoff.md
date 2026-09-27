@@ -10,7 +10,7 @@ Branch: `develop`
 
 Snapshot date: `2026-09-28`
 
-The package-core mechanism research and the universal validation/API translation are complete. Do not reopen detector tuning or redesign the accepted validation semantics unless a later package change invalidates them.
+The package-core mechanism research, universal validation/API translation, normalized public API, stress validation, and packaging dry-run are complete. Do not reopen detector tuning or redesign accepted validation semantics unless a later package change invalidates them.
 
 ## Current verified state
 
@@ -22,15 +22,7 @@ Package-core evidence:
 - multi-component identifiability: PACKAGE-CORE PASS;
 - general-context robustness: PACKAGE-CORE PASS using split-fit direction replication.
 
-Universal validation now covers:
-
-- initial-state context effects `[K]`;
-- duration context effects `[K,D]`;
-- emission context effects `[K,F]`;
-- transition context effects `[K,K]`;
-- arbitrary state-indexed custom effects `[K,...]` through the advanced validation layer.
-
-The normalized public facade is the preferred API:
+Normalized public validation facade:
 
 ```python
 context_effect(model, context, component=...)
@@ -57,7 +49,7 @@ split_fit_context_effect_evidence(
 initial | duration | emission | transition
 ```
 
-Component-specific helper functions remain available as compatibility/advanced API and must remain behavior-compatible.
+Component-specific helpers remain available as compatibility/advanced API.
 
 ## Verification status
 
@@ -66,15 +58,6 @@ Focused semantic/API regression:
 ```text
 23/23 PASS
 ```
-
-Functional end-to-end smoke includes:
-
-- real NHSMM initialization;
-- all four normalized `component=` extraction paths;
-- normalized-facade equality to component-specific helpers;
-- replica-evidence dispatch;
-- split-fit dispatch;
-- a real split-fit callback using `initialize_distributions()` + `NHSMM.optimize()` on disjoint halves.
 
 Stress result:
 
@@ -87,21 +70,77 @@ runtime=22.421 s
 Python-tracked peak memory=53.47 MiB
 ```
 
-Stress coverage included:
-
-- 40 initialized models, seeds `100..139`;
-- 15 context points per model;
-- all four public components;
-- exact repeated-call determinism for extraction;
-- train/eval mode restoration;
-- shape contracts;
-- finite values;
-- initial/duration/transition normalization;
-- disjoint split-fit contract.
-
 Persistent stress record:
 
 `docs/validation/public-api-stress-2026-09-28.md`
+
+## Packaging status
+
+Packaging is now functionally verified from a complete GitHub checkout.
+
+Canonical release workflow:
+
+```text
+.github/workflows/release.yml
+```
+
+Packaging stack:
+
+- PEP 517 / `setuptools.build_meta`;
+- versioning via `setuptools_scm`;
+- sdist + pure-Python wheel;
+- runtime version via installed metadata;
+- manual workflow run = build/install dry-run only;
+- pushed `v*` tag = production release path;
+- PyPI publish job uses OIDC / Trusted Publishing.
+
+### Verified dry-run
+
+GitHub Actions run:
+
+```text
+36359725337
+```
+
+All gates PASS:
+
+- build tooling install;
+- `python -m build`;
+- `twine check dist/*`;
+- clean-venv wheel installation;
+- installed-package public-API smoke for all four components;
+- distribution artifact upload.
+
+Artifact:
+
+```text
+name: nhsmm-release-dry-run-distributions-36359725337
+size: 208303 bytes
+sha256: dd741ea982c7679d07357d2dd475516904b5acfeeeb85415b03fb0c8397e130f
+```
+
+The temporary connector-trigger workflow used solely to force this dry-run was removed after success. Do not restore it; use the canonical manual trigger in `release.yml` for future rehearsals.
+
+## Remaining production-release setup
+
+Before a real PyPI release:
+
+1. Run the complete discovered pytest suite against the intended release commit from a complete checkout.
+2. Configure PyPI Trusted Publishing:
+
+```text
+owner: awa-si
+repository: nhsmm
+workflow: release.yml
+environment: pypi
+```
+
+3. Create GitHub environment `pypi`; manual approval is recommended.
+4. Choose a new version/tag only after the full regression is green.
+5. Do not reuse an already published version.
+6. Push the release tag; let `release.yml` rebuild and publish the exact verified distributions.
+
+No production tag was created during the packaging verification pass.
 
 ## Important semantic constraints
 
@@ -115,41 +154,29 @@ Preserve these unless explicitly justified by new research:
 - initial-state evidence uses normalized probabilities, not internal logits;
 - duration evidence includes `duration_logits_bias`;
 - effective transition evidence integrates duration-dependent transition laws over the current duration distribution;
-- adapters restore the previous train/eval mode;
-- accepted split-fit transition detector thresholds remain frozen for the recorded research profile and must not be retuned on prior confirmatory seeds.
-
-## Rejected research directions
-
-Do not revive without materially new evidence:
-
-- no-self topology as package fix;
-- shared-duration context;
-- shared-linear estimator as detector;
-- effect-floor detector variants;
-- fold-sign/fold-stability rules;
-- single-permutation and permutation-plus-effect-floor variants;
-- permutation-rank/binomial detector;
-- Fisher fold-permutation detector.
+- adapters restore previous train/eval mode;
+- frozen detector thresholds must not be retuned on prior confirmatory seeds.
 
 ## Current package boundary
 
-The next clean package task is **not more detector/API expansion**.
+The next task is **not more detector/API expansion and not another packaging redesign**.
 
 Proceed in this order:
 
-1. Use a complete local checkout of current `develop` when available.
-2. Run the full discovered pytest suite locally.
-3. Fix only regressions actually exposed by that run; preserve accepted model and validation semantics.
-4. Continue behavior-preserving audit only where there is a concrete correctness/maintenance benefit.
-5. Keep downstream Nautilus integration as a separate empirical boundary.
-
-The current runtime used during validation was a sparse/local reconstruction, so focused and stress validation are authoritative for the new validation API, but they are not a substitute for a full-repository pytest pass.
+1. complete-package pytest regression;
+2. fix only real regressions;
+3. configure Trusted Publisher / `pypi` environment;
+4. choose release version;
+5. manual canonical release dry-run if release commit changed materially;
+6. tag release;
+7. only then return to downstream Nautilus empirical evaluation.
 
 ## Source of truth
 
-For detailed current status and evidence, read:
+Read:
 
 - `docs/state.md`
+- `docs/release.md`
 - `docs/validation-api.md`
 - `docs/validation/public-api-stress-2026-09-28.md`
 - `docs/validation/general-context-split-replication-confirm-2026-09-27.md`
