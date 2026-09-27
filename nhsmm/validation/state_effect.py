@@ -150,6 +150,10 @@ def duration_context_tensor(model: Any, context: Any) -> np.ndarray:
             ).exp()
             if value.ndim != 4:
                 raise ValueError("duration log_matrix must return [B,T,K,D]")
+            if value.shape[0] != 1 or value.shape[1] != 1:
+                raise ValueError("duration evidence evaluation expects B=T=1")
+            if value.shape[2] <= 0 or value.shape[3] <= 0:
+                raise ValueError("duration log_matrix must contain positive K and D dimensions")
             out = value[0, 0].detach().cpu().numpy().astype(np.float64, copy=False)
     finally:
         if hasattr(model, "train"):
@@ -181,80 +185,62 @@ def emission_context_tensor(model: Any, context: Any) -> np.ndarray:
     finally:
         if hasattr(model, "train"):
             model.train(was_training)
-    if out.ndim != 2:
-        raise ValueError("emission context tensor must have shape [K,F]")
+    if out.ndim != 2 or out.shape[0] <= 0 or out.shape[1] <= 0:
+        raise ValueError("emission context tensor must have non-empty shape [K,F]")
     if not np.isfinite(out).all():
         raise ValueError("emission context tensor contains non-finite values")
     return out
 
 
-def evaluate_duration_context_replication(
-    model_a: Any,
-    model_b: Any,
-    contexts: Iterable[Any],
-    *,
-    config: ContextEvidenceConfig,
-) -> ContextEvidence:
-    return evaluate_state_context_replication(
-        model_a,
-        model_b,
-        contexts,
-        effect_tensor=duration_context_tensor,
-        config=config,
-    )
+def initial_context_tensor(model: Any, context: Any) -> np.ndarray:
+    """Return the context-conditioned initial-state probabilities ``[K]``."""
+    try:
+        initial = model.dist.initial
+    except AttributeError as exc:
+        raise TypeError("model must expose dist.initial") from exc
+    ctx = _context_tensor(model, context)
+    was_training = bool(getattr(model, "training", False))
+    if hasattr(model, "eval"):
+        model.eval()
+    try:
+        with torch.inference_mode():
+            value = initial.expected_probs(context=ctx)
+            while value.ndim > 1 and value.shape[0] == 1:
+                value = value[0]
+            out = value.detach().cpu().numpy().astype(np.float64, copy=False)
+    finally:
+        if hasattr(model, "train"):
+            model.train(was_training)
+    if out.ndim != 1 or out.shape[0] <= 0:
+        raise ValueError("initial context tensor must have non-empty shape [K]")
+    if not np.isfinite(out).all():
+        raise ValueError("initial context tensor contains non-finite values")
+    if np.any(out < 0.0):
+        raise ValueError("initial context tensor must contain non-negative probabilities")
+    if not np.isclose(out.sum(), 1.0, atol=1e-6, rtol=1e-6):
+        raise ValueError("initial context tensor must sum to one")
+    return out
 
 
-def evaluate_emission_context_replication(
-    model_a: Any,
-    model_b: Any,
-    contexts: Iterable[Any],
-    *,
-    config: ContextEvidenceConfig,
-) -> ContextEvidence:
-    return evaluate_state_context_replication(
-        model_a,
-        model_b,
-        contexts,
-        effect_tensor=emission_context_tensor,
-        config=config,
-    )
+def evaluate_initial_context_replication(model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig) -> ContextEvidence:
+    return evaluate_state_context_replication(model_a, model_b, contexts, effect_tensor=initial_context_tensor, config=config)
 
 
-def split_fit_duration_context_evidence(
-    observations: Any,
-    context: Any,
-    *,
-    fit_model: Callable[[Any, Any, int], Any],
-    evidence_contexts: Iterable[Any],
-    config: ContextEvidenceConfig,
-    split_index: Optional[int] = None,
-) -> SplitFitEvidence:
-    return split_fit_state_context_evidence(
-        observations,
-        context,
-        fit_model=fit_model,
-        effect_tensor=duration_context_tensor,
-        evidence_contexts=evidence_contexts,
-        config=config,
-        split_index=split_index,
-    )
+def evaluate_duration_context_replication(model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig) -> ContextEvidence:
+    return evaluate_state_context_replication(model_a, model_b, contexts, effect_tensor=duration_context_tensor, config=config)
 
 
-def split_fit_emission_context_evidence(
-    observations: Any,
-    context: Any,
-    *,
-    fit_model: Callable[[Any, Any, int], Any],
-    evidence_contexts: Iterable[Any],
-    config: ContextEvidenceConfig,
-    split_index: Optional[int] = None,
-) -> SplitFitEvidence:
-    return split_fit_state_context_evidence(
-        observations,
-        context,
-        fit_model=fit_model,
-        effect_tensor=emission_context_tensor,
-        evidence_contexts=evidence_contexts,
-        config=config,
-        split_index=split_index,
-    )
+def evaluate_emission_context_replication(model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig) -> ContextEvidence:
+    return evaluate_state_context_replication(model_a, model_b, contexts, effect_tensor=emission_context_tensor, config=config)
+
+
+def split_fit_initial_context_evidence(observations: Any, context: Any, *, fit_model: Callable[[Any, Any, int], Any], evidence_contexts: Iterable[Any], config: ContextEvidenceConfig, split_index: Optional[int] = None) -> SplitFitEvidence:
+    return split_fit_state_context_evidence(observations, context, fit_model=fit_model, effect_tensor=initial_context_tensor, evidence_contexts=evidence_contexts, config=config, split_index=split_index)
+
+
+def split_fit_duration_context_evidence(observations: Any, context: Any, *, fit_model: Callable[[Any, Any, int], Any], evidence_contexts: Iterable[Any], config: ContextEvidenceConfig, split_index: Optional[int] = None) -> SplitFitEvidence:
+    return split_fit_state_context_evidence(observations, context, fit_model=fit_model, effect_tensor=duration_context_tensor, evidence_contexts=evidence_contexts, config=config, split_index=split_index)
+
+
+def split_fit_emission_context_evidence(observations: Any, context: Any, *, fit_model: Callable[[Any, Any, int], Any], evidence_contexts: Iterable[Any], config: ContextEvidenceConfig, split_index: Optional[int] = None) -> SplitFitEvidence:
+    return split_fit_state_context_evidence(observations, context, fit_model=fit_model, effect_tensor=emission_context_tensor, evidence_contexts=evidence_contexts, config=config, split_index=split_index)
