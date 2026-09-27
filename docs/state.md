@@ -11,8 +11,8 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Transition context:** PASS.
 - **Multi-component identifiability:** PACKAGE-CORE PASS across the frozen 15-seed A/B/C/D gate.
 - **General-context robustness:** PACKAGE-CORE PASS using split-fit direction replication.
-- **Universal validation API:** implemented and hardened; no Nautilus/trading dependency and no change to `NHSMM.optimize()` semantics.
-- **Focused validation/API tests:** 13/13 PASS locally in the sparse package workspace.
+- **Universal validation API:** transition, duration, emission, and arbitrary state-indexed `[K,...]` context effects are supported without Nautilus/trading dependencies and without changing `NHSMM.optimize()` semantics.
+- **Focused validation/API tests:** 17/17 PASS locally in the sparse package workspace.
 - No CI is used for this research loop.
 
 The next package boundary is a broad local regression run from a complete checkout plus any documentation/export cleanup exposed by that run. Downstream Nautilus integration remains a separate empirical validation boundary.
@@ -77,20 +77,32 @@ See [`validation/general-context-split-replication-confirm-2026-09-27.md`](valid
 
 The accepted semantics are exposed as a domain-neutral validation layer under `nhsmm.validation` and via public package exports.
 
-Core API:
+Shared result/policy API:
 
 - `ContextEvidenceConfig`
 - `ContextEvidence`
 - `SplitFitEvidence`
 - `align_state_centers`
-- `evaluate_context_replication`
-- `split_fit_context_evidence`
 
-NHSMM transition convenience API:
+Transition-specific API:
 
 - `transition_context_matrix`
 - `evaluate_transition_context_replication`
 - `split_fit_transition_context_evidence`
+
+Generic state-indexed API for effects shaped `[K,...]`:
+
+- `evaluate_state_context_replication`
+- `split_fit_state_context_evidence`
+
+NHSMM state-indexed convenience adapters:
+
+- `duration_context_tensor` -> `[K,D]`
+- `emission_context_tensor` -> `[K,F]`
+- `evaluate_duration_context_replication`
+- `evaluate_emission_context_replication`
+- `split_fit_duration_context_evidence`
+- `split_fit_emission_context_evidence`
 
 Design rules:
 
@@ -98,35 +110,44 @@ Design rules:
 - training policy remains consumer-owned through `fit_model(...)`;
 - no trading/domain assumptions;
 - research thresholds are explicit policy configuration, not universal package defaults;
+- amplitude units remain component-specific;
 - duration-dependent transition evidence integrates over the current duration law including `duration_logits_bias`;
-- model training/eval mode is preserved by the adapter;
+- duration-context evidence evaluates the normalized duration distribution including `duration_logits_bias`;
+- emission-context evidence evaluates state-conditioned emission means;
+- model training/eval mode is preserved by NHSMM adapters;
 - state alignment is semantic via learned emission centers rather than latent truth labels.
 
 ### API hardening
 
-Focused semantic and contract coverage now verifies:
+Focused semantic and contract coverage verifies:
 
 - latent-state permutation invariance;
 - inconsistent replicated direction rejection;
 - null-effect rejection;
 - disjoint split-fit training units;
 - duration-weighted effective transition matrices;
+- generic `[K,...]` state-effect permutation invariance;
+- normalized duration context tensors;
+- emission state-feature tensor extraction;
 - model mode preservation;
 - explicit context-dimension errors;
 - non-finite context rejection;
 - non-finite evidence-policy threshold rejection;
 - non-finite effect-matrix rejection;
-- initialized-distribution requirement.
+- initialized-distribution requirement;
+- public root exports for the universal helpers.
 
-Focused local result: **13/13 PASS**.
+Focused local result: **17/17 PASS**.
 
 Documentation: [`validation-api.md`](validation-api.md).
 
 ## Verification limits
 
-The full discovered pytest suite has not yet been rerun after the validation API work because the active local workspace is a sparse source reconstruction and lacks several regular package modules imported by the root package. Temporary local import stubs were used only to isolate the focused validation tests; they are not repository changes.
+The full discovered pytest suite has not yet been rerun after the validation API work because the active local workspace is a sparse source reconstruction and lacks several regular package modules imported by the root package. Temporary local import stubs were used only to isolate focused validation tests; they are not repository changes.
 
-No GitHub Actions run is used for this research loop. A complete local checkout is the required environment for the next broad regression run.
+The GitHub connector exposes the complete repository tree but does not provide a mountable source archive in this workflow. Repo transport remains connector-only; no shell Git/curl checkout was used. A complete local checkout is therefore still the required environment for the broad regression run.
+
+No GitHub Actions run is used for this research loop.
 
 ## Package boundary
 
@@ -134,8 +155,8 @@ These controlled synthetic results establish mechanism recovery, identifiability
 
 ## Next slice
 
-1. Materialize/use a complete local checkout of `develop` and run the broad local test suite.
+1. Use a complete local checkout of `develop` and run the broad local test suite when that checkout is available in the runtime.
 2. Fix only regressions exposed by that complete-package run; preserve accepted probabilistic and validation semantics.
-3. Consolidate README/public examples if the broad run exposes export or usability gaps.
+3. Continue behavior-preserving code audit on remaining core modules where useful.
 4. Keep all validation thresholds explicit and domain/profile-owned.
 5. Treat downstream Nautilus integration as a separate empirical validation task.
