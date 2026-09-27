@@ -10,28 +10,28 @@ The universal path accepts any learned effect tensor whose first axis is latent 
 [K, ...]
 ```
 
-Only the first axis is interpreted by validation. Remaining axes belong to the component: duration bins, observation features, or another state-conditioned quantity. State alignment uses learned emission centers; latent truth labels are not required.
+Only the first axis is interpreted by validation. Remaining axes belong to the component. State alignment uses learned emission centers; latent truth labels are not required.
 
 Public helpers:
 
 - `evaluate_state_context_replication(...)`
 - `split_fit_state_context_evidence(...)`
+- `initial_context_tensor(...)`
 - `duration_context_tensor(...)`
 - `emission_context_tensor(...)`
+- `evaluate_initial_context_replication(...)`
 - `evaluate_duration_context_replication(...)`
 - `evaluate_emission_context_replication(...)`
+- `split_fit_initial_context_evidence(...)`
 - `split_fit_duration_context_evidence(...)`
 - `split_fit_emission_context_evidence(...)`
 
-Duration effects are represented as normalized `[K,D]` distributions including `duration_logits_bias`. Emission effects are represented as state-conditioned means `[K,F]`. Both adapters preserve the model's prior train/eval mode.
+Initial-state effects are represented as normalized `[K]` probabilities. Duration effects are normalized `[K,D]` distributions including `duration_logits_bias`. Emission effects are state-conditioned means `[K,F]`. All NHSMM adapters preserve the model's prior train/eval mode.
 
 Example:
 
 ```python
-from nhsmm import (
-    ContextEvidenceConfig,
-    evaluate_duration_context_replication,
-)
+from nhsmm import ContextEvidenceConfig, evaluate_duration_context_replication
 
 policy = ContextEvidenceConfig(
     replication_corr_min=0.55,
@@ -76,39 +76,11 @@ evidence = evaluate_transition_context_replication(
     contexts=[[-1.0, -1.0], [-1.0, 1.0], [1.0, -1.0], [1.0, 1.0]],
     config=policy,
 )
-
-if evidence.selected:
-    ...
 ```
 
 ## Split-fit validation
 
-Split-fit helpers create two disjoint training partitions and delegate fitting back to the caller:
-
-```python
-from nhsmm import ContextEvidenceConfig, split_fit_transition_context_evidence
-
-policy = ContextEvidenceConfig(
-    replication_corr_min=0.55,
-    min_replica_amplitude=0.50,
-)
-
-
-def fit_replica(x_split, context_split, replica_index):
-    model = make_model(seed=base_seed + replica_index)
-    model.optimize(x_split, context=context_split)
-    return model
-
-result = split_fit_transition_context_evidence(
-    observations,
-    context,
-    fit_model=fit_replica,
-    evidence_contexts=evidence_grid,
-    config=policy,
-)
-```
-
-The callback owns initialization, optimization, refinement, seeds, stopping rules, and any application-specific training choices. Validation never calls or mutates `NHSMM.optimize()` itself.
+Split-fit helpers create two disjoint training partitions and delegate fitting back to the caller. The callback owns initialization, optimization, refinement, seeds, stopping rules, and application-specific training choices. Validation never calls or mutates `NHSMM.optimize()` itself.
 
 ## Semantics
 
@@ -134,19 +106,8 @@ Lower-level APIs remain available through `nhsmm.validation`:
 
 ## Result objects
 
-`ContextEvidence` contains:
+`ContextEvidence` contains `selected`, `replication_corr`, `direction_agreement`, `replica_amplitudes`, `min_replica_amplitude`, `state_alignment`, and `n_contexts`.
 
-- `selected`
-- `replication_corr`
-- `direction_agreement`
-- `replica_amplitudes`
-- `min_replica_amplitude`
-- `state_alignment`
-- `n_contexts`
-
-`SplitFitEvidence` adds:
-
-- `split_index`
-- `replica_sizes`
+`SplitFitEvidence` adds `split_index` and `replica_sizes`.
 
 These objects report evidence; they do not automatically enable, disable, prune, or retrain model components.
