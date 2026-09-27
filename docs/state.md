@@ -4,99 +4,86 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability full-joint D is now confirmed against the package core locally.** General-context robustness remains **provisionally accepted at reference level** using the frozen detect→refine mechanism.
+**Phase:** duration-context, latent-state, transition-context, and multi-component identifiability are verified. **Multi-component identifiability is now PACKAGE-CORE PASS across the full frozen 15-seed A/B/C/D gate.** General-context robustness remains **provisionally accepted at independent-reference level** using the frozen detect→refine mechanism; package confirmation of that mechanism is now the active research boundary.
 
-Package-core confirmation used a SHA-pinned sparse local workspace reconstructed from `develop` sources. The exercised paths were canonical training, causal likelihood recursion, duration/transition/emission distributions, and causal filtering. Import/encoder glue was inert because every validation path supplies explicit external context. No CI is used for this research loop.
-
-The full-joint D gate passed across all frozen seeds `501..515` in strong, moderate, and null scenarios. Strong and moderate retained perfect state recovery and passed duration/transition recovery gates; null retained no material spurious duration/transition context. The transition-only C ablation still shows an absolute transition-MAE failure under the old generator because the model disables duration context while the data still contains duration-context effects; the package legally absorbs some omitted duration structure through self-boundary transitions. That C result is classified as an ablation-design misspecification, not a full-joint identifiability failure. A/B/C diagnostics must therefore be rerun with component-matched generators while D remains unchanged.
-
-General-context robustness exposed one specific defect in the ungated reference: multidimensional null context could retain spurious transition modulation despite perfect state recovery. Global L2 shrinkage and shared-duration/tied context were rejected. The accepted reference design separates detection from estimation: paired cross-fitted held-out evidence is computed on the same unrefined fitted model with transition context on vs off; context is selected at median ΔLL/boundary `> -0.07`; only selected context is then refined for 20 `tctx`-only steps. On fresh confirmatory seeds `731..735` this selected strong 5/5, moderate 5/5, null 0/5 and all per-seed recovery/null gates passed. This is a **PROVISIONAL PASS**, not package-level acceptance.
-
-Package validation remains independent of Nautilus, market data, trading labels, and downstream supervised models.
+Package-core confirmation uses a SHA-pinned sparse local workspace reconstructed from `develop` sources. The exercised paths are canonical training, causal likelihood recursion, duration/transition/emission distributions, and causal filtering. External context is supplied explicitly, so encoder/import glue is inert for these validators. No CI is used for this research loop.
 
 ## Verified training baseline
 
 - [x] `NHSMM.optimize()` covers all trainable parameters, including the causal encoder.
 - [x] Default joint-training maximum is `40` iterations.
-- [x] `n_init` uses independent restarts; best-run snapshots are deep and include `duration_logits_bias`.
-- [x] Default emission initialization remains `spread`; explicit `kmeans` is available for state-identifiability-sensitive training.
-- [x] Scalar external context retains a distribution hidden width >=16, avoiding `LayerNorm(1)` collapse.
+- [x] `n_init` uses independent restarts; best-run snapshots include `duration_logits_bias`.
+- [x] Explicit `kmeans` emission initialization is available for state-identifiability-sensitive training.
+- [x] Scalar external context retains a distribution hidden width >=16.
 - [x] Transition context capacity is independently configurable.
-- [x] Optional transition refinement updates only `transition.context_net + transition.delta_scale` against exact sequence likelihood; it is disabled by default.
-- [x] No auxiliary supervised transition loss or alternative duration parameterization is required by the current controlled gates.
+- [x] Optional transition refinement updates only transition context modulation against exact sequence likelihood.
 
 ## Accepted / provisional evidence
 
 ### Duration context — seeds 201..215
 
-| Scenario | Median gap | Mean gap | Non-collapsed | Result |
-| --- | ---: | ---: | ---: | --- |
-| strong | 0.09954 | 0.09166 | 15/15 | PASS |
-| moderate | 0.02434 | 0.03218 | 15/15 | PASS |
-| null | 0.01370 | 0.01184 | 15/15 | PASS |
+Strong, moderate, and null controlled duration-context gates: **PASS**.
 
 ### Latent state — seeds 301..315
 
-| Scenario | Median accuracy | Median ARI | Non-collapsed | Result |
-| --- | ---: | ---: | ---: | --- |
-| strong | 0.99667 | 0.99018 | 15/15 | PASS |
-| moderate | 0.93000 | 0.80182 | 15/15 | PASS |
-| null | 0.36333 | 0.00000 | descriptive | PASS |
+Strong and moderate state recovery plus null descriptive control: **PASS**.
 
 ### Transition context — seeds 401..415
 
-Validation config: `max_duration=1`, explicit binary external context, `transition_context_max_delta=1.5`, `transition_refine_steps=20`, `transition_refine_lr=0.03`.
+Binary external-context transition recovery at `max_duration=1`: **PASS** for strong, moderate, and null.
 
-| Scenario | Median MAE | Median KL | Delta correlation | Direction | Abs context delta | Non-collapsed | Result |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| strong | 0.01782 | 0.00370 | 0.99999 | 1.000 | 0.47720 | 15/15 | PASS |
-| moderate | 0.01833 | 0.00260 | 0.99194 | 1.000 | 0.16448 | 15/15 | PASS |
-| null | 0.00524 | 0.00032 | 0.00000 | n/a | 3.04e-7 | 15/15 | PASS |
+### Multi-component identifiability — PACKAGE-CORE PASS
 
-### Multi-component identifiability — package-core confirmation
+The initial failed joint benchmark is not accepted as evidence because it used a `semi` topology against cyclic ground truth and contained duration/transition scoring errors. A later isolated-C diagnostic was also invalid because duration-context ground truth remained active while duration context was disabled in the model. The corrected component-matched package gate nulls omitted mechanisms in both generator and model while leaving full-joint D unchanged.
 
-The corrected independent local causal-HSMM reference first established structural recoverability. Package-core confirmation then ran the frozen full-joint D gate with `K=3`, `D=24`, seeds `501..515`, ergodic topology, kmeans emission initialization, and transition refinement where enabled.
+Package source pinned for this confirmation: `efd4826ddc48586c47debf075d1c6332596cb0de`; frozen seeds `501..515`; `K=3`, `D=24`, ergodic transition support.
 
-| Scenario | Accuracy | ARI | Duration gap | Transition corr | Transition MAE | Null transition Δ | Noncollapsed | Result |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| strong | 1.000 | 1.000 | 4.383 | 0.997 | 0.169 | 0.306 | 15/15 | PASS |
-| moderate | 1.000 | 1.000 | 2.273 | 0.938 | 0.132 | 0.153 | 15/15 | PASS |
-| null | 1.000 | 1.000 | -0.116 | 0.000 | 0.130 | 0.040 | 13/15 | PASS |
+| Scenario | A | B | C | D |
+|---|---|---|---|---|
+| strong | PASS | PASS | PASS | PASS |
+| moderate | PASS | PASS | PASS | PASS |
+| null | PASS | PASS | PASS | PASS |
 
-See [`validation/multicomponent-package-core-confirmation-2026-09-27.md`](validation/multicomponent-package-core-confirmation-2026-09-27.md).
+Representative medians:
 
-**Status:** PACKAGE-CORE PASS for full-joint multi-component identifiability. Component-isolated A/B/C diagnostics remain to be rerun with component-matched generators; this does not reopen D.
+- strong C: accuracy/ARI `1.000/1.000`, transition MAE `0.184`, corr `0.996`, noncollapsed `15/15`;
+- strong D: accuracy/ARI `1.000/1.000`, duration gap `4.383`, transition MAE `0.169`, corr `0.997`, noncollapsed `15/15`;
+- moderate C: transition MAE `0.162`, corr `0.963`, noncollapsed `15/15`;
+- moderate D: duration gap `2.273`, transition MAE `0.132`, corr `0.938`, noncollapsed `15/15`;
+- null C: null transition delta `0.044`, noncollapsed `13/15`;
+- null D: null transition delta `0.040`, noncollapsed `13/15`.
+
+See [`validation/multicomponent-component-matched-package-15seed-2026-09-27.md`](validation/multicomponent-component-matched-package-15seed-2026-09-27.md).
+
+**Status: PACKAGE-CORE PASS.** The multi-component research question is closed unless a future package change invalidates the frozen gate.
 
 ### General-context robustness — current boundary
 
-See [`validation/general-context-robustness-2026-09-27.md`](validation/general-context-robustness-2026-09-27.md), [`validation/general-context-shared-duration-ablation-2026-09-27.md`](validation/general-context-shared-duration-ablation-2026-09-27.md), and [`validation/general-context-evidence-gating-2026-09-27.md`](validation/general-context-evidence-gating-2026-09-27.md).
+Independent-reference work established:
 
-Current status:
-
-- scalar strong/moderate/null: controlled recovery acceptable;
-- ungated 2D null: spurious context modulation reproduced;
-- L2 rescue: rejected;
-- shared-duration/tied-context rescue: rejected;
-- independent full-vs-null evidence gates: rejected for selection/recovery instability;
+- scalar strong/moderate/null controlled recovery acceptable;
+- ungated 2D null spurious context modulation reproduced;
+- global L2 rescue rejected;
+- shared-duration/tied-context rescue rejected;
+- independent full-vs-null evidence gates rejected;
 - **detect→refine paired cross-fit gate: PROVISIONAL PASS**;
-- confirmatory seeds `731..735`: strong selected 5/5, moderate selected 5/5, null selected 0/5;
+- confirmatory seeds `731..735`: strong selected `5/5`, moderate `5/5`, null `0/5`;
 - strong median corr `0.960`, MAE `0.075`;
 - moderate median corr `0.836`, MAE `0.074`;
 - null context amplitude `0.000`, median MAE `0.034`.
 
-**Status:** PROVISIONAL PASS at independent-reference level. Package-level acceptance still requires a local run against the actual `nhsmm` implementation.
+**Status:** PROVISIONAL PASS at independent-reference level. Package-level confirmation remains outstanding.
 
 ## Verification limits
 
-The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. Package-core confirmation is scoped to the exact external-context dependency closure used by the multi-component validator; encoder/import glue was inert.
+The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. Package-core evidence is scoped to the exact external-context dependency closure exercised by the validators.
 
 ## Package boundary
 
-These controlled results establish mechanism recovery under known synthetic ground truth. They do not establish domain semantics or downstream predictive value for any consumer.
+These controlled synthetic results establish mechanism recovery and identifiability. They do not establish domain semantics or downstream predictive value for Nautilus or any other consumer.
 
 ## Next research slices
 
-1. **Component-matched A/B/C confirmation:** rerun isolated diagnostics with omitted generator mechanisms nulled; D remains frozen and already accepted at package-core level.
-2. **General-context package confirmation:** translate the frozen detect→refine reference gate to the actual package implementation and run it locally.
-3. **API/design translation:** only after general-context package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration; do not promote the reference mechanism blindly into core model semantics.
-4. Change objectives or parameterizations only if the controlled package-level gates expose a reproducible deficiency.
+1. **General-context package confirmation:** translate the frozen detect→refine reference gate to the actual package core and run it locally without retuning thresholds.
+2. **API/design translation:** only after package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration.
+3. Change objectives or parameterizations only if a controlled package-level gate exposes a reproducible deficiency.
