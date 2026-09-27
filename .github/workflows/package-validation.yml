@@ -2,14 +2,9 @@ name: NHSMM package validation
 
 on:
   workflow_dispatch:
-  push:
-    branches: [develop]
-    paths:
-      - ".github/workflows/package-validation.yml"
 
 jobs:
   multicomponent-identifiability:
-    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Run NHSMM package validation'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
