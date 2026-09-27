@@ -58,46 +58,33 @@ Canonical package detect→refine result on seeds `731..735`:
 
 The moderate package run passes selection count, MAE, and per-seed recovery, but misses only the frozen median-correlation gate (`0.730 < 0.800`). Topology-equivalent recovery scoring conditions package `ergodic` destinations on an actual state change; selection evidence remains canonical package likelihood.
 
-### Diagnostics after the partial gate
+### Rejected candidates
 
-No frozen gate, threshold, or refinement hyperparameter was retuned.
+No frozen gate, threshold, or refinement hyperparameter was retuned after confirmatory runs.
 
-- pre-vs-post refinement: moderate corr is already ~`0.754` before refinement and ~`0.730` after; refinement is not the primary cause;
+- pre-vs-post refinement: moderate corr ~`0.754` before and ~`0.730` after; refinement is not the primary cause;
 - no-self topology: rejected (`3/5` moderate selected, corr ~`0.600`);
 - shared-duration context: rejected (moderate corr ~`0.644`, MAE ~`0.134`);
-- reference-equivalent shared-linear estimator: strong `corr~0.985/MAE~0.039`, moderate `corr~0.877/MAE~0.084`, but when used as its own detector it selects null `5/5` and is rejected;
-- dual-stage canonical-MLP detector → shared-linear estimator on new dev seeds `741..745`:
-  - strong: selected `5/5`, median corr `0.984`, MAE `0.044`, 5/5 per-seed recovery PASS;
-  - moderate: selected `5/5`, median corr `0.923`, MAE `0.076`, 5/5 per-seed recovery PASS;
-  - null: selected `3/5`, median context amplitude `0.169`, median MAE `0.038`, only 2/5 null per-seed PASS;
-  - **REJECTED** because detector null-generalization failed on the new dev seeds.
-
-### Shared-linear + effect-floor candidate — fresh confirmatory FAIL
-
-A second candidate used the shared-linear estimator plus a pre-refine functional-amplitude floor. The extra floor was chosen only on development seeds `741..745`, where `0.25` separated active moderate effects from null controls while preserving the existing held-out evidence threshold `delta_ll_per_boundary > -0.07`. The rule was then frozen and tested on fresh seeds `751..755`.
-
-| Scenario | Selected | Accuracy | ARI | Transition corr | Transition MAE | Result |
-|---|---:|---:|---:|---:|---:|---|
-| strong | 5/5 | 1.000 | 1.000 | 0.960 | 0.061 | PASS |
-| moderate | 3/5 | 1.000 | 1.000 | 0.814 | 0.103 | **FAIL** |
-| null | 0/5 | 1.000 | 1.000 | 0.000 | 0.017 | PASS |
-
-The candidate restores null rejection (`0/5`) and preserves excellent strong recovery, but moderate selection falls to `3/5`, below the frozen `>=4/5` requirement. It is therefore **REJECTED**. Do not lower the evidence threshold or the `0.25` effect floor after seeing the confirmatory set.
-
-### Rapid-mode detector candidate — checkpoint only
-
-The next candidate targets **detector stability/power**, not estimator shrinkage. Planned statistic: fold-direction agreement / variance-aware evidence over the existing shared-linear context estimator. The intent is to reject null fits whose learned transition-context directions are unstable across cross-fit folds while retaining genuine moderate effects.
-
-- development seeds: `761..765`
-- if a rule is chosen, it must be frozen on that development block only;
-- confirmatory seeds: `771..775`
-- no result has been accepted yet;
-- no thresholds have been changed yet;
-- this is a checkpoint only, not evidence of PASS.
+- shared-linear estimator alone: excellent active recovery but null selected `5/5`; rejected as detector;
+- shared-linear + effect-floor (`>=0.25`) on fresh confirmatory `751..755`: strong `5/5`, moderate `3/5`, null `0/5`; **REJECTED**;
+- fold-sign / direction-agreement detector frozen on dev `761..765` as `median ΔLL > -0.07` and at least `4/5` folds with positive ΔLL; confirmatory `771..775`: strong `5/5`, null `0/5`, moderate only `1/5`; **REJECTED**. Do not relax this rule post hoc.
 
 See [`validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md`](validation/general-context-detect-refine-package-core-confirmation-2026-09-27.md), [`validation/general-context-package-diagnostics-2026-09-27.md`](validation/general-context-package-diagnostics-2026-09-27.md), and [`validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md`](validation/general-context-shared-linear-effectfloor-confirm-2026-09-27.md).
 
-**Current interpretation:** estimator expressiveness is not the remaining blocker; shared-linear estimation recovers active strong/moderate functional shape well. The unresolved deficiency is robust evidence-based detection/generalization under multidimensional context. Canonical detection can false-positive on null blocks; the effect-floor variant restores null control but loses moderate selection power.
+### Rapid-mode detector candidate — permutation calibration checkpoint
+
+Current candidate: **held-out context permutation detector**. It compares validation evidence under the true context alignment against permuted context on the same held-out folds, aiming to calibrate each seed against its own null structure instead of using another global amplitude or likelihood threshold.
+
+- development seeds: `781..785`;
+- strong dev block: **5/5 completed**;
+- moderate dev block: pending;
+- null dev block: pending;
+- if the dev statistic separates active vs null, freeze exactly once;
+- planned fresh confirmatory seeds: `791..795`;
+- no result has been accepted yet;
+- no new threshold has been frozen yet.
+
+**Current interpretation:** estimator expressiveness is not the remaining blocker. The unresolved deficiency is robust evidence-based detection/generalization for moderate multidimensional context while preserving strict null rejection.
 
 **Status: PACKAGE-CORE PARTIAL / NOT PASS.**
 
@@ -111,8 +98,8 @@ These controlled synthetic results establish mechanism recovery and identifiabil
 
 ## Next research slices
 
-1. **Detector stability / power:** run fold-direction-agreement / variance-aware evidence candidate on dev seeds `761..765`; if viable, freeze once and confirm on `771..775`.
-2. Preserve strong detection, recover moderate `>=4/5`, and keep null at `0/5`.
-3. Prefer mechanism-level evidence uncertainty/calibration over another global shrinkage or lower post-hoc threshold.
-4. Keep the shared-linear estimator as diagnostic evidence only until detector stability is solved.
+1. Complete permutation-calibrated detector dev blocks for moderate/null on seeds `781..785`.
+2. If and only if dev separation is clean, freeze once and confirm on fresh seeds `791..795`.
+3. Required outcome remains: strong detection preserved, moderate `>=4/5`, null `0/5`.
+4. Do not revisit rejected effect-floor or fold-sign thresholds.
 5. **API/design translation** remains deferred until the general-context package gate passes.
