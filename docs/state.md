@@ -4,13 +4,13 @@ Current package readiness and next package-level research boundary. Detailed sem
 
 ## Current status
 
-**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability remains provisionally accepted.** General-context robustness remains **provisionally accepted at reference level** using the frozen detect→refine mechanism. **Package confirmation is active and has now started against the actual package core locally.**
+**Phase:** duration-context, latent-state, and transition-context recovery baselines verified. **Multi-component identifiability full-joint D is now confirmed against the package core locally.** General-context robustness remains **provisionally accepted at reference level** using the frozen detect→refine mechanism.
 
-The previously missing package-materialization boundary has been partially removed by reconstructing the exact dependency closure needed for the validator from SHA-pinned `develop` sources into a sparse local workspace. The real package training/filtering path imports successfully with `K=3`, `D=24`, `causal=True`. No CI is used for this research loop.
+Package-core confirmation used a SHA-pinned sparse local workspace reconstructed from `develop` sources. The exercised paths were canonical training, causal likelihood recursion, duration/transition/emission distributions, and causal filtering. Import/encoder glue was inert because every validation path supplies explicit external context. No CI is used for this research loop.
 
-A first real-package A/B/C/D smoke on one strong seed is numerically stable: state recovery is `1.000/1.000` accuracy/ARI in all four ablations, the learned duration and transition effects have the correct direction, and full-joint D is inside the strong transition-MAE gate. The transition-only C case on this single smoke seed has MAE `0.225`, slightly above the production median gate; this is not a gate failure because the production decision is median-based across the frozen multi-seed set. The displayed noncollapsed failure in the 1-seed smoke is likewise not interpretable against the production `>=13/15` gate. **No package-level PASS has been declared yet.** The next step is the unchanged 3-seed package run, followed by the full frozen gate if stable.
+The full-joint D gate passed across all frozen seeds `501..515` in strong, moderate, and null scenarios. Strong and moderate retained perfect state recovery and passed duration/transition recovery gates; null retained no material spurious duration/transition context. The transition-only C ablation still shows an absolute transition-MAE failure under the old generator because the model disables duration context while the data still contains duration-context effects; the package legally absorbs some omitted duration structure through self-boundary transitions. That C result is classified as an ablation-design misspecification, not a full-joint identifiability failure. A/B/C diagnostics must therefore be rerun with component-matched generators while D remains unchanged.
 
-General-context robustness exposed one specific defect in the ungated reference: multidimensional null context could retain spurious transition modulation despite perfect state recovery. Global L2 shrinkage and shared-duration/tied context were rejected. The accepted reference design separates detection from estimation: paired cross-fitted held-out evidence is computed on the same unrefined fitted model with transition context on vs off; context is selected at median ΔLL/boundary `> -0.07`; only selected context is then refined for 20 `tctx`-only steps. On fresh confirmatory seeds 731..735 this selected strong 5/5, moderate 5/5, null 0/5 and all per-seed recovery/null gates passed. This is a **PROVISIONAL PASS**, not package-level acceptance.
+General-context robustness exposed one specific defect in the ungated reference: multidimensional null context could retain spurious transition modulation despite perfect state recovery. Global L2 shrinkage and shared-duration/tied context were rejected. The accepted reference design separates detection from estimation: paired cross-fitted held-out evidence is computed on the same unrefined fitted model with transition context on vs off; context is selected at median ΔLL/boundary `> -0.07`; only selected context is then refined for 20 `tctx`-only steps. On fresh confirmatory seeds `731..735` this selected strong 5/5, moderate 5/5, null 0/5 and all per-seed recovery/null gates passed. This is a **PROVISIONAL PASS**, not package-level acceptance.
 
 Package validation remains independent of Nautilus, market data, trading labels, and downstream supervised models.
 
@@ -53,24 +53,19 @@ Validation config: `max_duration=1`, explicit binary external context, `transiti
 | moderate | 0.01833 | 0.00260 | 0.99194 | 1.000 | 0.16448 | 15/15 | PASS |
 | null | 0.00524 | 0.00032 | 0.00000 | n/a | 3.04e-7 | 15/15 | PASS |
 
-### Multi-component identifiability — provisional acceptance
+### Multi-component identifiability — package-core confirmation
 
-The corrected independent local causal-HSMM reference used `K=3`, `D=24`, seeds `501..503`, explicit A/B/C/D ablations, and an ergodic topology. Strong and moderate full-joint cases retained matched accuracy/ARI `1.000`; null A-D retained state identity without material spurious context. Reintroducing the old `semi` support reproduced the collapse. See [`validation/multicomponent-reference-deep-dive-2026-09-27.md`](validation/multicomponent-reference-deep-dive-2026-09-27.md).
+The corrected independent local causal-HSMM reference first established structural recoverability. Package-core confirmation then ran the frozen full-joint D gate with `K=3`, `D=24`, seeds `501..515`, ergodic topology, kmeans emission initialization, and transition refinement where enabled.
 
-**Status:** PROVISIONAL PASS. Package-level confirmation is now in progress against the actual package core.
+| Scenario | Accuracy | ARI | Duration gap | Transition corr | Transition MAE | Null transition Δ | Noncollapsed | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| strong | 1.000 | 1.000 | 4.383 | 0.997 | 0.169 | 0.306 | 15/15 | PASS |
+| moderate | 1.000 | 1.000 | 2.273 | 0.938 | 0.132 | 0.153 | 15/15 | PASS |
+| null | 1.000 | 1.000 | -0.116 | 0.000 | 0.130 | 0.040 | 13/15 | PASS |
 
-### Package confirmation — in progress
+See [`validation/multicomponent-package-core-confirmation-2026-09-27.md`](validation/multicomponent-package-core-confirmation-2026-09-27.md).
 
-Current pinned package head for the local sparse confirmation workspace: `efd4826ddc48586c47debf075d1c6332596cb0de`.
-
-Real package components materialized for the validator include the package configuration, context/router, convergence, distributions, causal filtering, and the canonical `models/base.py` + `models/training.py` path. The first one-seed strong A/B/C/D smoke completed with:
-
-- A state-only: matched accuracy/ARI `1.000/1.000`;
-- B state + duration: matched accuracy/ARI `1.000/1.000`, duration effect direction correct;
-- C state + transition: matched accuracy/ARI `1.000/1.000`, transition effect direction correct, single-seed MAE `0.225`;
-- D full joint: matched accuracy/ARI `1.000/1.000`, transition MAE inside the strong gate.
-
-**Interpretation:** smoke PASS for numerical/package-path viability only. This does not promote the provisional research result. The unchanged 3-seed run is next; only then may the full 15-seed gate be executed and evaluated.
+**Status:** PACKAGE-CORE PASS for full-joint multi-component identifiability. Component-isolated A/B/C diagnostics remain to be rerun with component-matched generators; this does not reopen D.
 
 ### General-context robustness — current boundary
 
@@ -93,7 +88,7 @@ Current status:
 
 ## Verification limits
 
-The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. The current package confirmation is intentionally scoped to the exact dependency closure required by the multi-component validator.
+The full discovered pytest suite was not rerun because the local workspace is sparse. No GitHub Actions run is used for this research loop. Package-core confirmation is scoped to the exact external-context dependency closure used by the multi-component validator; encoder/import glue was inert.
 
 ## Package boundary
 
@@ -101,7 +96,7 @@ These controlled results establish mechanism recovery under known synthetic grou
 
 ## Next research slices
 
-1. **Package confirmation:** run the unchanged 3-seed multi-component package gate locally against the materialized package core; if stable, execute the full frozen 15-seed gate and either promote to package-level PASS or reopen the deficiency.
-2. **General-context package confirmation:** after multi-component package confirmation, translate the frozen detect→refine reference gate to the actual package implementation and run it locally.
-3. **API/design translation:** only after package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration; do not promote the reference mechanism blindly into core model semantics.
+1. **Component-matched A/B/C confirmation:** rerun isolated diagnostics with omitted generator mechanisms nulled; D remains frozen and already accepted at package-core level.
+2. **General-context package confirmation:** translate the frozen detect→refine reference gate to the actual package implementation and run it locally.
+3. **API/design translation:** only after general-context package confirmation, decide whether evidence selection belongs inside package training, a validation utility, or consumer orchestration; do not promote the reference mechanism blindly into core model semantics.
 4. Change objectives or parameterizations only if the controlled package-level gates expose a reproducible deficiency.
