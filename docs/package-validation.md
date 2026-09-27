@@ -6,6 +6,8 @@ This document records package-level empirical evidence for NHSMM training under 
 
 The claims here are intentionally narrow: they validate package mechanisms under known generators, not usefulness in an external domain.
 
+**Verified code baseline:** `89bf5aea144cde5e3331971d00df76191bfb088f` (`training: add robust state-recovery initialization`).
+
 ## Context-conditioned duration recovery
 
 The maintained duration benchmark uses two latent states and an observable context that changes the episode-duration distribution. Training uses a causal `DefaultEncoder`, `K=2`, `D=30`, `max_iter=40`, one initialization per seed, and separately generated evaluation sequences.
