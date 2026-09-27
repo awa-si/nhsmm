@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Optional
 
 import numpy as np
 
@@ -21,8 +21,12 @@ class ContextEvidenceConfig:
     exclude_self_transitions: bool = True
 
     def __post_init__(self) -> None:
+        if not np.isfinite(self.replication_corr_min):
+            raise ValueError("replication_corr_min must be finite")
         if not -1.0 <= self.replication_corr_min <= 1.0:
             raise ValueError("replication_corr_min must be within [-1, 1]")
+        if not np.isfinite(self.min_replica_amplitude):
+            raise ValueError("min_replica_amplitude must be finite")
         if self.min_replica_amplitude < 0.0:
             raise ValueError("min_replica_amplitude must be non-negative")
 
@@ -55,6 +59,10 @@ def _effect_vector(matrices: np.ndarray, *, exclude_self: bool) -> tuple[np.ndar
         raise ValueError("context effect matrices must have shape [G, K, K]")
     if matrices.shape[0] < 2:
         raise ValueError("at least two context grid points are required")
+    if matrices.shape[1] == 0:
+        raise ValueError("context effect matrices must contain at least one state")
+    if not np.isfinite(matrices).all():
+        raise ValueError("context effect matrices must contain only finite values")
 
     if exclude_self:
         matrices = np.stack([_conditional_change(m) for m in matrices])
@@ -89,8 +97,8 @@ def evaluate_context_replication(
 ) -> ContextEvidence:
     """Evaluate whether a learned context effect replicates across two fitted models.
 
-    ``effect_matrix(model, context)`` must return a transition-like KxK matrix. The
-    detector consumes fitted-model outputs only; latent truth labels are never required.
+    `effect_matrix(model, context)` must return a state transition-like KxK matrix.
+    The detector uses only fitted-model outputs; it does not consume latent truth labels.
     """
     grid = list(contexts)
     if len(grid) < 2:
@@ -107,12 +115,8 @@ def evaluate_context_replication(
         mats_a.append(a)
         mats_b.append(b)
 
-    vec_a, amp_a = _effect_vector(
-        np.stack(mats_a), exclude_self=config.exclude_self_transitions
-    )
-    vec_b, amp_b = _effect_vector(
-        np.stack(mats_b), exclude_self=config.exclude_self_transitions
-    )
+    vec_a, amp_a = _effect_vector(np.stack(mats_a), exclude_self=config.exclude_self_transitions)
+    vec_b, amp_b = _effect_vector(np.stack(mats_b), exclude_self=config.exclude_self_transitions)
     replication_corr = _corr(vec_a, vec_b)
     nz = (np.abs(vec_a) > 1e-4) & (np.abs(vec_b) > 1e-4)
     agreement = float(((vec_a[nz] * vec_b[nz]) > 0.0).mean()) if np.any(nz) else 0.0
