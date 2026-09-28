@@ -10,7 +10,7 @@ cd nhsmm
 python -m pip install -e ".[dev]"
 ```
 
-The package supports Python 3.9+ according to `pyproject.toml`. CI currently exercises Python 3.11 for repository smoke and release checks.
+The package requires Python 3.12+ according to `pyproject.toml`. Repository smoke, package-validation, and release workflows use Python 3.12.
 
 ## Before opening a pull request
 
