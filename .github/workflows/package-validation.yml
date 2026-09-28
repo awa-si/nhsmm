@@ -3,6 +3,13 @@ name: NHSMM package validation
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: nhsmm-package-validation-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   multicomponent-identifiability:
     runs-on: ubuntu-latest
@@ -10,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -21,7 +28,7 @@ jobs:
       - name: Install package
         run: python -m pip install -e .
 
-      - name: Compile validation path
+      - name: Compile validation entry point
         run: python -m py_compile scripts/validate_multicomponent_identifiability.py
 
       - name: Run multi-component identifiability gate
@@ -32,9 +39,9 @@ jobs:
             --workers 2 \
             --output validation-results/multicomponent-identifiability.json
 
-      - name: Upload result
+      - name: Upload validation result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nhsmm-multicomponent-identifiability-${{ github.run_id }}
           path: validation-results/
