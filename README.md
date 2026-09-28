@@ -1,73 +1,25 @@
 # NHSMM — Neural Hidden Semi-Markov Models
 
-- **Repository:** [awa-si/nhsmm](https://github.com/awa-si/nhsmm)
-- **Interfaces:** [awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces)
-- **Documentation:** [NHSMM Wiki](https://github.com/awa-si/nhsmm/wiki)
-- **Article:** [Unlocking Hidden Patterns in Time – Meet NHSMM](https://medium.com/@awa-si/unlocking-hidden-patterns-in-time-meet-nhsmm-the-neural-hidden-semi-markov-model-cd3f1e2428c2)
+PyTorch implementation of a context-aware hidden semi-Markov model with explicit state durations.
 
-> **Pre-1.0 research stage.** NHSMM is actively evolving. Public APIs and internal model contracts may change before a stable `1.0.0` release.
+> **Status:** pre-1.0 research/development package. Public APIs and internal contracts may still change.
 
-NHSMM is a modular PyTorch library for context-aware latent-state sequence modeling with explicit state durations.
+[![PyPI](https://img.shields.io/pypi/v/nhsmm.svg)](https://pypi.org/project/nhsmm/) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 
-The current implementation separates four probabilistic components:
+## Scope
 
-- initial state distribution;
+The model separates four probabilistic components:
+
+- initial-state distribution;
 - transition distribution;
 - duration distribution;
 - emission distribution.
 
-A neural context encoder can condition these components on sequence context.
+An optional neural context encoder can condition these components on sequence context.
 
-[![PyPI](https://img.shields.io/pypi/v/nhsmm.svg)](https://pypi.org/project/nhsmm/) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
-
-## Current architecture
-
-```text
-Observed sequence
-      ↓
-Context encoder
-      ↓
-Initial / Transition / Duration / Emission parameterization
-      ↓
-HSMM inference
-      ↓
-Likelihood / decoding / training
-```
-
-Core implementation areas:
-
-```text
-nhsmm/
-├── config.py          # ModelConfig and numerical constants
-├── context.py         # context routing and sequence containers
-├── encoder.py         # default neural context encoder
-├── convergence.py     # convergence handling
-├── data.py            # data utilities
-├── distributions/     # initial, duration, transition, emission components
-└── models/
-    └── base.py        # NHSMM and DistributionSet
-```
-
-## Model configuration
-
-`ModelConfig` is the canonical configuration contract.
-
-Current configurable model dimensions include:
-
-- `n_states` — latent-state count;
-- `n_features` — observation feature count;
-- `max_duration` — maximum explicit state duration;
-- `context_dim` / `hidden_dim` — neural context dimensions;
-- encoder pooling and convolution parameters;
-- transition type;
-- emission family;
-- optimization and convergence parameters.
-
-The current configured emission families are Gaussian and Student-t. The current configured transition modes are `ergodic`, `semi`, and `left-to-right`.
+Current configured emission families are Gaussian and Student-t. Current transition modes are `ergodic`, `semi`, and `left-to-right`.
 
 ## Installation
-
-From PyPI:
 
 ```bash
 pip install nhsmm
@@ -81,11 +33,9 @@ cd nhsmm
 pip install -e ".[dev]"
 ```
 
-Python `3.9+` is required by the current package metadata.
+Python `3.9+` is required by the package metadata.
 
-## Basic construction
-
-The current public API is configuration-driven:
+## Basic usage
 
 ```python
 from nhsmm import ModelConfig, NHSMM
@@ -97,25 +47,76 @@ config = ModelConfig(
 )
 
 model = NHSMM(config=config)
+model.initialize_distributions()
 ```
 
-Do not rely on historical examples using `HSMM`, `NeuralHSMM`, `GaussianHSMM`, or older constructor signatures unless the current package exports explicitly provide them.
+`ModelConfig` is the main configuration contract. Historical constructor names or examples should not be treated as current API unless they are exported by the installed package.
 
-## Context-aware modeling
+## Architecture
 
-NHSMM can derive neural context from observed sequences and use it to parameterize latent-state distributions. The implementation distinguishes observed sequences, masks and sequence lengths, per-timestep context, canonical/global context, and latent-state distribution parameters.
+```text
+observations
+    |
+context encoder (optional)
+    |
+initial / transition / duration / emission distributions
+    |
+HSMM inference
+    |
+likelihood / decoding / filtering / optimization
+```
 
-## Temporal semantics
+Main package areas:
 
-NHSMM supports both retrospective sequence inference and an explicit causal online path.
+```text
+nhsmm/
+├── config.py          # model configuration
+├── context.py         # context routing and sequence containers
+├── encoder.py         # neural context encoder
+├── filtering.py       # filtering implementation
+├── inference.py       # inference helpers
+├── runtime.py         # incremental runtime
+├── artifact.py        # model artifact IO
+├── distributions/     # probabilistic components
+├── models/            # model and training implementation
+└── validation/        # context-effect validation API
+```
 
-With `ModelConfig(causal=True)`, the encoder is causal and the model-bound filter/runtime maintain a `(latent_state, episode_age)` posterior without consuming future observations. Duration is interpreted with dynamic causal boundary-time hazard semantics: `F_t` determines the duration/end hazard for boundary `t -> t+1`.
+## Causal and retrospective paths
 
-The canonical `DefaultEncoder` runtime carries bounded convolution/LSTM state so each accepted observation is encoded once. Retrospective/non-causal inference remains a separate path and must not be interpreted as an online filtered estimate.
+`ModelConfig(causal=True)` enables the causal encoder/runtime path. The filter state is represented over `(latent_state, episode_age)` and does not consume future observations.
+
+For causal filtering, information available at `F_t` determines the duration/end hazard for boundary `t -> t+1`.
+
+Retrospective/non-causal inference is a separate path and should not be interpreted as an online filtered estimate.
+
+See [`docs/model.md`](docs/model.md) for the model/runtime contract.
+
+## Validation API
+
+The public context-effect facade is component-based:
+
+```python
+from nhsmm import (
+    context_effect,
+    evaluate_context_effect_replication,
+    split_fit_context_effect_evidence,
+)
+```
+
+Supported component names:
+
+```text
+initial | duration | emission | transition
+```
+
+Validation is kept separate from model optimization. Evidence thresholds are supplied by the caller rather than embedded as universal defaults.
+
+See [`docs/validation-api.md`](docs/validation-api.md).
 
 ## Development
 
-Install development dependencies and run the canonical discovered test suite and static checks:
+Run the repository test/static-check set with:
 
 ```bash
 pip install -e ".[dev]"
@@ -124,32 +125,21 @@ ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 ```
 
-Maintained automated tests live under `tests/test_*.py`; see [Testing and verification](docs/testing.md) for discovery, integration-smoke, and runtime-benchmark policy. Contribution guidance lives in [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md).
+Repository tests are under `tests/`. The current test and runtime policies are documented in [`docs/testing.md`](docs/testing.md).
 
-Repository control is split deliberately:
-
-- [`agent.md`](./agent.md) defines AI behavior, reasoning, source resolution, and decision/completion gates for work in this repository;
-- [`docs/agent-domain.md`](docs/agent-domain.md) owns the repository-wide probabilistic, tensor, causal, API-evolution, testing, and research contracts that the AI must load when material;
-- [`docs/model.md`](docs/model.md) owns the human-facing model/runtime contract;
-- the global Git/edit/CI workflow is owned by `awa-si/admin/workflow.md`.
-
-`agent.md` routes AI work to the relevant contract owners; it is not the substantive model specification.
+Packaging/release notes are in [`docs/release.md`](docs/release.md).
 
 ## Documentation
 
-- [Project/evaluation state](docs/state.md)
-- [Model/runtime contract](docs/model.md)
-- [AI-facing domain contract](docs/agent-domain.md)
-- [Testing and verification](docs/testing.md)
+- [`docs/model.md`](docs/model.md) — model/runtime contract
+- [`docs/validation-api.md`](docs/validation-api.md) — validation API
+- [`docs/testing.md`](docs/testing.md) — test and verification policy
+- [`docs/package-validation.md`](docs/package-validation.md) — controlled package-level validation
+- [`docs/state.md`](docs/state.md) — current development state
+- [awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces) — external interface repository
 
-Documentation should describe implemented behavior. Performance, causal, production-readiness, or scalability claims require corresponding implementation or benchmark evidence.
-
-## Project relationship
-
-NHSMM is the open probabilistic-modeling foundation associated with the broader State Aware Engine (SAE) work. Domain/integration contracts are kept separate from the core model implementation.
+Validation documents describe controlled package behavior only. They are not claims about downstream domain performance.
 
 ## License
 
-Apache License 2.0 © AWA.SI.
-
-See [LICENSE](./LICENSE) for the full terms.
+Apache License 2.0 © AWA.SI. See [LICENSE](./LICENSE).
