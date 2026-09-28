@@ -1,7 +1,7 @@
 # nhsmm/context.py
 
 from __future__ import annotations
-from typing import Optional, Literal, Tuple, Callable, Dict, Sequence
+from typing import Optional, Literal, Tuple, Callable, Dict, Sequence, Union
 from dataclasses import dataclass, field
 import contextlib
 
@@ -9,8 +9,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as nnF
 from torch.nn.utils.rnn import pad_sequence
-
-from nhsmm.config import DTYPE, EPS, logger
 
 
 @dataclass
@@ -48,10 +46,14 @@ class SequenceSet:
         """
         if not sequences:
             raise ValueError("`sequences` must be a non-empty list of tensors.")
-        
+
         B = len(sequences)
-        lengths = torch.tensor([s.shape[0] for s in sequences], dtype=torch.long)
-        T_max = max(lengths)
+        lengths = torch.tensor(
+            [s.shape[0] for s in sequences],
+            dtype=torch.long,
+            device=sequences[0].device,
+        )
+        T_max = max(s.shape[0] for s in sequences)
         F = sequences[0].shape[1] if sequences[0].ndim > 1 else 1
 
         # Pad sequences
@@ -59,7 +61,10 @@ class SequenceSet:
         seq_tensor = pad_sequence(seq_tensors, batch_first=True, padding_value=pad_value)
 
         # Mask
-        mask_tensor = (torch.arange(T_max).expand(B, T_max) < lengths.unsqueeze(1)).unsqueeze(-1)
+        mask_tensor = (
+            torch.arange(T_max, device=seq_tensor.device).expand(B, T_max)
+            < lengths.unsqueeze(1)
+        ).unsqueeze(-1)
 
         # Contexts
         ctx_dim = F
@@ -69,17 +74,24 @@ class SequenceSet:
                     ctx_dim = c.shape[1] if c.ndim > 1 else 1
                     break
         ctx_pad = context_pad_value if context_pad_value is not None else 0.0
-        ctx_tensor = torch.full((B, T_max, ctx_dim), ctx_pad, dtype=seq_tensor.dtype)
+        ctx_tensor = torch.full(
+            (B, T_max, ctx_dim),
+            ctx_pad,
+            dtype=seq_tensor.dtype,
+            device=seq_tensor.device,
+        )
 
         if contexts is not None:
             for i, c in enumerate(contexts):
-                L = lengths[i]
+                L = int(lengths[i].item())
                 if c is None:
                     ctx_tensor[i, :L, :F] = seq_tensor[i, :L]
                 else:
                     c_ = c if c.ndim > 1 else c.unsqueeze(-1)
                     if c_.shape[0] != L:
-                        raise ValueError(f"Context length {c_.shape[0]} does not match sequence length {L}")
+                        raise ValueError(
+                            f"Context length {c_.shape[0]} does not match sequence length {L}"
+                        )
                     ctx_tensor[i, :L, :c_.shape[1]] = c_
         else:
             ctx_tensor[:, :, :F] = seq_tensor
@@ -88,7 +100,12 @@ class SequenceSet:
         logp_tensor = None
         if log_probs is not None:
             K = max(lp.shape[1] if lp is not None and lp.ndim > 1 else 1 for lp in log_probs)
-            logp_tensor = torch.full((B, T_max, K), float("-inf"), dtype=seq_tensor.dtype)
+            logp_tensor = torch.full(
+                (B, T_max, K),
+                float("-inf"),
+                dtype=seq_tensor.dtype,
+                device=seq_tensor.device,
+            )
             for i, lp in enumerate(log_probs):
                 if lp is not None:
                     lp_ = lp if lp.ndim > 1 else lp.unsqueeze(-1)
@@ -131,7 +148,11 @@ class SequenceSet:
     def select(self, indices: torch.Tensor | list[int]) -> "SequenceSet":
         """Select a subset of sequences by indices."""
         if isinstance(indices, list):
-            indices = torch.tensor(indices, dtype=torch.long)
+            indices = torch.tensor(
+                indices,
+                dtype=torch.long,
+                device=self.sequences.device,
+            )
         return SequenceSet(
             sequences=self.sequences[indices],
             lengths=self.lengths[indices],
@@ -149,7 +170,12 @@ class SequenceSet:
         B = len(items)
         T_max = max(t.shape[0] for t in items)
         F = items[0].shape[1] if items[0].ndim > 1 else 1
-        out = torch.full((B, T_max, F), pad_value, dtype=items[0].dtype)
+        out = torch.full(
+            (B, T_max, F),
+            pad_value,
+            dtype=items[0].dtype,
+            device=items[0].device,
+        )
         for i, t in enumerate(items):
             t_ = t if t.ndim > 1 else t.unsqueeze(-1)
             out[i, :t_.shape[0], :t_.shape[1]] = t_
@@ -170,12 +196,17 @@ class SequenceSet:
         old_pool = encoder.pool
         if pool is not None:
             encoder.pool = pool
-
-        with torch.no_grad() if detach else contextlib.nullcontext():
-            _, ctx, _ = encoder(x, mask=mask, return_context=True, return_sequence=False)
-
-        if pool is not None:
-            encoder.pool = old_pool
+        try:
+            with torch.no_grad() if detach else contextlib.nullcontext():
+                _, ctx, _ = encoder(
+                    x,
+                    mask=mask,
+                    return_context=True,
+                    return_sequence=False,
+                )
+        finally:
+            if pool is not None:
+                encoder.pool = old_pool
 
         # Ensure proper expansion if encoder outputs [B, H]
         if ctx.ndim == 2:
@@ -184,7 +215,11 @@ class SequenceSet:
             self.contexts = ctx
         else:
             raise ValueError(f"Unexpected context shape {ctx.shape}")
-        self.canonical = ctx.unsqueeze(1) if ctx.ndim == 2 else ctx.mean(dim=1, keepdim=True)
+        self.canonical = (
+            ctx.unsqueeze(1)
+            if ctx.ndim == 2
+            else ctx.mean(dim=1, keepdim=True)
+        )
 
 
 @dataclass
@@ -198,7 +233,9 @@ class ContextRouter:
 
     def __post_init__(self):
         if self.canonical.ndim != 3 or self.canonical.shape[1] != 1:
-            raise ValueError(f"canonical must be [B,1,H], got {tuple(self.canonical.shape)}")
+            raise ValueError(
+                f"canonical must be [B,1,H], got {tuple(self.canonical.shape)}"
+            )
 
         if self.context.ndim != 3:
             raise ValueError(f"context must be [B,T,H], got {tuple(self.context.shape)}")
@@ -214,7 +251,13 @@ class ContextRouter:
             raise ValueError(f"names length {len(self.names)} != H={H}")
 
         if self.mask is None:
-            self.mask = torch.ones(B, T, 1, dtype=torch.bool)
+            self.mask = torch.ones(
+                B,
+                T,
+                1,
+                dtype=torch.bool,
+                device=self.context.device,
+            )
         else:
             if self.mask.ndim == 2:
                 self.mask = self.mask.unsqueeze(-1)
@@ -231,10 +274,12 @@ class ContextRouter:
         self._cache.update({"B": B, "T": T, "H": H})
 
     @classmethod
-    def from_tensor(cls,
+    def from_tensor(
+        cls,
         X: "SequenceSet",
         context: Optional[Union[torch.Tensor, "ContextRouter"]] = None,
-        mode: str = "additive") -> "ContextRouter":
+        mode: str = "additive"
+    ) -> "ContextRouter":
 
         if not isinstance(X, SequenceSet):
             raise TypeError("X must be a SequenceSet")
@@ -254,19 +299,25 @@ class ContextRouter:
 
         if ctx_override is not None:
             if ctx_override.ndim == 1:
-                ctx_override = ctx_override.view(1,1,H).expand(B,T,H)
+                ctx_override = ctx_override.view(1, 1, H).expand(B, T, H)
 
             elif ctx_override.ndim == 2:
-                if ctx_override.shape == (T,H):
-                    ctx_override = ctx_override.unsqueeze(0).expand(B,T,H)
-                elif ctx_override.shape == (B,H):
-                    ctx_override = ctx_override.unsqueeze(1).expand(B,T,H)
+                if ctx_override.shape == (T, H):
+                    ctx_override = ctx_override.unsqueeze(0).expand(B, T, H)
+                elif ctx_override.shape == (B, H):
+                    ctx_override = ctx_override.unsqueeze(1).expand(B, T, H)
                 else:
-                    raise ValueError(f"Cannot align 2D context {ctx_override.shape} with (B,T,H)=({B},{T},{H})")
+                    raise ValueError(
+                        f"Cannot align 2D context {ctx_override.shape} "
+                        f"with (B,T,H)=({B},{T},{H})"
+                    )
 
             elif ctx_override.ndim == 3:
-                if ctx_override.shape != (B,T,H):
-                    raise ValueError(f"3D context {ctx_override.shape} incompatible with (B,T,H)=({B},{T},{H})")
+                if ctx_override.shape != (B, T, H):
+                    raise ValueError(
+                        f"3D context {ctx_override.shape} incompatible "
+                        f"with (B,T,H)=({B},{T},{H})"
+                    )
             else:
                 raise ValueError(f"Unsupported context ndim {ctx_override.ndim}")
 
@@ -296,10 +347,13 @@ class ContextRouter:
 
     # -------- selection --------
     def select_features(self, keys: list[str]) -> "ContextRouter":
-        idx = torch.tensor([self.names.index(k) for k in keys])
+        idx = torch.tensor(
+            [self.names.index(k) for k in keys],
+            device=self.context.device,
+        )
         return ContextRouter(
-            canonical=self.canonical[:,:,idx],
-            context=self.context[:,:,idx],
+            canonical=self.canonical[:, :, idx],
+            context=self.context[:, :, idx],
             names=keys,
             mask=self.mask,
             log_probs=self.log_probs
@@ -307,7 +361,11 @@ class ContextRouter:
 
     def select(self, indices: torch.Tensor | list[int]) -> "ContextRouter":
         if isinstance(indices, list):
-            indices = torch.tensor(indices)
+            indices = torch.tensor(
+                indices,
+                dtype=torch.long,
+                device=self.context.device,
+            )
         return ContextRouter(
             canonical=self.canonical[indices],
             context=self.context[indices],
@@ -369,16 +427,19 @@ class ContextEncoder(nn.Module):
             "mha": self._multihead_context,
         }
 
-    def forward(self,
+    def forward(
+        self,
         x: torch.Tensor,
         mask: Optional[torch.BoolTensor] = None,
         return_attn_weights: bool = False,
         return_context: bool = False,
-        return_sequence: bool = False) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+        return_sequence: bool = False
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
 
-        if x.ndim == 2: x = x.unsqueeze(0)
+        if x.ndim == 2:
+            x = x.unsqueeze(0)
         B, T, H = x.shape
-        mask = self._prepare_mask(mask, B, T)
+        mask = self._prepare_mask(mask, B, T, device=x.device)
 
         # encoder forward
         if "mask" in self._encoder_signature():
@@ -401,27 +462,42 @@ class ContextEncoder(nn.Module):
         self._context = canonical
 
         seq_out = context if return_sequence else self._last_timestep(context, mask)
-        return seq_out, (canonical if return_context else None), (attn if return_attn_weights else None)
+        return seq_out, (canonical if return_context else None), (
+            attn if return_attn_weights else None
+        )
 
-    def encode(self,
+    def encode(
+        self,
         sequences: torch.Tensor,
         mask: Optional[torch.BoolTensor] = None,
-        pool: Optional[str] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        pool: Optional[str] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         old_pool = self.pool
         if pool is not None:
             self.pool = pool
-
-        seq_features, canonical, _ = self.forward(
-            sequences, mask=mask, return_sequence=True, return_context=True
-        )
-        if pool is not None:
-            self.pool = old_pool
+        try:
+            seq_features, canonical, _ = self.forward(
+                sequences,
+                mask=mask,
+                return_sequence=True,
+                return_context=True,
+            )
+        finally:
+            if pool is not None:
+                self.pool = old_pool
         return seq_features, canonical
 
-    def _prepare_mask(self, mask: Optional[torch.BoolTensor], B: int, T: int) -> torch.BoolTensor:
+    def _prepare_mask(
+        self,
+        mask: Optional[torch.BoolTensor],
+        B: int,
+        T: int,
+        *,
+        device: torch.device,
+    ) -> torch.BoolTensor:
         if mask is None:
-            return torch.ones(B, T, dtype=torch.bool)
-        mask = mask.bool()
+            return torch.ones(B, T, dtype=torch.bool, device=device)
+        mask = mask.to(device=device, dtype=torch.bool)
         if mask.ndim == 1:
             mask = mask.unsqueeze(0).expand(B, -1)
         elif mask.ndim == 3:
@@ -430,13 +506,25 @@ class ContextEncoder(nn.Module):
             raise ValueError(f"Mask shape {mask.shape} does not match input shape {(B, T)}")
         return mask
 
-    def _last_timestep(self, context: torch.Tensor, mask: Optional[torch.BoolTensor]) -> torch.Tensor:
+    def _last_timestep(
+        self,
+        context: torch.Tensor,
+        mask: Optional[torch.BoolTensor],
+    ) -> torch.Tensor:
         if mask is not None:
             idx = torch.clamp(mask.sum(dim=1) - 1, min=0)
-            return context[torch.arange(context.shape[0]), idx]
+            return context[
+                torch.arange(context.shape[0], device=context.device),
+                idx,
+            ]
         return context[:, -1, :]
 
-    def _pool_context(self, context: torch.Tensor, mask: Optional[torch.BoolTensor], ret_attn: bool):
+    def _pool_context(
+        self,
+        context: torch.Tensor,
+        mask: Optional[torch.BoolTensor],
+        ret_attn: bool,
+    ):
         if self.pool not in self._POOLERS:
             raise ValueError(f"Invalid pooling method '{self.pool}'")
         return self._POOLERS[self.pool](context, mask, ret_attn)
@@ -461,14 +549,21 @@ class ContextEncoder(nn.Module):
             ctx = context.max(dim=1).values
         return ctx, None
 
-    def _init_attn_vector(self, H: int):
+    def _init_attn_vector(self, H: int, *, reference: torch.Tensor):
         if self._attn_vector is None or self._attn_vector.shape[0] != H:
-            self._attn_vector = nn.Parameter(torch.randn(H) * 0.1)
+            self._attn_vector = nn.Parameter(
+                reference.new_empty(H).normal_(mean=0.0, std=0.1)
+            )
             self.register_parameter("_attn_vector", self._attn_vector)
+        elif (
+            self._attn_vector.device != reference.device
+            or self._attn_vector.dtype != reference.dtype
+        ):
+            raise ValueError("attention parameter dtype/device does not match context")
 
     def _attention_context(self, context, mask, ret_attn):
         B, T, H = context.shape
-        self._init_attn_vector(H)
+        self._init_attn_vector(H, reference=context)
         scores = context @ self._attn_vector
         if mask is not None:
             scores = scores.masked_fill(~mask, -1e9)
@@ -480,11 +575,22 @@ class ContextEncoder(nn.Module):
         B, T, H = context.shape
         if self._mha is None:
             self._mha = nn.MultiheadAttention(
-                embed_dim=H, num_heads=self.n_heads, batch_first=True,
-                dropout=self.dropout_layer.p if isinstance(self.dropout_layer, nn.Dropout) else 0.0
-            )
+                embed_dim=H,
+                num_heads=self.n_heads,
+                batch_first=True,
+                dropout=(
+                    self.dropout_layer.p
+                    if isinstance(self.dropout_layer, nn.Dropout)
+                    else 0.0
+                ),
+            ).to(device=context.device, dtype=context.dtype)
         key_padding_mask = (~mask) if mask is not None else None
-        out, attn = self._mha(context, context, context, key_padding_mask=key_padding_mask)
+        out, attn = self._mha(
+            context,
+            context,
+            context,
+            key_padding_mask=key_padding_mask,
+        )
         pooled = out.mean(dim=1)
         return pooled, (attn if ret_attn else None)
 
@@ -496,7 +602,11 @@ class ContextEncoder(nn.Module):
 
     def _encoder_signature(self) -> Tuple[str, ...]:
         try:
-            return tuple(p.name for p in self.encoder.forward.__code__.co_varnames[:self.encoder.forward.__code__.co_argcount])
+            return tuple(
+                p.name
+                for p in self.encoder.forward.__code__.co_varnames[
+                    :self.encoder.forward.__code__.co_argcount
+                ]
+            )
         except Exception:
             return tuple()
-
