@@ -120,3 +120,29 @@ def test_noncausal_artifact_round_trip_preserves_explicit_context_dim(tmp_path) 
     assert loaded.encoder.encoder.hidden_dim == 1
     assert loaded.encoder.encoder.out_dim == 2
     torch.testing.assert_close(actual, expected, atol=1e-6, rtol=1e-6)
+
+
+def test_build_artifact_is_observational() -> None:
+    source = _model()
+    source.train()
+    for parameter in source.parameters():
+        parameter.requires_grad_(True)
+    training_before = source.training
+    requires_grad_before = {name: p.requires_grad for name, p in source.named_parameters()}
+
+    payload = build_artifact(source)
+
+    assert payload["artifact_type"] == "nhsmm"
+    assert source.training is training_before
+    assert {name: p.requires_grad for name, p in source.named_parameters()} == requires_grad_before
+
+
+def test_build_artifact_rejects_uninitialized_model_without_mutation() -> None:
+    config = ModelConfig(n_states=2, n_features=2, seed=59)
+    source = NHSMM(config, device="cpu")
+    source.train()
+
+    with pytest.raises(RuntimeError, match="distributions must be initialized"):
+        build_artifact(source)
+
+    assert source.training

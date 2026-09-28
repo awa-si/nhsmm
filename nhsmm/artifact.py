@@ -10,7 +10,7 @@ import torch
 from nhsmm.config import ModelConfig
 from nhsmm.context import ContextEncoder
 from nhsmm.encoder import DefaultEncoder
-from nhsmm.inference import load_inference_model, prepare_inference
+from nhsmm.inference import load_inference_model
 from nhsmm.models import NHSMM
 
 ARTIFACT_TYPE = "nhsmm"
@@ -58,9 +58,16 @@ def _schema(config: ModelConfig) -> dict[str, Any]:
 
 
 def build_artifact(model: NHSMM) -> dict[str, Any]:
-    """Build a versioned, self-describing artifact payload from an NHSMM."""
+    """Build a versioned, self-describing artifact without mutating ``model``."""
 
-    prepare_inference(model, freeze=False)
+    if not isinstance(model, NHSMM):
+        raise TypeError("model must be an NHSMM")
+    if model.dist is None:
+        raise RuntimeError("model distributions must be initialized before artifact creation")
+    for name, parameter in model.named_parameters():
+        if parameter.is_floating_point() and not torch.isfinite(parameter).all():
+            raise ValueError(f"model parameter {name!r} contains NaN or infinity")
+
     encoder = _raw_default_encoder(model)
     config = asdict(model.config)
     return {

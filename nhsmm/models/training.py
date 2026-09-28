@@ -259,6 +259,10 @@ class NHSMM(BaseNHSMM):
             raise ValueError("steps must be positive")
         if lr <= 0.0:
             raise ValueError("lr must be positive")
+        if context is None:
+            raise ValueError(
+                "transition refinement requires explicit external context"
+            )
 
         transition = self.dist.transition
         transition_params = [
@@ -321,6 +325,10 @@ class NHSMM(BaseNHSMM):
 
         if cfg.transition_refine_steps <= 0:
             return self
+        if context_tensor is None:
+            raise ValueError(
+                "transition_refine_steps > 0 requires explicit external context"
+            )
 
         # Base optimize already selected/restored the best joint initialization.
         X_tensor = self._ensure_tensor(X)

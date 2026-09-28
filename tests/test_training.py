@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
 from nhsmm import ModelConfig, NHSMM
@@ -254,6 +255,44 @@ def test_transition_refinement_only_updates_context_modulation() -> None:
             [*transition.context_net.parameters(), transition.delta_scale],
         )
     )
+
+
+def test_transition_refinement_requires_explicit_context() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        seed=41,
+        n_init=1,
+        max_iter=1,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+        transition_refine_steps=1,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    x = torch.randn(2, 8, cfg.n_features)
+
+    with pytest.raises(ValueError, match="requires explicit external context"):
+        model.optimize(x)
+
+
+def test_direct_transition_refinement_requires_explicit_context() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        seed=43,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    x = torch.randn(2, 8, cfg.n_features)
+
+    with pytest.raises(ValueError, match="requires explicit external context"):
+        model._refine_transition_likelihood(x, None, steps=1, lr=1e-2)
 
 def test_transition_refinement_is_opt_in() -> None:
     cfg = ModelConfig(n_states=2, n_features=3)
