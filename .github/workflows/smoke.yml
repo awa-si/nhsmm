@@ -2,20 +2,22 @@ name: NHSMM smoke
 
 on:
   workflow_dispatch:
-  push:
-    branches: [develop]
-    paths:
-      - ".github/workflows/smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nhsmm-smoke-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   smoke:
-    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Run NHSMM smoke'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prepare logs
         shell: bash
@@ -30,9 +32,10 @@ jobs:
           } | tee smoke-logs/environment.txt
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Python diagnostics
         shell: bash
@@ -74,7 +77,7 @@ jobs:
           set -o pipefail
           python -m pytest -q 2>&1 | tee smoke-logs/pytest.txt
 
-      - name: Production CPU runtime benchmark
+      - name: CPU runtime benchmark
         shell: bash
         run: |
           set -o pipefail
@@ -109,7 +112,7 @@ jobs:
 
       - name: Upload smoke logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nhsmm-smoke-logs-${{ github.run_id }}
           path: smoke-logs/
