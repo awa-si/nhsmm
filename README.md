@@ -4,7 +4,7 @@ PyTorch implementation of a context-aware hidden semi-Markov model with explicit
 
 > **Status:** pre-1.0 research/development package. Public APIs and internal contracts may still change.
 
-[![PyPI](https://img.shields.io/pypi/v/nhsmm.svg)](https://pypi.org/project/nhsmm/) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+[![PyPI](https://img.shields.io/pypi/v/nhsmm.svg)](https://pypi.org/project/nhsmm/) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Python Version](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 
 ## Scope
 
@@ -25,6 +25,12 @@ Current configured emission families are Gaussian and Student-t. Current transit
 pip install nhsmm
 ```
 
+Optional dataframe helpers use Polars and can be installed with:
+
+```bash
+pip install "nhsmm[data]"
+```
+
 For development:
 
 ```bash
@@ -33,7 +39,7 @@ cd nhsmm
 pip install -e ".[dev]"
 ```
 
-Python `3.9+` is required by the package metadata.
+Python `3.12+` is required by the package metadata.
 
 ## Basic usage
 
