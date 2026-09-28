@@ -4,19 +4,26 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 import numpy as np
-import polars as pl
-from typing import Tuple, Optional, List
+from typing import Any, Tuple, Optional
 
 from nhsmm.config import DTYPE
 
 
-def load_dataframe(data_dir: str, pair: str, timeframe: str) -> pl.DataFrame:
+def load_dataframe(data_dir: str, pair: str, timeframe: str) -> Any:
+    try:
+        import polars as pl
+    except ImportError as exc:
+        raise ImportError(
+            "load_dataframe requires the optional data dependencies; install nhsmm[data]"
+        ) from exc
+
     symbol = pair.replace("/", "_").replace(":", "_")
     filename = f"{symbol}-{timeframe}-futures.feather"
     path = os.path.join(data_dir, filename)
     if not os.path.exists(path):
         raise FileNotFoundError(f"Freqtrade data not found for {pair} @ {timeframe}: {path}")
     return pl.read_ipc(path, memory_map=False).sort("date")
+
 
 def generate_gaussian_sequence(
     n_states: int,
@@ -28,7 +35,7 @@ def generate_gaussian_sequence(
     context_dim: Optional[int] = None,
     context_noise_scale: float = 0.05,
     normalize: bool = False,
-    dataframe: Optional[pl.DataFrame] = None
+    dataframe: Optional[Any] = None,
 ):
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
@@ -79,8 +86,8 @@ class SequenceDataset(Dataset):
         context_dim: Optional[int] = None,
         context_noise_scale: float = 0.05,
         normalize: bool = False,
-        dataframe: Optional[pl.DataFrame] = None,
-        variable_length: bool = False
+        dataframe: Optional[Any] = None,
+        variable_length: bool = False,
     ):
         self.variable_length = variable_length
         self.states, X, C = generate_gaussian_sequence(
@@ -93,21 +100,19 @@ class SequenceDataset(Dataset):
             context_dim=context_dim,
             context_noise_scale=context_noise_scale,
             normalize=normalize,
-            dataframe=dataframe
+            dataframe=dataframe,
         )
 
-        # Convert to tensor
         self.X = X if isinstance(X, torch.Tensor) else torch.tensor(X, dtype=DTYPE)
         self.C = C if isinstance(C, torch.Tensor) or C is None else torch.tensor(C, dtype=DTYPE)
         self.states = torch.tensor(self.states, dtype=torch.long)
 
-        # Split into sequences if variable_length
         if self.variable_length:
-            self.seq_lengths = [len(self.X)] if dataframe is not None else [len(seg) for seg in X] if isinstance(X, list) else [len(X)]
-            if isinstance(X, torch.Tensor) and not isinstance(X, list):
-                self.X = [self.X]  # wrap in list for uniform processing
-                if self.C is not None:
-                    self.C = [self.C]
+            self.seq_lengths = [len(self.X)]
+            self.X = [self.X]
+            self.states = [self.states]
+            if self.C is not None:
+                self.C = [self.C]
 
     def __len__(self):
         return len(self.X) if self.variable_length else self.X.shape[0]
@@ -116,16 +121,12 @@ class SequenceDataset(Dataset):
         if self.variable_length:
             if self.C is not None:
                 return self.X[idx], self.C[idx], self.states[idx]
-            else:
-                return self.X[idx], self.states[idx]
-        else:
-            if self.C is not None:
-                return self.X[idx], self.C[idx], self.states[idx]
-            else:
-                return self.X[idx], self.states[idx]
+            return self.X[idx], self.states[idx]
+        if self.C is not None:
+            return self.X[idx], self.C[idx], self.states[idx]
+        return self.X[idx], self.states[idx]
 
     def collate_fn(self, batch):
-        # batch: list of tuples (X_seq, C_seq, state_seq) or (X_seq, state_seq)
         X_list = [b[0] for b in batch]
         lengths = torch.tensor([len(x) for x in X_list], dtype=torch.long)
         X_padded = torch.nn.utils.rnn.pad_sequence(X_list, batch_first=True)
@@ -135,10 +136,14 @@ class SequenceDataset(Dataset):
             states_list = [b[2] for b in batch]
             states_padded = torch.nn.utils.rnn.pad_sequence(states_list, batch_first=True)
             return X_padded, C_padded, states_padded, lengths
-        else:
-            states_list = [b[1] for b in batch]
-            states_padded = torch.nn.utils.rnn.pad_sequence(states_list, batch_first=True)
-            return X_padded, states_padded, lengths
+        states_list = [b[1] for b in batch]
+        states_padded = torch.nn.utils.rnn.pad_sequence(states_list, batch_first=True)
+        return X_padded, states_padded, lengths
 
     def loader(self, batch_size=64, shuffle=True):
-        return DataLoader(self, batch_size=batch_size, shuffle=shuffle, collate_fn=self.collate_fn if self.variable_length else None)
+        return DataLoader(
+            self,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            collate_fn=self.collate_fn if self.variable_length else None,
+        )
