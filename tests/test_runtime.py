@@ -111,3 +111,88 @@ def test_runtime_survival_forecast_uses_current_filter_state() -> None:
         atol=1e-6,
         rtol=1e-6,
     )
+
+
+def test_runtime_matches_batch_filter_with_explicit_context_dim() -> None:
+    torch.manual_seed(41)
+    config = ModelConfig(
+        n_states=3,
+        n_features=4,
+        max_duration=5,
+        causal=True,
+        context_dim=2,
+        dropout=0.0,
+        seed=41,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions()
+    model.eval()
+    x = torch.randn(2, 6, config.n_features)
+
+    assert model.encoder.encoder.hidden_dim == 2
+    batch = filter_model_sequence(model, x)
+    runtime = HSMMFilterRuntime(model)
+    streamed = [runtime.step(x[:, t]).log_posterior for t in range(x.shape[1])]
+
+    torch.testing.assert_close(
+        torch.stack(streamed, dim=1),
+        batch.log_posterior,
+        atol=1e-6,
+        rtol=1e-6,
+    )
+
+
+def test_runtime_external_context_matches_batch_filter() -> None:
+    torch.manual_seed(43)
+    config = ModelConfig(
+        n_states=3,
+        n_features=4,
+        max_duration=5,
+        causal=True,
+        context_dim=2,
+        dropout=0.0,
+        seed=43,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions()
+    model.eval()
+    x = torch.randn(2, 7, config.n_features)
+    context = torch.randn(2, 7, 2)
+
+    batch = filter_model_sequence(model, x, context=context)
+    runtime = HSMMFilterRuntime(model)
+    streamed = [
+        runtime.step(x[:, t], context=context[:, t : t + 1]).log_posterior
+        for t in range(x.shape[1])
+    ]
+
+    torch.testing.assert_close(
+        torch.stack(streamed, dim=1),
+        batch.log_posterior,
+        atol=1e-6,
+        rtol=1e-6,
+    )
+
+
+def test_runtime_external_context_mode_is_fixed_until_reset() -> None:
+    model = _make_model()
+    runtime = HSMMFilterRuntime(model)
+    observation = torch.randn(1, model.config.n_features)
+    context = torch.randn(model.context_dim)
+
+    runtime.step(observation, context=context)
+    try:
+        runtime.step(observation)
+    except ValueError as exc:
+        assert "context mode is fixed" in str(exc)
+    else:
+        raise AssertionError("runtime context mode must not change midstream")
+
+    runtime.reset()
+    runtime.step(observation)
+    try:
+        runtime.step(observation, context=context)
+    except ValueError as exc:
+        assert "context mode is fixed" in str(exc)
+    else:
+        raise AssertionError("runtime context mode must not change midstream")

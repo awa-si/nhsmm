@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 
 from nhsmm.config import DTYPE, ModelConfig
+from nhsmm.context import ContextEncoder, align_context_tensor
+from nhsmm.encoder import DefaultEncoder
 from nhsmm.distributions import Duration, Emission, Initial, Transition
 from nhsmm.models.base import DistributionSet as BaseDistributionSet
 from nhsmm.models.base import NHSMM as BaseNHSMM
@@ -72,6 +74,123 @@ class DistributionSet(BaseDistributionSet):
 
 class NHSMM(BaseNHSMM):
     """Canonical NHSMM with robust training/restart/context-calibration semantics."""
+
+    def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
+        if encoder is None:
+            if self.config.context_dim is None:
+                encoder_hidden_dim = max(32, min(64, self.config.n_features * 2))
+            else:
+                directions = 1 if self.config.causal else 2
+                if self.config.context_dim % directions != 0:
+                    raise ValueError(
+                        "context_dim must be divisible by 2 for the default "
+                        "bidirectional encoder when causal=False"
+                    )
+                encoder_hidden_dim = self.config.context_dim // directions
+            encoder = DefaultEncoder(
+                n_features=self.config.n_features,
+                cnn_channels=self.config.cnn_channels,
+                cnn_kernel=self.config.cnn_kernel,
+                hidden_dim=encoder_hidden_dim,
+                bidirectional=not self.config.causal,
+                causal=self.config.causal,
+            )
+        elif self.config.causal:
+            raw_encoder = encoder.encoder if isinstance(encoder, ContextEncoder) else encoder
+            if not bool(getattr(raw_encoder, "causal", False)):
+                raise ValueError(
+                    "ModelConfig.causal=True requires an encoder that explicitly declares causal=True."
+                )
+
+        self.encoder = encoder if isinstance(encoder, ContextEncoder) else ContextEncoder(
+            encoder=encoder,
+            pool=self.config.pool,
+            n_heads=self.config.n_heads,
+            dropout=self.config.dropout,
+        )
+        self.encoder = self.encoder.to(device=self.device, dtype=DTYPE)
+
+        try:
+            self.encoder.eval()
+            dummy = torch.zeros(
+                1, 16, self.config.n_features, device=self.device, dtype=DTYPE
+            )
+            try:
+                _, ctx, _ = self.encoder(
+                    dummy, return_context=True, return_sequence=True
+                )
+                inferred_dim = ctx.shape[-1]
+            except TypeError:
+                inferred_dim = self.encoder(dummy).shape[-1]
+
+            if self.context_dim is None:
+                self.context_dim = inferred_dim
+            elif inferred_dim != self.context_dim:
+                raise ValueError(
+                    f"encoder output dimension ({inferred_dim}) must equal context_dim "
+                    f"({self.context_dim})."
+                )
+            if self.hidden_dim is None:
+                self.hidden_dim = self.context_dim
+            elif self.hidden_dim != self.context_dim:
+                raise ValueError(
+                    f"hidden_dim ({self.hidden_dim}) must equal context_dim "
+                    f"({self.context_dim}) unless projections are explicitly defined."
+                )
+        finally:
+            self.encoder.train()
+
+        self.config.context_dim = self.context_dim
+        self.config.hidden_dim = self.hidden_dim
+
+    def _align_external_context(
+        self,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]],
+    ) -> Optional[torch.Tensor]:
+        if context is None:
+            return None
+        X_tensor = self._ensure_tensor(X)
+        B, T, _ = X_tensor.shape
+        if isinstance(context, list):
+            context = self._ensure_tensor(context)
+        elif not torch.is_tensor(context):
+            raise TypeError(f"Unsupported context type: {type(context)}")
+        return align_context_tensor(
+            context,
+            batch_size=B,
+            timesteps=T,
+            context_dim=int(self.context_dim),
+            device=X_tensor.device,
+            dtype=X_tensor.dtype,
+        )
+
+    def _build_sequence_set(
+        self,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[torch.Tensor] = None,
+    ):
+        aligned = self._align_external_context(X, context)
+        return super()._build_sequence_set(X, context=aligned)
+
+    def log_likelihood(
+        self,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
+        reduce: bool = False,
+    ) -> torch.Tensor:
+        aligned = self._align_external_context(X, context)
+        return super().log_likelihood(X, context=aligned, reduce=reduce)
+
+    def predict(
+        self,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
+        mode: str = "viterbi",
+        verbose: bool = True,
+    ):
+        aligned = self._align_external_context(X, context)
+        return super().predict(X, context=aligned, mode=mode, verbose=verbose)
 
     def initialize_distributions(
         self,
@@ -197,14 +316,14 @@ class NHSMM(BaseNHSMM):
     ):
         """Optimize joint parameters and optionally calibrate transition context modulation."""
         cfg = cfg or self.config
-        super().optimize(X, context=context, cfg=cfg)
+        context_tensor = self._align_external_context(X, context)
+        super().optimize(X, context=context_tensor, cfg=cfg)
 
         if cfg.transition_refine_steps <= 0:
             return self
 
         # Base optimize already selected/restored the best joint initialization.
         X_tensor = self._ensure_tensor(X)
-        context_tensor = self._ensure_tensor(context)
         self._refine_transition_likelihood(
             X_tensor,
             context_tensor,

@@ -11,6 +11,53 @@ import torch.nn.functional as nnF
 from torch.nn.utils.rnn import pad_sequence
 
 
+def align_context_tensor(
+    context: torch.Tensor,
+    *,
+    batch_size: int,
+    timesteps: int,
+    context_dim: int,
+    device: Optional[torch.device] = None,
+    dtype: Optional[torch.dtype] = None,
+) -> torch.Tensor:
+    """Normalize public external-context shapes to ``[B,T,H]``.
+
+    Accepted shapes are ``[H]`` (global/static), ``[T,H]`` (time-varying and
+    shared across the batch), ``[B,1,H]`` (batch-specific/static), and
+    ``[B,T,H]`` (batch- and time-specific). ``[B,H]`` is intentionally not a
+    public form because it is ambiguous with ``[T,H]`` whenever ``B == T``.
+    """
+    tensor = torch.as_tensor(context, device=device, dtype=dtype)
+    B, T, H = batch_size, timesteps, context_dim
+
+    if tensor.ndim == 1:
+        if tensor.shape[0] != H:
+            raise ValueError(f"1D context must be [H]=[{H}], got {tuple(tensor.shape)}")
+        return tensor.view(1, 1, H).expand(B, T, H)
+
+    if tensor.ndim == 2:
+        if tensor.shape != (T, H):
+            raise ValueError(
+                f"2D context must be [T,H]=({T},{H}); "
+                "batch-specific static context must use [B,1,H]"
+            )
+        return tensor.unsqueeze(0).expand(B, T, H)
+
+    if tensor.ndim == 3:
+        if tensor.shape == (B, 1, H):
+            return tensor.expand(B, T, H)
+        if tensor.shape == (B, T, H):
+            return tensor
+        raise ValueError(
+            f"3D context must be [B,1,H] or [B,T,H] for "
+            f"(B,T,H)=({B},{T},{H}), got {tuple(tensor.shape)}"
+        )
+
+    raise ValueError(
+        f"Unsupported context shape {tuple(tensor.shape)}; expected [H], [T,H], [B,1,H], or [B,T,H]"
+    )
+
+
 @dataclass
 class SequenceSet:
     """Container for batched sequences with optional contexts and log probabilities."""
@@ -250,24 +297,14 @@ class ContextRouter:
 
         ctx_override = context.context if isinstance(context, ContextRouter) else context
         if ctx_override is not None:
-            if ctx_override.ndim == 1:
-                ctx_override = ctx_override.view(1, 1, H).expand(B, T, H)
-            elif ctx_override.ndim == 2:
-                if ctx_override.shape == (T, H):
-                    ctx_override = ctx_override.unsqueeze(0).expand(B, T, H)
-                elif ctx_override.shape == (B, H):
-                    ctx_override = ctx_override.unsqueeze(1).expand(B, T, H)
-                else:
-                    raise ValueError(
-                        f"Cannot align 2D context {ctx_override.shape} with (B,T,H)=({B},{T},{H})"
-                    )
-            elif ctx_override.ndim == 3:
-                if ctx_override.shape != (B, T, H):
-                    raise ValueError(
-                        f"3D context {ctx_override.shape} incompatible with (B,T,H)=({B},{T},{H})"
-                    )
-            else:
-                raise ValueError(f"Unsupported context ndim {ctx_override.ndim}")
+            ctx_override = align_context_tensor(
+                ctx_override,
+                batch_size=B,
+                timesteps=T,
+                context_dim=H,
+                device=ctx.device,
+                dtype=ctx.dtype,
+            )
 
             if mode == "additive":
                 ctx = ctx + ctx_override

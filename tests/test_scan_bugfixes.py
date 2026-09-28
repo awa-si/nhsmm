@@ -3,7 +3,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from nhsmm import ModelConfig, NHSMM
+from nhsmm import DefaultEncoder, ModelConfig, NHSMM
+from nhsmm.context import align_context_tensor
 from nhsmm.data import SequenceDataset
 
 
@@ -96,3 +97,110 @@ def test_variable_length_dataset_collates_state_sequence_without_polars() -> Non
     x_pad, context_pad, states_pad, lengths = next(iter(dataset.loader(batch_size=1)))
     assert x_pad.shape[:2] == context_pad.shape[:2] == states_pad.shape
     assert lengths.tolist() == [x.shape[0]]
+
+
+def test_external_context_shape_contract() -> None:
+    B, T, H = 2, 3, 4
+    global_context = align_context_tensor(torch.zeros(H), batch_size=B, timesteps=T, context_dim=H)
+    temporal_context = align_context_tensor(torch.zeros(T, H), batch_size=B, timesteps=T, context_dim=H)
+    batch_static_context = align_context_tensor(torch.zeros(B, 1, H), batch_size=B, timesteps=T, context_dim=H)
+    full_context = align_context_tensor(torch.zeros(B, T, H), batch_size=B, timesteps=T, context_dim=H)
+    for tensor in (global_context, temporal_context, batch_static_context, full_context):
+        assert tensor.shape == (B, T, H)
+
+    with pytest.raises(ValueError, match=r"2D context must be \[T,H\]"):
+        align_context_tensor(torch.zeros(B, H), batch_size=B, timesteps=T, context_dim=H)
+
+
+def test_ambiguous_2d_context_is_always_temporal_when_batch_equals_time() -> None:
+    context = torch.tensor([[10.0], [20.0]])
+    aligned = align_context_tensor(context, batch_size=2, timesteps=2, context_dim=1)
+    assert aligned[:, :, 0].tolist() == [[10.0, 20.0], [10.0, 20.0]]
+
+@pytest.mark.parametrize(
+    "context_factory",
+    [
+        lambda B, T, H: torch.zeros(H),
+        lambda B, T, H: torch.zeros(T, H),
+        lambda B, T, H: torch.zeros(B, 1, H),
+        lambda B, T, H: torch.zeros(B, T, H),
+    ],
+)
+def test_model_build_sequence_set_accepts_public_context_shapes(context_factory) -> None:
+    model = _model(context_dim=2)
+    B, T, H = 2, 3, 2
+    X = torch.zeros(B, T, 2)
+    sequence = model._build_sequence_set(X, context=context_factory(B, T, H))
+    assert sequence.contexts.shape == (B, T, H)
+
+
+def test_model_build_sequence_set_rejects_batch_static_2d_context() -> None:
+    model = _model(context_dim=2)
+    B, T, H = 2, 3, 2
+    with pytest.raises(ValueError, match=r"2D context must be \[T,H\]"):
+        model._build_sequence_set(torch.zeros(B, T, 2), context=torch.zeros(B, H))
+
+
+def test_explicit_context_dim_controls_default_encoder_output_width() -> None:
+    model = _model(context_dim=2)
+    assert model.context_dim == 2
+    assert model.hidden_dim == 2
+    assert model.config.context_dim == 2
+    assert model.config.hidden_dim == 2
+    assert model.encoder.encoder.hidden_dim == 2
+
+
+def test_explicit_context_dim_rejects_incompatible_custom_encoder() -> None:
+    encoder = DefaultEncoder(
+        n_features=2,
+        hidden_dim=4,
+        cnn_channels=5,
+        cnn_kernel=3,
+        causal=True,
+    )
+    with pytest.raises(ValueError, match=r"encoder output dimension \(4\) must equal context_dim \(2\)"):
+        NHSMM(
+            ModelConfig(
+                n_states=2,
+                n_features=2,
+                max_duration=3,
+                causal=True,
+                context_dim=2,
+                dropout=0.0,
+            ),
+            encoder=encoder,
+            device="cpu",
+        )
+
+
+def test_noncausal_explicit_context_dim_controls_bidirectional_output_width() -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=False,
+        context_dim=2,
+        hidden_dim=2,
+        dropout=0.0,
+    )
+    model = NHSMM(config, device="cpu")
+    assert model.encoder.encoder.bidirectional is True
+    assert model.encoder.encoder.hidden_dim == 1
+    assert model.encoder.encoder.out_dim == 2
+    assert model.context_dim == 2
+
+
+def test_noncausal_default_encoder_rejects_odd_context_dim() -> None:
+    with pytest.raises(ValueError, match="context_dim must be divisible by 2"):
+        NHSMM(
+            ModelConfig(
+                n_states=2,
+                n_features=2,
+                max_duration=3,
+                causal=False,
+                context_dim=3,
+                hidden_dim=3,
+                dropout=0.0,
+            ),
+            device="cpu",
+        )

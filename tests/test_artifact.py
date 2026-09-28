@@ -67,3 +67,56 @@ def test_artifact_rejects_causal_metadata_mismatch(tmp_path) -> None:
     torch.save(payload, path)
     with pytest.raises(ValueError, match="encoder causal mode"):
         load_artifact(path, require_causal=True)
+
+
+def test_artifact_round_trip_with_explicit_context_dim(tmp_path) -> None:
+    torch.manual_seed(47)
+    config = ModelConfig(
+        n_states=3,
+        n_features=4,
+        max_duration=5,
+        causal=True,
+        context_dim=2,
+        dropout=0.0,
+        seed=47,
+    )
+    source = NHSMM(config, device="cpu")
+    source.initialize_distributions()
+    source.eval()
+    x = torch.randn(2, 5, config.n_features)
+    expected = filter_model_sequence(source, x).log_posterior
+
+    path = save_artifact(source, tmp_path / "context-model.nhsmm.pt")
+    loaded = load_artifact(path, device="cpu", require_causal=True)
+    actual = filter_model_sequence(loaded, x).log_posterior
+
+    assert loaded.config.context_dim == 2
+    assert loaded.config.hidden_dim == 2
+    assert loaded.encoder.encoder.hidden_dim == 2
+    torch.testing.assert_close(actual, expected, atol=1e-6, rtol=1e-6)
+
+
+def test_noncausal_artifact_round_trip_preserves_explicit_context_dim(tmp_path) -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=3,
+        max_duration=4,
+        causal=False,
+        context_dim=2,
+        hidden_dim=2,
+        dropout=0.0,
+        seed=53,
+    )
+    source = NHSMM(config, device="cpu")
+    source.initialize_distributions()
+    source.eval()
+    x = torch.randn(1, 4, config.n_features)
+    expected = source.log_likelihood(x)
+
+    path = save_artifact(source, tmp_path / "noncausal-context-model.nhsmm.pt")
+    loaded = load_artifact(path, device="cpu")
+    actual = loaded.log_likelihood(x)
+
+    assert loaded.encoder.encoder.hidden_dim == 1
+    assert loaded.encoder.encoder.out_dim == 2
+    torch.testing.assert_close(actual, expected, atol=1e-6, rtol=1e-6)

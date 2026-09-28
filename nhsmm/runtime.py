@@ -7,6 +7,7 @@ import math
 import torch
 
 from nhsmm.config import EPS
+from nhsmm.context import align_context_tensor
 from nhsmm.filtering import (
     HSMMFilterState,
     _filter_step_normalized,
@@ -284,10 +285,12 @@ class HSMMFilterRuntime:
         self.model = model
         self.temperature = temperature
         self.state: Optional[HSMMRuntimeState] = None
+        self._uses_external_context: Optional[bool] = None
         self._score_cache = _RuntimeScoreCache()
 
     def reset(self) -> None:
         self.state = None
+        self._uses_external_context = None
 
     @torch.inference_mode()
     def forecast_survival(self, horizons: HorizonInput) -> HSMMSurvivalForecast:
@@ -318,6 +321,7 @@ class HSMMFilterRuntime:
         self,
         observation: torch.Tensor,
         *,
+        context: Optional[torch.Tensor] = None,
         timestamp: Optional[Any] = None,
     ) -> HSMMFilterState:
         _validate_model(self.model)
@@ -330,8 +334,67 @@ class HSMMFilterRuntime:
             dtype=self.model.duration_logits_bias.dtype,
         )
         encoder = _stream_encoder(self.model)
+        uses_external_context = context is not None
+        if self._uses_external_context is None:
+            self._uses_external_context = uses_external_context
+        elif uses_external_context != self._uses_external_context:
+            raise ValueError(
+                "context mode is fixed at initialization; reset before changing "
+                "between internal and external context"
+            )
+
+        external_context = None
+        if uses_external_context:
+            external_context = align_context_tensor(
+                context,
+                batch_size=obs.shape[0],
+                timesteps=1,
+                context_dim=int(self.model.context_dim),
+                device=obs.device,
+                dtype=obs.dtype,
+            )
 
         if self.state is None:
+            if external_context is not None:
+                emission = _emission_log_prob(
+                    self.model,
+                    obs,
+                    external_context,
+                    self._score_cache,
+                )
+                B = external_context.shape[0]
+                K = int(self.model.config.n_states)
+                initial = self.model.dist.initial.log_matrix(
+                    context=external_context,
+                    temperature=self.temperature,
+                    T=1,
+                )
+                if initial.shape != (B, 1, K):
+                    raise ValueError(
+                        f"initial logits must be {(B, 1, K)}, got {initial.shape}"
+                    )
+                filter_state = initialize_filter(
+                    initial[:, 0],
+                    emission,
+                    int(self.model.dist.duration.max_duration),
+                )
+                duration, transition = _boundary_scores(
+                    self.model,
+                    external_context,
+                    temperature=self.temperature,
+                    cache=self._score_cache,
+                )
+                self.state = HSMMRuntimeState(
+                    filter_state=filter_state,
+                    observations=obs.clone(),
+                    duration_log_prob=duration,
+                    transition_log_prob=transition,
+                    encoder_state=None,
+                    last_timestamp=timestamp,
+                    uses_timestamps=timestamp is not None,
+                )
+                return filter_state
+
             if encoder is not None:
                 encoder_state = encoder.initial_stream_state(
                     obs.shape[0],
@@ -432,6 +495,36 @@ class HSMMFilterRuntime:
         if obs.shape[0] != previous.observations.shape[0]:
             raise ValueError("streaming batch size cannot change without reset")
         _require_compatible(previous.observations, obs, "observation")
+
+        if external_context is not None:
+            emission = _emission_log_prob(
+                self.model,
+                obs,
+                external_context,
+                self._score_cache,
+            )
+            filter_state = _filter_step_normalized(
+                previous.filter_state,
+                emission,
+                previous.duration_log_prob,
+                previous.transition_log_prob,
+            )
+            duration, transition = _boundary_scores(
+                self.model,
+                external_context,
+                temperature=self.temperature,
+                cache=self._score_cache,
+            )
+            self.state = HSMMRuntimeState(
+                filter_state=filter_state,
+                observations=obs.clone(),
+                duration_log_prob=duration,
+                transition_log_prob=transition,
+                encoder_state=None,
+                last_timestamp=timestamp if previous.uses_timestamps else None,
+                uses_timestamps=previous.uses_timestamps,
+            )
+            return filter_state
 
         if previous.encoder_state is not None:
             if encoder is None:

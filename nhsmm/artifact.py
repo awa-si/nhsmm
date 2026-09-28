@@ -140,8 +140,18 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
         raise ValueError("encoder causal mode does not match ModelConfig")
     if bool(encoder_meta["bidirectional"]) != (not config.causal):
         raise ValueError("encoder directionality does not match ModelConfig.causal")
-    if config.hidden_dim is None or int(encoder_meta["hidden_dim"]) != config.hidden_dim:
-        raise ValueError("encoder hidden_dim does not match resolved ModelConfig.hidden_dim")
+    encoder_output_dim = int(encoder_meta["hidden_dim"]) * (
+        2 if bool(encoder_meta["bidirectional"]) else 1
+    )
+    if (
+        config.hidden_dim is None
+        or config.context_dim is None
+        or config.hidden_dim != config.context_dim
+        or encoder_output_dim != config.context_dim
+    ):
+        raise ValueError(
+            "encoder output dimension does not match resolved ModelConfig context dimension"
+        )
 
     state_dict = _require_mapping(payload["state_dict"], "state_dict")
     if not state_dict:
