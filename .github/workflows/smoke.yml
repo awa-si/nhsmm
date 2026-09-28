@@ -115,5 +115,3 @@ jobs:
           path: smoke-logs/
           if-no-files-found: warn
           retention-days: 14
-
-# pre-CI gate trigger
