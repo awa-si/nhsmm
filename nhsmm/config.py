@@ -35,7 +35,7 @@ class ModelConfig:
     # -----------------------------
     # Encoder
     # -----------------------------
-    n_heads: int = 3
+    n_heads: int = 4
     cnn_kernel: int = 3
     cnn_channels: int = 5
     dropout: float = 0.05
@@ -50,7 +50,7 @@ class ModelConfig:
     max_duration: int = 35
     min_covar: float = 1e-6
     temperature: float = 1.0
-    emission_init_mode: Literal["randome", "spread", "kmeans"] = "spread"
+    emission_init_mode: Literal["random", "randome", "spread", "kmeans"] = "spread"
     initial_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     duration_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     transition_init_mode: Literal["normal", "biased", "uniform"] = "normal"
@@ -82,4 +82,42 @@ class ModelConfig:
     convergence_mode: Literal["delta", "plateau"] = "plateau"
     verbose: bool = True
 
+    def __post_init__(self) -> None:
+        integer_minimums = {
+            "n_states": (self.n_states, 1),
+            "n_features": (self.n_features, 1),
+            "n_heads": (self.n_heads, 1),
+            "cnn_kernel": (self.cnn_kernel, 1),
+            "cnn_channels": (self.cnn_channels, 1),
+            "max_duration": (self.max_duration, 1),
+            "n_init": (self.n_init, 1),
+            "max_iter": (self.max_iter, 1),
+            "plateau_window": (self.plateau_window, 1),
+            "transition_refine_steps": (self.transition_refine_steps, 0),
+        }
+        for name, (value, minimum) in integer_minimums.items():
+            if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+                raise ValueError(f"{name} must be an integer >= {minimum}")
 
+        for name, value in (("hidden_dim", self.hidden_dim), ("context_dim", self.context_dim)):
+            if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value < 1):
+                raise ValueError(f"{name} must be None or an integer >= 1")
+
+        if not 0.0 <= self.dropout < 1.0:
+            raise ValueError("dropout must satisfy 0 <= dropout < 1")
+        for name, value in (
+            ("min_covar", self.min_covar),
+            ("temperature", self.temperature),
+            ("lr", self.lr),
+            ("transition_refine_lr", self.transition_refine_lr),
+        ):
+            if value <= 0.0:
+                raise ValueError(f"{name} must be > 0")
+        for name, value in (
+            ("transition_context_max_delta", self.transition_context_max_delta),
+            ("tol", self.tol),
+            ("loss_bias", self.loss_bias),
+            ("plateau_tol", self.plateau_tol),
+        ):
+            if value < 0.0:
+                raise ValueError(f"{name} must be >= 0")
