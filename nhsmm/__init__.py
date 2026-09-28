@@ -5,6 +5,8 @@ from .models import NHSMM, DistributionSet
 from .inference import load_inference_model, prepare_inference
 from .artifact import build_artifact, load_artifact, save_artifact
 from .benchmark import benchmark_cpu_runtime
+from .filtering import HSMMFilterState
+from .runtime import HSMMFilterRuntime, HSMMRuntimeState
 from .validation import (
     ContextComponent,
     ContextEvidence,
@@ -35,6 +37,9 @@ __all__ = [
     'DefaultEncoder',
     'Convergence',
     'NHSMM',
+    'HSMMFilterState',
+    'HSMMFilterRuntime',
+    'HSMMRuntimeState',
     'load_inference_model',
     'prepare_inference',
     'build_artifact',
