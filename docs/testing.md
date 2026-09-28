@@ -74,4 +74,4 @@ Latency and Python-allocation measurements use separate passes; `tracemalloc` is
 
 ## Integration smoke
 
-`.github/workflows/smoke.yml` is a clean-runner integration diagnostic. Routine edit/test work is local; GitHub Actions is not the edit/test loop.
+`.github/workflows/smoke.yml` is a clean-runner integration diagnostic started manually with `workflow_dispatch`. Run the local/focused checks first and use the smoke workflow after the relevant local gate is green. Routine edit/test work remains local; GitHub Actions is not the primary edit/test loop.
