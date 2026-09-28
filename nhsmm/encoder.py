@@ -8,8 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as nnF
 
-from nhsmm.config import logger
-
 
 @dataclass(frozen=True)
 class DefaultEncoderStreamState:
@@ -255,7 +253,7 @@ class DefaultEncoder(nn.Module):
 
         # canonicalize mask
         if mask is not None:
-            mask = mask.bool()
+            mask = mask.to(device=x.device, dtype=torch.bool)
             if mask.ndim == 1:
                 mask = mask.unsqueeze(0).expand(B, -1)
             elif mask.shape[0] == 1 and B > 1:
