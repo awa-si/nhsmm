@@ -1,9 +1,6 @@
 name: NHSMM smoke
 
 on:
-  push:
-    branches:
-      - develop
   workflow_dispatch:
 
 permissions:
