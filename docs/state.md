@@ -4,9 +4,9 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 
 ## Current status
 
-**Phase:** package-core mechanism research, universal validation API translation, and packaging verification are complete.
+**Phase:** package-core mechanism research, universal validation API translation, packaging verification, repository/GitHub cleanup, full local regression, and first code-scan hardening are complete.
 
-**Saved snapshot:** 2026-09-28 after normalized-public-API functional/stress validation and successful package build/install dry-run.
+**Saved snapshot:** 2026-09-28 after code scan, behavior-preserving context/device hardening, and full local regression.
 
 - **Duration context:** PASS.
 - **Latent-state recovery:** PASS.
@@ -17,10 +17,11 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Normalized public facade:** canonical `component=` API implemented for extraction, replica evaluation, and split-fit evidence; component-specific helpers remain behavior-compatible.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
+- **Full local repository regression after latest hardening:** 99 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner — sdist + wheel build, `twine check`, clean-venv wheel install, installed-package public-API smoke, and artifact upload all succeeded.
 - **Production release workflow:** `.github/workflows/release.yml` is present; manual runs are build/install dry-runs only, while PyPI publication is restricted to pushed `v*` tags.
 
-The next package boundary is a complete-package regression run plus release gating. Downstream Nautilus integration remains a separate empirical validation boundary.
+The next package boundary is no longer generic regression or API expansion. The user has selected a concrete maintenance slice: **raise the Python baseline to 3.12 and close the P0/P1 bugs discovered by the repository code scan**. Downstream Nautilus integration remains a separate empirical validation boundary.
 
 ## Accepted package-core evidence
 
@@ -131,9 +132,46 @@ Python-tracked peak memory=53.47 MiB
 
 Persistent stress record: [`validation/public-api-stress-2026-09-28.md`](validation/public-api-stress-2026-09-28.md).
 
+## Repository code scan / hardening
+
+Full scan record: [`validation/code-scan-2026-09-28.md`](validation/code-scan-2026-09-28.md).
+
+Safe behavior-preserving hardening already applied:
+
+- ContextEncoder/ContextRouter/SequenceSet helper tensors follow active device placement;
+- mask/index/padding tensors are device-safe;
+- lazy attention/MHA modules are created on active device/dtype;
+- temporary pooling overrides restore previous state on exceptions;
+- unused encoder logger import removed;
+- focused regression tests added in `tests/test_context_hardening.py`.
+
+Verification after these changes:
+
+```text
+99 passed, 3 skipped
+```
+
+The three skips require CUDA and were run on a CPU-only local runtime.
+
+### Open scan findings selected for next slice
+
+P0:
+
+1. Python packaging metadata still claims `>=3.9` while source uses syntax requiring newer Python. **User decision: baseline becomes Python 3.12.**
+2. `SequenceDataset(variable_length=True)` has an X/C/state sequence-contract mismatch.
+3. lazy `attn`/`mha` training lifecycle can recreate trainable parameters after optimizer/snapshot construction because `ContextEncoder.reset()` clears parameterized pooling objects.
+
+P1:
+
+4. 2-D external-context interpretation is ambiguous/inconsistent across ContextRouter and NHSMM `_build_sequence_set()`.
+5. ModelConfig lacks early validation for invalid dimensions/iterations/learning rates and related bounds.
+6. `nhsmm/data.py` still contains a Freqtrade-specific loader and likely owns the otherwise unnecessary `polars` runtime dependency; review its public use before relocation/removal.
+
+See `docs/handoff.md` for the ordered next-chat execution plan and lower-priority findings.
+
 ## Packaging / PyPI readiness
 
-Packaging contract:
+Packaging contract currently recorded in `pyproject.toml`:
 
 - project name: `nhsmm`;
 - PEP 517 backend: `setuptools.build_meta`;
@@ -143,6 +181,8 @@ Packaging contract:
 - runtime version: `importlib.metadata.version("nhsmm")`;
 - release workflow: `.github/workflows/release.yml`;
 - target: existing PyPI project `nhsmm`.
+
+**Important:** the Python support metadata has not yet been bumped to 3.12. That is the first task in the next maintenance slice.
 
 ### Verified release dry-run — 2026-09-28
 
@@ -174,8 +214,6 @@ The temporary push-trigger workflow used to force this verification from the con
 
 ### Remaining release setup
 
-One external setup item remains before production publishing:
-
 Configure PyPI Trusted Publishing for:
 
 ```text
@@ -191,18 +229,43 @@ No production release tag has been created by this packaging pass.
 
 See [`release.md`](release.md).
 
-## Verification limits
+## CI status and limits
 
-The packaging path has now been verified from a complete GitHub checkout and clean wheel-install environment. The broad complete-repository pytest suite still needs a fresh final run against the intended release commit after the recent validation/API work.
+An earlier GitHub smoke run was green before the latest code-scan hardening:
 
-Packaging CI evidence is release verification only; routine model/research development remains local-first and does not rely on CI.
+```text
+run: 36392227850
+pytest: 96 passed
+runtime benchmark: PASS
+```
+
+The later hardening has local full-suite evidence (`99 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
 
 ## Package boundary / next slice
 
-1. Run the complete discovered pytest suite against current `develop` from a complete checkout.
-2. Fix only regressions actually exposed by that run; preserve accepted probabilistic and validation semantics.
-3. Confirm PyPI Trusted Publisher + GitHub `pypi` environment.
-4. Choose the next release version/tag only after full regression is green.
-5. Run the canonical release workflow manually once more if the release commit changes materially.
-6. Create the release tag; the tag-triggered workflow must rebuild, verify tag/version equality, and publish the exact verified distributions.
-7. Treat downstream Nautilus integration as a separate empirical validation task.
+Proceed in this order:
+
+1. Raise supported Python baseline to **3.12** across `pyproject.toml`, tooling targets, workflows, and version references in docs.
+2. Fix `SequenceDataset(variable_length=True)` and add focused tests.
+3. Fix `attn`/`mha` trainable lifecycle so optimizer/state snapshots include the pooling parameters.
+4. Resolve 2-D external-context semantics and add explicit shape tests.
+5. Add early ModelConfig validation.
+6. Review `nhsmm/data.py` / `polars` package-core ownership without silently breaking public consumers.
+7. Run focused tests.
+8. Run complete local pytest; require green before CI.
+9. Run manual smoke/package-validation CI only after local green.
+10. Re-run packaging build/install verification under Python 3.12.
+11. Update state/handoff and only then return to release/tagging or downstream Nautilus empirical evaluation.
+
+## Semantic constraints
+
+Preserve unless explicitly justified by new research:
+
+- causal boundary `t-1 -> t` uses only information from `F_{t-1}`; `x_t` enters only through emission after propagation;
+- explicit-duration HSMM semantics remain intact;
+- validation remains separate from `NHSMM.optimize()`;
+- validation thresholds remain explicit policy, not package-core defaults;
+- state alignment uses learned emission centers, not latent truth;
+- duration evidence includes `duration_logits_bias`;
+- no Nautilus/trading assumptions inside NHSMM package-core validation;
+- frozen detector thresholds are not retuned on confirmatory blocks.
