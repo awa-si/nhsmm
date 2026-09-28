@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible package, inference, runtime, or API defect.
+title: "[bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please provide a minimal reproduction. For security-sensitive issues, follow `.github/SECURITY.md` instead of filing a public issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: NHSMM version or commit
+      description: Installed package version, Git tag, or commit SHA.
+      placeholder: "0.x.y / v0.x.y / commit SHA"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, operating system, and relevant torch/device details.
+      placeholder: "Python 3.11, Ubuntu 24.04, torch 2.x, CPU"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest code or commands that reproduce the issue.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the full exception or relevant output when possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Shapes, configuration, artifact metadata, benchmark setup, or other details that may matter.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I checked the current README and documentation for the behavior I am reporting.
+          required: true
+        - label: This report does not contain an unpatched security vulnerability.
+          required: true
