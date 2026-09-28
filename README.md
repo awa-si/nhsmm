@@ -88,6 +88,20 @@ nhsmm/
 └── validation/        # context-effect validation API
 ```
 
+## Interfaces and integration contracts
+
+Domain-facing integration contracts are maintained separately in [`awa-si/nhsmm-interfaces`](https://github.com/awa-si/nhsmm-interfaces).
+
+`nhsmm` is the core modeling, inference, training, filtering, runtime, and artifact package. `nhsmm-interfaces` is the contract layer used to connect domain-specific systems to the NHSMM core without coupling application semantics to internal model implementation details.
+
+```text
+domain systems
+    |
+nhsmm-interfaces
+    |
+nhsmm core
+```
+
 ## Causal and retrospective paths
 
 `ModelConfig(causal=True)` enables the causal encoder/runtime path. The filter state is represented over `(latent_state, episode_age)` and does not consume future observations.
