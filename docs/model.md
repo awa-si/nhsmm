@@ -46,7 +46,7 @@ Retrospective/non-causal segment inference is a separate path and must not be in
 
 ## Inference and artifacts
 
-Production inference preparation requires initialized finite parameters, switches to eval mode, and freezes parameters by default. Strict state loading is required.
+Inference preparation requires initialized finite parameters, switches to eval mode, and freezes parameters by default. Strict state loading is required.
 
 Artifact v1 persists resolved `ModelConfig`, canonical encoder metadata, schema/mode metadata, and the complete model/distribution `state_dict`. Loading is fail-closed for unsupported or incompatible artifacts.
 
