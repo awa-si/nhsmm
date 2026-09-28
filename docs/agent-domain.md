@@ -4,7 +4,7 @@ mode: normative_machine_directives
 
 project:
 - package: nhsmm
-- language: Python>=3.9
+- language: Python>=3.12
 - framework: PyTorch
 - type: neural_probabilistic_sequence_modeling_library
 - maturity: pre_1_0_research
