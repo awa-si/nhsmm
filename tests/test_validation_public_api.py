@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import copy
-
 import numpy as np
 import pytest
 
@@ -42,6 +40,13 @@ def _model(seed: int = 1) -> NHSMM:
     return model
 
 
+def _clone_model(model: NHSMM) -> NHSMM:
+    clone = _model(seed=model.config.seed)
+    clone.load_state_dict(model.state_dict())
+    clone.train(model.training)
+    return clone
+
+
 def _policy() -> ContextEvidenceConfig:
     return ContextEvidenceConfig(replication_corr_min=-1.0, min_replica_amplitude=0.0)
 
@@ -62,7 +67,7 @@ def test_context_effect_dispatch_matches_component_helpers() -> None:
 
 def test_replication_dispatch_matches_component_helpers() -> None:
     a = _model(seed=3)
-    b = copy.deepcopy(a)
+    b = _clone_model(a)
     contexts = [[-1.0, -1.0], [0.0, 0.0], [1.0, 1.0]]
     specialized = {
         "initial": evaluate_initial_context_replication(a, b, contexts, config=_policy()),
@@ -83,7 +88,7 @@ def test_split_fit_dispatch_preserves_replica_contract() -> None:
 
     def fit_model(x, c, replica_index):
         seen.append((len(x), len(c), replica_index))
-        return copy.deepcopy(template)
+        return _clone_model(template)
 
     result = split_fit_context_effect_evidence(
         np.zeros((4, 2, 2)),
