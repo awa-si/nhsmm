@@ -226,7 +226,7 @@ Review after P0/P1:
 
 ## Next-chat execution order
 
-1. Read `agent.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.
+1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.
 2. Resolve current `develop` head before editing.
 3. Bump Python baseline to **3.12** across package metadata/tooling/workflows/docs.
 4. Fix `SequenceDataset(variable_length=True)` with focused tests.
@@ -253,7 +253,7 @@ Review after P0/P1:
 
 Read first:
 
-- `agent.md`
+- `AGENTS.md`
 - `docs/state.md`
 - `docs/handoff.md`
 - `docs/validation/code-scan-2026-09-28.md`
