@@ -25,7 +25,7 @@ agent_content_policy:
 - load_helpers: only_when_material_to_task
 
 control_plane:
-- inherit: awa-si/admin/instructions.txt|awa-si/admin/workflow.md|awa-si/admin/coding.md_when_applicable|awa-si/admin/mcp.md_when_applicable|awa-si/admin/projects/nhsmm/instructions.txt|awa-si/admin/projects/nhsmm/workflow.md
+- inherit: awa-si/admin/instructions.txt|awa-si/admin/workflow.md|awa-si/admin/coding.md_when_applicable|awa-si/admin/projects/nhsmm/instructions.txt|awa-si/admin/projects/nhsmm/workflow.md
 - repository_layer_position: after_applicable_admin_and_project_layers
 - global_precedence_and_tool_mechanics: do_not_redefine_here
 
