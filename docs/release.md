@@ -100,16 +100,17 @@ Pushing the tag starts `.github/workflows/release.yml`.
 
 The tag-triggered workflow:
 
-1. checks out full Git history/tags for `setuptools_scm`;
-2. builds sdist + wheel;
-3. runs `twine check`;
-4. installs the built wheel into a fresh venv;
-5. verifies the installed package version exactly equals the pushed tag without its `v` prefix;
-6. runs the installed-package public-API smoke;
-7. uploads the exact verified distributions as an artifact;
-8. publishes those same distributions to PyPI through Trusted Publishing.
+1. runs the complete pytest suite on Python 3.12;
+2. checks out full Git history/tags for `setuptools_scm`;
+3. builds sdist + wheel;
+4. runs `twine check`;
+5. installs the built wheel into a fresh venv;
+6. verifies the installed package version exactly equals the pushed tag without its `v` prefix;
+7. runs the installed-package public-API smoke;
+8. uploads the exact verified distributions as an artifact;
+9. publishes those same distributions to PyPI through Trusted Publishing.
 
-The publish job cannot run unless the build/verification job succeeds, and it is gated to `refs/tags/v*`.
+The build job cannot run unless the full test job succeeds. The publish job cannot run unless build/verification succeeds, and it is gated to `refs/tags/v*`.
 
 ## Versioning
 
