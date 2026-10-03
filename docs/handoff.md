@@ -101,7 +101,7 @@ pids=512
 tmp_mb=1024
 ```
 
-The 8 GiB storage profile is accepted by the current AWA runtime. For CPU-only verification, install the CPU PyTorch wheel before `pip install -e . --no-deps`; a generic editable install under Python 3.14 currently resolves the CUDA-enabled PyTorch stack and can exceed the 8 GiB retained-size guard.
+The 8 GiB storage profile is accepted by the current AWA runtime. CPU-only development now uses `python scripts/install_cpu_dev.py` inside the virtual environment; it installs the CPU PyTorch wheel first and then the normal editable `.[dev]` environment, preventing unnecessary CUDA dependency resolution.
 
 ## Packaging / PyPI
 
@@ -201,7 +201,7 @@ Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 5. Address the remaining P2 findings only as a coherent follow-on slice.
 6. Run focused tests.
 7. Run full local pytest; require green before CI.
-8. Use CPU-only PyTorch wheels in the AWA CPU workspace to avoid the CUDA dependency footprint.
+8. Use `scripts/install_cpu_dev.py` in the AWA CPU workspace to avoid the CUDA dependency footprint.
 9. Run manual smoke/package-validation CI only when material.
 10. Update `docs/state.md` and `docs/handoff.md` after verification.
 11. Then return to PyPI release/versioning or downstream Nautilus evaluation.

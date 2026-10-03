@@ -21,10 +21,12 @@ For a CPU-only AWA verification environment:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
-.venv/bin/python -m pip install numpy pytest pytest-cov
-.venv/bin/python -m pip install -e . --no-deps
+.venv/bin/python scripts/install_cpu_dev.py
 ```
+
+The bootstrap installs `torch>=2.2` from PyTorch's CPU wheel index first, then
+runs the normal editable `.[dev]` install. Because the Torch requirement is
+already satisfied, pip does not resolve the CUDA dependency set.
 
 ## Canonical suite
 

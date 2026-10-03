@@ -51,15 +51,12 @@ data = [
 ]
 test = [
     "pytest>=8.2",
-    "pytest-cov>=5.0",
 ]
 dev = [
     "black>=24.4",
     "build>=1.2",
     "mypy>=1.11",
-    "pre-commit>=3.7",
     "pytest>=8.2",
-    "pytest-cov>=5.0",
     "ruff>=0.6",
     "twine>=5.1",
 ]

@@ -40,6 +40,15 @@ cd nhsmm
 pip install -e ".[dev]"
 ```
 
+For CPU-only development, install through the repository bootstrap so pip does
+not resolve accelerator packages that are unnecessary on a CPU host:
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+python scripts/install_cpu_dev.py
+```
+
 Python 3.12+ is required by the current package metadata.
 
 ## Basic model usage
@@ -255,6 +264,9 @@ pytest -q
 ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 ```
+
+CPU-only hosts should use `python scripts/install_cpu_dev.py` inside an
+activated virtual environment before running the same checks.
 
 Tests live under `tests/`.
 
