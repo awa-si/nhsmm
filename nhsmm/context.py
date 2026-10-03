@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Optional, Literal, Tuple, Callable, Dict, Sequence, Union
 from dataclasses import dataclass, field
 import contextlib
+import inspect
 
 import torch
 import torch.nn as nn
@@ -82,15 +83,34 @@ class SequenceSet:
             raise ValueError("`sequences` must be a non-empty list of tensors.")
 
         B = len(sequences)
+        if contexts is not None and len(contexts) != B:
+            raise ValueError(
+                f"contexts length {len(contexts)} does not match sequences length {B}"
+            )
+        if log_probs is not None and len(log_probs) != B:
+            raise ValueError(
+                f"log_probs length {len(log_probs)} does not match sequences length {B}"
+            )
+
+        seq_tensors = [s if s.ndim > 1 else s.unsqueeze(-1) for s in sequences]
+        if any(t.ndim != 2 for t in seq_tensors):
+            raise ValueError("each sequence must be 1D or 2D")
+        feature_dim = seq_tensors[0].shape[1]
+        if any(t.shape[1] != feature_dim for t in seq_tensors):
+            raise ValueError("all sequences must have the same feature dimension")
+        if any(t.device != seq_tensors[0].device for t in seq_tensors):
+            raise ValueError("all sequences must be on the same device")
+        if any(t.dtype != seq_tensors[0].dtype for t in seq_tensors):
+            raise ValueError("all sequences must have the same dtype")
+
         lengths = torch.tensor(
             [s.shape[0] for s in sequences],
             dtype=torch.long,
             device=sequences[0].device,
         )
         T_max = max(s.shape[0] for s in sequences)
-        F = sequences[0].shape[1] if sequences[0].ndim > 1 else 1
+        F = feature_dim
 
-        seq_tensors = [s if s.ndim > 1 else s.unsqueeze(-1) for s in sequences]
         seq_tensor = pad_sequence(seq_tensors, batch_first=True, padding_value=pad_value)
         mask_tensor = (
             torch.arange(T_max, device=seq_tensor.device).expand(B, T_max)
@@ -99,10 +119,25 @@ class SequenceSet:
 
         ctx_dim = F
         if contexts is not None:
-            for c in contexts:
-                if c is not None:
-                    ctx_dim = c.shape[1] if c.ndim > 1 else 1
-                    break
+            context_tensors = [
+                c if c is None or c.ndim > 1 else c.unsqueeze(-1)
+                for c in contexts
+            ]
+            explicit_dims = {
+                c.shape[1]
+                for c in context_tensors
+                if c is not None
+            }
+            if len(explicit_dims) > 1:
+                raise ValueError("all explicit contexts must have the same feature dimension")
+            if explicit_dims:
+                ctx_dim = explicit_dims.pop()
+            if any(c is None for c in context_tensors) and ctx_dim != F:
+                raise ValueError(
+                    "None context fallback requires context dimension to match sequence feature dimension"
+                )
+        else:
+            context_tensors = None
         ctx_pad = context_pad_value if context_pad_value is not None else 0.0
         ctx_tensor = torch.full(
             (B, T_max, ctx_dim),
@@ -111,37 +146,60 @@ class SequenceSet:
             device=seq_tensor.device,
         )
 
-        if contexts is not None:
-            for i, c in enumerate(contexts):
+        if context_tensors is not None:
+            for i, c in enumerate(context_tensors):
                 L = int(lengths[i].item())
                 if c is None:
-                    ctx_tensor[i, :L, :F] = seq_tensor[i, :L]
-                else:
-                    c_ = c if c.ndim > 1 else c.unsqueeze(-1)
-                    if c_.shape[0] != L:
-                        raise ValueError(
-                            f"Context length {c_.shape[0]} does not match sequence length {L}"
-                        )
-                    ctx_tensor[i, :L, : c_.shape[1]] = c_
+                    ctx_tensor[i, :L] = seq_tensor[i, :L]
+                    continue
+                if c.ndim != 2:
+                    raise ValueError("each context must be 1D or 2D")
+                if c.shape[0] != L:
+                    raise ValueError(
+                        f"Context length {c.shape[0]} does not match sequence length {L}"
+                    )
+                if c.shape[1] != ctx_dim:
+                    raise ValueError(
+                        f"Context dimension {c.shape[1]} does not match expected {ctx_dim}"
+                    )
+                ctx_tensor[i, :L] = c.to(device=seq_tensor.device, dtype=seq_tensor.dtype)
         else:
             ctx_tensor[:, :, :F] = seq_tensor
 
         logp_tensor = None
         if log_probs is not None:
-            K = max(
-                lp.shape[1] if lp is not None and lp.ndim > 1 else 1
+            logp_tensors = [
+                lp if lp is None or lp.ndim > 1 else lp.unsqueeze(-1)
                 for lp in log_probs
-            )
+            ]
+            state_dims = {
+                lp.shape[1]
+                for lp in logp_tensors
+                if lp is not None
+            }
+            if len(state_dims) > 1:
+                raise ValueError("all log_probs must have the same state dimension")
+            K = state_dims.pop() if state_dims else 1
             logp_tensor = torch.full(
                 (B, T_max, K),
                 float("-inf"),
                 dtype=seq_tensor.dtype,
                 device=seq_tensor.device,
             )
-            for i, lp in enumerate(log_probs):
-                if lp is not None:
-                    lp_ = lp if lp.ndim > 1 else lp.unsqueeze(-1)
-                    logp_tensor[i, : lp_.shape[0], : lp_.shape[1]] = lp_
+            for i, lp in enumerate(logp_tensors):
+                if lp is None:
+                    continue
+                if lp.ndim != 2:
+                    raise ValueError("each log_probs tensor must be 1D or 2D")
+                L = int(lengths[i].item())
+                if lp.shape[0] != L:
+                    raise ValueError(
+                        f"log_probs length {lp.shape[0]} does not match sequence length {L}"
+                    )
+                logp_tensor[i, :L] = lp.to(
+                    device=seq_tensor.device,
+                    dtype=seq_tensor.dtype,
+                )
 
         denom = mask_tensor.sum(dim=1).clamp_min(1)
         canonical_tensor = (ctx_tensor * mask_tensor).sum(dim=1) / denom
@@ -208,30 +266,29 @@ class SequenceSet:
             out[i, : t_.shape[0], : t_.shape[1]] = t_
         return out
 
-    def update(self, encoder, pool: Optional[str] = None, detach: bool = False):
-        x = self.sequences
+    def update(
+        self,
+        encoder: "ContextEncoder",
+        pool: Optional[str] = None,
+        detach: bool = False,
+    ) -> None:
         mask = self.masks.squeeze(-1)
-        old_pool = encoder.pool
-        if pool is not None:
-            encoder.pool = pool
-        try:
-            with torch.no_grad() if detach else contextlib.nullcontext():
-                _, ctx, _ = encoder(
-                    x, mask=mask, return_context=True, return_sequence=False
-                )
-        finally:
-            if pool is not None:
-                encoder.pool = old_pool
+        with torch.no_grad() if detach else contextlib.nullcontext():
+            contexts, canonical = encoder.encode(
+                self.sequences,
+                mask=mask,
+                pool=pool,
+            )
 
-        if ctx.ndim == 2:
-            self.contexts = ctx.unsqueeze(1).expand(-1, x.shape[1], -1)
-        elif ctx.ndim == 3:
-            self.contexts = ctx
-        else:
-            raise ValueError(f"Unexpected context shape {ctx.shape}")
-        self.canonical = (
-            ctx.unsqueeze(1) if ctx.ndim == 2 else ctx.mean(dim=1, keepdim=True)
-        )
+        if contexts.ndim != 3 or contexts.shape[:2] != self.sequences.shape[:2]:
+            raise ValueError(
+                "encoder sequence context must match SequenceSet batch/time dimensions"
+            )
+        if canonical.ndim != 3 or canonical.shape[:2] != (self.n_sequences, 1):
+            raise ValueError("encoder canonical context must be [B,1,H]")
+
+        self.contexts = contexts
+        self.canonical = canonical
 
 
 @dataclass
@@ -265,6 +322,7 @@ class ContextRouter:
                 B, T, 1, dtype=torch.bool, device=self.context.device
             )
         else:
+            self.mask = self.mask.to(device=self.context.device, dtype=torch.bool)
             if self.mask.ndim == 2:
                 self.mask = self.mask.unsqueeze(-1)
             if self.mask.shape[0] != B:
@@ -274,8 +332,16 @@ class ContextRouter:
             if self.mask.shape[2] != 1:
                 raise ValueError(f"mask last dim must be 1, got {self.mask.shape[2]}")
 
-        if self.log_probs is not None and self.log_probs.shape[0] != B:
-            raise ValueError(f"log_probs batch mismatch: {self.log_probs.shape[0]} != {B}")
+        if self.log_probs is not None:
+            if self.log_probs.ndim != 3:
+                raise ValueError(
+                    f"log_probs must be [B,T,K], got {tuple(self.log_probs.shape)}"
+                )
+            if self.log_probs.shape[:2] != (B, T):
+                raise ValueError(
+                    "log_probs batch/time dimensions must match context: "
+                    f"{tuple(self.log_probs.shape[:2])} != {(B, T)}"
+                )
         self._cache.update({"B": B, "T": T, "H": H})
 
     @classmethod
@@ -473,7 +539,7 @@ class ContextEncoder(nn.Module):
     ) -> torch.BoolTensor:
         if mask is None:
             return torch.ones(B, T, dtype=torch.bool, device=device)
-        mask = mask.bool()
+        mask = mask.to(device=device, dtype=torch.bool)
         if mask.ndim == 1:
             mask = mask.unsqueeze(0).expand(B, -1)
         elif mask.ndim == 3:
@@ -576,11 +642,6 @@ class ContextEncoder(nn.Module):
 
     def _encoder_signature(self) -> Tuple[str, ...]:
         try:
-            return tuple(
-                p.name
-                for p in self.encoder.forward.__code__.co_varnames[
-                    : self.encoder.forward.__code__.co_argcount
-                ]
-            )
-        except Exception:
+            return tuple(inspect.signature(self.encoder.forward).parameters)
+        except (TypeError, ValueError):
             return tuple()

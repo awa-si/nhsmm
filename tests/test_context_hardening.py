@@ -4,7 +4,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from nhsmm.context import ContextEncoder, SequenceSet
+from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet
 
 
 class _IdentityEncoder(nn.Module):
@@ -52,3 +52,76 @@ def test_context_encoder_cuda_device_safety(pool: str) -> None:
     seq, canonical, _ = encoder(x, return_sequence=True, return_context=True)
     assert seq.device == device
     assert canonical is not None and canonical.device == device
+
+
+class _MaskAwareEncoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.mask = None
+
+    def forward(self, x, mask=None):
+        self.mask = mask
+        return x
+
+
+def test_context_encoder_forwards_supported_mask():
+    inner = _MaskAwareEncoder()
+    encoder = ContextEncoder(inner, layer_norm=False)
+    mask = torch.tensor([[True, True, False]])
+
+    encoder(torch.ones(1, 3, 1), mask=mask)
+
+    assert inner.mask is not None
+    assert torch.equal(inner.mask, mask)
+
+
+def test_sequence_update_preserves_temporal_context_shape():
+    sequence = SequenceSet.from_unbatched(
+        [torch.tensor([[1.0], [3.0]]), torch.tensor([[10.0]])]
+    )
+    encoder = ContextEncoder(_IdentityEncoder(), pool="mean", layer_norm=False)
+
+    sequence.update(encoder)
+
+    assert sequence.contexts.shape == sequence.sequences.shape
+    assert sequence.canonical.shape == (2, 1, 1)
+    assert torch.equal(sequence.contexts[1, :1], torch.tensor([[10.0]]))
+    assert sequence.contexts[1, 1:].eq(0).all()
+
+
+def test_sequence_set_rejects_incomplete_parallel_inputs():
+    sequences = [torch.ones(2, 1), torch.ones(2, 1)]
+
+    with pytest.raises(ValueError, match="contexts length"):
+        SequenceSet.from_unbatched(sequences, contexts=[torch.ones(2, 1)])
+
+    with pytest.raises(ValueError, match="log_probs length"):
+        SequenceSet.from_unbatched(sequences, log_probs=[torch.ones(2, 2)])
+
+
+def test_sequence_set_rejects_log_prob_time_mismatch():
+    with pytest.raises(ValueError, match="log_probs length"):
+        SequenceSet.from_unbatched(
+            [torch.ones(2, 1)],
+            log_probs=[torch.ones(3, 2)],
+        )
+
+
+def test_context_router_rejects_log_prob_time_mismatch():
+    with pytest.raises(ValueError, match="batch/time"):
+        ContextRouter(
+            context=torch.zeros(2, 3, 4),
+            canonical=torch.zeros(2, 1, 4),
+            log_probs=torch.zeros(2, 99, 5),
+        )
+
+
+def test_prepare_mask_normalizes_device_and_dtype():
+    encoder = ContextEncoder(_IdentityEncoder())
+    x = torch.ones(1, 3, 1)
+    mask = torch.tensor([[1, 1, 0]], dtype=torch.int64)
+
+    prepared = encoder._prepare_mask(mask, 1, 3, device=x.device)
+
+    assert prepared.dtype == torch.bool
+    assert prepared.device == x.device
