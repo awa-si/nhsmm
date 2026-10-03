@@ -15,7 +15,16 @@ pids = 512
 tmp_mb = 1024
 ```
 
-The 8 GiB storage allocation is required for PyTorch development installs plus the complete CPU pytest suite. AWA currently accepts this profile; do not reduce storage back to 4 GiB for full-suite verification.
+The 8 GiB storage allocation is sufficient for the complete CPU pytest suite when PyTorch is installed from the CPU wheel index. A generic `pip install -e .` under Python 3.14 currently resolves the CUDA-enabled PyTorch dependency set and can exceed the retained-size guard.
+
+For a CPU-only AWA verification environment:
+
+```bash
+python -m venv .venv
+.venv/bin/python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+.venv/bin/python -m pip install numpy pytest pytest-cov
+.venv/bin/python -m pip install -e . --no-deps
+```
 
 ## Canonical suite
 

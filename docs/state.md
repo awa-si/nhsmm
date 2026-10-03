@@ -6,7 +6,7 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 
 **Phase:** package-core mechanism research, context-effect validation API consolidation, packaging verification, repository/GitHub cleanup, full local regression, and first code-scan hardening are complete.
 
-**Saved snapshot:** 2026-09-28 after code scan, behavior-preserving context/device hardening, and full local regression.
+**Saved snapshot:** 2026-10-04 after code-scan fixes, context-invariant hardening, and full local regression.
 
 - **Duration context:** PASS.
 - **Latent-state recovery:** PASS.
@@ -17,12 +17,12 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
-- **Full local repository regression after latest cleanup:** 138 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
+- **Full local repository regression on current `develop`:** 144 passed, 3 skipped in 22.77 s. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner — sdist + wheel build, `twine check`, clean-venv wheel install, installed-package public-API smoke, and artifact upload all succeeded.
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
-- **AWA development workspace:** `workspace.ini` now allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp; the 8 GiB profile is accepted by the current AWA runtime and removes the previous PyTorch/full-suite 4 GiB storage bottleneck.
+- **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp. The full CPU suite is verified with the CPU-only PyTorch wheel; a generic `pip install -e .` under Python 3.14 currently resolves the CUDA-enabled PyTorch dependency set and can exceed the 8 GiB retained-size guard.
 
-The next package boundary is no longer generic regression or API expansion. The user has selected a concrete maintenance slice: **raise the Python baseline to 3.12 and close the P0/P1 bugs discovered by the repository code scan**. Downstream Nautilus integration remains a separate empirical validation boundary.
+The Python 3.12 baseline and the selected P0 code-scan fixes are complete. The next package boundary is the remaining API/semantic cleanup, starting with explicit 2-D context semantics. Downstream Nautilus integration remains a separate empirical validation boundary.
 
 ## Accepted package-core evidence
 
@@ -149,26 +149,27 @@ Safe behavior-preserving hardening already applied:
 Verification after these changes:
 
 ```text
-138 passed, 3 skipped
+144 passed, 3 skipped
 ```
 
 The three skips require CUDA and were run on a CPU-only local runtime.
 
-### Open scan findings selected for next slice
-
-P0:
-
-1. Python packaging metadata still claims `>=3.9` while source uses syntax requiring newer Python. **User decision: baseline becomes Python 3.12.**
-2. `SequenceDataset(variable_length=True)` has an X/C/state sequence-contract mismatch.
-3. lazy `attn`/`mha` training lifecycle can recreate trainable parameters after optimizer/snapshot construction because `ContextEncoder.reset()` clears parameterized pooling objects.
+### Remaining scan findings selected for next slice
 
 P1:
 
-4. 2-D external-context interpretation is ambiguous/inconsistent across ContextRouter and NHSMM `_build_sequence_set()`.
-5. ModelConfig lacks early validation for invalid dimensions/iterations/learning rates and related bounds.
-6. `nhsmm/data.py` still contains a Freqtrade-specific loader and likely owns the otherwise unnecessary `polars` runtime dependency; review its public use before relocation/removal.
+1. Unify explicit 2-D context semantics across `NHSMM._build_sequence_set()` and `ContextRouter.from_tensor()`, with an unambiguous `[T,H]` / `[B,H]` public contract.
+2. Define and enforce transition-refinement behavior when transition context is absent.
 
-See `docs/handoff.md` for the ordered next-chat execution plan and lower-priority findings.
+P2:
+
+3. Make base `DistributionSet` honor its injectable distribution factories or simplify the constructor contract.
+4. Decide whether `build_artifact()` should preserve model train/eval mode instead of preparing the supplied model for inference in place.
+5. Review ContextEncoder cache graph retention and remaining distribution/logging hygiene.
+
+Already resolved by the code-scan maintenance pass: Python 3.12 packaging/tooling alignment, variable-length dataset state alignment, learned attention/MHA restart lifecycle, core Polars optionalization, and public numeric `ModelConfig` validation.
+
+See `docs/validation/code-scan-2026-09-28.md` for the canonical scan status.
 
 ## Packaging / PyPI readiness
 
@@ -238,23 +239,22 @@ pytest: 96 passed
 runtime benchmark: PASS
 ```
 
-The later hardening has local full-suite evidence (`138 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
+The later hardening has local full-suite evidence (`144 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
 
 ## Package boundary / next slice
 
 Proceed in this order:
 
-1. Raise supported Python baseline to **3.12** across `pyproject.toml`, tooling targets, workflows, and version references in docs.
-2. Fix `SequenceDataset(variable_length=True)` and add focused tests.
-3. Fix `attn`/`mha` trainable lifecycle so optimizer/state snapshots include the pooling parameters.
-4. Resolve 2-D external-context semantics and add explicit shape tests.
-5. Add early ModelConfig validation.
-6. Review `nhsmm/data.py` / `polars` package-core ownership without silently breaking public consumers.
-7. Run focused tests.
-8. Run complete local pytest; require green before CI.
-9. Run manual smoke/package-validation CI only after local green.
-10. Re-run packaging build/install verification under Python 3.12.
-11. Update state/handoff and only then return to release/tagging or downstream Nautilus empirical evaluation.
+1. Resolve the 2-D external-context contract and add explicit shape/ambiguity tests.
+2. Define transition-refinement behavior without enabled/explicit context and add focused tests.
+3. Resolve the base `DistributionSet` injectable-factory contract.
+4. Decide and test artifact train/eval-mode semantics.
+5. Review ContextEncoder cache graph retention and remaining distribution/logging hygiene.
+6. Run focused tests.
+7. Run complete local pytest; require green before CI.
+8. Run manual smoke/package-validation CI only when material to the resulting change.
+9. Update state/handoff after verification.
+10. Return to release/tagging or downstream Nautilus empirical evaluation only after the selected package slice is closed.
 
 ## Semantic constraints
 

@@ -6,7 +6,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 
 - repository: `awa-si/nhsmm`
 - branch: `develop`
-- snapshot date: `2026-09-28`
+- snapshot date: `2026-10-04`
 - snapshot head before this handoff update: `7fa2462a12fb909c58ef8e4e3fd696843ffe2db7`
 
 ## Current state
@@ -71,10 +71,10 @@ runtime=22.421 s
 Python-tracked peak memory=53.47 MiB
 ```
 
-Full repository pre-CI regression after the latest context/device hardening:
+Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-138 passed, 3 skipped
+144 passed, 3 skipped in 22.77 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -101,7 +101,7 @@ pids=512
 tmp_mb=1024
 ```
 
-The 8 GiB storage profile has been accepted by the current AWA runtime. Use the repository profile for PyTorch installs and full-suite runs; the previous 4 GiB workspace ceiling is no longer the active constraint for this repository.
+The 8 GiB storage profile is accepted by the current AWA runtime. For CPU-only verification, install the CPU PyTorch wheel before `pip install -e . --no-deps`; a generic editable install under Python 3.14 currently resolves the CUDA-enabled PyTorch stack and can exceed the 8 GiB retained-size guard.
 
 ## Packaging / PyPI
 
@@ -171,87 +171,40 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding local full suite is `138 passed, 3 skipped`.
+The corresponding current local full suite is `144 passed, 3 skipped`.
 
-## IMPORTANT: requested next change is NOT done yet
+## Code-scan maintenance status
 
-The user explicitly requested:
+The previously selected Python/P0 maintenance work is complete:
 
-```text
-Bump Python to 3.12. Correct bugs.
-```
+- Python baseline/tooling/workflows are aligned to 3.12+.
+- `SequenceDataset(variable_length=True)` state alignment is fixed and regression-tested.
+- learned `attn` / `mha` pooling parameters survive reset/restarts and remain optimizer/state-dict members.
+- Polars is optional behind the `data` extra.
+- main public numeric `ModelConfig` bounds are validated early.
+- later context-invariant hardening in `e9169cb` preserves temporal encoder output, validates SequenceSet/ContextRouter shapes, forwards supported masks, and normalizes masks to the active device/bool dtype.
 
-That work was interrupted by this handoff request. Do **not** assume it has been applied.
+Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 
-Current package metadata still declares Python `>=3.9` and old Python classifiers. The next chat should deliberately move the supported baseline to Python 3.12 and align packaging/tool configuration/workflows/docs accordingly.
-
-## Open code-scan findings to fix next
-
-Priority order:
-
-### P0 — Python compatibility metadata
-
-Current source already uses syntax such as `A | B`, while `pyproject.toml` still claims Python `>=3.9`.
-
-User decision: **raise the project baseline to Python 3.12** rather than backport syntax.
-
-Next chat should update at least:
-
-- `project.requires-python` -> `>=3.12`
-- Python classifiers -> remove 3.9/3.10/3.11; retain/add supported modern versions as deliberately chosen
-- Black/Ruff/mypy target versions -> Python 3.12
-- GitHub workflows -> use Python 3.12 consistently unless a deliberate matrix is introduced
-- README/contributor/release docs if they state a Python version
-
-Then rebuild/install-test the wheel under Python 3.12.
-
-### P0 — `SequenceDataset(variable_length=True)` contract bug
-
-`generate_gaussian_sequence()` returns a single observation tensor. `SequenceDataset` wraps `X` and optional `C` as sequence lists for `variable_length=True`, but leaves `states` as one tensor. `__getitem__()` therefore returns a scalar state where `collate_fn()` expects a state sequence for `pad_sequence()`.
-
-Fix the data contract, add focused tests, and verify both context/no-context variable-length paths.
-
-Also review whether `nhsmm/data.py` should remain package-core at all; it still contains a Freqtrade-specific `load_dataframe()` helper and is the apparent reason `polars` is a runtime dependency. Do not remove or relocate it silently without checking public/import consumers.
-
-### P0 — lazy `attn` / `mha` training lifecycle
-
-`ContextEncoder.reset()` clears lazy attention/MHA modules. During optimize/restarts this can cause parameters to be recreated after optimizer construction, leaving those recreated parameters outside the optimizer and restart snapshots.
-
-Correct the lifecycle so trainable pooling parameters/modules are registered before optimizer construction and survive/reset only runtime caches, not model parameters. Add tests proving optimizer membership and restart/state-dict consistency for `pool="attn"` and `pool="mha"`.
-
-### P1 — 2-D context contract
-
-`ContextRouter` supports both `[T,H]` and `[B,H]`, while the normal NHSMM `_build_sequence_set()` 2-D context path effectively assumes `[T,H]` and broadcasts it across batch. Decide and enforce one unambiguous public contract with tests; avoid silent ambiguous broadcasting.
-
-### P1 — config validation
-
-Add early `ModelConfig` validation for invalid values such as zero/negative `n_states`, `n_features`, `max_duration`, `n_init`, `max_iter`, invalid learning rates/tolerances, etc., rather than failing later in training internals.
-
-### Lower-priority scan findings
-
-Review after P0/P1:
-
-- transition refinement should explicitly handle missing context
-- base `DistributionSet` constructor accepts injectable classes but currently instantiates canonical classes directly
-- `build_artifact()` calls inference preparation and can alter model mode; decide whether artifact creation should be side-effect-free
-- ContextEncoder caches may retain autograd graphs longer than necessary
-- a small number of broad exceptions/assert-based runtime checks remain
-- dead imports in `distributions/default.py` were observed previously; only remove after current-state proof
+- P1: unify explicit 2-D `[T,H]` / `[B,H]` context semantics.
+- P1: define transition-refinement behavior when context is absent.
+- P2: resolve base `DistributionSet` injectable-factory semantics.
+- P2: decide whether artifact construction preserves model train/eval mode.
+- P2: review ContextEncoder cache graph retention and remaining distribution/logging hygiene.
 
 ## Next-chat execution order
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.
 2. Resolve current `develop` head before editing.
-3. Bump Python baseline to **3.12** across package metadata/tooling/workflows/docs.
-4. Fix `SequenceDataset(variable_length=True)` with focused tests.
-5. Fix lazy `attn`/`mha` lifecycle with optimizer/state/restart tests.
-6. Resolve the 2-D context contract and add tests.
-7. Add `ModelConfig` validation.
-8. Run focused tests.
-9. Run full local pytest; require green before CI.
-10. If local green, run the manual smoke/package validation CI as appropriate.
-11. Update `docs/state.md`, `docs/handoff.md`, and code-scan status after verification.
-12. Only after package bugs are closed return to PyPI release/versioning or downstream Nautilus evaluation.
+3. Resolve the 2-D external-context contract and add explicit tests.
+4. Define transition-refinement behavior without enabled/explicit context.
+5. Address the remaining P2 findings only as a coherent follow-on slice.
+6. Run focused tests.
+7. Run full local pytest; require green before CI.
+8. Use CPU-only PyTorch wheels in the AWA CPU workspace to avoid the CUDA dependency footprint.
+9. Run manual smoke/package-validation CI only when material.
+10. Update `docs/state.md` and `docs/handoff.md` after verification.
+11. Then return to PyPI release/versioning or downstream Nautilus evaluation.
 
 ## Semantic constraints to preserve
 
