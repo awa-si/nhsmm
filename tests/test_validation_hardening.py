@@ -7,11 +7,11 @@ import pytest
 
 from nhsmm.config import ModelConfig
 from nhsmm.models.base import NHSMM
-from nhsmm.validation import (
+from nhsmm.validation.context_evidence import (
     ContextEvidenceConfig,
     evaluate_context_replication,
-    transition_context_matrix,
 )
+from nhsmm.validation.nhsmm import transition_context_matrix
 
 
 @dataclass

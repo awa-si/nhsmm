@@ -23,12 +23,12 @@ from .state_effect import (
     split_fit_initial_context_evidence,
 )
 
-ContextComponent = Literal["initial", "duration", "emission", "transition"]
+ContextEffectComponent = Literal["initial", "duration", "emission", "transition"]
 
 _COMPONENTS = ("initial", "duration", "emission", "transition")
 
 
-def _component_name(component: str) -> ContextComponent:
+def _component_name(component: str) -> ContextEffectComponent:
     if component not in _COMPONENTS:
         allowed = ", ".join(_COMPONENTS)
         raise ValueError(f"unknown context component {component!r}; expected one of: {allowed}")
@@ -39,7 +39,7 @@ def context_effect(
     model: Any,
     context: Any,
     *,
-    component: ContextComponent,
+    component: ContextEffectComponent,
 ) -> np.ndarray:
     """Return the semantic context-conditioned effect for one NHSMM component.
 
@@ -65,7 +65,7 @@ def evaluate_context_effect_replication(
     model_b: Any,
     contexts: Iterable[Any],
     *,
-    component: ContextComponent,
+    component: ContextEffectComponent,
     config: ContextEvidenceConfig,
 ) -> ContextEvidence:
     """Evaluate replicated context effects through one component-normalized API."""
@@ -83,7 +83,7 @@ def split_fit_context_effect_evidence(
     observations: Any,
     context: Any,
     *,
-    component: ContextComponent,
+    component: ContextEffectComponent,
     fit_model: Callable[[Any, Any, int], Any],
     evidence_contexts: Iterable[Any],
     config: ContextEvidenceConfig,

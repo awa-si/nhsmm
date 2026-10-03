@@ -4,7 +4,7 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 
 ## Current status
 
-**Phase:** package-core mechanism research, universal validation API translation, packaging verification, repository/GitHub cleanup, full local regression, and first code-scan hardening are complete.
+**Phase:** package-core mechanism research, context-effect validation API consolidation, packaging verification, repository/GitHub cleanup, full local regression, and first code-scan hardening are complete.
 
 **Saved snapshot:** 2026-09-28 after code scan, behavior-preserving context/device hardening, and full local regression.
 
@@ -13,8 +13,8 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Transition context:** PASS.
 - **Multi-component identifiability:** PACKAGE-CORE PASS across the frozen 15-seed A/B/C/D gate.
 - **General-context robustness:** PACKAGE-CORE PASS using split-fit direction replication.
-- **Universal validation API:** initial, duration, emission, transition, and arbitrary state-indexed `[K,...]` context effects are supported without Nautilus/trading dependencies and without changing `NHSMM.optimize()` semantics.
-- **Normalized public facade:** canonical `component=` API implemented for extraction, replica evaluation, and split-fit evidence; component-specific helpers remain behavior-compatible.
+- **Context-effect validation API:** initial, duration, emission, transition, and arbitrary state-indexed `[K,...]` context effects are supported without Nautilus/trading dependencies and without changing `NHSMM.optimize()` semantics.
+- **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
 - **Full local repository regression after latest hardening:** 99 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
@@ -62,13 +62,13 @@ Rejected detector variants remain rejected and must not be revived by retuning o
 
 See [`validation/general-context-split-replication-confirm-2026-09-27.md`](validation/general-context-split-replication-confirm-2026-09-27.md).
 
-## Universal validation API
+## Context-effect validation API
 
 ### Canonical facade
 
 Normal callers should use:
 
-- `ContextComponent = Literal["initial", "duration", "emission", "transition"]`
+- `ContextEffectComponent = Literal["initial", "duration", "emission", "transition"]`
 - `context_effect(model, context, component=...)`
 - `evaluate_context_effect_replication(model_a, model_b, contexts, component=..., config=...)`
 - `split_fit_context_effect_evidence(observations, context, component=..., fit_model=..., evidence_contexts=..., config=...)`
@@ -86,7 +86,7 @@ Canonical semantic shapes:
 - `emission` -> `[K,F]` state-conditioned means;
 - `transition` -> `[K,K]` effective boundary-transition law.
 
-Existing component-specific helpers remain available as compatibility/advanced API.
+Component-specific helpers are internal implementation details behind the canonical component-selected validation API.
 
 Design rules:
 
@@ -114,7 +114,7 @@ Functional end-to-end smoke includes:
 
 - real NHSMM initialization;
 - all four normalized `component=` extraction paths;
-- equality to component-specific helpers;
+- correct component dispatch and semantic effect shapes;
 - replica-evidence dispatch;
 - split-fit dispatch;
 - real split-fit callbacks using `initialize_distributions()` + `NHSMM.optimize()` on disjoint halves.

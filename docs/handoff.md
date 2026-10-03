@@ -11,7 +11,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 
 ## Current state
 
-Package-core mechanism research, normalized universal validation API, stress validation, packaging dry-run, GitHub metadata cleanup, full local regression, and the first repository code-scan/hardening pass are complete.
+Package-core mechanism research, canonical context-effect validation API, stress validation, packaging dry-run, GitHub metadata cleanup, full local regression, and the first repository code-scan/hardening pass are complete.
 
 Do not reopen accepted detector tuning or change probabilistic semantics without new evidence.
 
@@ -220,7 +220,6 @@ Review after P0/P1:
 - base `DistributionSet` constructor accepts injectable classes but currently instantiates canonical classes directly
 - `build_artifact()` calls inference preparation and can alter model mode; decide whether artifact creation should be side-effect-free
 - ContextEncoder caches may retain autograd graphs longer than necessary
-- `emission_init_mode="randome"` is an old typo retained as compatibility behavior
 - a small number of broad exceptions/assert-based runtime checks remain
 - dead imports in `distributions/default.py` were observed previously; only remove after current-state proof
 

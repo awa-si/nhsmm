@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from nhsmm.validation import (
+from nhsmm.validation.context_evidence import (
     ContextEvidenceConfig,
     evaluate_context_replication,
-    split_fit_context_evidence,
 )
+from nhsmm.validation.split_fit import split_fit_context_evidence
 
 
 @dataclass

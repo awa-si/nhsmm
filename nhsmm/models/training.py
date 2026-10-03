@@ -231,8 +231,6 @@ class NHSMM(BaseNHSMM):
         if mode == "kmeans":
             self._initialize_emission_from_observations(observations)
         else:
-            if mode == "randome":
-                mode = "random"
             emission.initialize(mode=mode, context=None)
 
         with torch.no_grad():

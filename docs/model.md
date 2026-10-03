@@ -269,9 +269,9 @@ StateEstimate / downstream representation
 
 The interface repository owns host/domain contracts such as:
 
-- `UniversalAdapter`;
+- `Adapter`;
 - `NHSMMRuntimeAdapter`;
-- `ResearchAdapter`;
+- `StructuredEventAdapter`;
 - framework-specific adapters.
 
 The core repository should not absorb:

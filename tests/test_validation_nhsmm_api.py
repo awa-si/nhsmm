@@ -5,8 +5,8 @@ import torch
 
 from nhsmm.config import ModelConfig
 from nhsmm.models.base import NHSMM
-from nhsmm.validation import (
-    ContextEvidenceConfig,
+from nhsmm.validation import ContextEvidenceConfig
+from nhsmm.validation.nhsmm import (
     evaluate_transition_context_replication,
     split_fit_transition_context_evidence,
     transition_context_matrix,

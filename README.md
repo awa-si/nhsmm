@@ -180,9 +180,9 @@ NHSMM core
 `nhsmm-interfaces` provides:
 
 - canonical `Observation`, `Context`, and `StateEstimate` contracts;
-- `UniversalAdapter`;
+- `Adapter`;
 - `NHSMMRuntimeAdapter`;
-- domain/framework adapters such as `ResearchAdapter`;
+- domain/framework adapters such as `StructuredEventAdapter`;
 - integration guidance for systems such as Nautilus Trader and Freqtrade.
 
 The core package does not contain trading policy, medical/research workflow policy, execution logic, or other domain decisions.

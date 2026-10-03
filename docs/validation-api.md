@@ -27,7 +27,7 @@ The canonical operations are:
 - `evaluate_context_effect_replication(model_a, model_b, contexts, component=..., config=...)`
 - `split_fit_context_effect_evidence(observations, context, component=..., fit_model=..., evidence_contexts=..., config=...)`
 
-`ContextComponent` is exported as the corresponding typing alias.
+`ContextEffectComponent` is exported as the corresponding typing alias.
 
 Semantic effect shapes are stable by component:
 
@@ -74,31 +74,9 @@ Shared validation semantics are:
 
 Transition evidence retains its dedicated internal implementation because it has two latent-state axes and boundary semantics. The normalized facade hides that implementation distinction from normal callers.
 
-## Compatibility and advanced helpers
+## Internal implementation
 
-The earlier component-specific helpers remain available and behavior-compatible. They are useful for advanced consumers that need the component-specific representation directly:
-
-- `initial_context_tensor(...)`
-- `duration_context_tensor(...)`
-- `emission_context_tensor(...)`
-- `transition_context_matrix(...)`
-- `evaluate_initial_context_replication(...)`
-- `evaluate_duration_context_replication(...)`
-- `evaluate_emission_context_replication(...)`
-- `evaluate_transition_context_replication(...)`
-- corresponding `split_fit_*_context_evidence(...)` helpers.
-
-Lower-level generic machinery remains under `nhsmm.validation`:
-
-- `evaluate_state_context_replication(...)` for arbitrary `[K,...]` effects;
-- `split_fit_state_context_evidence(...)`;
-- `evaluate_context_replication(...)` for square transition-like effects;
-- `split_fit_context_evidence(...)`;
-- `align_state_centers(...)`;
-- `reorder_square_matrix(...)`.
-
-These are not required for the normal public workflow.
-
+Component-specific extraction and evidence helpers remain internal implementation details under `nhsmm.validation` modules. Application code should use the canonical component-selected facade above.
 ## Result objects
 
 `ContextEvidence` contains `selected`, `replication_corr`, `direction_agreement`, `replica_amplitudes`, `min_replica_amplitude`, `state_alignment`, and `n_contexts`.
