@@ -89,6 +89,20 @@ runtime benchmark: PASS
 
 Do not claim CI coverage of the later code-scan hardening until a new CI run is actually executed.
 
+## AWA workspace
+
+Canonical development resources are defined in `workspace.ini`:
+
+```text
+cpu=4
+memory_mb=8192
+storage_mb=8192
+pids=512
+tmp_mb=1024
+```
+
+The 8 GiB storage profile has been accepted by the current AWA runtime. Use the repository profile for PyTorch installs and full-suite runs; the previous 4 GiB workspace ceiling is no longer the active constraint for this repository.
+
 ## Packaging / PyPI
 
 Packaging dry-run is verified:

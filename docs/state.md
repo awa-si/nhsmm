@@ -20,6 +20,7 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Full local repository regression after latest cleanup:** 138 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner — sdist + wheel build, `twine check`, clean-venv wheel install, installed-package public-API smoke, and artifact upload all succeeded.
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
+- **AWA development workspace:** `workspace.ini` now allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp; the 8 GiB profile is accepted by the current AWA runtime and removes the previous PyTorch/full-suite 4 GiB storage bottleneck.
 
 The next package boundary is no longer generic regression or API expansion. The user has selected a concrete maintenance slice: **raise the Python baseline to 3.12 and close the P0/P1 bugs discovered by the repository code scan**. Downstream Nautilus integration remains a separate empirical validation boundary.
 

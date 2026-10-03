@@ -2,6 +2,21 @@
 
 The maintained automated contract is the pytest-discovered suite under `tests/`.
 
+## AWA workspace resources
+
+Repository workspace defaults are defined in `workspace.ini`:
+
+```ini
+[resources]
+cpu = 4
+memory_mb = 8192
+storage_mb = 8192
+pids = 512
+tmp_mb = 1024
+```
+
+The 8 GiB storage allocation is required for PyTorch development installs plus the complete CPU pytest suite. AWA currently accepts this profile; do not reduce storage back to 4 GiB for full-suite verification.
+
 ## Canonical suite
 
 ```bash
