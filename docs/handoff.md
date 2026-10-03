@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `3485072ad2c726253a93c5c9ac777ce5331971da`
+- base head for this handoff update: `0e6459b9ffce7e24155bcb9ba1026ad7d02de2b0`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-166 passed, 3 skipped in 40.99 s
+175 passed, 3 skipped in 37.25 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `166 passed, 3 skipped`.
+The corresponding current local full suite is `175 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -196,6 +196,18 @@ Default-distribution math/performance hardening is also complete:
 - batch sequence construction uses the specialized emission scorer instead of constructing full distribution objects.
 
 Measured CPU microbenchmarks showed about 12x lower Gaussian batch-emission scoring latency, about 2x lower Student-t batch-emission latency, and about 8x lower static transition-constraint cost for the tested shapes.
+
+DefaultEncoder audit/hardening is complete:
+
+- non-causal CNN output preserves sequence length for odd and even kernels;
+- masks are validated as right-padded sequence masks instead of silently accepting holes incompatible with packed recurrence;
+- empty mask rows no longer synthesize a fake valid timestep;
+- masked padding is zeroed before convolution so non-causal kernels cannot leak padding values into valid outputs;
+- masked output positions are zeroed consistently;
+- the private pooled-context cache is detached and no longer retains the latest autograd graph;
+- causal streaming parity remains covered by incremental-runtime tests.
+
+Canonical runtime benchmark on a temporary causal artifact (128 steps, 16 warmup, batch 1): p50 11.27 ms, p95 55.04 ms, mean 17.25 ms, bounded runtime state 151 tensor elements.
 
 Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 
