@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression after the latest context/device hardening:
 
 ```text
-99 passed, 3 skipped
+138 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -111,6 +111,7 @@ Canonical release workflow:
 
 ```text
 .github/workflows/release.yml
+full pytest -> build/verify -> tag-gated PyPI publish
 ```
 
 PyPI Trusted Publishing still requires one-time external setup for:
@@ -156,7 +157,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding local full suite is `99 passed, 3 skipped`.
+The corresponding local full suite is `138 passed, 3 skipped`.
 
 ## IMPORTANT: requested next change is NOT done yet
 

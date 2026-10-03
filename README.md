@@ -187,6 +187,12 @@ NHSMM core
 
 The core package does not contain trading policy, medical/research workflow policy, execution logic, or other domain decisions.
 
+### Cross-repository contract
+
+`awa-si/nhsmm` is the source of truth for model/runtime behavior, artifacts, filtering, forecasting, and context-effect validation. `awa-si/nhsmm-interfaces` is the source of truth for host/framework mapping, adapter lifecycle, and canonical `Observation`/`Context`/`StateEstimate` contracts.
+
+The interface repository must consume this package through public exports such as `HSMMFilterRuntime`, `load_artifact`, and the documented validation surface; it must not depend on model internals. Conversely, framework-specific adapter code does not belong in this core repository.
+
 ## Causal and retrospective paths
 
 `ModelConfig(causal=True)` enables the causal encoder/runtime path.

@@ -17,9 +17,9 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
-- **Full local repository regression after latest hardening:** 99 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
+- **Full local repository regression after latest cleanup:** 138 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner — sdist + wheel build, `twine check`, clean-venv wheel install, installed-package public-API smoke, and artifact upload all succeeded.
-- **Production release workflow:** `.github/workflows/release.yml` is present; manual runs are build/install dry-runs only, while PyPI publication is restricted to pushed `v*` tags.
+- **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
 
 The next package boundary is no longer generic regression or API expansion. The user has selected a concrete maintenance slice: **raise the Python baseline to 3.12 and close the P0/P1 bugs discovered by the repository code scan**. Downstream Nautilus integration remains a separate empirical validation boundary.
 
@@ -148,7 +148,7 @@ Safe behavior-preserving hardening already applied:
 Verification after these changes:
 
 ```text
-99 passed, 3 skipped
+138 passed, 3 skipped
 ```
 
 The three skips require CUDA and were run on a CPU-only local runtime.
@@ -181,8 +181,6 @@ Packaging contract currently recorded in `pyproject.toml`:
 - runtime version: `importlib.metadata.version("nhsmm")`;
 - release workflow: `.github/workflows/release.yml`;
 - target: existing PyPI project `nhsmm`.
-
-**Important:** the Python support metadata has not yet been bumped to 3.12. That is the first task in the next maintenance slice.
 
 ### Verified release dry-run — 2026-09-28
 
@@ -239,7 +237,7 @@ pytest: 96 passed
 runtime benchmark: PASS
 ```
 
-The later hardening has local full-suite evidence (`99 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
+The later hardening has local full-suite evidence (`138 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
 
 ## Package boundary / next slice
 

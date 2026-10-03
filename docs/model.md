@@ -267,6 +267,8 @@ HSMMFilterState
 StateEstimate / downstream representation
 ```
 
+The dependency direction is one-way: `nhsmm-interfaces` may depend on the public `nhsmm` package API; `nhsmm` must not depend on `nhsmm-interfaces` or any framework package.
+
 The interface repository owns host/domain contracts such as:
 
 - `Adapter`;
