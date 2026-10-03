@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
-from nhsmm.distributions.default import Categorical, Duration, Emission, Initial, Transition
+from nhsmm.distributions.default import (
+    Categorical,
+    Duration,
+    Emission,
+    IndependentStudentT,
+    Initial,
+    Transition,
+)
 
 
 def test_categorical_sampling_contracts() -> None:
@@ -40,7 +48,9 @@ def test_initial_emits_expected_state_axis() -> None:
 
 
 def test_duration_emits_normalized_duration_pmf_and_hard_support() -> None:
-    duration = Duration(n_states=2, activation="tanh", max_duration=4, context_dim=None, init_mode="uniform")
+    duration = Duration(
+        n_states=2, activation="tanh", max_duration=4, context_dim=None, init_mode="uniform"
+    )
     with torch.no_grad():
         duration.logits.copy_(torch.tensor([[4.0, 3.0, 2.0, 1.0], [1.0, 2.0, 3.0, 4.0]]))
 
@@ -59,7 +69,9 @@ def test_duration_emits_normalized_duration_pmf_and_hard_support() -> None:
 
 
 def test_duration_soft_gate_changes_duration_distribution() -> None:
-    duration = Duration(n_states=1, activation="tanh", max_duration=3, context_dim=None, init_mode="uniform")
+    duration = Duration(
+        n_states=1, activation="tanh", max_duration=3, context_dim=None, init_mode="uniform"
+    )
     with torch.no_grad():
         duration.logits.zero_()
 
@@ -84,11 +96,15 @@ def test_transition_emits_normalized_boundary_probabilities() -> None:
         init_mode="uniform",
     )
     with torch.no_grad():
-        transition.logits.copy_(torch.tensor([
-            [[3.0, 1.0, 0.0], [0.0, 1.0, 3.0]],
-            [[1.0, 3.0, 0.0], [1.0, 0.0, 3.0]],
-            [[0.0, 1.0, 3.0], [3.0, 1.0, 0.0]],
-        ]))
+        transition.logits.copy_(
+            torch.tensor(
+                [
+                    [[3.0, 1.0, 0.0], [0.0, 1.0, 3.0]],
+                    [[1.0, 3.0, 0.0], [1.0, 0.0, 3.0]],
+                    [[0.0, 1.0, 3.0], [3.0, 1.0, 0.0]],
+                ]
+            )
+        )
 
     logp = transition.log_matrix(T=4)
     assert logp.shape == (1, 4, 3, 2, 3)
@@ -209,3 +225,57 @@ def test_context_modulation_emits_expected_time_shapes() -> None:
 
     x = torch.randn(B, T, 2)
     assert emission.log_prob(x, context=context).shape == (B, T, 3)
+
+
+def test_emission_log_prob_rejects_non_finite_result() -> None:
+    emission = Emission(
+        n_states=2,
+        n_features=1,
+        activation="tanh",
+        emission_type="gaussian",
+        context_dim=None,
+    )
+
+    with pytest.raises(FloatingPointError, match="NaN/Inf in emission log-prob"):
+        emission.log_prob(torch.tensor([[[float("nan")]]]))
+
+
+def test_independent_student_t_respects_event_dim_contract() -> None:
+    loc = torch.zeros(2, 3)
+    scale = torch.ones(2, 3)
+    df = torch.full((2, 3), 5.0)
+    value = torch.tensor([[0.1, -0.2, 0.3], [0.4, -0.5, 0.6]])
+
+    dist = IndependentStudentT(loc=loc, scale=scale, df=df, event_dim=1)
+    reference = torch.distributions.Independent(
+        torch.distributions.StudentT(df=df, loc=loc, scale=scale),
+        1,
+    )
+
+    assert dist.batch_shape == torch.Size([2])
+    assert dist.event_shape == torch.Size([3])
+    assert torch.allclose(dist.log_prob(value), reference.log_prob(value))
+    assert torch.allclose(dist.entropy(), reference.entropy())
+
+    scalar_events = IndependentStudentT(loc=loc, scale=scale, df=df, event_dim=0)
+    assert scalar_events.batch_shape == torch.Size([2, 3])
+    assert scalar_events.event_shape == torch.Size()
+    assert scalar_events.log_prob(value).shape == (2, 3)
+
+
+def test_emission_grad_scale_is_applied_once() -> None:
+    torch.manual_seed(11)
+    emission = Emission(
+        n_states=3,
+        n_features=2,
+        activation="tanh",
+        emission_type="gaussian",
+        context_dim=2,
+    )
+    base = emission.base
+    context = torch.randn(1, 4, 2)
+
+    unscaled = emission._apply_context(base, context=context)
+    scaled = emission._apply_context(base, context=context, grad_scale=0.5)
+
+    assert torch.allclose(scaled, unscaled * 0.5, atol=1e-6, rtol=1e-6)

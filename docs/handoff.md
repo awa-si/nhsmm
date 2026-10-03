@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-144 passed, 3 skipped in 22.77 s
+147 passed, 3 skipped in 22.77 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `144 passed, 3 skipped`.
+The corresponding current local full suite is `147 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
