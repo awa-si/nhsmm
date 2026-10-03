@@ -77,6 +77,7 @@ Transition evidence retains its dedicated internal implementation because it has
 ## Internal implementation
 
 Component-specific extraction and evidence helpers remain internal implementation details under `nhsmm.validation` modules. Application code should use the canonical component-selected facade above.
+
 ## Result objects
 
 `ContextEvidence` contains `selected`, `replication_corr`, `direction_agreement`, `replica_amplitudes`, `min_replica_amplitude`, `state_alignment`, and `n_contexts`.
