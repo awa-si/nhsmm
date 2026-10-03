@@ -23,7 +23,7 @@ Let:
 
 ### Initial
 
-`Initial.log_matrix(...)` returns latent-state logits with canonical shape:
+`Initial.log_matrix(...)` returns normalized latent-state log probabilities with canonical shape:
 
 ```text
 [B, T, K]
@@ -31,7 +31,7 @@ Let:
 
 For a context-free distribution, singleton batch/time dimensions are introduced as needed.
 
-The last axis is the latent-state axis.
+The last axis is the latent-state axis. It is normalized with `log_softmax`, so adding a common offset to the underlying trainable logits does not change the initial-state distribution.
 
 ### Duration
 
@@ -122,7 +122,7 @@ Supported emission families:
 - diagonal Gaussian via `MultivariateNormal`
 - independent Student-t via `IndependentStudentT`
 
-Context modulation changes state-conditioned location parameters. Temperature is applied through the common modulation path and therefore affects context/base modulation consistently when supplied.
+Context modulation changes state-conditioned location parameters while preserving the learned absolute state locations. The context delta is centered across states so context does not introduce a shared location offset. Emission locations are not temperature-scaled; temperature applies to categorical logits.
 
 ## Context modulation
 
@@ -159,13 +159,13 @@ For non-causal retrospective inference, a separate explicitly documented segment
 
 ## Temperature
 
-Temperature scaling is applied to finite trainable/context-modulated parameters before structural hard masks are imposed. This ordering preserves exact `-inf` support for impossible durations/transitions.
+Temperature scaling applies to categorical state/duration/transition logits before structural hard masks are imposed. Emission location parameters are not temperature-scaled. This ordering preserves hard support for impossible durations/transitions.
 
 ## Numerical and support rules
 
 - Non-finite trainable/context-modulated parameters are rejected before normalization.
-- Structural impossibilities use `-inf`, not merely very negative finite logits.
-- Categorical probabilities are normalized over their declared final categorical axis.
+- Structural masks must leave at least one valid outcome per categorical row; impossible outcomes use the package negative-infinity sentinel.
+- Categorical probabilities are normalized over the final categorical axis; non-final category axes are rejected explicitly.
 - Context-free construction is supported.
 - `Categorical.rsample()` uses Gumbel-softmax and supports differentiable soft samples and straight-through hard samples.
 

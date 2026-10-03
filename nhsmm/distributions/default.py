@@ -29,15 +29,25 @@ class Categorical(Distribution):
         if (logits is None) == (probs is None):
             raise ValueError("Specify exactly one of logits or probs.")
 
-        self.dim = dim
+        reference = logits if logits is not None else probs
+        assert reference is not None
+        normalized_dim = dim if dim >= 0 else reference.ndim + dim
+        if normalized_dim != reference.ndim - 1:
+            raise ValueError("Categorical only supports the last dimension as the category axis")
+        self.dim = -1
         if logits is not None:
             self._logits = logits
             self._log_probs = nnF.log_softmax(logits, dim=dim)
             self._probs = self._log_probs.exp()
         else:
-            self._probs = probs / probs.sum(dim=dim, keepdim=True).clamp_min(EPS)
+            if not torch.isfinite(probs).all() or (probs < 0).any():
+                raise ValueError("probs must be finite and non-negative")
+            total = probs.sum(dim=-1, keepdim=True)
+            if (total <= 0).any():
+                raise ValueError("probs must have positive mass on every batch row")
+            self._probs = probs / total
             self._log_probs = self._probs.clamp_min(EPS).log()
-            self._logits = torch.log(self._probs)
+            self._logits = self._log_probs
 
     @property
     def logits(self):
@@ -77,12 +87,14 @@ class Categorical(Distribution):
 
     def log_prob(self, value: torch.Tensor):
         value = value.long()
-        dim = self.dim if self.dim >= 0 else self._log_probs.ndim + self.dim
-        return self._log_probs.gather(dim, value.unsqueeze(dim)).squeeze(dim)
+        log_probs = self._log_probs
+        while log_probs.ndim < value.ndim + 1:
+            log_probs = log_probs.unsqueeze(0)
+        log_probs = log_probs.expand(*value.shape, self._log_probs.shape[-1])
+        return log_probs.gather(-1, value.unsqueeze(-1)).squeeze(-1)
 
     def entropy(self):
-        p = self._probs.clamp_min(EPS)
-        return -(p * p.log()).sum(dim=self.dim)
+        return -(self._probs * self._log_probs).sum(dim=-1)
 
     def mode(self):
         return self._logits.argmax(dim=self.dim)
@@ -126,11 +138,20 @@ class IndependentStudentT(Distribution):
 
     @property
     def mean(self):
-        return self.loc
+        return torch.where(self.df > 1.0, self.loc, torch.full_like(self.loc, torch.nan))
 
     @property
     def variance(self):
-        return self.scale**2 * self.df / (self.df - 2)
+        finite = self.scale.square() * self.df / (self.df - 2.0)
+        return torch.where(
+            self.df > 2.0,
+            finite,
+            torch.where(
+                self.df > 1.0,
+                torch.full_like(finite, torch.inf),
+                torch.full_like(finite, torch.nan),
+            ),
+        )
 
     @property
     def stddev(self):
@@ -144,26 +165,45 @@ class IndependentStudentT(Distribution):
             return self.rsample(sample_shape)
 
     def log_prob(self, value):
-        logp = StudentT(df=self.df, loc=self.loc, scale=self.scale).log_prob(value)
+        t = (value - self.loc) / self.scale
+        df = self.df
+        logp = (
+            torch.lgamma((df + 1.0) / 2.0)
+            - torch.lgamma(df / 2.0)
+            - 0.5 * torch.log(df * torch.pi)
+            - torch.log(self.scale)
+            - ((df + 1.0) / 2.0) * torch.log1p(t.square() / df)
+        )
         if self.event_dim:
             dims = tuple(range(logp.ndim - self.event_dim, logp.ndim))
             logp = logp.sum(dim=dims)
         return logp
 
     def entropy(self):
-        entropy = StudentT(df=self.df, loc=self.loc, scale=self.scale).entropy()
+        df = self.df
+        entropy = (
+            torch.log(self.scale)
+            + 0.5 * torch.log(df)
+            + torch.lgamma(df / 2.0)
+            + torch.lgamma(torch.tensor(0.5, device=df.device, dtype=df.dtype))
+            - torch.lgamma((df + 1.0) / 2.0)
+            + ((df + 1.0) / 2.0) * (torch.digamma((df + 1.0) / 2.0) - torch.digamma(df / 2.0))
+        )
         if self.event_dim:
             dims = tuple(range(entropy.ndim - self.event_dim, entropy.ndim))
             entropy = entropy.sum(dim=dims)
         return entropy
 
     def expand(self, batch_shape, _instance=None):
-        new = self._get_checked_instance(IndependentStudentT, _instance)
-        new.loc = self.loc.expand(batch_shape + self.event_shape)
-        new.scale = self.scale.expand(batch_shape + self.event_shape)
-        new.df = self.df.expand(batch_shape + self.event_shape)
-        new.event_dim = self.event_dim
-        return new
+        batch_shape = torch.Size(batch_shape)
+        expanded_shape = batch_shape + self.event_shape
+        return IndependentStudentT(
+            loc=self.loc.expand(expanded_shape),
+            scale=self.scale.expand(expanded_shape),
+            df=self.df.expand(expanded_shape),
+            event_dim=self.event_dim,
+            validate_args=self._validate_args,
+        )
 
 
 class Neural(nn.Module, ABC):
@@ -292,6 +332,14 @@ class Neural(nn.Module, ABC):
             return context.unsqueeze(1)
         return context
 
+    @staticmethod
+    def _summarize_context(context: torch.Tensor) -> torch.Tensor:
+        if context.ndim == 0:
+            raise ValueError("context must have at least one dimension")
+        if context.ndim == 1:
+            return context
+        return context.mean(dim=tuple(range(context.ndim - 1)))
+
     def _validate_base(self, base: torch.Tensor) -> torch.Tensor:
         if not torch.isfinite(base).all():
             bad_idx = (~torch.isfinite(base)).nonzero(as_tuple=True)
@@ -380,9 +428,8 @@ class Neural(nn.Module, ABC):
         mod_logits = self._modulate(
             context=context, temperature=temperature, timestep=None, **kwargs
         )
-        dist = self._dist_factory(**self._dist_params(mod_logits))
         if return_dist:
-            return dist
+            return self._dist_factory(**self._dist_params(mod_logits))
         return mod_logits
 
     def log_prob(
@@ -445,7 +492,8 @@ class Initial(Neural):
         )
         self.n_states = n_states
         self.init_mode = init_mode
-        self._init_params(mode=init_mode)
+        with torch.no_grad():
+            self.logits.copy_(self._init_params(mode=init_mode))
 
     def _init_params(
         self,
@@ -464,7 +512,7 @@ class Initial(Neural):
         else:
             raise ValueError(f"Unknown init_mode '{mode}'")
         if context is not None and self.context_net is not None:
-            ctx = context.mean(dim=tuple(range(context.ndim - 1))) if context.ndim > 1 else context
+            ctx = self._summarize_context(context)
             logits = logits + self.context_net(ctx).view_as(logits)
         if jitter > 0.0:
             logits = logits + torch.randn_like(logits) * jitter
@@ -486,6 +534,10 @@ class Initial(Neural):
         if mask is None:
             return logits
         mask = mask.to(device=logits.device, dtype=torch.bool)
+        if mask.shape != (self.n_states,):
+            raise ValueError("initial mask must have shape [K]")
+        if not bool(mask.any()):
+            raise ValueError("initial mask must allow at least one state")
         mask = mask.view((1,) * (logits.ndim - 1) + mask.shape)
         return logits.masked_fill(~mask, NEG_INF)
 
@@ -504,7 +556,7 @@ class Initial(Neural):
             logits = logits.unsqueeze(0).unsqueeze(0)
         elif logits.ndim == 2:
             logits = logits.unsqueeze(0)
-        return logits
+        return nnF.log_softmax(logits, dim=-1)
 
 
 class Duration(Neural):
@@ -534,7 +586,8 @@ class Duration(Neural):
         self.n_states = n_states
         self.init_mode = init_mode
         self.max_duration = max_duration
-        self._init_params(mode=init_mode)
+        with torch.no_grad():
+            self.logits.copy_(self._init_params(mode=init_mode))
 
     def _init_params(
         self,
@@ -555,10 +608,9 @@ class Duration(Neural):
         else:
             raise ValueError(f"Unknown init_mode '{mode}'")
         if context is not None and self.context_net is not None:
-            ctx_delta = self.context_net(context.mean(dim=0))
-            if ctx_delta.shape != logits.shape:
-                ctx_delta = ctx_delta.view_as(logits)
-            logits = logits + ctx_delta.view_as(logits)
+            ctx = self._summarize_context(context)
+            ctx_delta = self.context_net(ctx).view_as(logits)
+            logits = logits + ctx_delta
         if jitter > 0.0:
             logits = logits + torch.randn_like(logits) * jitter
         return logits
@@ -583,10 +635,14 @@ class Duration(Neural):
         if mask.ndim == 1:
             if mask.shape[0] != self.max_duration:
                 raise ValueError("duration mask [D] must match max_duration")
+            if not bool(mask.any()):
+                raise ValueError("duration mask must allow at least one duration")
             mask = mask.view(*((1,) * (logits.ndim - 1)), self.max_duration)
         elif mask.ndim == 2:
             if mask.shape != (self.n_states, self.max_duration):
                 raise ValueError("duration mask [K,D] must match n_states and max_duration")
+            if not bool(mask.any(dim=-1).all()):
+                raise ValueError("duration mask must allow at least one duration per state")
             mask = mask.view(*((1,) * (logits.ndim - 2)), self.n_states, self.max_duration)
         else:
             raise ValueError("duration mask must have shape [D] or [K,D]")
@@ -655,7 +711,41 @@ class Transition(Neural):
         self.init_mode = init_mode
         self.max_duration = max_duration
         self.transition_type = transition_type
-        self._init_params(mode=init_mode)
+        self.register_buffer(
+            "_structural_constraint",
+            self._build_structural_constraint(),
+            persistent=False,
+        )
+        with torch.no_grad():
+            self.logits.copy_(self._init_params(mode=init_mode))
+
+    def _build_structural_constraint(self) -> torch.Tensor:
+        n, D = self.n_states, self.max_duration
+        if self.transition_type == "ergodic":
+            return torch.ones((n, n) if D is None else (n, D, n), dtype=torch.bool)
+        if self.transition_type == "semi":
+            if D is None:
+                constraint = torch.eye(n, dtype=torch.bool)
+                if n > 1:
+                    idx = torch.arange(n - 1)
+                    constraint[idx, idx + 1] = True
+                return constraint
+            constraint = torch.zeros(n, D, n, dtype=torch.bool)
+            idx = torch.arange(n)
+            constraint[idx, :, idx] = True
+            if n > 1:
+                idx = torch.arange(n - 1)
+                constraint[idx, :, idx + 1] = True
+            return constraint
+        if self.transition_type == "left-to-right":
+            if D is None:
+                return torch.triu(torch.ones(n, n, dtype=torch.bool))
+            constraint = torch.zeros(n, D, n, dtype=torch.bool)
+            for offset in range(3):
+                src = torch.arange(max(0, n - offset))
+                constraint[src, :, src + offset] = True
+            return constraint
+        raise ValueError(f"Unsupported transition_type: {self.transition_type}")
 
     def _init_params(
         self,
@@ -686,10 +776,9 @@ class Transition(Neural):
         else:
             raise ValueError(f"Unknown init_mode '{mode}'")
         if context is not None and self.context_net is not None:
-            ctx_delta = self.context_net(context.mean(dim=0))
-            logits = logits + ctx_delta.view(
-                *([1] * (logits.ndim - ctx_delta.ndim)), *ctx_delta.shape
-            )
+            ctx = self._summarize_context(context)
+            ctx_delta = self.context_net(ctx).view_as(logits)
+            logits = logits + ctx_delta
         if jitter > 0.0:
             logits = logits + torch.randn_like(logits) * jitter
         return logits
@@ -707,45 +796,19 @@ class Transition(Neural):
     def _apply_constraints(
         self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
-        n, D, device = self.n_states, self.max_duration, logits.device
-        if self.transition_type == "ergodic":
-            constraint = torch.ones(
-                (n, n) if D is None else (n, D, n), device=device, dtype=torch.bool
-            )
-        elif self.transition_type == "semi":
-            if D is None:
-                constraint = torch.eye(n, device=device, dtype=torch.bool)
-                for i in range(n - 1):
-                    constraint[i, i + 1] = True
-            else:
-                constraint = torch.zeros(n, D, n, device=device, dtype=torch.bool)
-                for k in range(n):
-                    constraint[k, :, k] = True
-                    if k < n - 1:
-                        constraint[k, :, k + 1] = True
-        elif self.transition_type == "left-to-right":
-            if D is None:
-                constraint = torch.triu(
-                    torch.ones(n, n, device=device, dtype=torch.bool), diagonal=0
-                )
-            else:
-                constraint = torch.zeros(n, D, n, device=device, dtype=torch.bool)
-                for k in range(n):
-                    constraint[k, :, k] = True
-                    for to_state in range(k + 1, min(n, k + 3)):
-                        constraint[k, :, to_state] = True
-        else:
-            raise ValueError(f"Unsupported transition_type: {self.transition_type}")
-        constraint = constraint.view(
-            *((1,) * (logits.ndim - constraint.ndim)), *constraint.shape
+        constraint = self._structural_constraint.view(
+            *((1,) * (logits.ndim - self._structural_constraint.ndim)),
+            *self._structural_constraint.shape,
         ).expand_as(logits)
         if mask is not None:
-            mask = mask.to(device=device, dtype=torch.bool)
-            expected = (n, n) if D is None else (n, D, n)
+            mask = mask.to(device=logits.device, dtype=torch.bool)
+            expected = self._structural_constraint.shape
             if mask.shape != expected:
-                raise ValueError(f"transition mask must have shape {expected}")
+                raise ValueError(f"transition mask must have shape {tuple(expected)}")
             mask = mask.view(*((1,) * (logits.ndim - mask.ndim)), *mask.shape).expand_as(logits)
             constraint = constraint & mask
+        if not bool(constraint.any(dim=-1).all()):
+            raise ValueError("transition support must allow at least one destination per row")
         return logits.masked_fill(~constraint, NEG_INF)
 
     def log_matrix(
@@ -793,6 +856,11 @@ class Emission(Neural):
             hidden_dim=hidden_dim,
             activation=activation,
         )
+        # Emissions use mu/loc as their base parameters. The inherited logits
+        # and temperature parameters remain in the state dict for artifact
+        # compatibility but are not part of the emission likelihood.
+        self.logits.requires_grad_(False)
+        self.log_temperature.requires_grad_(False)
         self.n_states = n_states
         self.init_mode = init_mode
         self.min_covar = min_covar
@@ -817,26 +885,37 @@ class Emission(Neural):
         jitter: float = 1e-5,
     ) -> torch.Tensor:
         mode = mode or self.init_mode
+        reference = self.mu if self.emission_type == "gaussian" else self.loc
+        device, dtype = reference.device, reference.dtype
         if mode == "random":
-            init_mean = torch.randn(self.n_states, self.n_features) * 0.1
-        elif mode == "spread":
-            linspace = torch.linspace(-1.0, 1.0, steps=self.n_states)
-            perm_idx = torch.stack(
-                [torch.randperm(self.n_states) for _ in range(self.n_features)], dim=0
+            init_mean = (
+                torch.randn(self.n_states, self.n_features, device=device, dtype=dtype) * 0.1
             )
-            init_mean = linspace[perm_idx].T + torch.randn(self.n_states, self.n_features) * 0.05
+        elif mode == "spread":
+            linspace = torch.linspace(-1.0, 1.0, steps=self.n_states, device=device, dtype=dtype)
+            perm_idx = torch.stack(
+                [torch.randperm(self.n_states, device=device) for _ in range(self.n_features)],
+                dim=0,
+            )
+            init_mean = (
+                linspace[perm_idx].T
+                + torch.randn(self.n_states, self.n_features, device=device, dtype=dtype) * 0.05
+            )
         else:
             raise ValueError(f"Unsupported mode: {mode}")
         if context is not None and self.context_net is not None:
-            ctx = context.mean(dim=0) if context.ndim in (2, 3) else context
-            delta = self.context_net(ctx)
-            if delta.numel() == self.n_states * self.n_features:
-                delta = delta.view(self.n_states, self.n_features)
+            ctx = self._summarize_context(context).to(device=device, dtype=dtype)
+            delta = self.context_net(ctx).view(self.n_states, self.n_features)
             init_mean = init_mean + delta
             if self.emission_type == "studentt":
                 with torch.no_grad():
                     self.dof.clamp_(min=2.1)
-        init_var = torch.full((self.n_states, self.n_features), 1.0, device=init_mean.device)
+        init_var = torch.full(
+            (self.n_states, self.n_features),
+            1.0,
+            device=init_mean.device,
+            dtype=init_mean.dtype,
+        )
         init_var += torch.rand_like(init_var) * jitter
         if self.emission_type == "gaussian":
             self.mu = nn.Parameter(init_mean, requires_grad=True)
@@ -864,9 +943,12 @@ class Emission(Neural):
         mask = mask.to(dtype=torch.bool, device=tensor.device)
         while mask.ndim < tensor.ndim:
             mask = mask.unsqueeze(0)
-        constrained = tensor.clone()
-        constrained[~mask] = 0.0
-        return constrained
+        try:
+            return tensor.masked_fill(~mask, 0.0)
+        except RuntimeError as exc:
+            raise ValueError(
+                f"emission mask shape {tuple(mask.shape)} is not broadcastable to {tuple(tensor.shape)}"
+            ) from exc
 
     def _apply_context(
         self,
@@ -880,10 +962,14 @@ class Emission(Neural):
         )
         return delta - delta.mean(dim=-2, keepdim=True)
 
+    def _apply_temperature(
+        self, logits: torch.Tensor, temperature: Optional[float] = None
+    ) -> torch.Tensor:
+        return logits
+
     def _dist_params(self, loc: torch.Tensor, **dist_kwargs) -> dict:
         if loc.ndim == 2:
             loc = loc.unsqueeze(0).unsqueeze(0)
-        loc = loc - loc.mean(dim=2, keepdim=True)
         B, T, K, n_feat = loc.shape
         if self.emission_type == "gaussian":
             var = nnF.softplus(self.log_var).clamp_min(self.min_covar)
@@ -906,17 +992,22 @@ class Emission(Neural):
         return_dist: bool = False,
         **dist_kwargs,
     ) -> Tuple:
-        dist = self._get_dist(context=context, temperature=temperature, **dist_kwargs)
+        loc = self._modulate(context=context, temperature=temperature, **dist_kwargs)
+        if loc.ndim == 2:
+            loc = loc.unsqueeze(0).unsqueeze(0)
         if return_dist:
-            return dist
+            return self._dist_factory(**self._dist_params(loc))
+        B, T, K, n_feat = loc.shape
         if self.emission_type == "gaussian":
-            cov = (
-                dist.covariance_matrix
-                if hasattr(dist, "covariance_matrix")
-                else dist.scale_tril @ dist.scale_tril.transpose(-1, -2)
-            )
-            return self._tensor_shape(dist.mean), self._tensor_shape(cov)
-        return self._tensor_shape(dist.loc), self._tensor_shape(dist.scale)
+            var = nnF.softplus(self.log_var).clamp_min(self.min_covar)
+            covariance = torch.diag_embed(var)[None, None].expand(B, T, K, n_feat, n_feat)
+            return loc, covariance
+        scale = (
+            nnF.softplus(self.scale_param)
+            .clamp_min(self.min_covar)[None, None]
+            .expand(B, T, K, n_feat)
+        )
+        return loc, scale
 
     def log_prob(
         self,
@@ -930,7 +1021,6 @@ class Emission(Neural):
         elif x.ndim == 2:
             x = x.unsqueeze(0)
         B, T, F = x.shape
-        K = self.n_states
         if F != self.n_features:
             raise ValueError(f"Feature mismatch: input F={F}, expected {self.n_features}")
 
@@ -942,20 +1032,27 @@ class Emission(Neural):
             )
             if loc.ndim == 2:
                 loc = loc.unsqueeze(0).unsqueeze(0)
-            loc = loc - loc.mean(dim=2, keepdim=True)
             var = nnF.softplus(self.log_var).clamp_min(self.min_covar)
             diff = x[..., None, :] - loc
             logp = -0.5 * (diff.square() / var + var.log() + math.log(2.0 * math.pi)).sum(dim=-1)
         else:
-            dist = self._get_dist(
+            loc = self._modulate(
                 context=context,
                 temperature=temperature,
                 **dist_kwargs,
             )
-            x_exp = x[..., None, :].expand(-1, -1, K, -1)
-            logp = dist.log_prob(x_exp)
-            if logp.ndim == 4:
-                logp = logp.sum(-1)
+            if loc.ndim == 2:
+                loc = loc.unsqueeze(0).unsqueeze(0)
+            scale = nnF.softplus(self.scale_param).clamp_min(self.min_covar)[None, None]
+            df = (nnF.softplus(self.dof) + 2.0)[None, None, :, None]
+            t = (x[..., None, :] - loc) / scale
+            logp = (
+                torch.lgamma((df + 1.0) / 2.0)
+                - torch.lgamma(df / 2.0)
+                - 0.5 * torch.log(df * torch.pi)
+                - torch.log(scale)
+                - ((df + 1.0) / 2.0) * torch.log1p(t.square() / df)
+            ).sum(dim=-1)
 
         if not torch.isfinite(logp).all():
             raise FloatingPointError("NaN/Inf in emission log-prob")

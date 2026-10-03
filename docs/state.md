@@ -17,12 +17,12 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
-- **Full local repository regression on current `develop`:** 147 passed, 3 skipped in 22.77 s. The skips are CUDA-only tests on a CPU runtime.
+- **Full local repository regression on current `develop`:** 166 passed, 3 skipped in 40.99 s. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner — sdist + wheel build, `twine check`, clean-venv wheel install, installed-package public-API smoke, and artifact upload all succeeded.
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
 - **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp. CPU-only development uses `scripts/install_cpu_dev.py`, which installs the official CPU PyTorch wheel before the normal editable dev environment and avoids unnecessary CUDA dependency resolution.
 
-The Python 3.12 baseline and the selected P0 code-scan fixes are complete. The next package boundary is the remaining API/semantic cleanup, starting with explicit 2-D context semantics. Downstream Nautilus integration remains a separate empirical validation boundary.
+The Python 3.12 baseline, selected P0 code-scan fixes, and the default-distribution math/performance hardening are complete. The next package boundary is the remaining API/semantic cleanup, starting with explicit 2-D context semantics. Downstream Nautilus integration remains a separate empirical validation boundary.
 
 ## Accepted package-core evidence
 
@@ -149,7 +149,7 @@ Safe behavior-preserving hardening already applied:
 Verification after these changes:
 
 ```text
-147 passed, 3 skipped
+166 passed, 3 skipped
 ```
 
 The three skips require CUDA and were run on a CPU-only local runtime.
@@ -165,7 +165,7 @@ P2:
 
 3. Make base `DistributionSet` honor its injectable distribution factories or simplify the constructor contract.
 4. Decide whether `build_artifact()` should preserve model train/eval mode instead of preparing the supplied model for inference in place.
-5. Review ContextEncoder cache graph retention and remaining distribution/logging hygiene.
+5. Review ContextEncoder cache graph retention and package-level logging policy.
 
 Already resolved by the code-scan maintenance pass: Python 3.12 packaging/tooling alignment, variable-length dataset state alignment, learned attention/MHA restart lifecycle, core Polars optionalization, and public numeric `ModelConfig` validation.
 
@@ -239,7 +239,7 @@ pytest: 96 passed
 runtime benchmark: PASS
 ```
 
-The later hardening has local full-suite evidence (`147 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
+The later hardening has local full-suite evidence (`166 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
 
 ## Package boundary / next slice
 
@@ -249,7 +249,7 @@ Proceed in this order:
 2. Define transition-refinement behavior without enabled/explicit context and add focused tests.
 3. Resolve the base `DistributionSet` injectable-factory contract.
 4. Decide and test artifact train/eval-mode semantics.
-5. Review ContextEncoder cache graph retention and remaining distribution/logging hygiene.
+5. Review ContextEncoder cache graph retention and package-level logging policy.
 6. Run focused tests.
 7. Run complete local pytest; require green before CI.
 8. Run manual smoke/package-validation CI only when material to the resulting change.

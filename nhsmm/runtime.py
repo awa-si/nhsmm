@@ -256,7 +256,6 @@ def _emission_log_prob(
         loc = emission._modulate(context=context)
         if loc.ndim == 2:
             loc = loc.unsqueeze(0).unsqueeze(0)
-        loc = loc - loc.mean(dim=2, keepdim=True)
         var, log_norm = cache.gaussian_terms(
             emission.log_var,
             min_covar=float(emission.min_covar),

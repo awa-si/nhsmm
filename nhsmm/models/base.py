@@ -11,7 +11,7 @@ from nhsmm import Convergence, DefaultEncoder
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet
 from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.filtering import duration_log_hazard
-from nhsmm.config import DTYPE, EPS, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
+from nhsmm.config import DTYPE, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
 
 
 class DistributionSet(nn.Module):
@@ -180,8 +180,6 @@ class NHSMM(nn.Module):
 
         X, mask = self._ensure_tensor(X, return_mask=True)
         B, T, F = X.shape
-        device = X.device
-
         if F != self.config.n_features:
             raise ValueError(f"Feature dimension mismatch: expected {self.config.n_features}, got {F}")
 
@@ -204,9 +202,7 @@ class NHSMM(nn.Module):
         if T == 0:
             log_probs = X.new_empty(B, 0, K)
         else:
-            dist = self.dist.emission.forward(context=context_tensor, return_dist=True)
-            X_exp = X.unsqueeze(2).expand(-1, -1, K, -1)
-            log_probs = dist.log_prob(X_exp)
+            log_probs = self.dist.emission.log_prob(X, context=context_tensor)
             log_probs = log_probs.masked_fill(~mask.unsqueeze(-1), float("-inf"))
 
         return SequenceSet(

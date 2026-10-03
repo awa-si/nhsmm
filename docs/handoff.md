@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- snapshot head before this handoff update: `7fa2462a12fb909c58ef8e4e3fd696843ffe2db7`
+- base head for this handoff update: `3485072ad2c726253a93c5c9ac777ce5331971da`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-147 passed, 3 skipped in 22.77 s
+166 passed, 3 skipped in 40.99 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `147 passed, 3 skipped`.
+The corresponding current local full suite is `166 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -184,13 +184,26 @@ The previously selected Python/P0 maintenance work is complete:
 - main public numeric `ModelConfig` bounds are validated early.
 - later context-invariant hardening in `e9169cb` preserves temporal encoder output, validates SequenceSet/ContextRouter shapes, forwards supported masks, and normalizes masks to the active device/bool dtype.
 
+Default-distribution math/performance hardening is also complete:
+
+- initial-state output is normalized log probability rather than raw logits;
+- categorical helpers enforce a final category axis and valid probability mass;
+- Student-t event dimensions, moments, expansion, and scoring match PyTorch semantics;
+- emissions preserve absolute learned locations and are not temperature-scaled;
+- context-aware initialization preserves vector-context and dtype/device contracts;
+- structural masks reject empty support rows;
+- static transition topology is cached;
+- batch sequence construction uses the specialized emission scorer instead of constructing full distribution objects.
+
+Measured CPU microbenchmarks showed about 12x lower Gaussian batch-emission scoring latency, about 2x lower Student-t batch-emission latency, and about 8x lower static transition-constraint cost for the tested shapes.
+
 Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 
 - P1: unify explicit 2-D `[T,H]` / `[B,H]` context semantics.
 - P1: define transition-refinement behavior when context is absent.
 - P2: resolve base `DistributionSet` injectable-factory semantics.
 - P2: decide whether artifact construction preserves model train/eval mode.
-- P2: review ContextEncoder cache graph retention and remaining distribution/logging hygiene.
+- P2: review ContextEncoder cache graph retention and package-level logging policy.
 
 ## Next-chat execution order
 
