@@ -31,6 +31,15 @@ End-to-end learning/prediction acceptance is now maintained:
 - null controls remain at chance-like state recovery while density likelihood can still improve;
 - package-default spread initialization improves OOS likelihood in the supplementary probe but remains less reliable for latent-state identity, so hard recovery acceptance continues to opt into K-Means.
 
+
+
+Structural usefulness validation is now part of the maintained learning/prediction acceptance:
+
+- strong and moderate pass both learning and usefulness gates;
+- weak passes a lower-confidence usefulness contract, with exact boundary timing explicitly qualified and ±1-timestep timing reported separately;
+- null is retained strictly as a negative control and does not receive a usefulness claim;
+- usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
+
 Production-boundary hardening is complete:
 
 - inference/artifact validation now checks every persisted floating state tensor, including persistent buffers, for NaN/Inf;

@@ -79,7 +79,25 @@ The benchmark evaluates state identity only up to permutation and explicitly use
 
     python scripts/validate_learning_prediction.py --scenario all --seeds 401,402,403,404,405 --max-iter 40 --workers 4 --output /tmp/nhsmm-learning-prediction.json
 
-This is the canonical empirical proof that optimize() changes learned state and that the fitted model improves held-out likelihood and predicts identifiable latent states on disjoint OOS sequences. It covers strong, moderate, weak, and null signals; parameter movement; pre/post OOS likelihood; permutation-invariant state recovery; ARI; train/OOS generalization gap; model-health collapse; validation fingerprints; and variable-length Viterbi outputs.
+This is the canonical empirical proof that optimize() changes learned state and that the fitted model improves held-out likelihood and predicts identifiable latent states on disjoint OOS sequences.
+
+The harness now separates two questions:
+
+1. **learning_pass** — parameter movement, held-out likelihood gain, permutation-invariant OOS state recovery, ARI, provenance, and variable-length prediction;
+2. **usefulness_pass** — boundary timing, regime run lengths, transition recovery, occupancy recovery, posterior calibration, collapse behavior, and train/OOS stability.
+
+Usefulness metrics include exact boundary F1, a causal ±1-timestep boundary F1 for weak-signal interpretation, run-length relative error, transition-matrix MAE, occupancy L1, posterior ECE/Brier, and health diagnostics.
+
+Latest 5-seed evidence:
+
+| scenario | OOS accuracy | ARI | boundary F1 | boundary F1 ±1 | run-length rel. error | transition MAE | occupancy L1 | posterior ECE |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| strong | 0.9978 | 0.9934 | 0.9831 | 0.9944 | 0.0108 | 0.0029 | 0.0022 | 0.0031 |
+| moderate | 0.9656 | 0.8979 | 0.7386 | 0.9274 | 0.0204 | 0.0112 | 0.0200 | 0.0345 |
+| weak | 0.7611 | 0.4085 | 0.3152 | 0.5525 | 0.0787 | 0.0579 | 0.2244 | 0.1866 |
+| null | 0.3589 | 0.0000 | 0.0000 | 0.0000 | 17.8000 | 0.3333 | 1.2822 | 0.6260 |
+
+Strong and moderate pass both learning and usefulness cleanly. Weak passes a deliberately lower-confidence usefulness contract; exact boundary timing is explicitly weaker, while ±1-timestep timing, durations, transitions, occupancy, and calibration remain informative. Null is a negative control: learning-control checks pass, but usefulness is not applicable and no predictive state identity is claimed.
 
 The hard state-identification acceptance explicitly uses emission_init_mode="kmeans". A separate default-spread probe is recorded in validation/learning-prediction-2026-10-04.md.
 

@@ -19,6 +19,7 @@ from nhsmm import (
     evaluate_model_health,
     evaluate_validation_snapshot,
 )
+from nhsmm.filtering import filter_model_sequence
 
 N_STATES = 3
 N_FEATURES = 3
@@ -39,6 +40,11 @@ class Scenario:
     max_median_oos_accuracy: float | None = None
     max_abs_median_ari: float | None = None
     max_collapse_fraction: float | None = None
+    min_median_boundary_f1: float | None = None
+    max_median_run_length_rel_error: float | None = None
+    max_median_transition_mae: float | None = None
+    max_median_occupancy_l1: float | None = None
+    max_median_ece: float | None = None
     expect_collapse: bool = False
 
 
@@ -49,6 +55,11 @@ SCENARIOS = {
         min_median_oos_accuracy=0.95,
         min_median_ll_gain=1.0,
         max_collapse_fraction=0.0,
+        min_median_boundary_f1=0.90,
+        max_median_run_length_rel_error=0.12,
+        max_median_transition_mae=0.10,
+        max_median_occupancy_l1=0.10,
+        max_median_ece=0.12,
     ),
     "moderate": Scenario(
         "moderate",
@@ -57,6 +68,11 @@ SCENARIOS = {
         min_median_accuracy_gain=0.02,
         min_median_ll_gain=0.50,
         max_collapse_fraction=0.0,
+        min_median_boundary_f1=0.70,
+        max_median_run_length_rel_error=0.25,
+        max_median_transition_mae=0.18,
+        max_median_occupancy_l1=0.16,
+        max_median_ece=0.18,
     ),
     "weak": Scenario(
         "weak",
@@ -64,6 +80,11 @@ SCENARIOS = {
         min_median_oos_accuracy=0.55,
         min_median_ll_gain=0.10,
         max_collapse_fraction=0.40,
+        min_median_boundary_f1=None,
+        max_median_run_length_rel_error=0.50,
+        max_median_transition_mae=0.30,
+        max_median_occupancy_l1=0.30,
+        max_median_ece=0.25,
     ),
     "null": Scenario(
         "null",
@@ -107,16 +128,123 @@ def _flatten_predictions(
     return decoded.detach().cpu().numpy().reshape(-1)
 
 
-def _matched_accuracy(true: np.ndarray, predicted: np.ndarray) -> float:
-    best = 0.0
+def _best_state_permutation(
+    true: np.ndarray,
+    predicted: np.ndarray,
+) -> tuple[tuple[int, ...], float]:
+    best_permutation = tuple(range(N_STATES))
+    best_accuracy = -1.0
     for permutation in itertools.permutations(range(N_STATES)):
         mapped = np.fromiter(
             (permutation[int(state)] for state in predicted),
             dtype=np.int64,
             count=len(predicted),
         )
-        best = max(best, float(np.mean(mapped == true)))
-    return best
+        accuracy = float(np.mean(mapped == true))
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_permutation = permutation
+    return best_permutation, best_accuracy
+
+
+def _matched_accuracy(true: np.ndarray, predicted: np.ndarray) -> float:
+    return _best_state_permutation(true, predicted)[1]
+
+
+def _apply_permutation(values: np.ndarray, permutation: tuple[int, ...]) -> np.ndarray:
+    mapping = np.asarray(permutation, dtype=np.int64)
+    return mapping[np.asarray(values, dtype=np.int64)]
+
+
+def _boundary_f1(
+    true: np.ndarray,
+    predicted: np.ndarray,
+    *,
+    tolerance: int = 0,
+) -> float:
+    true = np.asarray(true, dtype=np.int64)
+    predicted = np.asarray(predicted, dtype=np.int64)
+    if true.shape != predicted.shape or true.ndim != 2:
+        raise ValueError("boundary F1 expects equal [B,T] arrays")
+    if tolerance < 0:
+        raise ValueError("boundary tolerance must be >= 0")
+
+    tp = 0
+    fp = 0
+    fn = 0
+    for true_sequence, predicted_sequence in zip(true, predicted):
+        true_positions = list(np.flatnonzero(true_sequence[1:] != true_sequence[:-1]) + 1)
+        pred_positions = list(np.flatnonzero(predicted_sequence[1:] != predicted_sequence[:-1]) + 1)
+        matched_true: set[int] = set()
+        matched_pred: set[int] = set()
+
+        candidates: list[tuple[int, int, int]] = []
+        for pred_index, pred_position in enumerate(pred_positions):
+            for true_index, true_position in enumerate(true_positions):
+                distance = abs(int(pred_position) - int(true_position))
+                if distance <= tolerance:
+                    candidates.append((distance, pred_index, true_index))
+
+        for _, pred_index, true_index in sorted(candidates):
+            if pred_index in matched_pred or true_index in matched_true:
+                continue
+            matched_pred.add(pred_index)
+            matched_true.add(true_index)
+
+        tp += len(matched_true)
+        fp += len(pred_positions) - len(matched_pred)
+        fn += len(true_positions) - len(matched_true)
+
+    denominator = 2 * tp + fp + fn
+    return 1.0 if denominator == 0 else float(2 * tp / denominator)
+
+
+def _run_lengths(states: np.ndarray) -> np.ndarray:
+    runs: list[int] = []
+    for sequence in np.asarray(states, dtype=np.int64):
+        if sequence.size == 0:
+            continue
+        starts = np.flatnonzero(np.concatenate(([True], sequence[1:] != sequence[:-1])))
+        ends = np.concatenate((starts[1:], [sequence.size]))
+        runs.extend((ends - starts).tolist())
+    return np.asarray(runs, dtype=np.float64)
+
+
+def _empirical_transition_matrix(states: np.ndarray) -> np.ndarray:
+    counts = np.zeros((N_STATES, N_STATES), dtype=np.float64)
+    for sequence in np.asarray(states, dtype=np.int64):
+        for source, target in zip(sequence[:-1], sequence[1:]):
+            if source != target:
+                counts[int(source), int(target)] += 1.0
+    rows = counts.sum(axis=1, keepdims=True)
+    return np.divide(counts, rows, out=np.zeros_like(counts), where=rows > 0)
+
+
+def _occupancy(states: np.ndarray) -> np.ndarray:
+    counts = np.bincount(np.asarray(states, dtype=np.int64).reshape(-1), minlength=N_STATES)
+    return counts.astype(np.float64) / counts.sum()
+
+
+def _expected_calibration_error(
+    confidence: np.ndarray,
+    correct: np.ndarray,
+    *,
+    bins: int = 10,
+) -> float:
+    confidence = np.asarray(confidence, dtype=np.float64)
+    correct = np.asarray(correct, dtype=np.float64)
+    edges = np.linspace(0.0, 1.0, bins + 1)
+    total = len(confidence)
+    ece = 0.0
+    for index in range(bins):
+        if index == bins - 1:
+            mask = (confidence >= edges[index]) & (confidence <= edges[index + 1])
+        else:
+            mask = (confidence >= edges[index]) & (confidence < edges[index + 1])
+        count = int(mask.sum())
+        if count:
+            ece += count / total * abs(float(correct[mask].mean()) - float(confidence[mask].mean()))
+    return float(ece)
 
 
 def _adjusted_rand_index(true: np.ndarray, predicted: np.ndarray) -> float:
@@ -215,9 +343,42 @@ def _run_one(
 
     with torch.inference_mode():
         ll_after = float(model.log_likelihood(oos_tensor, reduce=True)) / (N_EVAL * STEPS)
-        pred_after = _flatten_predictions(model.predict(oos_tensor, mode="viterbi", verbose=False))
-        oos_accuracy = _matched_accuracy(oos_y.reshape(-1), pred_after)
+        decoded_after = model.predict(oos_tensor, mode="viterbi", verbose=False)
+        pred_after = _flatten_predictions(decoded_after)
+        permutation, oos_accuracy = _best_state_permutation(oos_y.reshape(-1), pred_after)
+        aligned_pred = _apply_permutation(pred_after, permutation).reshape(N_EVAL, STEPS)
         oos_ari = _adjusted_rand_index(oos_y.reshape(-1), pred_after)
+
+        trace = filter_model_sequence(model, oos_tensor)
+        posterior = trace.state_posterior.detach().cpu().numpy()
+        posterior_aligned = np.empty_like(posterior)
+        for predicted_state, true_state in enumerate(permutation):
+            posterior_aligned[..., true_state] = posterior[..., predicted_state]
+        posterior_confidence = posterior_aligned.max(axis=-1).reshape(-1)
+        posterior_prediction = posterior_aligned.argmax(axis=-1)
+        posterior_correct = (posterior_prediction == oos_y).reshape(-1)
+
+        boundary_f1 = _boundary_f1(oos_y, aligned_pred, tolerance=0)
+        boundary_f1_tolerance_1 = _boundary_f1(oos_y, aligned_pred, tolerance=1)
+        true_runs = _run_lengths(oos_y)
+        predicted_runs = _run_lengths(aligned_pred)
+        true_mean_run = float(true_runs.mean())
+        predicted_mean_run = float(predicted_runs.mean())
+        run_length_rel_error = abs(predicted_mean_run - true_mean_run) / true_mean_run
+
+        true_transition = _empirical_transition_matrix(oos_y)
+        predicted_transition = _empirical_transition_matrix(aligned_pred)
+        active_rows = true_transition.sum(axis=1) > 0
+        transition_mae = float(
+            np.abs(predicted_transition[active_rows] - true_transition[active_rows]).mean()
+        )
+        occupancy_l1 = float(np.abs(_occupancy(aligned_pred) - _occupancy(oos_y)).sum())
+        posterior_ece = _expected_calibration_error(posterior_confidence, posterior_correct)
+        posterior_brier = float(
+            np.square(posterior_aligned - np.eye(N_STATES, dtype=np.float32)[oos_y])
+            .sum(axis=-1)
+            .mean()
+        )
 
         train_pred = _flatten_predictions(
             model.predict(train_tensor, mode="viterbi", verbose=False)
@@ -250,6 +411,16 @@ def _run_one(
         "oos_ari": oos_ari,
         "train_accuracy": train_accuracy,
         "generalization_gap": train_accuracy - oos_accuracy,
+        "boundary_f1": boundary_f1,
+        "boundary_f1_tolerance_1": boundary_f1_tolerance_1,
+        "true_mean_run_length": true_mean_run,
+        "predicted_mean_run_length": predicted_mean_run,
+        "run_length_rel_error": run_length_rel_error,
+        "transition_mae": transition_mae,
+        "occupancy_l1": occupancy_l1,
+        "posterior_ece": posterior_ece,
+        "posterior_brier": posterior_brier,
+        "posterior_mean_confidence": float(posterior_confidence.mean()),
         "train_health": train_health.as_dict(),
         "oos_health": oos_health.as_dict(),
         "validation_comparison": comparison.as_dict(),
@@ -270,6 +441,12 @@ def _summarize(scenario: Scenario, rows: list[dict[str, object]]) -> dict[str, o
     median_accuracy_gain = _median(rows, "accuracy_gain")
     median_ll_gain = _median(rows, "ll_gain")
     median_ari = _median(rows, "oos_ari")
+    median_boundary_f1 = _median(rows, "boundary_f1")
+    median_boundary_f1_tolerance_1 = _median(rows, "boundary_f1_tolerance_1")
+    median_run_length_rel_error = _median(rows, "run_length_rel_error")
+    median_transition_mae = _median(rows, "transition_mae")
+    median_occupancy_l1 = _median(rows, "occupancy_l1")
+    median_ece = _median(rows, "posterior_ece")
     collapsed = sum(bool(row["oos_health"]["state_collapsed"]) for row in rows)
     parameters_changed = sum(float(row["parameter_l1_change"]) > 0.0 for row in rows)
     snapshot_contract = sum(
@@ -278,38 +455,68 @@ def _summarize(scenario: Scenario, rows: list[dict[str, object]]) -> dict[str, o
     )
     variable_contract = sum(row["variable_prediction_lengths"] == [53, 101] for row in rows)
 
-    reasons: list[str] = []
+    learning_reasons: list[str] = []
+    usefulness_reasons: list[str] = []
     if parameters_changed != len(rows):
-        reasons.append("parameters_did_not_change")
+        learning_reasons.append("parameters_did_not_change")
     if snapshot_contract != len(rows):
-        reasons.append("snapshot_contract")
+        learning_reasons.append("snapshot_contract")
     if variable_contract != len(rows):
-        reasons.append("variable_length_predict_contract")
+        learning_reasons.append("variable_length_predict_contract")
     if (
         scenario.min_median_oos_accuracy is not None
         and median_accuracy < scenario.min_median_oos_accuracy
     ):
-        reasons.append("median_oos_accuracy")
+        learning_reasons.append("median_oos_accuracy")
     if (
         scenario.min_median_accuracy_gain is not None
         and median_accuracy_gain < scenario.min_median_accuracy_gain
     ):
-        reasons.append("median_accuracy_gain")
+        learning_reasons.append("median_accuracy_gain")
     if scenario.min_median_ll_gain is not None and median_ll_gain < scenario.min_median_ll_gain:
-        reasons.append("median_ll_gain")
+        learning_reasons.append("median_ll_gain")
     if (
         scenario.max_median_oos_accuracy is not None
         and median_accuracy > scenario.max_median_oos_accuracy
     ):
-        reasons.append("null_median_oos_accuracy")
+        learning_reasons.append("null_median_oos_accuracy")
     if scenario.max_abs_median_ari is not None and abs(median_ari) > scenario.max_abs_median_ari:
-        reasons.append("null_median_ari")
+        learning_reasons.append("null_median_ari")
+    if (
+        scenario.min_median_boundary_f1 is not None
+        and median_boundary_f1 < scenario.min_median_boundary_f1
+    ):
+        usefulness_reasons.append("median_boundary_f1")
+    if scenario.name == "weak" and median_boundary_f1_tolerance_1 < 0.45:
+        usefulness_reasons.append("median_boundary_f1_tolerance_1")
+    if (
+        scenario.max_median_run_length_rel_error is not None
+        and median_run_length_rel_error > scenario.max_median_run_length_rel_error
+    ):
+        usefulness_reasons.append("median_run_length_rel_error")
+    if (
+        scenario.max_median_transition_mae is not None
+        and median_transition_mae > scenario.max_median_transition_mae
+    ):
+        usefulness_reasons.append("median_transition_mae")
+    if (
+        scenario.max_median_occupancy_l1 is not None
+        and median_occupancy_l1 > scenario.max_median_occupancy_l1
+    ):
+        usefulness_reasons.append("median_occupancy_l1")
+    if scenario.max_median_ece is not None and median_ece > scenario.max_median_ece:
+        usefulness_reasons.append("median_posterior_ece")
     if scenario.expect_collapse:
         if collapsed != len(rows):
-            reasons.append("expected_state_collapse")
+            usefulness_reasons.append("expected_state_collapse")
     elif scenario.max_collapse_fraction is not None:
         if collapsed / len(rows) > scenario.max_collapse_fraction:
-            reasons.append("unexpected_state_collapse")
+            usefulness_reasons.append("unexpected_state_collapse")
+
+    learning_pass = not learning_reasons
+    usefulness_applicable = scenario.separation > 0.0
+    usefulness_pass = usefulness_applicable and not usefulness_reasons
+    passed = learning_pass and (usefulness_pass if usefulness_applicable else True)
 
     return {
         "scenario": scenario.name,
@@ -324,6 +531,14 @@ def _summarize(scenario: Scenario, rows: list[dict[str, object]]) -> dict[str, o
         "median_oos_ari": median_ari,
         "median_train_accuracy": _median(rows, "train_accuracy"),
         "median_generalization_gap": _median(rows, "generalization_gap"),
+        "median_boundary_f1": median_boundary_f1,
+        "median_boundary_f1_tolerance_1": median_boundary_f1_tolerance_1,
+        "median_run_length_rel_error": median_run_length_rel_error,
+        "median_transition_mae": median_transition_mae,
+        "median_occupancy_l1": median_occupancy_l1,
+        "median_posterior_ece": median_ece,
+        "median_posterior_brier": _median(rows, "posterior_brier"),
+        "median_posterior_confidence": _median(rows, "posterior_mean_confidence"),
         "median_effective_states": float(
             np.median([float(row["oos_health"]["effective_states"]) for row in rows])
         ),
@@ -334,8 +549,13 @@ def _summarize(scenario: Scenario, rows: list[dict[str, object]]) -> dict[str, o
         "parameters_changed_runs": parameters_changed,
         "snapshot_contract_runs": snapshot_contract,
         "variable_length_contract_runs": variable_contract,
-        "passed": not reasons,
-        "failure_reasons": reasons,
+        "learning_pass": learning_pass,
+        "learning_failure_reasons": learning_reasons,
+        "usefulness_applicable": usefulness_applicable,
+        "usefulness_pass": usefulness_pass,
+        "usefulness_failure_reasons": usefulness_reasons,
+        "passed": passed,
+        "failure_reasons": [*learning_reasons, *usefulness_reasons],
     }
 
 

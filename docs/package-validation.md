@@ -53,6 +53,10 @@ All 20 fits changed parameters, preserved train/OOS model fingerprints, used dis
 
 Acceptance: **PASS**.
 
+The acceptance harness now distinguishes **learning_pass** from **usefulness_pass**. In addition to state recovery and OOS likelihood, usefulness is scored using boundary F1, ±1-timestep boundary F1, run-length recovery, transition-matrix MAE, occupancy L1, posterior calibration, collapse behavior, and train/OOS stability.
+
+Strong and moderate pass both gates cleanly. Weak also passes the maintained weak-signal usefulness contract, but exact boundary timing is intentionally qualified: median exact boundary F1 is 0.3152 versus 0.5525 with ±1-timestep tolerance. Null remains a negative control and does not receive a usefulness claim.
+
 Detailed evidence: validation/learning-prediction-2026-10-04.md.
 
 ## Transition-context recovery

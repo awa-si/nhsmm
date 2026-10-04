@@ -256,6 +256,15 @@ End-to-end learning/prediction acceptance is implemented:
 - null median ARI is 0.0 and all 5 null runs collapse, demonstrating no spurious state-identity recovery;
 - detailed evidence is recorded in docs/validation/learning-prediction-2026-10-04.md.
 
+
+
+Structural usefulness validation is now part of the maintained learning/prediction acceptance:
+
+- strong and moderate pass both learning and usefulness gates;
+- weak passes a lower-confidence usefulness contract, with exact boundary timing explicitly qualified and ±1-timestep timing reported separately;
+- null is retained strictly as a negative control and does not receive a usefulness claim;
+- usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
+
 Production-boundary hardening is complete:
 
 - persisted model state validation covers parameters and persistent buffers;

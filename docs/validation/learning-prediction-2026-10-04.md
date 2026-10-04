@@ -64,3 +64,23 @@ This confirms probabilistic learning under the default initialization, but recon
 ## Supported claim
 
 Within this controlled synthetic setting, the package updates learned parameters during optimization, improves held-out sequence likelihood, predicts latent states on unseen sequences when identifiable signal exists, generalizes beyond training sequences, does not show false latent-state recovery under the null control, exposes collapse when data do not support the requested state structure, and preserves variable-length prediction and validation provenance contracts.
+
+
+## Structural usefulness
+
+The acceptance now distinguishes successful fitting from structurally usable regime output.
+
+Median 5-seed OOS usefulness metrics:
+
+| Scenario | Boundary F1 | Boundary F1 ±1 | Run-length rel. error | Transition MAE | Occupancy L1 | Posterior ECE | Usefulness |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| strong | 0.9831 | 0.9944 | 0.0108 | 0.0029 | 0.0022 | 0.0031 | PASS |
+| moderate | 0.7386 | 0.9274 | 0.0204 | 0.0112 | 0.0200 | 0.0345 | PASS |
+| weak | 0.3152 | 0.5525 | 0.0787 | 0.0579 | 0.2244 | 0.1866 | PASS, qualified |
+| null | 0.0000 | 0.0000 | 17.8000 | 0.3333 | 1.2822 | 0.6260 | not applicable |
+
+Strong and moderate output is not only classifiable but also structurally close to the known regime process: boundaries, durations, transitions, occupancies, and posterior confidence all remain accurate out of sample.
+
+Weak signal is deliberately treated as a lower-confidence operating regime. Exact boundary timing is poor enough that it must not be presented as precise event timing, but a ±1-timestep tolerance materially improves boundary recovery and the duration/transition/occupancy structure remains informative.
+
+The null control demonstrates the opposite case: likelihood can improve without producing useful latent-state semantics. That distinction is why the harness reports `learning_pass` and `usefulness_pass` separately.
