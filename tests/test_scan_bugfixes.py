@@ -48,7 +48,6 @@ def test_python_baseline_is_312() -> None:
         ("transition_refine_steps", -1),
         ("dropout", 1.0),
         ("min_covar", 0.0),
-        ("temperature", 0.0),
         ("lr", 0.0),
         ("transition_context_max_delta", -0.1),
     ],
@@ -222,7 +221,6 @@ def test_noncausal_default_encoder_rejects_odd_context_dim() -> None:
     [
         ("dropout", float("nan")),
         ("min_covar", float("nan")),
-        ("temperature", float("inf")),
         ("lr", float("nan")),
         ("transition_refine_lr", float("inf")),
         ("transition_context_max_delta", float("nan")),
@@ -261,7 +259,7 @@ def test_model_config_rejects_invalid_literal_values(field: str, value: str) -> 
 
 @pytest.mark.parametrize(
     "field",
-    ["causal", "debug", "use_scheduler", "convergence_stop", "verbose"],
+    ["causal", "use_scheduler", "convergence_stop", "verbose"],
 )
 def test_model_config_rejects_non_boolean_flags(field: str) -> None:
     kwargs = {"n_states": 2, "n_features": 2, field: 1}

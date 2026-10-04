@@ -43,7 +43,6 @@ class ModelConfig:
     # -----------------------------
     max_duration: int = 35
     min_covar: float = 1e-6
-    temperature: float = 1.0
     emission_init_mode: Literal["random", "spread", "kmeans"] = "spread"
     initial_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     duration_init_mode: Literal["normal", "biased", "uniform"] = "normal"
@@ -57,7 +56,6 @@ class ModelConfig:
     # General
     # -----------------------------
     seed: Optional[int] = None
-    debug: bool = False
 
     # -----------------------------
     # Optimization / Training
@@ -103,7 +101,6 @@ class ModelConfig:
             raise ValueError("dropout must be finite and satisfy 0 <= dropout < 1")
         for name, value in (
             ("min_covar", self.min_covar),
-            ("temperature", self.temperature),
             ("lr", self.lr),
             ("transition_refine_lr", self.transition_refine_lr),
         ):
@@ -120,7 +117,6 @@ class ModelConfig:
 
         for name, value in (
             ("causal", self.causal),
-            ("debug", self.debug),
             ("use_scheduler", self.use_scheduler),
             ("convergence_stop", self.convergence_stop),
             ("verbose", self.verbose),

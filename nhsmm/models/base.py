@@ -119,7 +119,6 @@ class NHSMM(nn.Module):
         self.context_dim = self.config.context_dim
         self.hidden_dim = self.config.hidden_dim
 
-        self.debug: bool = config.debug
         self.dist: Optional[DistributionSet] = None
         self.duration_logits_bias = nn.Parameter(torch.ones(config.n_states, config.max_duration))
 

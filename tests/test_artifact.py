@@ -146,3 +146,11 @@ def test_build_artifact_rejects_uninitialized_model_without_mutation() -> None:
         build_artifact(source)
 
     assert source.training
+
+
+def test_artifact_model_config_excludes_removed_unused_fields() -> None:
+    source = _model()
+    payload = build_artifact(source)
+
+    assert "temperature" not in payload["model_config"]
+    assert "debug" not in payload["model_config"]
