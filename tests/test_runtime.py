@@ -4,7 +4,7 @@ import torch
 
 from nhsmm import ModelConfig, NHSMM
 from nhsmm.filtering import filter_model_sequence, next_episode_end_probability
-from nhsmm.runtime import HSMMFilterRuntime
+from nhsmm.runtime import HSMMFilterRuntime, HSMMRuntimeState
 
 
 def _make_model() -> NHSMM:
@@ -196,3 +196,85 @@ def test_runtime_external_context_mode_is_fixed_until_reset() -> None:
         assert "context mode is fixed" in str(exc)
     else:
         raise AssertionError("runtime context mode must not change midstream")
+
+
+def test_runtime_state_rejects_nonfinite_observation() -> None:
+    model = _make_model()
+    runtime = HSMMFilterRuntime(model)
+    runtime.step(torch.zeros(1, model.config.n_features))
+    state = runtime.state
+    assert state is not None
+
+    bad = state.observations.clone()
+    bad[..., 0] = float("nan")
+    try:
+        HSMMRuntimeState(
+            filter_state=state.filter_state,
+            observations=bad,
+            duration_log_prob=state.duration_log_prob,
+            transition_log_prob=state.transition_log_prob,
+            encoder_state=state.encoder_state,
+            last_timestamp=state.last_timestamp,
+            uses_timestamps=state.uses_timestamps,
+        )
+    except ValueError as exc:
+        assert "finite" in str(exc)
+    else:
+        raise AssertionError("non-finite runtime observations must fail closed")
+
+
+def test_runtime_rejects_nonfinite_observation_before_state_mutation() -> None:
+    model = _make_model()
+    runtime = HSMMFilterRuntime(model)
+    observation = torch.zeros(1, model.config.n_features)
+    observation[0, 0] = float("nan")
+
+    try:
+        runtime.step(observation)
+    except ValueError as exc:
+        assert "finite" in str(exc)
+    else:
+        raise AssertionError("non-finite observations must fail closed")
+
+    assert runtime.state is None
+
+
+def test_runtime_rejects_nonfinite_external_context_before_state_mutation() -> None:
+    model = _make_model()
+    runtime = HSMMFilterRuntime(model)
+    context = torch.zeros(model.context_dim)
+    context[0] = float("inf")
+
+    try:
+        runtime.step(torch.zeros(1, model.config.n_features), context=context)
+    except ValueError as exc:
+        assert "finite" in str(exc)
+    else:
+        raise AssertionError("non-finite external context must fail closed")
+
+    assert runtime.state is None
+
+
+def test_runtime_state_rejects_zero_mass_probability_rows() -> None:
+    model = _make_model()
+    runtime = HSMMFilterRuntime(model)
+    runtime.step(torch.zeros(1, model.config.n_features))
+    state = runtime.state
+    assert state is not None
+
+    bad_duration = state.duration_log_prob.clone()
+    bad_duration[:, 0] = float("-inf")
+    try:
+        HSMMRuntimeState(
+            filter_state=state.filter_state,
+            observations=state.observations,
+            duration_log_prob=bad_duration,
+            transition_log_prob=state.transition_log_prob,
+            encoder_state=state.encoder_state,
+            last_timestamp=state.last_timestamp,
+            uses_timestamps=state.uses_timestamps,
+        )
+    except ValueError as exc:
+        assert "finite probability mass" in str(exc)
+    else:
+        raise AssertionError("zero-mass runtime probability rows must fail closed")

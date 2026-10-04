@@ -77,7 +77,7 @@ def _update_tensor_hash(hasher: Any, tensor: torch.Tensor) -> None:
     value = tensor.detach().cpu().contiguous()
     hasher.update(str(value.dtype).encode())
     hasher.update(json.dumps(list(value.shape), separators=(",", ":")).encode())
-    hasher.update(value.numpy().tobytes(order="C"))
+    hasher.update(value.reshape(-1).view(torch.uint8).numpy().tobytes(order="C"))
 
 
 def model_fingerprint(model: Any) -> str:

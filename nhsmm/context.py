@@ -29,6 +29,10 @@ def align_context_tensor(
     public form because it is ambiguous with ``[T,H]`` whenever ``B == T``.
     """
     tensor = torch.as_tensor(context, device=device, dtype=dtype)
+    if not tensor.is_floating_point():
+        raise TypeError("context must use a floating dtype")
+    if not torch.isfinite(tensor).all():
+        raise ValueError("context must contain only finite values")
     B, T, H = batch_size, timesteps, context_dim
 
     if tensor.ndim == 1:

@@ -30,12 +30,19 @@ class Categorical(Distribution):
             raise ValueError("Specify exactly one of logits or probs.")
 
         reference = logits if logits is not None else probs
-        assert reference is not None
+        if not isinstance(reference, torch.Tensor):
+            raise TypeError("logits/probs must be torch.Tensor values")
+        if not reference.is_floating_point():
+            raise TypeError("logits/probs must use a floating dtype")
+        if reference.ndim < 1 or reference.shape[-1] < 1:
+            raise ValueError("Categorical requires a non-empty category dimension")
         normalized_dim = dim if dim >= 0 else reference.ndim + dim
         if normalized_dim != reference.ndim - 1:
             raise ValueError("Categorical only supports the last dimension as the category axis")
         self.dim = -1
         if logits is not None:
+            if not torch.isfinite(logits).all():
+                raise ValueError("logits must contain only finite values")
             self._logits = logits
             self._log_probs = nnF.log_softmax(logits, dim=dim)
             self._probs = self._log_probs.exp()
@@ -79,7 +86,9 @@ class Categorical(Distribution):
     def rsample(
         self, sample_shape=torch.Size(), temperature: Optional[float] = None, hard: bool = False
     ):
-        tau = 1.0 if temperature is None else temperature
+        tau = 1.0 if temperature is None else float(temperature)
+        if not math.isfinite(tau) or tau <= 0.0:
+            raise ValueError("temperature must be finite and > 0")
         logits_exp = self._logits
         if sample_shape:
             logits_exp = logits_exp.expand(*sample_shape, *self.batch_shape, self._logits.shape[-1])

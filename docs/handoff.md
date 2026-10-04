@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `7780bcc0347619dec0e1356d8b790a4a4dc1fe73`
+- base head for this handoff update: `1cd1090cf5e648fe155129df4536bcba147ff328`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-241 passed, 3 skipped
+261 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `241 passed, 3 skipped`.
+The corresponding current local full suite is `261 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -245,6 +245,16 @@ Unused public config cleanup is complete:
 - model-level `self.debug` was removed with the dead config field;
 - distribution/runtime temperature APIs remain intact because they are active consumers and separate from the removed config field;
 - artifact payloads no longer persist the removed dead fields.
+
+Production-boundary hardening is complete:
+
+- persisted model state validation covers parameters and persistent buffers;
+- artifact build/load and inference loading reject non-finite floating state tensors before use;
+- external context and streaming observations reject non-finite values instead of propagating/sanitizing them;
+- runtime state requires finite probability mass in every duration/transition row;
+- categorical construction/sampling validates finite logits and positive finite temperatures;
+- filter-trace length dtype/device contracts are explicit;
+- exact-byte validation fingerprints support scalar and `bfloat16` tensor state.
 
 Reproducible validation snapshots are implemented:
 

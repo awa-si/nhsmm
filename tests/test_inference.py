@@ -79,3 +79,31 @@ def test_load_inference_model_can_require_causal_config() -> None:
         assert "causal=True" in str(exc)
     else:
         raise AssertionError("non-causal config must fail when causal inference is required")
+
+
+def test_prepare_inference_rejects_nonfinite_persistent_buffer() -> None:
+    model = _make_model()
+    model.register_buffer("poisoned_buffer", torch.tensor(float("nan")), persistent=True)
+
+    try:
+        prepare_inference(model)
+    except ValueError as exc:
+        assert "model state" in str(exc)
+        assert "poisoned_buffer" in str(exc)
+    else:
+        raise AssertionError("non-finite persistent buffers must fail closed")
+
+
+def test_load_inference_model_rejects_nonfinite_state_tensor() -> None:
+    source = _make_model()
+    state = {name: value.detach().clone() for name, value in source.state_dict().items()}
+    name = next(key for key, value in state.items() if value.is_floating_point())
+    state[name].reshape(-1)[0] = float("inf")
+
+    try:
+        load_inference_model(copy.deepcopy(source.config), state, device="cpu")
+    except ValueError as exc:
+        assert "state_dict" in str(exc)
+        assert name in str(exc)
+    else:
+        raise AssertionError("non-finite state tensors must fail closed")

@@ -265,3 +265,10 @@ def test_model_config_rejects_non_boolean_flags(field: str) -> None:
     kwargs = {"n_states": 2, "n_features": 2, field: 1}
     with pytest.raises(ValueError):
         ModelConfig(**kwargs)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_align_context_tensor_rejects_nonfinite_values(value: float) -> None:
+    context = torch.tensor([0.0, value])
+    with pytest.raises(ValueError, match="finite"):
+        align_context_tensor(context, batch_size=1, timesteps=2, context_dim=2)

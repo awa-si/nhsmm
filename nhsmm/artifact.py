@@ -10,7 +10,7 @@ import torch
 from nhsmm.config import ModelConfig
 from nhsmm.context import ContextEncoder
 from nhsmm.encoder import DefaultEncoder
-from nhsmm.inference import load_inference_model
+from nhsmm.inference import _validate_finite_state_tensors, load_inference_model
 from nhsmm.models import NHSMM
 
 ARTIFACT_TYPE = "nhsmm"
@@ -64,9 +64,8 @@ def build_artifact(model: NHSMM) -> dict[str, Any]:
         raise TypeError("model must be an NHSMM")
     if model.dist is None:
         raise RuntimeError("model distributions must be initialized before artifact creation")
-    for name, parameter in model.named_parameters():
-        if parameter.is_floating_point() and not torch.isfinite(parameter).all():
-            raise ValueError(f"model parameter {name!r} contains NaN or infinity")
+    state_dict = model.state_dict()
+    _validate_finite_state_tensors(state_dict, owner="model state")
 
     encoder = _raw_default_encoder(model)
     config = asdict(model.config)
@@ -76,7 +75,7 @@ def build_artifact(model: NHSMM) -> dict[str, Any]:
         "model_config": config,
         "encoder_config": _encoder_config(encoder),
         "schema": _schema(model.config),
-        "state_dict": {name: tensor.detach().cpu() for name, tensor in model.state_dict().items()},
+        "state_dict": {name: tensor.detach().cpu() for name, tensor in state_dict.items()},
     }
 
 
@@ -163,9 +162,10 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
     state_dict = _require_mapping(payload["state_dict"], "state_dict")
     if not state_dict:
         raise ValueError("artifact state_dict must not be empty")
-    for name, tensor in state_dict.items():
-        if not isinstance(name, str) or not isinstance(tensor, torch.Tensor):
-            raise ValueError("artifact state_dict must map string names to tensors")
+    try:
+        _validate_finite_state_tensors(state_dict, owner="artifact state_dict")
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid artifact state_dict: {exc}") from exc
     return config, state_dict
 
 

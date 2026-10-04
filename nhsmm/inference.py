@@ -13,6 +13,20 @@ _INFERENCE_CONTEXT_WEIGHT = "_inference_context_weight"
 _INFERENCE_CONTEXT_BIAS = "_inference_context_bias"
 
 
+def _validate_finite_state_tensors(
+    tensors: Mapping[str, torch.Tensor],
+    *,
+    owner: str,
+) -> None:
+    for name, value in tensors.items():
+        if not isinstance(name, str):
+            raise TypeError(f"{owner} keys must be strings")
+        if not isinstance(value, torch.Tensor):
+            raise TypeError(f"{owner}[{name!r}] must be a torch.Tensor")
+        if value.is_floating_point() and not torch.isfinite(value).all():
+            raise ValueError(f"{owner}[{name!r}] contains NaN or infinity")
+
+
 def _set_nonpersistent_buffer(module: nn.Module, name: str, value: Optional[torch.Tensor]) -> None:
     if name in module._buffers:
         module._buffers[name] = value
@@ -70,9 +84,7 @@ def prepare_inference(model: NHSMM, *, freeze: bool = True) -> NHSMM:
     if model.dist is None:
         raise RuntimeError("model distributions must be initialized before inference")
 
-    for name, parameter in model.named_parameters():
-        if parameter.is_floating_point() and not torch.isfinite(parameter).all():
-            raise ValueError(f"model parameter {name!r} contains NaN or infinity")
+    _validate_finite_state_tensors(model.state_dict(), owner="model state")
 
     model.eval()
     if freeze:
@@ -106,11 +118,7 @@ def load_inference_model(
         raise TypeError("state_dict must be a mapping of parameter names to tensors")
     if not state_dict:
         raise ValueError("state_dict must not be empty")
-    for name, value in state_dict.items():
-        if not isinstance(name, str):
-            raise TypeError("state_dict keys must be strings")
-        if not isinstance(value, torch.Tensor):
-            raise TypeError(f"state_dict[{name!r}] must be a torch.Tensor")
+    _validate_finite_state_tensors(state_dict, owner="state_dict")
 
     model = NHSMM(config=config, device=device)
     model.initialize_distributions()

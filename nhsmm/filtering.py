@@ -81,6 +81,10 @@ class HSMMFilterTrace:
             raise TypeError("lengths must be a torch.Tensor")
         if lengths.ndim != 1 or lengths.shape[0] != value.shape[0]:
             raise ValueError(f"lengths must be [B], got {lengths.shape}")
+        if lengths.dtype != torch.long:
+            raise TypeError("lengths must use torch.long dtype")
+        if lengths.device != value.device:
+            raise ValueError("lengths must be on the same device as log_posterior")
         if (lengths < 0).any() or (lengths > value.shape[1]).any():
             raise ValueError("lengths contain values outside the trace time dimension")
 

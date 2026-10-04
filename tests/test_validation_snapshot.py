@@ -122,3 +122,11 @@ def test_validation_snapshot_rejects_empty_or_nonfinite_inputs() -> None:
     x[0, 0, 0] = float("nan")
     with pytest.raises((ValueError, RuntimeError)):
         evaluate_validation_snapshot(model, x)
+
+
+def test_model_fingerprint_supports_bfloat16_state() -> None:
+    model = _model().to(dtype=torch.bfloat16)
+    fingerprint = model_fingerprint(model)
+
+    assert len(fingerprint) == 64
+    assert fingerprint == model_fingerprint(model)

@@ -91,6 +91,8 @@ class HSMMRuntimeState:
             )
         if not self.observations.is_floating_point():
             raise TypeError("observations must use a floating dtype")
+        if not torch.isfinite(self.observations).all():
+            raise ValueError("observations must contain only finite values")
 
         posterior = self.filter_state.log_posterior
         B, K, D = posterior.shape
@@ -107,6 +109,10 @@ class HSMMRuntimeState:
             if tensor.shape != shape:
                 raise ValueError(f"{name} must be {shape}, got {tensor.shape}")
             _require_compatible(posterior, tensor, name)
+            if torch.isnan(tensor).any() or torch.isposinf(tensor).any():
+                raise ValueError(f"{name} must not contain NaN or +inf")
+            if not torch.isfinite(torch.logsumexp(tensor, dim=-1)).all():
+                raise ValueError(f"{name} must contain finite probability mass in every row")
 
         if self.uses_timestamps and self.last_timestamp is None:
             raise ValueError("timestamped runtime state requires last_timestamp")
@@ -143,6 +149,8 @@ def _as_observation(observation: torch.Tensor, *, n_features: int) -> torch.Tens
         raise ValueError(
             f"feature dimension mismatch: expected {n_features}, got {observation.shape[-1]}"
         )
+    if not torch.isfinite(observation).all():
+        raise ValueError("observation must contain only finite values")
     return observation
 
 

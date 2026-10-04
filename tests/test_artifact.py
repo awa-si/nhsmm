@@ -154,3 +154,24 @@ def test_artifact_model_config_excludes_removed_unused_fields() -> None:
 
     assert "temperature" not in payload["model_config"]
     assert "debug" not in payload["model_config"]
+
+
+def test_build_artifact_rejects_nonfinite_persistent_buffer() -> None:
+    source = _model()
+    source.register_buffer("poisoned_buffer", torch.tensor(float("inf")), persistent=True)
+
+    with pytest.raises(ValueError, match="poisoned_buffer"):
+        build_artifact(source)
+
+
+def test_load_artifact_rejects_nonfinite_state_tensor(tmp_path) -> None:
+    source = _model()
+    payload = build_artifact(source)
+    name = next(key for key, value in payload["state_dict"].items() if value.is_floating_point())
+    payload["state_dict"][name] = payload["state_dict"][name].clone()
+    payload["state_dict"][name].reshape(-1)[0] = float("nan")
+    path = tmp_path / "nonfinite.nhsmm.pt"
+    torch.save(payload, path)
+
+    with pytest.raises(ValueError, match="invalid artifact state_dict"):
+        load_artifact(path, device="cpu")

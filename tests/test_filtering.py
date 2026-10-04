@@ -7,6 +7,7 @@ import torch
 
 from nhsmm.filtering import (
     HSMMFilterState,
+    HSMMFilterTrace,
     _filter_step_normalized,
     duration_log_hazard,
     filter_step,
@@ -160,3 +161,13 @@ def test_filter_posterior_normalizes() -> None:
             atol=1e-6,
             rtol=1e-6,
         )
+
+
+def test_filter_trace_requires_long_lengths_on_same_device() -> None:
+    trace = torch.zeros(1, 2, 1, 1)
+    with pytest.raises(TypeError, match="torch.long"):
+        HSMMFilterTrace(trace, torch.tensor([2.0]))
+
+    meta_lengths = torch.tensor([2], dtype=torch.long, device="meta")
+    with pytest.raises(ValueError, match="same device"):
+        HSMMFilterTrace(trace, meta_lengths)

@@ -506,3 +506,27 @@ def test_emission_temperature_does_not_rescale_locations(emission_type) -> None:
     torch.testing.assert_close(cooled, baseline)
     assert not emission.logits.requires_grad
     assert not emission.log_temperature.requires_grad
+
+
+@pytest.mark.parametrize(
+    "logits",
+    [
+        torch.tensor([[0.0, float("nan"), 1.0]]),
+        torch.tensor([[0.0, float("inf"), 1.0]]),
+    ],
+)
+def test_categorical_rejects_nonfinite_logits(logits) -> None:
+    with pytest.raises(ValueError, match="logits"):
+        Categorical(logits=logits)
+
+
+@pytest.mark.parametrize("temperature", [0.0, -1.0, float("nan"), float("inf")])
+def test_categorical_rsample_rejects_invalid_temperature(temperature) -> None:
+    dist = Categorical(logits=torch.zeros(2, 3))
+    with pytest.raises(ValueError, match="temperature"):
+        dist.rsample(temperature=temperature)
+
+
+def test_categorical_rejects_nonfloating_inputs() -> None:
+    with pytest.raises(TypeError, match="floating dtype"):
+        Categorical(logits=torch.tensor([[1, 2, 3]]))
