@@ -17,7 +17,7 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
-- **Full local repository regression on current `develop`:** 263 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
+- **Full local repository regression on current `develop`:** 270 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner; current local consistency scan also rebuilt sdist + wheel and passed `twine check` after migrating package license metadata to SPDX.
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
 - **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp. CPU-only development uses `scripts/install_cpu_dev.py`, which installs the official CPU PyTorch wheel before the normal editable dev environment and avoids unnecessary CUDA dependency resolution.
@@ -39,6 +39,14 @@ Structural usefulness validation is now part of the maintained learning/predicti
 - weak passes a lower-confidence usefulness contract, with exact boundary timing explicitly qualified and ±1-timestep timing reported separately;
 - null is retained strictly as a negative control and does not receive a usefulness claim;
 - usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
+
+Configuration contract and tuning surface are now explicit:
+
+- `ModelConfig` exposes strict `to_dict()`, `from_dict(...)`, and validated `with_overrides(...)`;
+- public `ValidationConfig`, `ValidationDataConfig`, and `ValidationScenarioConfig` separate model/training configuration from acceptance policy;
+- validation config is schema-versioned and JSON-serializable, includes seeds, synthetic-data policy, model template, model-health thresholds, boundary tolerance, and per-scenario learning/usefulness thresholds;
+- the learning/prediction harness accepts `--config`, `--dump-config`, and strict dotted `--set` overrides for model/data/health/scenario fields;
+- scenario semantics are no longer name-based; null/weak behavior is expressed entirely through explicit policy fields.
 
 Production-boundary hardening is complete:
 
@@ -188,7 +196,7 @@ Safe behavior-preserving hardening already applied:
 Verification after these changes:
 
 ```text
-263 passed, 3 skipped
+270 passed, 3 skipped
 ```
 
 The three skips require CUDA and were run on a CPU-only local runtime.
@@ -269,7 +277,7 @@ pytest: 96 passed
 runtime benchmark: PASS
 ```
 
-The later hardening has local full-suite evidence (`263 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
+The later hardening has local full-suite evidence (`270 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
 
 ## Package boundary / next slice
 

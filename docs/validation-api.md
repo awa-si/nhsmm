@@ -114,3 +114,15 @@ comparison = compare_validation_snapshots(train, oos)
 `compare_validation_snapshots(...)` reports reference-to-candidate deltas for likelihood, effective-state count, occupancy concentration, posterior entropy, switch rate, run length, and occupancy L1 distance. By default it requires the same fitted-model fingerprint, preventing accidental direct comparison of unaligned latent-state labels from independently fitted models.
 
 Snapshots and comparisons expose `.as_dict()` and are JSON-serializable. They deliberately contain no timestamps or trading-specific labels so identical model/data inputs produce stable validation evidence.
+
+## Validation configuration contract
+
+Controlled learning/prediction acceptance uses a separate public configuration surface from `ModelConfig`:
+
+- `ValidationConfig` — schema version, seeds, boundary tolerance, model template, health thresholds, data policy, and named scenarios;
+- `ValidationDataConfig` — sequence counts/length and synthetic duration-generation policy;
+- `ValidationScenarioConfig` — explicit learning and structural-usefulness thresholds.
+
+The contract is strict and JSON-serializable. Unknown keys, unsupported schema versions, invalid ranges, incompatible dimensions, and contradictory policies fail closed. Tuning returns validated copies via `with_overrides(...)`; no scenario name carries hidden behavior.
+
+See [configuration.md](configuration.md) for the full contract and CLI examples.

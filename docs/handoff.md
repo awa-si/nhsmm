@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `ebd52cc517e01c4f838bb5b7ecc7ffdebb07f31e`
+- base head for this handoff update: `e3ca971d313efd364bf3589fe1383447211ce015`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-263 passed, 3 skipped
+270 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `263 passed, 3 skipped`.
+The corresponding current local full suite is `270 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -264,6 +264,14 @@ Structural usefulness validation is now part of the maintained learning/predicti
 - weak passes a lower-confidence usefulness contract, with exact boundary timing explicitly qualified and ±1-timestep timing reported separately;
 - null is retained strictly as a negative control and does not receive a usefulness claim;
 - usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
+
+Configuration/tuning contract is implemented:
+
+- `ModelConfig` has strict serialization and validated override helpers;
+- public schema-versioned `ValidationConfig` owns acceptance dataset/model/health/scenario policy;
+- validation thresholds and health/collapse policy are tuneable without editing the harness;
+- CLI supports JSON config loading, resolved-config dumping, and strict dotted overrides;
+- latest full local suite after this change: `270 passed, 3 skipped`.
 
 Production-boundary hardening is complete:
 

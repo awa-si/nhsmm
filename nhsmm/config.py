@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import Optional, Literal
-from dataclasses import dataclass
+from typing import Any, Literal, Mapping, Optional
+from dataclasses import asdict, dataclass, fields, replace
 import logging
 import math
 
@@ -146,3 +146,42 @@ class ModelConfig:
             value = getattr(self, name)
             if value not in allowed:
                 raise ValueError(f"{name} must be one of {sorted(allowed)}, got {value!r}")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the complete resolved model configuration."""
+
+        return asdict(self)
+
+    @classmethod
+    def from_dict(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        strict: bool = True,
+    ) -> "ModelConfig":
+        """Construct a validated config from a mapping.
+
+        Strict mode rejects unknown keys so stale or misspelled tuning
+        parameters cannot be silently ignored.
+        """
+
+        if not isinstance(payload, Mapping):
+            raise TypeError("ModelConfig payload must be a mapping")
+        values = dict(payload)
+        allowed = {field.name for field in fields(cls)}
+        unknown = sorted(set(values) - allowed)
+        if strict and unknown:
+            raise ValueError(f"unknown ModelConfig fields: {unknown}")
+        if unknown:
+            for name in unknown:
+                values.pop(name, None)
+        return cls(**values)
+
+    def with_overrides(self, **overrides: Any) -> "ModelConfig":
+        """Return a validated copy with explicit tuning overrides."""
+
+        allowed = {field.name for field in fields(self)}
+        unknown = sorted(set(overrides) - allowed)
+        if unknown:
+            raise ValueError(f"unknown ModelConfig fields: {unknown}")
+        return replace(self, **overrides)

@@ -12,7 +12,7 @@ def test_learning_prediction_smoke_proves_fit_and_oos_prediction() -> None:
     assert all(float(row["oos_accuracy"]) > 0.80 for row in rows)
     assert all(not bool(row["oos_health"]["state_collapsed"]) for row in rows)
     assert all(float(row["boundary_f1"]) > 0.65 for row in rows)
-    assert all(float(row["boundary_f1_tolerance_1"]) > 0.75 for row in rows)
+    assert all(float(row["boundary_f1_tolerance"]) > 0.75 for row in rows)
     assert all(float(row["run_length_rel_error"]) < 0.35 for row in rows)
     assert all(float(row["transition_mae"]) < 0.25 for row in rows)
     assert all(float(row["occupancy_l1"]) < 0.25 for row in rows)

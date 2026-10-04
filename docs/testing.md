@@ -101,6 +101,9 @@ Strong and moderate pass both learning and usefulness cleanly. Weak passes a del
 
 The hard state-identification acceptance explicitly uses emission_init_mode="kmeans". A separate default-spread probe is recorded in validation/learning-prediction-2026-10-04.md.
 
+The harness configuration is now externalized through the public `ValidationConfig` contract. A complete JSON contract can be supplied with `--config`; `--dump-config` writes the fully resolved contract; repeated `--set` arguments tune fields such as `model.max_iter`, `data.steps`, `health.max_state_occupancy`, `boundary_tolerance`, or `scenario.moderate.max_median_ece` without code edits. See [configuration.md](configuration.md).
+
+
 ## Controlled transition-context acceptance
 
 ```bash
