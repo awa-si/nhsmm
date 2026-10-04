@@ -8,7 +8,7 @@ import torch.nn.functional as nnF
 from torch.nn.utils.rnn import pad_sequence
 
 from nhsmm import Convergence, DefaultEncoder
-from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet
+from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
 from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.filtering import duration_log_hazard
 from nhsmm.config import DTYPE, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
@@ -221,10 +221,57 @@ class NHSMM(nn.Module):
         except Exception as err:
             raise RuntimeError(f"Failed to initialize NHSMM PDFs: {err}") from err
 
-    def _build_sequence_set(
-        self, X: Union[torch.Tensor, List[torch.Tensor]], context: Optional[torch.Tensor] = None
-    ) -> SequenceSet:
+    def _align_external_context(
+        self,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]],
+    ) -> Optional[torch.Tensor]:
+        if context is None:
+            return None
 
+        X_tensor = self._ensure_tensor(X)
+        B, T, _ = X_tensor.shape
+        if isinstance(context, list):
+            if len(context) != B:
+                raise ValueError(
+                    f"context list length {len(context)} does not match batch size {B}"
+                )
+            expected_lengths = (
+                [int(torch.as_tensor(item).shape[0]) for item in X]
+                if isinstance(X, list)
+                else [T] * B
+            )
+            for index, (item, expected_length) in enumerate(zip(context, expected_lengths)):
+                item_tensor = torch.as_tensor(item)
+                if item_tensor.ndim != 2:
+                    raise ValueError(
+                        "context list entries must be [T,H] tensors; "
+                        f"entry {index} has shape {tuple(item_tensor.shape)}"
+                    )
+                if item_tensor.shape[0] != expected_length:
+                    raise ValueError(
+                        f"context sequence {index} length {item_tensor.shape[0]} "
+                        f"does not match observation length {expected_length}"
+                    )
+            context = self._ensure_tensor(context)
+        elif not torch.is_tensor(context):
+            raise TypeError(f"Unsupported context type: {type(context)}")
+
+        return align_context_tensor(
+            context,
+            batch_size=B,
+            timesteps=T,
+            context_dim=int(self.context_dim),
+            device=X_tensor.device,
+            dtype=X_tensor.dtype,
+        )
+
+    def _build_sequence_set(
+        self,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
+    ) -> SequenceSet:
+        context = self._align_external_context(X, context)
         X, mask = self._ensure_tensor(X, return_mask=True)
         B, T, F = X.shape
         if F != self.config.n_features:
@@ -237,16 +284,7 @@ class NHSMM(nn.Module):
             if self.config.causal:
                 canonical = context_tensor[:, :1]
         else:
-            context_tensor = self._ensure_tensor(context)
-            if context_tensor.ndim == 2:
-                context_tensor = context_tensor.unsqueeze(0).expand(B, T, -1)
-            elif context_tensor.ndim == 3:
-                if context_tensor.shape[:2] != (B, T):
-                    raise ValueError(
-                        f"context shape {context_tensor.shape} incompatible with batch {B}, seq {T}"
-                    )
-            else:
-                raise ValueError(f"Unsupported context ndim {context_tensor.ndim}")
+            context_tensor = context
             canonical = context_tensor[:, :1]
 
         K = self.config.n_states
@@ -667,7 +705,7 @@ class NHSMM(nn.Module):
         reduce: bool = False,
     ) -> torch.Tensor:
 
-        X, context = self._ensure_tensor(X), self._ensure_tensor(context)
+        X = self._ensure_tensor(X)
         B, T, F = X.shape
 
         if F != self.config.n_features:
@@ -696,7 +734,7 @@ class NHSMM(nn.Module):
         verbose: bool = True,
     ) -> torch.Tensor | list[torch.Tensor]:
 
-        X, context = self._ensure_tensor(X), self._ensure_tensor(context)
+        X = self._ensure_tensor(X)
         B, T, F = X.shape
 
         if B == 0 or T == 0:
@@ -939,6 +977,70 @@ class NHSMM(nn.Module):
 
         return ll, loss
 
+    def _refine_transition_likelihood(
+        self,
+        X: torch.Tensor,
+        context: Optional[torch.Tensor],
+        *,
+        steps: int,
+        lr: float,
+    ) -> float:
+        """Refine transition context modulation against exact sequence likelihood."""
+        if steps <= 0:
+            raise ValueError("steps must be positive")
+        if lr <= 0.0:
+            raise ValueError("lr must be positive")
+        if context is None:
+            raise ValueError("transition refinement requires explicit external context")
+
+        transition = self.dist.transition
+        transition_params = [
+            *[p for p in transition.context_net.parameters() if p.requires_grad],
+            transition.delta_scale,
+        ]
+        transition_params = [p for p in transition_params if p.requires_grad]
+        if not transition_params:
+            raise RuntimeError("transition context modulation has no trainable parameters")
+
+        original_requires_grad = {id(p): p.requires_grad for p in self.parameters()}
+        transition_ids = {id(p) for p in transition_params}
+        original_training = self.training
+        try:
+            for parameter in self.parameters():
+                parameter.requires_grad_(id(parameter) in transition_ids)
+            self.eval()
+            optimizer = torch.optim.Adam(transition_params, lr=lr)
+            for step in range(steps):
+                optimizer.zero_grad()
+                _, loss = self._compute_loss(
+                    X,
+                    context=context,
+                    loss_bias=0.0,
+                    it=step,
+                    max_iter=steps,
+                    t_min=1.0,
+                    t_max=1.0,
+                )
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(transition_params, 5.0)
+                optimizer.step()
+
+            with torch.no_grad():
+                ll, _ = self._compute_loss(
+                    X,
+                    context=context,
+                    loss_bias=0.0,
+                    it=steps,
+                    max_iter=steps,
+                    t_min=1.0,
+                    t_max=1.0,
+                )
+            return float(ll.item())
+        finally:
+            for parameter in self.parameters():
+                parameter.requires_grad_(original_requires_grad[id(parameter)])
+            self.train(original_training)
+
     def optimize(
         self,
         X: Union[torch.Tensor, List[torch.Tensor]],
@@ -958,7 +1060,8 @@ class NHSMM(nn.Module):
 
         cfg = cfg or self.config
         observations = self._training_observations(X)
-        X, context = self._ensure_tensor(X), self._ensure_tensor(context)
+        context = self._align_external_context(X, context)
+        X = self._ensure_tensor(X)
 
         self._convergence = Convergence(
             tol=cfg.tol,
@@ -1035,5 +1138,15 @@ class NHSMM(nn.Module):
 
         if cfg.n_init > 1:
             self._restore_best_params()
+
+        if cfg.transition_refine_steps > 0:
+            if context is None:
+                raise ValueError("transition_refine_steps > 0 requires explicit external context")
+            self._refine_transition_likelihood(
+                X,
+                context,
+                steps=cfg.transition_refine_steps,
+                lr=cfg.transition_refine_lr,
+            )
 
         return self

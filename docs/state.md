@@ -22,7 +22,7 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
 - **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp. CPU-only development uses `scripts/install_cpu_dev.py`, which installs the official CPU PyTorch wheel before the normal editable dev environment and avoids unnecessary CUDA dependency resolution.
 
-The Python 3.12 baseline, selected P0 code-scan fixes, default-distribution math/performance hardening, encoder/cache hardening, models-layer contract cleanup, convergence-monitor hardening, transition-forecast hardening, and repository-wide static/API consistency cleanup are complete. Downstream Nautilus integration remains a separate empirical validation boundary.
+The Python 3.12 baseline, selected P0 code-scan fixes, distribution/encoder/model/convergence/transition hardening, repository-wide static/API consistency cleanup, and file/code consolidation are complete. Downstream Nautilus integration remains a separate empirical validation boundary.
 
 ## Accepted package-core evidence
 

@@ -102,6 +102,10 @@ def _as_batched(tensor: torch.Tensor, ndim: int, name: str) -> torch.Tensor:
 
 
 def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
+    if not isinstance(tensor, torch.Tensor):
+        raise TypeError(f"{name} must be a torch.Tensor")
+    if not tensor.is_floating_point():
+        raise TypeError(f"{name} must use a floating dtype")
     if tensor.device != reference.device:
         raise ValueError(f"{name} device {tensor.device} != expected {reference.device}")
     if tensor.dtype != reference.dtype:

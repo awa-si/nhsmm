@@ -6,6 +6,19 @@ from typing import Any
 import numpy as np
 
 
+def finite_correlation(a: Any, b: Any) -> float:
+    """Return Pearson correlation, using zero for degenerate finite vectors."""
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    if a.shape != b.shape:
+        raise ValueError("correlation inputs must have equal shape")
+    if not np.isfinite(a).all() or not np.isfinite(b).all():
+        raise ValueError("correlation inputs must contain only finite values")
+    if np.std(a) < 1e-12 or np.std(b) < 1e-12:
+        return 0.0
+    return float(np.corrcoef(a, b)[0, 1])
+
+
 @dataclass(frozen=True)
 class StateAlignment:
     """Permutation aligning candidate latent states to reference latent states."""

@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `ea1023e9755ab4e0d10b42a64a673af4a376c517`
+- base head for this handoff update: `6c863e9b732cee3624eefc8ba1d29154765b139d`
 
 ## Current state
 
@@ -213,7 +213,7 @@ Canonical runtime benchmark on a temporary causal artifact (128 steps, 16 warmup
 
 Models-layer audit/hardening is complete:
 
-- base and training `DistributionSet` share one canonical implementation and honor injected component factories;
+- `nhsmm.models` now exposes the single canonical `DistributionSet`/`NHSMM` implementation from `models/base.py`; the redundant `models/training.py` layer was removed;
 - distribution restarts preserve injected component factories;
 - base/default encoder dimension validation matches the canonical training model;
 - restart initialization keeps base distribution parameters independent of observed external context;
@@ -245,6 +245,14 @@ Unused public config cleanup is complete:
 - model-level `self.debug` was removed with the dead config field;
 - distribution/runtime temperature APIs remain intact because they are active consumers and separate from the removed config field;
 - artifact payloads no longer persist the removed dead fields.
+
+File/code consolidation is complete:
+
+- redundant `nhsmm/models/training.py` was removed; all public model imports now resolve to the single implementation in `models/base.py`;
+- external-context alignment and optional transition refinement were folded into the canonical model rather than maintained in a subclass;
+- repeated validation correlation logic was centralized in `validation/alignment.py`;
+- filtering/runtime/transition dtype-device compatibility checks share one internal helper;
+- exact top-level function-body duplicate scan over `nhsmm/` is clean.
 
 Repository-wide consistency cleanup is complete:
 

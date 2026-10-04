@@ -11,6 +11,7 @@ from nhsmm.context import align_context_tensor
 from nhsmm.filtering import (
     HSMMFilterState,
     _filter_step_normalized,
+    _require_compatible,
     initialize_filter,
 )
 from nhsmm.survival import (
@@ -19,13 +20,6 @@ from nhsmm.survival import (
     active_episode_survival_forecast,
 )
 from nhsmm.transitions import HSMMTransitionForecast, one_step_transition_forecast
-
-
-def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
-    if tensor.device != reference.device:
-        raise ValueError(f"{name} device {tensor.device} != expected {reference.device}")
-    if tensor.dtype != reference.dtype:
-        raise ValueError(f"{name} dtype {tensor.dtype} != expected {reference.dtype}")
 
 
 class _RuntimeScoreCache:

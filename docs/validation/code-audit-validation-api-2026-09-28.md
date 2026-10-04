@@ -1,5 +1,7 @@
 # Validation API code audit — 2026-09-28
 
+> Historical note: `nhsmm/models/training.py` referenced below was later consolidated into the canonical `nhsmm/models/base.py` implementation and removed.
+
 Status: **PASS / behavior preserved**.
 
 ## Scope

@@ -1,4 +1,4 @@
-from .training import NHSMM, DistributionSet
+from .base import DistributionSet, NHSMM
 
 __all__ = [
     "NHSMM",

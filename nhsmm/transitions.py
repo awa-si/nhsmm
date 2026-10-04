@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import torch
 
-from nhsmm.filtering import HSMMFilterState, duration_log_hazard
+from nhsmm.filtering import HSMMFilterState, _require_compatible, duration_log_hazard
 
 
 @dataclass(frozen=True)
@@ -98,17 +98,6 @@ class HSMMTransitionForecast:
             raise ValueError("next_state_prior must be normalized")
         if (change > end + atol).any():
             raise ValueError("state_change_probability cannot exceed episode_end_probability")
-
-
-def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
-    if not isinstance(tensor, torch.Tensor):
-        raise TypeError(f"{name} must be a torch.Tensor")
-    if not tensor.is_floating_point():
-        raise TypeError(f"{name} must use a floating dtype")
-    if tensor.device != reference.device:
-        raise ValueError(f"{name} device {tensor.device} != expected {reference.device}")
-    if tensor.dtype != reference.dtype:
-        raise ValueError(f"{name} dtype {tensor.dtype} != expected {reference.dtype}")
 
 
 def _normalize_transition(log_transition: torch.Tensor) -> torch.Tensor:

@@ -5,7 +5,13 @@ from typing import Any, Callable, Iterable
 
 import numpy as np
 
-from .alignment import StateAlignment, align_state_centers, emission_centers, reorder_square_matrix
+from .alignment import (
+    StateAlignment,
+    align_state_centers,
+    emission_centers,
+    finite_correlation,
+    reorder_square_matrix,
+)
 
 
 @dataclass(frozen=True)
@@ -80,12 +86,6 @@ def _effect_vector(matrices: np.ndarray, *, exclude_self: bool) -> tuple[np.ndar
     return centered.reshape(-1), amplitude
 
 
-def _corr(a: np.ndarray, b: np.ndarray) -> float:
-    if np.std(a) < 1e-12 or np.std(b) < 1e-12:
-        return 0.0
-    return float(np.corrcoef(a, b)[0, 1])
-
-
 def evaluate_context_replication(
     model_a: Any,
     model_b: Any,
@@ -117,7 +117,7 @@ def evaluate_context_replication(
 
     vec_a, amp_a = _effect_vector(np.stack(mats_a), exclude_self=config.exclude_self_transitions)
     vec_b, amp_b = _effect_vector(np.stack(mats_b), exclude_self=config.exclude_self_transitions)
-    replication_corr = _corr(vec_a, vec_b)
+    replication_corr = finite_correlation(vec_a, vec_b)
     nz = (np.abs(vec_a) > 1e-4) & (np.abs(vec_b) > 1e-4)
     agreement = float(((vec_a[nz] * vec_b[nz]) > 0.0).mean()) if np.any(nz) else 0.0
     amp_min = min(amp_a, amp_b)
