@@ -6,6 +6,7 @@ import pytest
 
 from nhsmm import (
     ModelConfig,
+    ModelHealthThresholds,
     ValidationConfig,
     ValidationScenarioConfig,
 )
@@ -113,3 +114,25 @@ def test_validation_config_supports_tuned_dimensions() -> None:
     assert config.data.steps == 64
     assert config.data.n_train == 3
     assert config.data.n_eval == 2
+
+
+@pytest.mark.parametrize("field", ["pad_value"])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_model_config_rejects_nonfinite_padding(field: str, value: float) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        ModelConfig(n_states=2, n_features=2, **{field: value})
+
+
+@pytest.mark.parametrize("seed", [True, 1.5, "7"])
+def test_model_config_rejects_noninteger_seed(seed) -> None:
+    with pytest.raises(ValueError, match="seed"):
+        ModelConfig(n_states=2, n_features=2, seed=seed)
+
+
+def test_health_threshold_contract_is_central_and_tunable() -> None:
+    thresholds = ModelHealthThresholds().with_overrides(max_state_occupancy=0.85)
+
+    assert thresholds.max_state_occupancy == 0.85
+    assert ModelHealthThresholds.from_dict(thresholds.__dict__) == thresholds
+    with pytest.raises(ValueError, match="unknown ModelHealthThresholds fields"):
+        thresholds.with_overrides(typo=1)

@@ -7,7 +7,7 @@ from .api import (
     split_fit_context_effect_evidence,
 )
 from .context_evidence import ContextEvidence, ContextEvidenceConfig
-from .config import (
+from nhsmm.config import (
     VALIDATION_CONFIG_SCHEMA_VERSION,
     ValidationConfig,
     ValidationDataConfig,

@@ -1,5 +1,7 @@
 # Configuration contract
 
+All public configuration types are defined in `nhsmm/config.py`. Validation modules may re-export them, but configuration ownership is centralized.
+
 NHSMM separates model/training configuration from validation policy.
 
 ## ModelConfig

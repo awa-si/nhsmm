@@ -5,33 +5,8 @@ from typing import Any, Optional, Union
 
 import torch
 
+from nhsmm.config import ModelHealthThresholds
 from nhsmm.filtering import filter_model_sequence
-
-
-@dataclass(frozen=True)
-class ModelHealthThresholds:
-    """Thresholds used to classify fitted-model degeneration."""
-
-    min_effective_states: float = 2.0
-    max_state_occupancy: float = 0.80
-    min_viterbi_states: int = 2
-    min_state_occupancy: float = 0.01
-    max_duration_peak: float = 0.95
-    max_transition_peak: float = 0.95
-
-    def __post_init__(self) -> None:
-        if self.min_effective_states <= 0.0:
-            raise ValueError("min_effective_states must be > 0")
-        if not 0.0 < self.max_state_occupancy <= 1.0:
-            raise ValueError("max_state_occupancy must be in (0,1]")
-        if self.min_viterbi_states < 1:
-            raise ValueError("min_viterbi_states must be >= 1")
-        if not 0.0 <= self.min_state_occupancy < 1.0:
-            raise ValueError("min_state_occupancy must be in [0,1)")
-        if not 0.0 < self.max_duration_peak <= 1.0:
-            raise ValueError("max_duration_peak must be in (0,1]")
-        if not 0.0 < self.max_transition_peak <= 1.0:
-            raise ValueError("max_transition_peak must be in (0,1]")
 
 
 @dataclass(frozen=True)

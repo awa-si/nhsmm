@@ -7,7 +7,8 @@ from typing import Any, Optional, Union
 
 import torch
 
-from nhsmm.diagnostics import ModelHealthReport, ModelHealthThresholds, evaluate_model_health
+from nhsmm.config import ModelHealthThresholds
+from nhsmm.diagnostics import ModelHealthReport, evaluate_model_health
 
 SNAPSHOT_SCHEMA_VERSION = 1
 
