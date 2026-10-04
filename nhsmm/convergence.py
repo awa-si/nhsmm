@@ -1,7 +1,9 @@
 from __future__ import annotations
 import json
-import torch
+import math
+
 import numpy as np
+import torch
 from threading import Lock
 from typing import List, Optional, Protocol, Literal
 
@@ -17,7 +19,7 @@ class CallbackFn(Protocol):
         score: float,
         delta_abs: float,
         delta_rel: float,
-        converged: bool
+        converged: bool,
     ) -> None: ...
 
 
@@ -50,6 +52,27 @@ class Convergence:
         early_stop: bool = True,
         verbose: bool = True,
     ):
+        if n_init < 1:
+            raise ValueError("n_init must be >= 1")
+        if max_iter < 1:
+            raise ValueError("max_iter must be >= 1")
+        if patience < 1:
+            raise ValueError("patience must be >= 1")
+        if plateau_window < 1:
+            raise ValueError("plateau_window must be >= 1")
+        if mode not in {"delta", "plateau"}:
+            raise ValueError("mode must be 'delta' or 'plateau'")
+        for name, value in (
+            ("tol", tol),
+            ("rel_tol", rel_tol),
+            ("plateau_tol", plateau_tol),
+            ("patience_scale", patience_scale),
+        ):
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"{name} must be finite and >= 0")
+        if patience_max is not None and patience_max < patience:
+            raise ValueError("patience_max must be >= patience")
+
         self.tol = tol
         self.mode = mode
         self.n_init = n_init
@@ -97,8 +120,8 @@ class Convergence:
         except Exception:
             return self.patience
 
-        ratio = max(lr / self._lr_ref, 1e-8)
-        scale = 1.0 + self.patience_scale * (-torch.log10(torch.tensor(ratio))).item()
+        ratio = max(float(lr) / float(self._lr_ref), 1e-8)
+        scale = 1.0 + self.patience_scale * (-math.log10(ratio))
         p = int(round(self.patience * scale))
         if self.patience_max is not None:
             p = min(p, self.patience_max)
@@ -117,7 +140,14 @@ class Convergence:
 
     def update(self, score: float | torch.Tensor, iteration: int, init_idx: int) -> bool:
         """Record a new score and check convergence."""
+        if not 0 <= iteration <= self.max_iter:
+            raise IndexError(f"iteration must be in [0, {self.max_iter}], got {iteration}")
+        if not 0 <= init_idx < self.n_init:
+            raise IndexError(f"init_idx must be in [0, {self.n_init}), got {init_idx}")
         score_val = float(score.item()) if torch.is_tensor(score) else float(score)
+        if not math.isfinite(score_val):
+            self.converged_flags[init_idx] = False
+            raise ValueError("score must be finite")
         self._record_score(score_val, iteration, init_idx)
         converged = self._evaluate(iteration, init_idx)
 
@@ -165,20 +195,21 @@ class Convergence:
         if not torch.isfinite(da).all() or not torch.isfinite(dr).all():
             self.converged_flags[i] = False
             return False
-        ok = bool((da.abs() < self.tol).all() and (dr.abs() < self.rel_tol).all())
+        ok = bool((da.abs() <= self.tol).all() and (dr.abs() <= self.rel_tol).all())
         self.converged_flags[i] = ok
         return ok
 
     def _plateau_convergence(self, it: int, i: int) -> bool:
-        if it < self.plateau_window:
+        if it < self.plateau_window - 1:
             self.converged_flags[i] = False
             return False
         sl = slice(it - self.plateau_window + 1, it + 1)
         window = self.scores[sl, i]
         if not torch.isfinite(window).all():
+            self.converged_flags[i] = False
             return False
         improvement = window.max() - window.min()
-        ok = bool(improvement < self.plateau_tol)
+        ok = bool(improvement <= self.plateau_tol)
         self.converged_flags[i] = ok
         return ok
 
@@ -190,7 +221,11 @@ class Convergence:
         with self._lock:
             s = float(self.scores[it, i])
             da = float(self.deltas[it, i]) if torch.isfinite(self.deltas[it, i]) else float("nan")
-            dr = float(self.rel_deltas[it, i]) if torch.isfinite(self.rel_deltas[it, i]) else float("nan")
+            dr = (
+                float(self.rel_deltas[it, i])
+                if torch.isfinite(self.rel_deltas[it, i])
+                else float("nan")
+            )
             for fn in self.callbacks:
                 try:
                     fn(self, it, i, s, da, dr, converged)
@@ -201,8 +236,7 @@ class Convergence:
         logger.info(
             f"[Init {i+1:02d}] Iter {it:03d} | "
             f"Score {self.scores[it, i]:.6f} | "
-            f"Δ {self.deltas[it, i]:.2e}"
-            + (" ✓" if converged else "")
+            f"Δ {self.deltas[it, i]:.2e}" + (" ✓" if converged else "")
         )
 
     # -------------------- Properties / export --------------------

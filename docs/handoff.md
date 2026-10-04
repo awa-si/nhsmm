@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `c7cc77fc344c172adfef6bcf8e20e71bcbc90bd0`
+- base head for this handoff update: `ff5df3b1b201a7c3310eab3338838e2ab9674143`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-182 passed, 3 skipped in 44.16 s
+202 passed, 3 skipped in 77.86 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `182 passed, 3 skipped`.
+The corresponding current local full suite is `202 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -221,6 +221,15 @@ Models-layer audit/hardening is complete:
 - external context lists must match observation sequence lengths exactly;
 - public 2-D context semantics are unified through `align_context_tensor()`;
 - transition refinement without explicit context is guarded and regression-tested.
+
+Convergence-monitor audit/hardening is complete:
+
+- plateau convergence now fires after exactly the configured window of observations instead of one iteration late;
+- zero tolerances accept exact zero change;
+- non-finite scores are rejected and cannot leave stale converged flags behind;
+- negative/out-of-range iteration and initialization indices are rejected explicitly;
+- constructor invariants validate counts, tolerances, mode, and patience bounds;
+- LR-aware patience scaling uses scalar math without transient tensor allocation.
 
 Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 
