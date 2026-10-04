@@ -28,12 +28,6 @@ Domain/framework integration is intentionally kept outside this repository.
 pip install nhsmm
 ```
 
-Optional dataframe helpers:
-
-```bash
-pip install "nhsmm[data]"
-```
-
 Development install:
 
 ```bash

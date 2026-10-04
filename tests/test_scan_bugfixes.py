@@ -82,7 +82,7 @@ def test_learned_pooling_parameters_survive_reset(pool: str) -> None:
     assert set(after.values()).issubset(model_parameter_ids)
 
 
-def test_variable_length_dataset_collates_state_sequence_without_polars() -> None:
+def test_variable_length_dataset_collates_state_sequence() -> None:
     dataset = SequenceDataset(
         n_states=2,
         n_features=2,

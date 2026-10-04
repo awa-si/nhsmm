@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `9832e9fa00a4b788ae7581c7bbaf3067a073a457`
+- base head for this handoff update: `9f4f2f16e037acf1581380bb839c9eea93282035`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-285 passed, 3 skipped
+297 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `285 passed, 3 skipped`.
+The corresponding current local full suite is `297 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -180,7 +180,7 @@ The previously selected Python/P0 maintenance work is complete:
 - Python baseline/tooling/workflows are aligned to 3.12+.
 - `SequenceDataset(variable_length=True)` state alignment is fixed and regression-tested.
 - learned `attn` / `mha` pooling parameters survive reset/restarts and remain optimizer/state-dict members.
-- Polars is optional behind the `data` extra.
+- framework-specific dataframe ingestion was removed from core; `nhsmm/data.py` contains synthetic dataset helpers only.
 - main public numeric `ModelConfig` bounds are validated early.
 - later context-invariant hardening in `e9169cb` preserves temporal encoder output, validates SequenceSet/ContextRouter shapes, forwards supported masks, and normalizes masks to the active device/bool dtype.
 
@@ -265,11 +265,11 @@ Structural usefulness validation is now part of the maintained learning/predicti
 - null is retained strictly as a negative control and does not receive a usefulness claim;
 - usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
 
-Repository-wide file consistency audit completed: 121 tracked files reviewed; 28/28 package modules import; no root-export gaps, import cycles, tracked bytecode, or broken local Markdown links. Safe consistency fixes aligned model imports, artifact/snapshot config serialization, README/agent-domain ownership, and empirical/release workflows. The retained `nhsmm/data.py` Freqtrade-style loader is explicitly legacy/non-root and deferred to a breaking API window. Full regression remains `285 passed, 3 skipped`.
+Repository-wide file consistency audit completed: 121 tracked files reviewed; 28/28 package modules import; no root-export gaps, import cycles, tracked bytecode, or broken local Markdown links. Safe consistency fixes aligned model imports, artifact/snapshot config serialization, README/agent-domain ownership, and empirical/release workflows. The legacy Freqtrade/Polars loader and dataframe path have now been removed from `nhsmm/data.py`; data helpers are core-only synthetic fixtures. Full regression remains `297 passed, 3 skipped`.
 
-A public `ConfigTuner` layer now sits above the centralized configuration contracts. It supports validated grid/random candidate generation, maximize/minimize objectives, reusable dotted overrides, serializable trial evidence, and deterministic best-config selection. Full regression after this addition: `285 passed, 3 skipped`.
+A public `ConfigTuner` layer now sits above the centralized configuration contracts. It supports validated grid/random candidate generation, maximize/minimize objectives, reusable dotted overrides, serializable trial evidence, and deterministic best-config selection. Full regression after this addition: `297 passed, 3 skipped`.
 
-Configuration ownership is consolidated in `nhsmm/config.py`; the previous validation-local config module was removed. Public imports remain unchanged, while model, health, data, scenario, and validation contracts now use the same strict helpers. Full local regression: `285 passed, 3 skipped`.
+Configuration ownership is consolidated in `nhsmm/config.py`; the previous validation-local config module was removed. Public imports remain unchanged, while model, health, data, scenario, and validation contracts now use the same strict helpers. Full local regression: `297 passed, 3 skipped`.
 
 Configuration/tuning contract is implemented:
 
@@ -277,7 +277,7 @@ Configuration/tuning contract is implemented:
 - public schema-versioned `ValidationConfig` owns acceptance dataset/model/health/scenario policy;
 - validation thresholds and health/collapse policy are tuneable without editing the harness;
 - CLI supports JSON config loading, resolved-config dumping, and strict dotted overrides;
-- latest full local suite after this change: `285 passed, 3 skipped`.
+- latest full local suite after this change: `297 passed, 3 skipped`.
 
 Production-boundary hardening is complete:
 

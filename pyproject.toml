@@ -45,9 +45,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-data = [
-    "polars>=1.36",
-]
 test = [
     "pytest>=8.2",
 ]

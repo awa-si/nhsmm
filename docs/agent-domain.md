@@ -120,6 +120,5 @@ documentation_contract:
 
 data_boundary:
 - synthetic_sequence_helpers: allowed
-- legacy_dataframe_loader: internal_non_root_api
-- framework_specific_mapping: move_to_nhsmm_interfaces_on_breaking_api_window
-- new_framework_specific_loaders_in_core: prohibited
+- framework_specific_mapping: prohibited
+- synthetic_data_helpers_only: true

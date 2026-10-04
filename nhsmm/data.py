@@ -1,102 +1,145 @@
-"""Optional data helpers and synthetic sequence fixtures.
+"""Synthetic sequence data helpers used by tests and examples."""
 
-`load_dataframe` is a legacy convenience loader with Freqtrade-style filename
-semantics. It is not part of the root public API and should not be used as a
-domain-integration boundary; framework adapters belong in nhsmm-interfaces.
-"""
+from __future__ import annotations
 
-import os
-import torch
-from torch.utils.data import Dataset, DataLoader
+from typing import Optional
 
 import numpy as np
-from typing import Any, Tuple, Optional
+import torch
+from torch.utils.data import DataLoader, Dataset
 
 from nhsmm.config import DTYPE
 
 
-def load_dataframe(data_dir: str, pair: str, timeframe: str) -> Any:
-    try:
-        import polars as pl
-    except ImportError as exc:
-        raise ImportError(
-            "load_dataframe requires the optional data dependencies; install nhsmm[data]"
-        ) from exc
+def _validate_generation_args(
+    *,
+    n_states: int,
+    n_features: int,
+    seg_len_range: tuple[int, int],
+    n_segments_per_state: int,
+    noise_scale: float,
+    context_dim: int | None,
+    context_noise_scale: float,
+) -> None:
+    for name, value in (
+        ("n_states", n_states),
+        ("n_features", n_features),
+        ("n_segments_per_state", n_segments_per_state),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name} must be an integer >= 1")
 
-    symbol = pair.replace("/", "_").replace(":", "_")
-    filename = f"{symbol}-{timeframe}-futures.feather"
-    path = os.path.join(data_dir, filename)
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"data file not found for {pair} @ {timeframe}: {path}")
-    return pl.read_ipc(path, memory_map=False).sort("date")
+    if (
+        not isinstance(seg_len_range, tuple)
+        or len(seg_len_range) != 2
+        or any(isinstance(value, bool) or not isinstance(value, int) for value in seg_len_range)
+    ):
+        raise ValueError("seg_len_range must be a tuple of two integers")
+
+    low, high = seg_len_range
+    if low < 1 or high <= low:
+        raise ValueError("seg_len_range must satisfy 1 <= low < high")
+
+    for name, value in (
+        ("noise_scale", noise_scale),
+        ("context_noise_scale", context_noise_scale),
+    ):
+        if not np.isfinite(value) or value < 0.0:
+            raise ValueError(f"{name} must be finite and >= 0")
+
+    if context_dim is not None and (
+        isinstance(context_dim, bool) or not isinstance(context_dim, int) or context_dim < 1
+    ):
+        raise ValueError("context_dim must be None or an integer >= 1")
 
 
 def generate_gaussian_sequence(
     n_states: int,
     n_features: int,
     seed: int,
-    seg_len_range: Tuple[int, int] = (5, 20),
+    seg_len_range: tuple[int, int] = (5, 20),
     n_segments_per_state: int = 3,
     noise_scale: float = 0.05,
     context_dim: Optional[int] = None,
     context_noise_scale: float = 0.05,
     normalize: bool = False,
-    dataframe: Optional[Any] = None,
-):
+) -> tuple[np.ndarray, torch.Tensor, torch.Tensor | None]:
+    """Generate a segmented Gaussian latent-state sequence.
+
+    The helper owns only a local NumPy RNG. It does not mutate PyTorch's global
+    random state.
+    """
+
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("seed must be an integer")
+    if not isinstance(normalize, bool):
+        raise ValueError("normalize must be a bool")
+
+    _validate_generation_args(
+        n_states=n_states,
+        n_features=n_features,
+        seg_len_range=seg_len_range,
+        n_segments_per_state=n_segments_per_state,
+        noise_scale=noise_scale,
+        context_dim=context_dim,
+        context_noise_scale=context_noise_scale,
+    )
+
     rng = np.random.default_rng(seed)
-    torch.manual_seed(seed)
+    observations: list[np.ndarray] = []
+    states: list[int] = []
+    contexts: list[np.ndarray] = []
 
-    X_list, states_list, C_list = [], [], []
+    base_means = rng.uniform(-1.0, 1.0, size=(n_states, n_features))
+    for state in range(n_states):
+        for _ in range(n_segments_per_state):
+            length = int(rng.integers(*seg_len_range))
+            observations.append(
+                base_means[state] + rng.normal(scale=noise_scale, size=(length, n_features))
+            )
+            states.extend([state] * length)
+            if context_dim is not None:
+                contexts.append(
+                    rng.normal(
+                        scale=context_noise_scale,
+                        size=(length, context_dim),
+                    )
+                )
 
-    if dataframe is not None:
-        feature_cols = dataframe.columns[-n_features:]
-        X_np = dataframe.select(feature_cols).to_numpy()
-        n_samples = X_np.shape[0]
-        X_list.append(X_np)
-        states_list = np.zeros(n_samples, dtype=int)
-        if context_dim:
-            C_list.append(rng.normal(scale=context_noise_scale, size=(n_samples, context_dim)))
-    else:
-        base_means = rng.uniform(-1.0, 1.0, size=(n_states, n_features))
-        for s in range(n_states):
-            for _ in range(n_segments_per_state):
-                L = int(rng.integers(*seg_len_range))
-                segment = base_means[s] + rng.normal(scale=noise_scale, size=(L, n_features))
-                X_list.append(segment)
-                states_list.extend([s] * L)
-                if context_dim:
-                    C_list.append(rng.normal(scale=context_noise_scale, size=(L, context_dim)))
-
-    X = np.vstack(X_list)
-    states = np.array(states_list, dtype=int)
-    C = np.vstack(C_list) if C_list else None
+    observation_array = np.vstack(observations)
+    state_array = np.asarray(states, dtype=np.int64)
+    context_array = np.vstack(contexts) if contexts else None
 
     if normalize:
-        X = (X - X.mean(0)) / (X.std(0) + 1e-8)
+        observation_array = (observation_array - observation_array.mean(axis=0)) / (
+            observation_array.std(axis=0) + 1e-8
+        )
 
-    X_tensor = torch.tensor(X, dtype=DTYPE)
-    C_tensor = torch.tensor(C, dtype=DTYPE) if C is not None else None
-
-    return states, X_tensor, C_tensor
+    observation_tensor = torch.as_tensor(observation_array, dtype=DTYPE)
+    context_tensor = (
+        torch.as_tensor(context_array, dtype=DTYPE) if context_array is not None else None
+    )
+    return state_array, observation_tensor, context_tensor
 
 
 class SequenceDataset(Dataset):
+    """Dataset wrapper around one generated latent-state sequence."""
+
     def __init__(
         self,
         n_states: int,
         n_features: int,
         seed: int = 42,
-        seg_len_range: Tuple[int, int] = (5, 20),
+        seg_len_range: tuple[int, int] = (5, 20),
         n_segments_per_state: int = 3,
         noise_scale: float = 0.05,
         context_dim: Optional[int] = None,
         context_noise_scale: float = 0.05,
         normalize: bool = False,
-        dataframe: Optional[Any] = None,
         variable_length: bool = False,
-    ):
+    ) -> None:
         self.variable_length = variable_length
-        self.states, X, C = generate_gaussian_sequence(
+        states, observations, context = generate_gaussian_sequence(
             n_states=n_states,
             n_features=n_features,
             seed=seed,
@@ -106,47 +149,72 @@ class SequenceDataset(Dataset):
             context_dim=context_dim,
             context_noise_scale=context_noise_scale,
             normalize=normalize,
-            dataframe=dataframe,
         )
 
-        self.X = X if isinstance(X, torch.Tensor) else torch.tensor(X, dtype=DTYPE)
-        self.C = C if isinstance(C, torch.Tensor) or C is None else torch.tensor(C, dtype=DTYPE)
-        self.states = torch.tensor(self.states, dtype=torch.long)
+        self.X: torch.Tensor | list[torch.Tensor] = observations
+        self.C: torch.Tensor | list[torch.Tensor] | None = context
+        self.states: torch.Tensor | list[torch.Tensor] = torch.as_tensor(
+            states,
+            dtype=torch.long,
+        )
 
         if self.variable_length:
-            self.seq_lengths = [len(self.X)]
-            self.X = [self.X]
-            self.states = [self.states]
-            if self.C is not None:
-                self.C = [self.C]
+            self.X = [observations]
+            self.states = [torch.as_tensor(states, dtype=torch.long)]
+            if context is not None:
+                self.C = [context]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.X) if self.variable_length else self.X.shape[0]
 
-    def __getitem__(self, idx):
+    def __getitem__(self, index: int):
         if self.variable_length:
             if self.C is not None:
-                return self.X[idx], self.C[idx], self.states[idx]
-            return self.X[idx], self.states[idx]
+                return self.X[index], self.C[index], self.states[index]
+            return self.X[index], self.states[index]
+
         if self.C is not None:
-            return self.X[idx], self.C[idx], self.states[idx]
-        return self.X[idx], self.states[idx]
+            return self.X[index], self.C[index], self.states[index]
+        return self.X[index], self.states[index]
 
     def collate_fn(self, batch):
-        X_list = [b[0] for b in batch]
-        lengths = torch.tensor([len(x) for x in X_list], dtype=torch.long)
-        X_padded = torch.nn.utils.rnn.pad_sequence(X_list, batch_first=True)
-        if self.C is not None:
-            C_list = [b[1] for b in batch]
-            C_padded = torch.nn.utils.rnn.pad_sequence(C_list, batch_first=True)
-            states_list = [b[2] for b in batch]
-            states_padded = torch.nn.utils.rnn.pad_sequence(states_list, batch_first=True)
-            return X_padded, C_padded, states_padded, lengths
-        states_list = [b[1] for b in batch]
-        states_padded = torch.nn.utils.rnn.pad_sequence(states_list, batch_first=True)
-        return X_padded, states_padded, lengths
+        observations = [item[0] for item in batch]
+        lengths = torch.tensor([len(item) for item in observations], dtype=torch.long)
+        padded_observations = torch.nn.utils.rnn.pad_sequence(
+            observations,
+            batch_first=True,
+        )
 
-    def loader(self, batch_size=64, shuffle=True):
+        if self.C is not None:
+            contexts = [item[1] for item in batch]
+            states = [item[2] for item in batch]
+            padded_contexts = torch.nn.utils.rnn.pad_sequence(
+                contexts,
+                batch_first=True,
+            )
+            padded_states = torch.nn.utils.rnn.pad_sequence(
+                states,
+                batch_first=True,
+            )
+            return padded_observations, padded_contexts, padded_states, lengths
+
+        states = [item[1] for item in batch]
+        padded_states = torch.nn.utils.rnn.pad_sequence(
+            states,
+            batch_first=True,
+        )
+        return padded_observations, padded_states, lengths
+
+    def loader(
+        self,
+        batch_size: int = 64,
+        shuffle: bool = True,
+    ) -> DataLoader:
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size < 1:
+            raise ValueError("batch_size must be an integer >= 1")
+        if not isinstance(shuffle, bool):
+            raise ValueError("shuffle must be a bool")
+
         return DataLoader(
             self,
             batch_size=batch_size,

@@ -1,6 +1,6 @@
 # Repository consistency audit — 2026-10-04
 
-Scope: every tracked repository file on `develop`.
+Scope: every tracked repository file on `develop` after the data-layer cleanup.
 
 ## Result
 
@@ -19,7 +19,7 @@ Resolved in this audit:
 
 Static evidence:
 
-- tracked files: **121**;
+- tracked files: **122**;
 - package Python modules: **28/28 import successfully**;
 - Python source AST parse: **68/68**;
 - root `__all__`: no missing or duplicate exports;
@@ -27,9 +27,9 @@ Static evidence:
 - tracked bytecode/cache artifacts: none;
 - local Markdown links: no broken relative links.
 
-## Remaining intentional boundary
+## Data boundary cleanup
 
-`nhsmm/data.py::load_dataframe(data_dir, pair, timeframe)` still encodes a Freqtrade-style `*-futures.feather` filename convention. It is not exported from package root and has no repository consumer. It was not removed or signature-changed in this audit to avoid an unannounced external breaking change. New framework-specific loaders in core are prohibited; migration/removal belongs to an explicit breaking API window.
+The prior `nhsmm/data.py::load_dataframe(...)` Freqtrade/Polars compatibility path was removed after explicit cleanup authorization. `nhsmm/data.py` now contains only synthetic sequence generation and dataset helpers; framework-specific ingestion belongs outside the core package.
 
 ## File inventory
 
@@ -92,7 +92,7 @@ Static evidence:
 | `nhsmm/config.py` | CURRENT PACKAGE | Canonical ownership for model, health, and validation configuration contracts. |
 | `nhsmm/context.py` | CURRENT PACKAGE | Sequence/context routing and context encoder support. |
 | `nhsmm/convergence.py` | CURRENT PACKAGE | Training convergence tracking; depends only on config constants/logger. |
-| `nhsmm/data.py` | CURRENT PACKAGE | Synthetic/optional data helpers. Legacy Freqtrade-style loader retained as non-root internal API; migration deferred to breaking window. |
+| `nhsmm/data.py` | CURRENT PACKAGE | Synthetic sequence generation and dataset helpers only; no framework-specific ingestion dependency. |
 | `nhsmm/diagnostics.py` | CURRENT PACKAGE | Model-health metrics using central ModelHealthThresholds. |
 | `nhsmm/distributions/README.md` | CURRENT PACKAGE | Canonical distribution layer/documentation. |
 | `nhsmm/distributions/__init__.py` | CURRENT PACKAGE | Canonical distribution layer/documentation. |
@@ -131,6 +131,7 @@ Static evidence:
 | `tests/test_context_hardening.py` | CURRENT TEST | Regression/contract coverage; collected by full pytest suite. |
 | `tests/test_convergence.py` | CURRENT TEST | Regression/contract coverage; collected by full pytest suite. |
 | `tests/test_default_distributions.py` | CURRENT TEST | Regression/contract coverage; collected by full pytest suite. |
+| `tests/test_data.py` | CURRENT TEST | Regression/contract coverage for synthetic generation, RNG isolation, input validation, and dataset loader behavior. |
 | `tests/test_diagnostics.py` | CURRENT TEST | Regression/contract coverage; collected by full pytest suite. |
 | `tests/test_duration_indexing.py` | CURRENT TEST | Regression/contract coverage; collected by full pytest suite. |
 | `tests/test_encoder.py` | CURRENT TEST | Regression/contract coverage; collected by full pytest suite. |
