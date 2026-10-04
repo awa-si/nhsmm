@@ -13,8 +13,13 @@ from .validation import (
     ContextEvidence,
     ContextEvidenceConfig,
     SplitFitEvidence,
+    ValidationComparison,
+    ValidationSnapshot,
+    compare_validation_snapshots,
     context_effect,
+    evaluate_validation_snapshot,
     evaluate_context_effect_replication,
+    model_fingerprint,
     split_fit_context_effect_evidence,
 )
 
@@ -40,7 +45,12 @@ __all__ = [
     "ContextEvidence",
     "ContextEvidenceConfig",
     "SplitFitEvidence",
+    "ValidationComparison",
+    "ValidationSnapshot",
+    "compare_validation_snapshots",
     "context_effect",
+    "evaluate_validation_snapshot",
     "evaluate_context_effect_replication",
+    "model_fingerprint",
     "split_fit_context_effect_evidence",
 ]

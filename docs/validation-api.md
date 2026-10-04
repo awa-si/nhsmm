@@ -85,3 +85,32 @@ Component-specific extraction and evidence helpers remain internal implementatio
 `SplitFitEvidence` adds `split_index` and `replica_sizes`.
 
 These objects report evidence; they do not automatically enable, disable, prune, or retrain model components.
+
+
+## Reproducible validation snapshots
+
+For later train/OOS, walk-forward, replay, or deployment validation, use:
+
+```python
+from nhsmm import (
+    evaluate_validation_snapshot,
+    compare_validation_snapshots,
+)
+
+train = evaluate_validation_snapshot(model, train_x, label="train")
+oos = evaluate_validation_snapshot(model, oos_x, label="oos")
+comparison = compare_validation_snapshots(train, oos)
+```
+
+`ValidationSnapshot` records domain-neutral evidence without changing model state:
+
+- deterministic model fingerprint from resolved config + state dict;
+- deterministic data fingerprint and optional explicit-context fingerprint;
+- sequence counts and original lengths;
+- total, per-sequence, and per-timestep log likelihood;
+- decoded state-switch rate and mean decoded run length;
+- the full `ModelHealthReport`.
+
+`compare_validation_snapshots(...)` reports reference-to-candidate deltas for likelihood, effective-state count, occupancy concentration, posterior entropy, switch rate, run length, and occupancy L1 distance. By default it requires the same fitted-model fingerprint, preventing accidental direct comparison of unaligned latent-state labels from independently fitted models.
+
+Snapshots and comparisons expose `.as_dict()` and are JSON-serializable. They deliberately contain no timestamps or trading-specific labels so identical model/data inputs produce stable validation evidence.

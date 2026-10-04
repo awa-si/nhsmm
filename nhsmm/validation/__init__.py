@@ -8,6 +8,13 @@ from .api import (
 )
 from .context_evidence import ContextEvidence, ContextEvidenceConfig
 from .split_fit import SplitFitEvidence
+from .snapshot import (
+    ValidationComparison,
+    ValidationSnapshot,
+    compare_validation_snapshots,
+    evaluate_validation_snapshot,
+    model_fingerprint,
+)
 
 __all__ = [
     "ContextEffectComponent",
@@ -17,4 +24,9 @@ __all__ = [
     "context_effect",
     "evaluate_context_effect_replication",
     "split_fit_context_effect_evidence",
+    "ValidationComparison",
+    "ValidationSnapshot",
+    "compare_validation_snapshots",
+    "evaluate_validation_snapshot",
+    "model_fingerprint",
 ]

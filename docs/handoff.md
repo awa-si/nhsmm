@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `eb2983c7547ddb42dc0468518a645df0cbe2e74e`
+- base head for this handoff update: `7780bcc0347619dec0e1356d8b790a4a4dc1fe73`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-235 passed, 3 skipped
+241 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `235 passed, 3 skipped`.
+The corresponding current local full suite is `241 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -245,6 +245,14 @@ Unused public config cleanup is complete:
 - model-level `self.debug` was removed with the dead config field;
 - distribution/runtime temperature APIs remain intact because they are active consumers and separate from the removed config field;
 - artifact payloads no longer persist the removed dead fields.
+
+Reproducible validation snapshots are implemented:
+
+- public `evaluate_validation_snapshot(...)`, `compare_validation_snapshots(...)`, `ValidationSnapshot`, `ValidationComparison`, and `model_fingerprint(...)`;
+- snapshots fingerprint fitted model state, observations, and explicit context independently;
+- sequence lengths, per-sequence/per-timestep likelihood, switch rate, mean run length, and model health are recorded in one JSON-serializable result;
+- same-model comparison is enforced by default so independently fitted latent labels are not compared without alignment;
+- learned-model train/OOS smoke kept the same model fingerprint, distinct data fingerprints, healthy state usage, and stable switch/run-length behavior.
 
 Model-health diagnostics are implemented and validated:
 
