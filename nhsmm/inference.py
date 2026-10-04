@@ -9,7 +9,6 @@ import torch.nn as nn
 from nhsmm.config import ModelConfig
 from nhsmm.models import NHSMM
 
-
 _INFERENCE_CONTEXT_WEIGHT = "_inference_context_weight"
 _INFERENCE_CONTEXT_BIAS = "_inference_context_bias"
 

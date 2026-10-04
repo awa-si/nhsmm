@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `96b56b6caa425e7cc8fe2d293691fe7e157ac976`
+- base head for this handoff update: `42a28fcf7f19c45103b6941592231075d51037cb`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-205 passed, 3 skipped in 25.58 s
+228 passed, 3 skipped in 23.98 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `205 passed, 3 skipped`.
+The corresponding current local full suite is `228 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -239,23 +239,38 @@ Transition-forecast audit/hardening is complete:
 - state-change probability is computed as boundary mass minus self-transition mass, avoiding a temporary KxK eye mask;
 - D=1 deterministic episode termination and dtype/device fail-closed behavior are verified.
 
-Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
+Repository-wide consistency cleanup is complete:
 
-- P2: decide whether artifact construction preserves model train/eval mode.
-- P2: review package-level logging policy.
+- the documented Ruff/Black static gate is clean across `nhsmm`, `tests`, and `scripts`;
+- the obsolete distribution-module monkeypatch was removed;
+- package logging no longer installs/levels a stream handler at import time and now uses a library-safe `NullHandler`;
+- `ModelConfig` rejects non-finite numeric values, invalid Literal values, and non-boolean flag values at construction time;
+- artifact construction is confirmed observational by existing regression coverage and the stale finding was removed.
+
+Packaging/static consistency verification is also green:
+
+- `ruff check nhsmm tests scripts`: PASS;
+- `black --check nhsmm tests scripts`: PASS;
+- local sdist + wheel build: PASS;
+- `twine check dist/*`: PASS;
+- package license metadata now uses SPDX `Apache-2.0` rather than deprecated setuptools license-table/classifier forms;
+- mypy 2.4.0 under the current Python 3.14 workspace aborted with an internal mypy error before emitting repository diagnostics, so no mypy-clean claim is made.
+
+Canonical remaining finding is in `docs/validation/code-scan-2026-09-28.md`:
+
+- P2: decide the compatibility contract for currently unused public `ModelConfig.temperature` and `ModelConfig.debug` fields.
 
 ## Next-chat execution order
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.
 2. Resolve current `develop` head before editing.
-3. Decide and test artifact train/eval-mode semantics.
-4. Review package-level logging policy.
-5. Run focused tests.
-6. Run full local pytest; require green before CI.
-7. Use `scripts/install_cpu_dev.py` in the AWA CPU workspace to avoid the CUDA dependency footprint.
-8. Run manual smoke/package-validation CI only when material.
-9. Update `docs/state.md` and `docs/handoff.md` after verification.
-10. Then return to PyPI release/versioning or downstream Nautilus evaluation.
+3. Decide whether unused public config fields `temperature` and `debug` should be wired, deprecated, or removed in a breaking release.
+4. Run focused tests.
+5. Run full local pytest; require green before CI.
+6. Use `scripts/install_cpu_dev.py` in the AWA CPU workspace to avoid the CUDA dependency footprint.
+7. Run manual smoke/package-validation CI only when material.
+8. Update `docs/state.md` and `docs/handoff.md` after verification.
+9. Then return to PyPI release/versioning or downstream Nautilus evaluation.
 
 ## Semantic constraints to preserve
 

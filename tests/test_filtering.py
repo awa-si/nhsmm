@@ -86,7 +86,9 @@ def test_transition_occurs_only_at_episode_boundary() -> None:
 
 def test_filter_rejects_zero_mass_transition_rows() -> None:
     state = initialize_filter(torch.zeros(1, 1), torch.zeros(1, 1), max_duration=2)
-    with pytest.raises(ValueError, match="transition_log_prob has zero or non-finite probability mass"):
+    with pytest.raises(
+        ValueError, match="transition_log_prob has zero or non-finite probability mass"
+    ):
         filter_step(
             state,
             torch.zeros(1, 1),

@@ -29,7 +29,11 @@ def test_runtime_transition_forecast_contract() -> None:
 
     forecast = runtime.forecast_transition()
 
-    assert forecast.boundary_transition_joint.shape == (1, model.config.n_states, model.config.n_states)
+    assert forecast.boundary_transition_joint.shape == (
+        1,
+        model.config.n_states,
+        model.config.n_states,
+    )
     assert forecast.next_episode_state_joint.shape == (1, model.config.n_states)
     assert forecast.next_state_prior.shape == (1, model.config.n_states)
     assert forecast.episode_end_probability.shape == (1,)

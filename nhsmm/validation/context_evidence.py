@@ -122,8 +122,7 @@ def evaluate_context_replication(
     agreement = float(((vec_a[nz] * vec_b[nz]) > 0.0).mean()) if np.any(nz) else 0.0
     amp_min = min(amp_a, amp_b)
     selected = (
-        replication_corr >= config.replication_corr_min
-        and amp_min >= config.min_replica_amplitude
+        replication_corr >= config.replication_corr_min and amp_min >= config.min_replica_amplitude
     )
     return ContextEvidence(
         selected=bool(selected),

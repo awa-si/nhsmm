@@ -67,12 +67,10 @@ def test_survival_is_monotone_across_horizons() -> None:
     )
 
     assert torch.all(
-        forecast.survival_probability[:, 1:]
-        <= forecast.survival_probability[:, :-1] + 1e-6
+        forecast.survival_probability[:, 1:] <= forecast.survival_probability[:, :-1] + 1e-6
     )
     assert torch.all(
-        forecast.end_within_probability[:, 1:] + 1e-6
-        >= forecast.end_within_probability[:, :-1]
+        forecast.end_within_probability[:, 1:] + 1e-6 >= forecast.end_within_probability[:, :-1]
     )
     assert torch.allclose(
         forecast.survival_probability + forecast.end_within_probability,

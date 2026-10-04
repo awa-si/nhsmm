@@ -45,21 +45,38 @@ class Scenario:
 
 SCENARIOS = {
     "strong": Scenario(
-        "strong", 6.0, 16.0, 0.85,
-        min_acc=0.90, min_ari=0.80,
-        min_duration_gap=2.0, min_duration_direction=2.0 / 3.0,
-        max_transition_mae=0.20, min_transition_corr=0.60,
-        min_transition_direction=0.75, min_noncollapsed=13,
+        "strong",
+        6.0,
+        16.0,
+        0.85,
+        min_acc=0.90,
+        min_ari=0.80,
+        min_duration_gap=2.0,
+        min_duration_direction=2.0 / 3.0,
+        max_transition_mae=0.20,
+        min_transition_corr=0.60,
+        min_transition_direction=0.75,
+        min_noncollapsed=13,
     ),
     "moderate": Scenario(
-        "moderate", 8.0, 14.0, 0.65,
-        min_acc=0.80, min_ari=0.60,
-        min_duration_gap=1.0, min_duration_direction=2.0 / 3.0,
-        max_transition_mae=0.22, min_transition_corr=0.40,
-        min_transition_direction=0.65, min_noncollapsed=13,
+        "moderate",
+        8.0,
+        14.0,
+        0.65,
+        min_acc=0.80,
+        min_ari=0.60,
+        min_duration_gap=1.0,
+        min_duration_direction=2.0 / 3.0,
+        max_transition_mae=0.22,
+        min_transition_corr=0.40,
+        min_transition_direction=0.65,
+        min_noncollapsed=13,
     ),
     "null": Scenario(
-        "null", 11.0, 11.0, 0.50,
+        "null",
+        11.0,
+        11.0,
+        0.50,
         max_null_duration_gap=1.0,
         max_null_transition_delta=0.10,
         min_noncollapsed=13,
@@ -94,9 +111,9 @@ def generate(seed: int, scenario: Scenario, n_sequences: int):
             mean_duration = scenario.long_mean if context else scenario.short_mean
             duration = int(np.clip(rng.poisson(max(1.0, mean_duration - 1.0)) + 1, 2, D))
             end = min(T, t + duration)
-            observations[batch, t:end] = MEANS[state] + rng.normal(
-                0.0, 0.7, (end - t, F)
-            ).astype(np.float32)
+            observations[batch, t:end] = MEANS[state] + rng.normal(0.0, 0.7, (end - t, F)).astype(
+                np.float32
+            )
             states[batch, t:end] = state
             contexts[batch, t:end, 0] = float(context)
             if end < T:
@@ -297,22 +314,40 @@ def summarize(scenario: Scenario, rows: list[dict[str, object]]) -> dict[str, ob
         reasons.append("state_accuracy")
     if scenario.min_ari is not None and values["median_ari"] < scenario.min_ari:
         reasons.append("state_ari")
-    if scenario.min_duration_gap is not None and values["median_duration_gap"] < scenario.min_duration_gap:
+    if (
+        scenario.min_duration_gap is not None
+        and values["median_duration_gap"] < scenario.min_duration_gap
+    ):
         reasons.append("duration_gap")
-    if scenario.min_duration_direction is not None and values["median_duration_direction"] < scenario.min_duration_direction:
+    if (
+        scenario.min_duration_direction is not None
+        and values["median_duration_direction"] < scenario.min_duration_direction
+    ):
         reasons.append("duration_direction")
-    if scenario.max_transition_mae is not None and values["median_transition_mae"] > scenario.max_transition_mae:
+    if (
+        scenario.max_transition_mae is not None
+        and values["median_transition_mae"] > scenario.max_transition_mae
+    ):
         reasons.append("transition_mae")
-    if scenario.min_transition_corr is not None and values["median_transition_corr"] < scenario.min_transition_corr:
+    if (
+        scenario.min_transition_corr is not None
+        and values["median_transition_corr"] < scenario.min_transition_corr
+    ):
         reasons.append("transition_correlation")
     if scenario.min_transition_direction is not None and (
         values["median_transition_direction"] is None
         or values["median_transition_direction"] < scenario.min_transition_direction
     ):
         reasons.append("transition_direction")
-    if scenario.max_null_duration_gap is not None and abs(values["median_duration_gap"]) > scenario.max_null_duration_gap:
+    if (
+        scenario.max_null_duration_gap is not None
+        and abs(values["median_duration_gap"]) > scenario.max_null_duration_gap
+    ):
         reasons.append("null_duration_gap")
-    if scenario.max_null_transition_delta is not None and values["median_null_transition_abs_delta"] > scenario.max_null_transition_delta:
+    if (
+        scenario.max_null_transition_delta is not None
+        and values["median_null_transition_abs_delta"] > scenario.max_null_transition_delta
+    ):
         reasons.append("null_transition_delta")
     if noncollapsed < scenario.min_noncollapsed:
         reasons.append("noncollapsed")
@@ -384,7 +419,9 @@ def main() -> int:
     payload["passed"] = passed
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        args.output.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     return 0 if passed else 1
 
 

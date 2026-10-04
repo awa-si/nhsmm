@@ -1,13 +1,8 @@
-from . import default as _default
-
-# Keep functional calls in the distribution module bound to its canonical nnF import.
-_default.F = _default.nnF
-
-from .default import Initial, Duration, Transition, Emission
+from .default import Duration, Emission, Initial, Transition
 
 __all__ = [
-    'Initial',
-    'Emission',
-    'Duration',
-    'Transition',
+    "Initial",
+    "Emission",
+    "Duration",
+    "Transition",
 ]

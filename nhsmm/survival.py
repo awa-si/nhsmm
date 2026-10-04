@@ -8,7 +8,6 @@ import torch
 
 from nhsmm.filtering import HSMMFilterState, duration_log_hazard
 
-
 HorizonInput = Union[int, torch.Tensor, Iterable[int]]
 
 
@@ -156,7 +155,7 @@ def active_episode_survival_forecast(
         if horizon < D:
             for age_index in range(D - horizon):
                 component_log_survival[..., age_index] = log_continue[
-                    ..., age_index:age_index + horizon
+                    ..., age_index : age_index + horizon
                 ].sum(dim=-1)
 
         log_survival = torch.logsumexp(

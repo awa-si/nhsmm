@@ -2,18 +2,12 @@ from __future__ import annotations
 from typing import Optional, Literal
 from dataclasses import dataclass
 import logging
+import math
 
 import torch
 
 logger = logging.getLogger("NHSMM")
-
-if not logger.hasHandlers():
-    logger.setLevel(logging.INFO)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('[%(levelname)s] %(name)s - %(message)s')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+logger.addHandler(logging.NullHandler())
 
 
 EPS: float = 1e-12
@@ -100,24 +94,59 @@ class ModelConfig:
                 raise ValueError(f"{name} must be an integer >= {minimum}")
 
         for name, value in (("hidden_dim", self.hidden_dim), ("context_dim", self.context_dim)):
-            if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value < 1):
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, int) or value < 1
+            ):
                 raise ValueError(f"{name} must be None or an integer >= 1")
 
-        if not 0.0 <= self.dropout < 1.0:
-            raise ValueError("dropout must satisfy 0 <= dropout < 1")
+        if not math.isfinite(self.dropout) or not 0.0 <= self.dropout < 1.0:
+            raise ValueError("dropout must be finite and satisfy 0 <= dropout < 1")
         for name, value in (
             ("min_covar", self.min_covar),
             ("temperature", self.temperature),
             ("lr", self.lr),
             ("transition_refine_lr", self.transition_refine_lr),
         ):
-            if value <= 0.0:
-                raise ValueError(f"{name} must be > 0")
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{name} must be finite and > 0")
         for name, value in (
             ("transition_context_max_delta", self.transition_context_max_delta),
             ("tol", self.tol),
             ("loss_bias", self.loss_bias),
             ("plateau_tol", self.plateau_tol),
         ):
-            if value < 0.0:
-                raise ValueError(f"{name} must be >= 0")
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"{name} must be finite and >= 0")
+
+        for name, value in (
+            ("causal", self.causal),
+            ("debug", self.debug),
+            ("use_scheduler", self.use_scheduler),
+            ("convergence_stop", self.convergence_stop),
+            ("verbose", self.verbose),
+        ):
+            if not isinstance(value, bool):
+                raise ValueError(f"{name} must be a bool")
+
+        choices = {
+            "pool": {"mean", "last", "max", "attn", "mha"},
+            "emission_init_mode": {"random", "spread", "kmeans"},
+            "initial_init_mode": {"normal", "biased", "uniform"},
+            "duration_init_mode": {"normal", "biased", "uniform"},
+            "transition_init_mode": {"normal", "biased", "uniform"},
+            "transition_type": {"ergodic", "semi", "left-to-right"},
+            "activation": {
+                "leaky_relu",
+                "identity",
+                "softplus",
+                "gelu",
+                "relu",
+                "tanh",
+            },
+            "emission_type": {"gaussian", "studentt"},
+            "convergence_mode": {"delta", "plateau"},
+        }
+        for name, allowed in choices.items():
+            value = getattr(self, name)
+            if value not in allowed:
+                raise ValueError(f"{name} must be one of {sorted(allowed)}, got {value!r}")

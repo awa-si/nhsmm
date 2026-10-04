@@ -197,7 +197,5 @@ def load_artifact(
     )
     actual_encoder = _encoder_config(_raw_default_encoder(model))
     if actual_encoder != dict(payload["encoder_config"]):
-        raise ValueError(
-            "reconstructed encoder does not match artifact encoder configuration"
-        )
+        raise ValueError("reconstructed encoder does not match artifact encoder configuration")
     return model

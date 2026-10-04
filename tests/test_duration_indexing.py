@@ -106,10 +106,14 @@ def test_forward_first_segment_score_is_transition_independent() -> None:
     score_a = alpha_a[0, 1, 0, 1].clone()
 
     with torch.no_grad():
-        model.dist.transition.logits.copy_(torch.tensor([
-            [[40.0, -40.0], [40.0, -40.0], [40.0, -40.0]],
-            [[-40.0, 40.0], [-40.0, 40.0], [-40.0, 40.0]],
-        ]))
+        model.dist.transition.logits.copy_(
+            torch.tensor(
+                [
+                    [[40.0, -40.0], [40.0, -40.0], [40.0, -40.0]],
+                    [[-40.0, 40.0], [-40.0, 40.0], [-40.0, 40.0]],
+                ]
+            )
+        )
     alpha_b = model.forward(seq)
     score_b = alpha_b[0, 1, 0, 1]
 

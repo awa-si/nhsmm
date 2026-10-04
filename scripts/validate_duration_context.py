@@ -76,10 +76,16 @@ def _evaluate(model: NHSMM, x: np.ndarray, contexts: list[np.ndarray]) -> dict[s
     with torch.inference_mode():
         tensor = torch.as_tensor(x, dtype=torch.float32)
         trace = filter_model_sequence(model, tensor)
-        occupancy = trace.state_posterior.cpu().numpy().reshape(-1, model.config.n_states).mean(axis=0)
+        occupancy = (
+            trace.state_posterior.cpu().numpy().reshape(-1, model.config.n_states).mean(axis=0)
+        )
         occupancy /= occupancy.sum()
-        ll_per_row = float(model.log_likelihood(tensor, reduce=True)) / float(x.shape[0] * x.shape[1])
-    entropy = -float(np.sum(np.clip(occupancy, 1e-12, 1.0) * np.log(np.clip(occupancy, 1e-12, 1.0))))
+        ll_per_row = float(model.log_likelihood(tensor, reduce=True)) / float(
+            x.shape[0] * x.shape[1]
+        )
+    entropy = -float(
+        np.sum(np.clip(occupancy, 1e-12, 1.0) * np.log(np.clip(occupancy, 1e-12, 1.0)))
+    )
     return {
         "gap": float(np.mean(short) - np.mean(long)),
         "effective_states": float(np.exp(entropy)),
@@ -97,12 +103,16 @@ def _summary(rows: list[dict[str, float]]) -> dict[str, float | int]:
         "median_gap": float(np.median(gaps)),
         "mean_gap": float(np.mean(gaps)),
         "std_gap": float(np.std(gaps)),
-        "noncollapsed": int(sum(row["effective_states"] >= 1.5 and row["max_occupancy"] <= 0.85 for row in rows)),
+        "noncollapsed": int(
+            sum(row["effective_states"] >= 1.5 and row["max_occupancy"] <= 0.85 for row in rows)
+        ),
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate context-conditioned duration recovery on controlled synthetic data.")
+    parser = argparse.ArgumentParser(
+        description="Validate context-conditioned duration recovery on controlled synthetic data."
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
@@ -111,20 +121,45 @@ def main() -> int:
         rows = []
         for seed in DEFAULT_SEEDS:
             model = _train(seed, short_mean=short_mean, long_mean=long_mean)
-            x, contexts = _generate(seed + 10000, n_sequences=5, steps=180, short_mean=short_mean, long_mean=long_mean)
+            x, contexts = _generate(
+                seed + 10000, n_sequences=5, steps=180, short_mean=short_mean, long_mean=long_mean
+            )
             metrics = _evaluate(model, x, contexts)
             rows.append({"seed": seed, **metrics})
-            print(json.dumps({"scenario": name, "seed": seed, **metrics}, sort_keys=True), flush=True)
-        scenarios.append({"scenario": name, "short_mean": short_mean, "long_mean": long_mean, "rows": rows, "summary": _summary(rows)})
+            print(
+                json.dumps({"scenario": name, "seed": seed, **metrics}, sort_keys=True), flush=True
+            )
+        scenarios.append(
+            {
+                "scenario": name,
+                "short_mean": short_mean,
+                "long_mean": long_mean,
+                "rows": rows,
+                "summary": _summary(rows),
+            }
+        )
 
     by_name = {item["scenario"]: item["summary"] for item in scenarios}
     strong = by_name["strong"]
     moderate = by_name["moderate"]
     null = by_name["null"]
     acceptance = {
-        "strong_context": bool(strong["positive"] >= 13 and strong["material_ge_0_02"] >= 10 and strong["median_gap"] >= 0.02 and strong["noncollapsed"] >= 13),
-        "moderate_context": bool(moderate["positive"] >= 12 and moderate["median_gap"] >= 0.01 and moderate["noncollapsed"] >= 13),
-        "null_context_no_spurious_separation": bool(abs(null["median_gap"]) <= 0.015 and abs(null["mean_gap"]) <= 0.015 and null["noncollapsed"] >= 13),
+        "strong_context": bool(
+            strong["positive"] >= 13
+            and strong["material_ge_0_02"] >= 10
+            and strong["median_gap"] >= 0.02
+            and strong["noncollapsed"] >= 13
+        ),
+        "moderate_context": bool(
+            moderate["positive"] >= 12
+            and moderate["median_gap"] >= 0.01
+            and moderate["noncollapsed"] >= 13
+        ),
+        "null_context_no_spurious_separation": bool(
+            abs(null["median_gap"]) <= 0.015
+            and abs(null["mean_gap"]) <= 0.015
+            and null["noncollapsed"] >= 13
+        ),
     }
     acceptance["passed"] = all(acceptance.values())
     payload = {
@@ -135,7 +170,9 @@ def main() -> int:
     }
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        args.output.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     print(json.dumps({"acceptance": acceptance, "summaries": by_name}, sort_keys=True), flush=True)
     return 0 if acceptance["passed"] else 1
 

@@ -77,7 +77,9 @@ def test_learned_pooling_parameters_survive_reset(pool: str) -> None:
 
     after = {name: id(parameter) for name, parameter in model.encoder.named_parameters()}
     assert after == before
-    model_parameter_ids = {id(parameter) for parameter in model.parameters() if parameter.requires_grad}
+    model_parameter_ids = {
+        id(parameter) for parameter in model.parameters() if parameter.requires_grad
+    }
     assert set(after.values()).issubset(model_parameter_ids)
 
 
@@ -102,9 +104,15 @@ def test_variable_length_dataset_collates_state_sequence_without_polars() -> Non
 def test_external_context_shape_contract() -> None:
     B, T, H = 2, 3, 4
     global_context = align_context_tensor(torch.zeros(H), batch_size=B, timesteps=T, context_dim=H)
-    temporal_context = align_context_tensor(torch.zeros(T, H), batch_size=B, timesteps=T, context_dim=H)
-    batch_static_context = align_context_tensor(torch.zeros(B, 1, H), batch_size=B, timesteps=T, context_dim=H)
-    full_context = align_context_tensor(torch.zeros(B, T, H), batch_size=B, timesteps=T, context_dim=H)
+    temporal_context = align_context_tensor(
+        torch.zeros(T, H), batch_size=B, timesteps=T, context_dim=H
+    )
+    batch_static_context = align_context_tensor(
+        torch.zeros(B, 1, H), batch_size=B, timesteps=T, context_dim=H
+    )
+    full_context = align_context_tensor(
+        torch.zeros(B, T, H), batch_size=B, timesteps=T, context_dim=H
+    )
     for tensor in (global_context, temporal_context, batch_static_context, full_context):
         assert tensor.shape == (B, T, H)
 
@@ -116,6 +124,7 @@ def test_ambiguous_2d_context_is_always_temporal_when_batch_equals_time() -> Non
     context = torch.tensor([[10.0], [20.0]])
     aligned = align_context_tensor(context, batch_size=2, timesteps=2, context_dim=1)
     assert aligned[:, :, 0].tolist() == [[10.0, 20.0], [10.0, 20.0]]
+
 
 @pytest.mark.parametrize(
     "context_factory",
@@ -158,7 +167,9 @@ def test_explicit_context_dim_rejects_incompatible_custom_encoder() -> None:
         cnn_kernel=3,
         causal=True,
     )
-    with pytest.raises(ValueError, match=r"encoder output dimension \(4\) must equal context_dim \(2\)"):
+    with pytest.raises(
+        ValueError, match=r"encoder output dimension \(4\) must equal context_dim \(2\)"
+    ):
         NHSMM(
             ModelConfig(
                 n_states=2,
@@ -204,3 +215,55 @@ def test_noncausal_default_encoder_rejects_odd_context_dim() -> None:
             ),
             device="cpu",
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("dropout", float("nan")),
+        ("min_covar", float("nan")),
+        ("temperature", float("inf")),
+        ("lr", float("nan")),
+        ("transition_refine_lr", float("inf")),
+        ("transition_context_max_delta", float("nan")),
+        ("tol", float("inf")),
+        ("loss_bias", float("nan")),
+        ("plateau_tol", float("inf")),
+    ],
+)
+def test_model_config_rejects_non_finite_public_floats(field: str, value) -> None:
+    kwargs = {"n_states": 2, "n_features": 2}
+    kwargs[field] = value
+    with pytest.raises(ValueError):
+        ModelConfig(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("pool", "bogus"),
+        ("emission_init_mode", "bogus"),
+        ("initial_init_mode", "bogus"),
+        ("duration_init_mode", "bogus"),
+        ("transition_init_mode", "bogus"),
+        ("transition_type", "bogus"),
+        ("activation", "bogus"),
+        ("emission_type", "bogus"),
+        ("convergence_mode", "bogus"),
+    ],
+)
+def test_model_config_rejects_invalid_literal_values(field: str, value: str) -> None:
+    kwargs = {"n_states": 2, "n_features": 2}
+    kwargs[field] = value
+    with pytest.raises(ValueError):
+        ModelConfig(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["causal", "debug", "use_scheduler", "convergence_stop", "verbose"],
+)
+def test_model_config_rejects_non_boolean_flags(field: str) -> None:
+    kwargs = {"n_states": 2, "n_features": 2, field: 1}
+    with pytest.raises(ValueError):
+        ModelConfig(**kwargs)

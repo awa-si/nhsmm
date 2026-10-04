@@ -67,16 +67,12 @@ def transition_context_matrix(model: Any, context: Any) -> np.ndarray:
                 if duration_p.ndim != 4:
                     raise ValueError("duration log_matrix must return [B,T,K,D]")
                 if duration_p.shape[:4] != transition_p.shape[:4]:
-                    raise ValueError(
-                        "duration and transition outputs must agree on [B,T,K,D]"
-                    )
+                    raise ValueError("duration and transition outputs must agree on [B,T,K,D]")
                 matrix = (duration_p.unsqueeze(-1) * transition_p).sum(dim=-2)[0, 0]
             elif transition_p.ndim == 4:
                 matrix = transition_p[0, 0]
             else:
-                raise ValueError(
-                    "transition log_matrix must return [B,T,K,K] or [B,T,K,D,K]"
-                )
+                raise ValueError("transition log_matrix must return [B,T,K,K] or [B,T,K,D,K]")
     finally:
         if hasattr(model, "train"):
             model.train(was_training)

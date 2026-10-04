@@ -143,9 +143,7 @@ def _as_observation(observation: torch.Tensor, *, n_features: int) -> torch.Tens
     elif observation.ndim == 3 and observation.shape[1] == 1:
         pass
     else:
-        raise ValueError(
-            "observation must be [F], [B,F], or [B,1,F] for one streaming timestep"
-        )
+        raise ValueError("observation must be [F], [B,F], or [B,1,F] for one streaming timestep")
 
     if observation.shape[-1] != n_features:
         raise ValueError(
@@ -166,8 +164,7 @@ def _boundary_scores(
     if (
         cache is not None
         and _is_default_distribution(duration_dist, "Duration")
-        and duration_bias.shape
-        == (int(model.config.n_states), int(duration_dist.max_duration))
+        and duration_bias.shape == (int(model.config.n_states), int(duration_dist.max_duration))
     ):
         duration_mod = duration_dist._modulate(
             context=context,
@@ -221,9 +218,7 @@ def _boundary_scores(
     if duration.shape != (B, K, D):
         raise ValueError(f"duration logits must be {(B, K, D)}, got {duration.shape}")
     if transition.shape != (B, K, D, K):
-        raise ValueError(
-            f"transition logits must be {(B, K, D, K)}, got {transition.shape}"
-        )
+        raise ValueError(f"transition logits must be {(B, K, D, K)}, got {transition.shape}")
     return duration, transition
 
 
@@ -369,9 +364,7 @@ class HSMMFilterRuntime:
                     T=1,
                 )
                 if initial.shape != (B, 1, K):
-                    raise ValueError(
-                        f"initial logits must be {(B, 1, K)}, got {initial.shape}"
-                    )
+                    raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
                 filter_state = initialize_filter(
                     initial[:, 0],
                     emission,
@@ -415,9 +408,7 @@ class HSMMFilterRuntime:
                     T=1,
                 )
                 if initial.shape != (B, 1, K):
-                    raise ValueError(
-                        f"initial logits must be {(B, 1, K)}, got {initial.shape}"
-                    )
+                    raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
                 filter_state = initialize_filter(
                     initial[:, 0],
                     emission,
@@ -451,9 +442,7 @@ class HSMMFilterRuntime:
                 T=1,
             )
             if initial.shape != (B, 1, K):
-                raise ValueError(
-                    f"initial logits must be {(B, 1, K)}, got {initial.shape}"
-                )
+                raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
 
             filter_state = initialize_filter(
                 initial[:, 0],
@@ -562,9 +551,7 @@ class HSMMFilterRuntime:
         sequence = self.model._build_sequence_set(observations)
         expected_lengths = torch.full_like(sequence.lengths, observations.shape[1])
         if not torch.equal(sequence.lengths, expected_lengths):
-            raise ValueError(
-                "runtime filtering requires one valid observation per batch item"
-            )
+            raise ValueError("runtime filtering requires one valid observation per batch item")
 
         filter_state = _filter_step_normalized(
             previous.filter_state,

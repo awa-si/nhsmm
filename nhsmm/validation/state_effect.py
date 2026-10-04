@@ -83,8 +83,7 @@ def evaluate_state_context_replication(
     agreement = float(((vec_a[nz] * vec_b[nz]) > 0.0).mean()) if np.any(nz) else 0.0
     amp_min = min(amp_a, amp_b)
     selected = (
-        replication_corr >= config.replication_corr_min
-        and amp_min >= config.min_replica_amplitude
+        replication_corr >= config.replication_corr_min and amp_min >= config.min_replica_amplitude
     )
     return ContextEvidence(
         selected=bool(selected),
@@ -222,25 +221,85 @@ def initial_context_tensor(model: Any, context: Any) -> np.ndarray:
     return out
 
 
-def evaluate_initial_context_replication(model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig) -> ContextEvidence:
-    return evaluate_state_context_replication(model_a, model_b, contexts, effect_tensor=initial_context_tensor, config=config)
+def evaluate_initial_context_replication(
+    model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig
+) -> ContextEvidence:
+    return evaluate_state_context_replication(
+        model_a, model_b, contexts, effect_tensor=initial_context_tensor, config=config
+    )
 
 
-def evaluate_duration_context_replication(model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig) -> ContextEvidence:
-    return evaluate_state_context_replication(model_a, model_b, contexts, effect_tensor=duration_context_tensor, config=config)
+def evaluate_duration_context_replication(
+    model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig
+) -> ContextEvidence:
+    return evaluate_state_context_replication(
+        model_a, model_b, contexts, effect_tensor=duration_context_tensor, config=config
+    )
 
 
-def evaluate_emission_context_replication(model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig) -> ContextEvidence:
-    return evaluate_state_context_replication(model_a, model_b, contexts, effect_tensor=emission_context_tensor, config=config)
+def evaluate_emission_context_replication(
+    model_a: Any, model_b: Any, contexts: Iterable[Any], *, config: ContextEvidenceConfig
+) -> ContextEvidence:
+    return evaluate_state_context_replication(
+        model_a, model_b, contexts, effect_tensor=emission_context_tensor, config=config
+    )
 
 
-def split_fit_initial_context_evidence(observations: Any, context: Any, *, fit_model: Callable[[Any, Any, int], Any], evidence_contexts: Iterable[Any], config: ContextEvidenceConfig, split_index: Optional[int] = None) -> SplitFitEvidence:
-    return split_fit_state_context_evidence(observations, context, fit_model=fit_model, effect_tensor=initial_context_tensor, evidence_contexts=evidence_contexts, config=config, split_index=split_index)
+def split_fit_initial_context_evidence(
+    observations: Any,
+    context: Any,
+    *,
+    fit_model: Callable[[Any, Any, int], Any],
+    evidence_contexts: Iterable[Any],
+    config: ContextEvidenceConfig,
+    split_index: Optional[int] = None,
+) -> SplitFitEvidence:
+    return split_fit_state_context_evidence(
+        observations,
+        context,
+        fit_model=fit_model,
+        effect_tensor=initial_context_tensor,
+        evidence_contexts=evidence_contexts,
+        config=config,
+        split_index=split_index,
+    )
 
 
-def split_fit_duration_context_evidence(observations: Any, context: Any, *, fit_model: Callable[[Any, Any, int], Any], evidence_contexts: Iterable[Any], config: ContextEvidenceConfig, split_index: Optional[int] = None) -> SplitFitEvidence:
-    return split_fit_state_context_evidence(observations, context, fit_model=fit_model, effect_tensor=duration_context_tensor, evidence_contexts=evidence_contexts, config=config, split_index=split_index)
+def split_fit_duration_context_evidence(
+    observations: Any,
+    context: Any,
+    *,
+    fit_model: Callable[[Any, Any, int], Any],
+    evidence_contexts: Iterable[Any],
+    config: ContextEvidenceConfig,
+    split_index: Optional[int] = None,
+) -> SplitFitEvidence:
+    return split_fit_state_context_evidence(
+        observations,
+        context,
+        fit_model=fit_model,
+        effect_tensor=duration_context_tensor,
+        evidence_contexts=evidence_contexts,
+        config=config,
+        split_index=split_index,
+    )
 
 
-def split_fit_emission_context_evidence(observations: Any, context: Any, *, fit_model: Callable[[Any, Any, int], Any], evidence_contexts: Iterable[Any], config: ContextEvidenceConfig, split_index: Optional[int] = None) -> SplitFitEvidence:
-    return split_fit_state_context_evidence(observations, context, fit_model=fit_model, effect_tensor=emission_context_tensor, evidence_contexts=evidence_contexts, config=config, split_index=split_index)
+def split_fit_emission_context_evidence(
+    observations: Any,
+    context: Any,
+    *,
+    fit_model: Callable[[Any, Any, int], Any],
+    evidence_contexts: Iterable[Any],
+    config: ContextEvidenceConfig,
+    split_index: Optional[int] = None,
+) -> SplitFitEvidence:
+    return split_fit_state_context_evidence(
+        observations,
+        context,
+        fit_model=fit_model,
+        effect_tensor=emission_context_tensor,
+        evidence_contexts=evidence_contexts,
+        config=config,
+        split_index=split_index,
+    )

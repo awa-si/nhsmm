@@ -98,7 +98,9 @@ def emission_centers(model: Any) -> np.ndarray:
     try:
         emission = model.dist.emission
     except AttributeError as exc:
-        raise TypeError("model must expose dist.emission or provide a custom centers function") from exc
+        raise TypeError(
+            "model must expose dist.emission or provide a custom centers function"
+        ) from exc
 
     value = None
     for name in ("mu", "loc", "base"):

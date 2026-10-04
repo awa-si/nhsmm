@@ -42,31 +42,37 @@ def _brute_force_dynamic_hazard_path(model: NHSMM, x: torch.Tensor) -> list[int]
     emission = sequence.log_probs[0, :T]
 
     frontier: list[tuple[list[int], int, int, torch.Tensor]] = [
-        ([state], state, 0, initial[state] + emission[0, state])
-        for state in range(K)
+        ([state], state, 0, initial[state] + emission[0, state]) for state in range(K)
     ]
 
     for t in range(1, T):
         next_frontier: list[tuple[list[int], int, int, torch.Tensor]] = []
         for path, state, age, score in frontier:
             if age + 1 < D and torch.isfinite(log_continue[t - 1, state, age]):
-                next_frontier.append((
-                    path + [state],
-                    state,
-                    age + 1,
-                    score + log_continue[t - 1, state, age] + emission[t, state],
-                ))
+                next_frontier.append(
+                    (
+                        path + [state],
+                        state,
+                        age + 1,
+                        score + log_continue[t - 1, state, age] + emission[t, state],
+                    )
+                )
 
             if torch.isfinite(log_end[t - 1, state, age]):
                 for next_state in range(K):
                     trans = transition[t - 1, state, age, next_state]
                     if torch.isfinite(trans):
-                        next_frontier.append((
-                            path + [next_state],
-                            next_state,
-                            0,
-                            score + log_end[t - 1, state, age] + trans + emission[t, next_state],
-                        ))
+                        next_frontier.append(
+                            (
+                                path + [next_state],
+                                next_state,
+                                0,
+                                score
+                                + log_end[t - 1, state, age]
+                                + trans
+                                + emission[t, next_state],
+                            )
+                        )
         frontier = next_frontier
 
     return max(frontier, key=lambda item: float(item[3].detach()))[0]

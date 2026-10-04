@@ -4,7 +4,6 @@ import argparse
 import concurrent.futures
 import itertools
 import json
-import os
 import random
 from dataclasses import dataclass
 from pathlib import Path
