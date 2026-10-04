@@ -69,6 +69,36 @@ class HSMMTransitionForecast:
             if (value < -eps).any() or (value > 1.0 + eps).any():
                 raise ValueError(f"{name} must contain probabilities in [0,1]")
 
+        atol = float(64 * torch.finfo(end.dtype).eps)
+        boundary_end = joint.sum(dim=(1, 2))
+        if not torch.allclose(boundary_end, end, atol=atol, rtol=0.0):
+            raise ValueError("boundary_transition_joint must sum to episode_end_probability")
+        if not torch.allclose(
+            next_episode.sum(dim=-1),
+            end,
+            atol=atol,
+            rtol=0.0,
+        ):
+            raise ValueError("next_episode_state_joint must sum to episode_end_probability")
+        if not torch.allclose(
+            next_episode,
+            joint.sum(dim=1),
+            atol=atol,
+            rtol=0.0,
+        ):
+            raise ValueError(
+                "next_episode_state_joint must equal destination-marginal boundary mass"
+            )
+        if not torch.allclose(
+            prior.sum(dim=-1),
+            torch.ones_like(end),
+            atol=atol,
+            rtol=0.0,
+        ):
+            raise ValueError("next_state_prior must be normalized")
+        if (change > end + atol).any():
+            raise ValueError("state_change_probability cannot exceed episode_end_probability")
+
 
 def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
     if not isinstance(tensor, torch.Tensor):
@@ -90,6 +120,22 @@ def _normalize_transition(log_transition: torch.Tensor) -> torch.Tensor:
     return log_transition - log_z
 
 
+def _probability_tolerance(reference: torch.Tensor) -> float:
+    return float(64 * torch.finfo(reference.dtype).eps)
+
+
+def _require_normalized_posterior(log_posterior: torch.Tensor) -> None:
+    log_z = torch.logsumexp(log_posterior.flatten(1), dim=1)
+    atol = _probability_tolerance(log_posterior)
+    if not torch.allclose(
+        log_z,
+        torch.zeros_like(log_z),
+        atol=atol,
+        rtol=0.0,
+    ):
+        raise ValueError("state.log_posterior must be normalized over state and age")
+
+
 def one_step_transition_forecast(
     state: HSMMFilterState,
     log_duration: torch.Tensor,
@@ -106,6 +152,7 @@ def one_step_transition_forecast(
         raise TypeError("state must be an HSMMFilterState")
 
     posterior = state.log_posterior
+    _require_normalized_posterior(posterior)
     B, K, D = posterior.shape
     _require_compatible(posterior, log_duration, "log_duration")
     _require_compatible(posterior, transition_log_prob, "transition_log_prob")
@@ -135,11 +182,13 @@ def one_step_transition_forecast(
     continuation_state = log_continue_state.exp()
     next_state_prior = continuation_state + next_episode_joint
 
-    eye = torch.eye(K, device=posterior.device, dtype=torch.bool).unsqueeze(0)
-    state_change = boundary_joint.masked_fill(eye, 0.0).sum(dim=(1, 2))
+    diagonal_boundary = boundary_joint.diagonal(dim1=-2, dim2=-1).sum(dim=-1)
+    state_change = episode_end - diagonal_boundary
 
-    eps = 64 * torch.finfo(posterior.dtype).eps
-    if not torch.allclose(next_state_prior.sum(dim=-1), torch.ones_like(episode_end), atol=eps, rtol=0.0):
+    eps = _probability_tolerance(posterior)
+    if not torch.allclose(
+        next_state_prior.sum(dim=-1), torch.ones_like(episode_end), atol=eps, rtol=0.0
+    ):
         raise ValueError("next_state_prior is not normalized")
     if not torch.allclose(boundary_joint.sum(dim=(1, 2)), episode_end, atol=eps, rtol=0.0):
         raise ValueError("boundary transition mass is inconsistent with episode-end probability")

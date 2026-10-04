@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `ff5df3b1b201a7c3310eab3338838e2ab9674143`
+- base head for this handoff update: `96b56b6caa425e7cc8fe2d293691fe7e157ac976`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-202 passed, 3 skipped in 77.86 s
+205 passed, 3 skipped in 25.58 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `202 passed, 3 skipped`.
+The corresponding current local full suite is `205 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -230,6 +230,14 @@ Convergence-monitor audit/hardening is complete:
 - negative/out-of-range iteration and initialization indices are rejected explicitly;
 - constructor invariants validate counts, tolerances, mode, and patience bounds;
 - LR-aware patience scaling uses scalar math without transient tensor allocation.
+
+Transition-forecast audit/hardening is complete:
+
+- forecast input now requires a normalized HSMM state posterior explicitly;
+- the public forecast result validates its probability identities, not only tensor shapes/ranges;
+- boundary mass, next-episode mass, normalized next-state prior, and change-probability bounds are checked coherently;
+- state-change probability is computed as boundary mass minus self-transition mass, avoiding a temporary KxK eye mask;
+- D=1 deterministic episode termination and dtype/device fail-closed behavior are verified.
 
 Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 
