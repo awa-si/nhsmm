@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `0e6459b9ffce7e24155bcb9ba1026ad7d02de2b0`
+- base head for this handoff update: `c7cc77fc344c172adfef6bcf8e20e71bcbc90bd0`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-177 passed, 3 skipped in 41.71 s
+182 passed, 3 skipped in 44.16 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `177 passed, 3 skipped`.
+The corresponding current local full suite is `182 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -211,11 +211,19 @@ DefaultEncoder audit/hardening is complete:
 
 Canonical runtime benchmark on a temporary causal artifact (128 steps, 16 warmup, batch 1): p50 11.27 ms, p95 55.04 ms, mean 17.25 ms, bounded runtime state 151 tensor elements.
 
+Models-layer audit/hardening is complete:
+
+- base and training `DistributionSet` share one canonical implementation and honor injected component factories;
+- distribution restarts preserve injected component factories;
+- base/default encoder dimension validation matches the canonical training model;
+- restart initialization keeps base distribution parameters independent of observed external context;
+- floating observations/context are coerced to the model dtype;
+- external context lists must match observation sequence lengths exactly;
+- public 2-D context semantics are unified through `align_context_tensor()`;
+- transition refinement without explicit context is guarded and regression-tested.
+
 Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 
-- P1: unify explicit 2-D `[T,H]` / `[B,H]` context semantics.
-- P1: define transition-refinement behavior when context is absent.
-- P2: resolve base `DistributionSet` injectable-factory semantics.
 - P2: decide whether artifact construction preserves model train/eval mode.
 - P2: review package-level logging policy.
 
@@ -223,15 +231,14 @@ Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.
 2. Resolve current `develop` head before editing.
-3. Resolve the 2-D external-context contract and add explicit tests.
-4. Define transition-refinement behavior without enabled/explicit context.
-5. Address the remaining P2 findings only as a coherent follow-on slice.
-6. Run focused tests.
-7. Run full local pytest; require green before CI.
-8. Use `scripts/install_cpu_dev.py` in the AWA CPU workspace to avoid the CUDA dependency footprint.
-9. Run manual smoke/package-validation CI only when material.
-10. Update `docs/state.md` and `docs/handoff.md` after verification.
-11. Then return to PyPI release/versioning or downstream Nautilus evaluation.
+3. Decide and test artifact train/eval-mode semantics.
+4. Review package-level logging policy.
+5. Run focused tests.
+6. Run full local pytest; require green before CI.
+7. Use `scripts/install_cpu_dev.py` in the AWA CPU workspace to avoid the CUDA dependency footprint.
+8. Run manual smoke/package-validation CI only when material.
+9. Update `docs/state.md` and `docs/handoff.md` after verification.
+10. Then return to PyPI release/versioning or downstream Nautilus evaluation.
 
 ## Semantic constraints to preserve
 

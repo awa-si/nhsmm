@@ -4,6 +4,8 @@ import pytest
 import torch
 
 from nhsmm import ModelConfig, NHSMM
+from nhsmm.distributions import Duration, Emission, Initial, Transition
+from nhsmm.models import DistributionSet
 
 
 def test_optimize_updates_causal_encoder_parameters() -> None:
@@ -34,11 +36,7 @@ def test_optimize_updates_causal_encoder_parameters() -> None:
     model.optimize(x)
 
     assert model._optimizer is not None
-    optimizer_ids = {
-        id(p)
-        for group in model._optimizer.param_groups
-        for p in group["params"]
-    }
+    optimizer_ids = {id(p) for group in model._optimizer.param_groups for p in group["params"]}
     assert {id(p) for p in encoder}.issubset(optimizer_ids)
     assert any(not torch.equal(a, b.detach()) for a, b in zip(before, encoder))
 
@@ -125,9 +123,7 @@ def test_kmeans_emission_initialization_recovers_separated_centers() -> None:
     model.initialize_distributions()
 
     truth = torch.tensor([[-4.0, 0.0], [0.0, 4.0], [4.0, 0.0]])
-    observations = torch.cat(
-        [center + 0.05 * torch.randn(40, 2) for center in truth], dim=0
-    )
+    observations = torch.cat([center + 0.05 * torch.randn(40, 2) for center in truth], dim=0)
     model._initialize_run_state(
         0,
         observations=observations,
@@ -191,9 +187,7 @@ def test_scalar_external_context_uses_non_degenerate_distribution_hidden_space()
     context = torch.randint(0, 2, (2, 12, 1), dtype=torch.float32)
     model.optimize(x, context=context)
 
-    probs = model.dist.transition.expected_probs(
-        context=torch.tensor([[[0.0]], [[1.0]]])
-    )
+    probs = model.dist.transition.expected_probs(context=torch.tensor([[[0.0]], [[1.0]]]))
     assert torch.isfinite(probs).all()
     assert probs.shape[-3:] == (cfg.n_states, cfg.max_duration, cfg.n_states)
 
@@ -226,13 +220,10 @@ def test_transition_refinement_only_updates_context_modulation() -> None:
         id(transition.delta_scale)
     }
     frozen_before = {
-        name: p.detach().clone()
-        for name, p in model.named_parameters()
-        if id(p) not in refined_ids
+        name: p.detach().clone() for name, p in model.named_parameters() if id(p) not in refined_ids
     }
     refined_before = [
-        p.detach().clone()
-        for p in [*transition.context_net.parameters(), transition.delta_scale]
+        p.detach().clone() for p in [*transition.context_net.parameters(), transition.delta_scale]
     ]
 
     ll = model._refine_transition_likelihood(
@@ -294,6 +285,7 @@ def test_direct_transition_refinement_requires_explicit_context() -> None:
     with pytest.raises(ValueError, match="requires explicit external context"):
         model._refine_transition_likelihood(x, None, steps=1, lr=1e-2)
 
+
 def test_transition_refinement_is_opt_in() -> None:
     cfg = ModelConfig(n_states=2, n_features=3)
     assert cfg.transition_refine_steps == 0
@@ -316,3 +308,133 @@ def test_transition_context_capacity_is_transition_specific() -> None:
     assert model.dist.initial.max_delta == 0.5
     assert model.dist.duration.max_delta == 0.5
     assert model.dist.emission.max_delta == 0.5
+
+
+def test_distribution_set_honors_injected_component_factories() -> None:
+    class CustomInitial(Initial):
+        pass
+
+    class CustomDuration(Duration):
+        pass
+
+    class CustomTransition(Transition):
+        pass
+
+    class CustomEmission(Emission):
+        pass
+
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        context_dim=2,
+        hidden_dim=2,
+    )
+    dist = DistributionSet(
+        config=cfg,
+        initial=CustomInitial,
+        duration=CustomDuration,
+        transition=CustomTransition,
+        emission=CustomEmission,
+    )
+
+    assert isinstance(dist.initial, CustomInitial)
+    assert isinstance(dist.duration, CustomDuration)
+    assert isinstance(dist.transition, CustomTransition)
+    assert isinstance(dist.emission, CustomEmission)
+
+    fresh = dist.fresh()
+    assert isinstance(fresh.initial, CustomInitial)
+    assert isinstance(fresh.duration, CustomDuration)
+    assert isinstance(fresh.transition, CustomTransition)
+    assert isinstance(fresh.emission, CustomEmission)
+
+
+def test_model_coerces_floating_observations_to_model_dtype() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+        seed=79,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    x64 = torch.randn(2, 6, 2, dtype=torch.float64)
+
+    sequence = model._build_sequence_set(x64)
+    likelihood = model.log_likelihood(x64)
+
+    assert sequence.sequences.dtype == model.duration_logits_bias.dtype
+    assert sequence.contexts.dtype == model.duration_logits_bias.dtype
+    assert likelihood.dtype == model.duration_logits_bias.dtype
+    assert torch.isfinite(likelihood).all()
+
+
+def test_training_restart_preserves_injected_distribution_factories() -> None:
+    class CustomInitial(Initial):
+        pass
+
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+        seed=83,
+        n_init=1,
+        max_iter=1,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.dist = DistributionSet(config=cfg, initial=CustomInitial)
+    model.dist.to(device=model.device, dtype=model.duration_logits_bias.dtype)
+    model.dist.initialize()
+
+    x = torch.randn(2, 6, 2)
+    model.optimize(x)
+
+    assert isinstance(model.dist.initial, CustomInitial)
+
+
+def test_external_context_list_requires_per_sequence_length_alignment() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        context_dim=2,
+        hidden_dim=2,
+        causal=True,
+        dropout=0.0,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    observations = [torch.randn(3, 2), torch.randn(5, 2)]
+    context = [torch.randn(2, 2), torch.randn(5, 2)]
+
+    with pytest.raises(ValueError, match="does not match observation length"):
+        model._build_sequence_set(observations, context=context)
+
+
+def test_external_context_list_accepts_matching_variable_lengths() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        context_dim=2,
+        hidden_dim=2,
+        causal=True,
+        dropout=0.0,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    observations = [torch.randn(3, 2), torch.randn(5, 2)]
+    context = [torch.randn(3, 2), torch.randn(5, 2)]
+
+    sequence = model._build_sequence_set(observations, context=context)
+
+    assert sequence.lengths.tolist() == [3, 5]
+    assert sequence.contexts.shape == (2, 5, 2)

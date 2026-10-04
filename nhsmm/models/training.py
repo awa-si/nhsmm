@@ -6,69 +6,29 @@ import torch
 import torch.nn as nn
 
 from nhsmm.config import DTYPE, ModelConfig
-from nhsmm.context import ContextEncoder, align_context_tensor
-from nhsmm.encoder import DefaultEncoder
+from nhsmm.context import align_context_tensor
 from nhsmm.distributions import Duration, Emission, Initial, Transition
 from nhsmm.models.base import DistributionSet as BaseDistributionSet
 from nhsmm.models.base import NHSMM as BaseNHSMM
 
 
 class DistributionSet(BaseDistributionSet):
-    """Training-aware distribution container with robust context capacity."""
+    """Canonical distribution container used by the training model."""
 
     def __init__(
         self,
         config: Optional[ModelConfig] = None,
-        initial: Optional[nn.Module] = Initial,
-        duration: Optional[nn.Module] = Duration,
-        transition: Optional[nn.Module] = Transition,
-        emission: Optional[nn.Module] = Emission,
+        initial: type[nn.Module] = Initial,
+        duration: type[nn.Module] = Duration,
+        transition: type[nn.Module] = Transition,
+        emission: type[nn.Module] = Emission,
     ):
-        nn.Module.__init__(self)
-        self.config = config
-        if self.config is None:
-            raise ValueError("DistributionSet requires ModelConfig")
-
-        distribution_hidden_dim = max(
-            16,
-            self.config.hidden_dim or 0,
-            self.config.context_dim or 0,
-        )
-        self.initial = initial(
-            hidden_dim=distribution_hidden_dim,
-            context_dim=self.config.context_dim,
-            n_states=self.config.n_states,
-            init_mode=self.config.initial_init_mode,
-            activation=self.config.activation,
-        )
-        self.duration = duration(
-            hidden_dim=distribution_hidden_dim,
-            context_dim=self.config.context_dim,
-            n_states=self.config.n_states,
-            max_duration=self.config.max_duration,
-            init_mode=self.config.duration_init_mode,
-            activation=self.config.activation,
-        )
-        self.transition = transition(
-            hidden_dim=distribution_hidden_dim,
-            context_dim=self.config.context_dim,
-            n_states=self.config.n_states,
-            n_features=self.config.n_features,
-            transition_type=self.config.transition_type,
-            init_mode=self.config.transition_init_mode,
-            max_duration=self.config.max_duration,
-            activation=self.config.activation,
-        )
-        self.transition.max_delta = self.config.transition_context_max_delta
-        self.emission = emission(
-            hidden_dim=distribution_hidden_dim,
-            context_dim=self.config.context_dim,
-            n_states=self.config.n_states,
-            min_covar=self.config.min_covar,
-            n_features=self.config.n_features,
-            emission_type=self.config.emission_type,
-            init_mode=self.config.emission_init_mode,
-            activation=self.config.activation,
+        super().__init__(
+            config=config,
+            initial=initial,
+            duration=duration,
+            transition=transition,
+            emission=emission,
         )
 
 
@@ -76,72 +36,7 @@ class NHSMM(BaseNHSMM):
     """Canonical NHSMM with robust training/restart/context-calibration semantics."""
 
     def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
-        if encoder is None:
-            if self.config.context_dim is None:
-                encoder_hidden_dim = max(32, min(64, self.config.n_features * 2))
-            else:
-                directions = 1 if self.config.causal else 2
-                if self.config.context_dim % directions != 0:
-                    raise ValueError(
-                        "context_dim must be divisible by 2 for the default "
-                        "bidirectional encoder when causal=False"
-                    )
-                encoder_hidden_dim = self.config.context_dim // directions
-            encoder = DefaultEncoder(
-                n_features=self.config.n_features,
-                cnn_channels=self.config.cnn_channels,
-                cnn_kernel=self.config.cnn_kernel,
-                hidden_dim=encoder_hidden_dim,
-                bidirectional=not self.config.causal,
-                causal=self.config.causal,
-            )
-        elif self.config.causal:
-            raw_encoder = encoder.encoder if isinstance(encoder, ContextEncoder) else encoder
-            if not bool(getattr(raw_encoder, "causal", False)):
-                raise ValueError(
-                    "ModelConfig.causal=True requires an encoder that explicitly declares causal=True."
-                )
-
-        self.encoder = encoder if isinstance(encoder, ContextEncoder) else ContextEncoder(
-            encoder=encoder,
-            pool=self.config.pool,
-            n_heads=self.config.n_heads,
-            dropout=self.config.dropout,
-        )
-        self.encoder = self.encoder.to(device=self.device, dtype=DTYPE)
-
-        try:
-            self.encoder.eval()
-            dummy = torch.zeros(
-                1, 16, self.config.n_features, device=self.device, dtype=DTYPE
-            )
-            try:
-                _, ctx, _ = self.encoder(
-                    dummy, return_context=True, return_sequence=True
-                )
-                inferred_dim = ctx.shape[-1]
-            except TypeError:
-                inferred_dim = self.encoder(dummy).shape[-1]
-
-            if self.context_dim is None:
-                self.context_dim = inferred_dim
-            elif inferred_dim != self.context_dim:
-                raise ValueError(
-                    f"encoder output dimension ({inferred_dim}) must equal context_dim "
-                    f"({self.context_dim})."
-                )
-            if self.hidden_dim is None:
-                self.hidden_dim = self.context_dim
-            elif self.hidden_dim != self.context_dim:
-                raise ValueError(
-                    f"hidden_dim ({self.hidden_dim}) must equal context_dim "
-                    f"({self.context_dim}) unless projections are explicitly defined."
-                )
-        finally:
-            self.encoder.train()
-
-        self.config.context_dim = self.context_dim
-        self.config.hidden_dim = self.hidden_dim
+        super().initialize_encoder(encoder=encoder)
 
     def _align_external_context(
         self,
@@ -153,6 +48,26 @@ class NHSMM(BaseNHSMM):
         X_tensor = self._ensure_tensor(X)
         B, T, _ = X_tensor.shape
         if isinstance(context, list):
+            if len(context) != B:
+                raise ValueError(
+                    f"context list length {len(context)} does not match batch size {B}"
+                )
+            if isinstance(X, list):
+                expected_lengths = [int(torch.as_tensor(item).shape[0]) for item in X]
+            else:
+                expected_lengths = [T] * B
+            for index, (item, expected_length) in enumerate(zip(context, expected_lengths)):
+                item_tensor = torch.as_tensor(item)
+                if item_tensor.ndim != 2:
+                    raise ValueError(
+                        "context list entries must be [T,H] tensors; "
+                        f"entry {index} has shape {tuple(item_tensor.shape)}"
+                    )
+                if item_tensor.shape[0] != expected_length:
+                    raise ValueError(
+                        f"context sequence {index} length {item_tensor.shape[0]} "
+                        f"does not match observation length {expected_length}"
+                    )
             context = self._ensure_tensor(context)
         elif not torch.is_tensor(context):
             raise TypeError(f"Unsupported context type: {type(context)}")
@@ -217,32 +132,13 @@ class NHSMM(BaseNHSMM):
         emission_init_mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
     ) -> None:
-        """Initialize one independent optimization run."""
-        dist_type = type(self.dist)
-        self.dist = dist_type(config=self.config).to(device=self.device, dtype=DTYPE)
-
-        # Base parameters are initialized independently of observed context.
-        # Context modulation is learned through the likelihood objective.
-        for name in ("initial", "transition", "duration"):
-            getattr(self.dist, name).initialize(context=None)
-
-        mode = emission_init_mode or self.config.emission_init_mode
-        emission = self.dist.emission
-        if mode == "kmeans":
-            self._initialize_emission_from_observations(observations)
-        else:
-            emission.initialize(mode=mode, context=None)
-
-        with torch.no_grad():
-            self.duration_logits_bias.fill_(1.0)
-
-        if self.encoder is not None:
-            if encoder_state is not None:
-                self.encoder.load_state_dict(encoder_state)
-            self.encoder.reset()
-
-        if hasattr(self, "_convergence"):
-            self._convergence.converged_flags[run_idx] = False
+        super()._initialize_run_state(
+            run_idx,
+            observations=observations,
+            encoder_state=encoder_state,
+            emission_init_mode=emission_init_mode,
+            context=context,
+        )
 
     def _refine_transition_likelihood(
         self,
@@ -258,9 +154,7 @@ class NHSMM(BaseNHSMM):
         if lr <= 0.0:
             raise ValueError("lr must be positive")
         if context is None:
-            raise ValueError(
-                "transition refinement requires explicit external context"
-            )
+            raise ValueError("transition refinement requires explicit external context")
 
         transition = self.dist.transition
         transition_params = [
@@ -324,9 +218,7 @@ class NHSMM(BaseNHSMM):
         if cfg.transition_refine_steps <= 0:
             return self
         if context_tensor is None:
-            raise ValueError(
-                "transition_refine_steps > 0 requires explicit external context"
-            )
+            raise ValueError("transition_refine_steps > 0 requires explicit external context")
 
         # Base optimize already selected/restored the best joint initialization.
         X_tensor = self._ensure_tensor(X)

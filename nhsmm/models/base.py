@@ -15,48 +15,59 @@ from nhsmm.config import DTYPE, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelCo
 
 
 class DistributionSet(nn.Module):
-    """
-    Convenience container for all HSMM distributions.
-    Provides a unified initialization interface.
-    """
+    """Container for the four trainable HSMM distribution components."""
 
     def __init__(
         self,
         config: Optional[ModelConfig] = None,
-        initial: Optional[nn.Module] = Initial,
-        duration: Optional[nn.Module] = Duration,
-        transition: Optional[nn.Module] = Transition,
-        emission: Optional[nn.Module] = Emission,
+        initial: type[nn.Module] = Initial,
+        duration: type[nn.Module] = Duration,
+        transition: type[nn.Module] = Transition,
+        emission: type[nn.Module] = Emission,
     ):
         super().__init__()
+        if config is None:
+            raise ValueError("DistributionSet requires ModelConfig")
         self.config = config
-        self.initial=Initial(
-            hidden_dim=self.config.hidden_dim,
+        self._factories = {
+            "initial": initial,
+            "duration": duration,
+            "transition": transition,
+            "emission": emission,
+        }
+        distribution_hidden_dim = max(
+            16,
+            self.config.hidden_dim or 0,
+            self.config.context_dim or 0,
+        )
+        self.initial = initial(
+            hidden_dim=distribution_hidden_dim,
             context_dim=self.config.context_dim,
             n_states=self.config.n_states,
             init_mode=self.config.initial_init_mode,
             activation=self.config.activation,
         )
-        self.duration=Duration(
-            hidden_dim=self.config.hidden_dim,
+        self.duration = duration(
+            hidden_dim=distribution_hidden_dim,
             context_dim=self.config.context_dim,
             n_states=self.config.n_states,
             max_duration=self.config.max_duration,
             init_mode=self.config.duration_init_mode,
             activation=self.config.activation,
         )
-        self.transition=Transition(
-            hidden_dim=self.config.hidden_dim,
+        self.transition = transition(
+            hidden_dim=distribution_hidden_dim,
             context_dim=self.config.context_dim,
             n_states=self.config.n_states,
             n_features=self.config.n_features,
             transition_type=self.config.transition_type,
             init_mode=self.config.transition_init_mode,
-            max_duration=self.config.max_duration, # if None, standard HMM
+            max_duration=self.config.max_duration,
             activation=self.config.activation,
         )
-        self.emission=Emission(
-            hidden_dim=self.config.hidden_dim,
+        self.transition.max_delta = self.config.transition_context_max_delta
+        self.emission = emission(
+            hidden_dim=distribution_hidden_dim,
             context_dim=self.config.context_dim,
             n_states=self.config.n_states,
             min_covar=self.config.min_covar,
@@ -66,13 +77,21 @@ class DistributionSet(nn.Module):
             activation=self.config.activation,
         )
 
-    def initialize(self, context: Optional[torch.Tensor] = None, jitter: float = 1e-5) -> Dict[str, Any]:
+    def initialize(
+        self,
+        context: Optional[torch.Tensor] = None,
+        jitter: float = 1e-5,
+    ) -> Dict[str, Any]:
         return {
             "initial": self.initial.initialize(context=context, jitter=jitter),
             "duration": self.duration.initialize(context=context, jitter=jitter),
             "transition": self.transition.initialize(context=context, jitter=jitter),
             "emission": self.emission.initialize(context=context, jitter=jitter),
         }
+
+    def fresh(self) -> "DistributionSet":
+        """Recreate the same distribution container and injected component factories."""
+        return type(self)(config=self.config, **self._factories)
 
 
 class NHSMM(nn.Module):
@@ -86,8 +105,10 @@ class NHSMM(nn.Module):
         super().__init__()
 
         self.config = config
-        self.device = torch.device(device) if device is not None else torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = (
+            torch.device(device)
+            if device is not None
+            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
 
         if self.config.seed is not None:
@@ -106,14 +127,22 @@ class NHSMM(nn.Module):
         self.to(device=self.device, dtype=DTYPE)
 
     def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
-
         if encoder is None:
-            hidden_dim = max(32, min(64, self.config.n_features * 2))
+            if self.config.context_dim is None:
+                encoder_hidden_dim = max(32, min(64, self.config.n_features * 2))
+            else:
+                directions = 1 if self.config.causal else 2
+                if self.config.context_dim % directions != 0:
+                    raise ValueError(
+                        "context_dim must be divisible by 2 for the default "
+                        "bidirectional encoder when causal=False"
+                    )
+                encoder_hidden_dim = self.config.context_dim // directions
             encoder = DefaultEncoder(
                 n_features=self.config.n_features,
                 cnn_channels=self.config.cnn_channels,
                 cnn_kernel=self.config.cnn_kernel,
-                hidden_dim=hidden_dim,
+                hidden_dim=encoder_hidden_dim,
                 bidirectional=not self.config.causal,
                 causal=self.config.causal,
             )
@@ -124,27 +153,44 @@ class NHSMM(nn.Module):
                     "ModelConfig.causal=True requires an encoder that explicitly declares causal=True."
                 )
 
-        self.encoder = encoder if isinstance(encoder, ContextEncoder) else ContextEncoder(
-            encoder=encoder,
-            pool=self.config.pool,
-            n_heads=self.config.n_heads,
-            dropout=self.config.dropout,
+        self.encoder = (
+            encoder
+            if isinstance(encoder, ContextEncoder)
+            else ContextEncoder(
+                encoder=encoder,
+                pool=self.config.pool,
+                n_heads=self.config.n_heads,
+                dropout=self.config.dropout,
+            )
         )
         self.encoder = self.encoder.to(device=self.device, dtype=DTYPE)
 
         try:
             self.encoder.eval()
             dummy = torch.zeros(
-                1, 16, self.config.n_features, device=self.device, dtype=DTYPE
+                1,
+                16,
+                self.config.n_features,
+                device=self.device,
+                dtype=DTYPE,
             )
             try:
-                _, ctx, _ = self.encoder(dummy, return_context=True, return_sequence=True)
+                _, ctx, _ = self.encoder(
+                    dummy,
+                    return_context=True,
+                    return_sequence=True,
+                )
                 inferred_dim = ctx.shape[-1]
             except TypeError:
                 inferred_dim = self.encoder(dummy).shape[-1]
 
             if self.context_dim is None:
                 self.context_dim = inferred_dim
+            elif inferred_dim != self.context_dim:
+                raise ValueError(
+                    f"encoder output dimension ({inferred_dim}) must equal context_dim "
+                    f"({self.context_dim})."
+                )
             if self.hidden_dim is None:
                 self.hidden_dim = self.context_dim
             elif self.hidden_dim != self.context_dim:
@@ -158,10 +204,12 @@ class NHSMM(nn.Module):
         self.config.context_dim = self.context_dim
         self.config.hidden_dim = self.hidden_dim
 
-    def initialize_distributions(self,
-        context: Optional[torch.Tensor] = None, jitter: float = 1e-5,
-        dist: Optional[DistributionSet] = None) -> None:
-
+    def initialize_distributions(
+        self,
+        context: Optional[torch.Tensor] = None,
+        jitter: float = 1e-5,
+        dist: Optional[type[DistributionSet]] = None,
+    ) -> None:
         if dist is not None:
             self.dist = dist(config=self.config)
 
@@ -174,14 +222,16 @@ class NHSMM(nn.Module):
         except Exception as err:
             raise RuntimeError(f"Failed to initialize NHSMM PDFs: {err}") from err
 
-    def _build_sequence_set(self,
-        X: Union[torch.Tensor, List[torch.Tensor]],
-        context: Optional[torch.Tensor] = None) -> SequenceSet:
+    def _build_sequence_set(
+        self, X: Union[torch.Tensor, List[torch.Tensor]], context: Optional[torch.Tensor] = None
+    ) -> SequenceSet:
 
         X, mask = self._ensure_tensor(X, return_mask=True)
         B, T, F = X.shape
         if F != self.config.n_features:
-            raise ValueError(f"Feature dimension mismatch: expected {self.config.n_features}, got {F}")
+            raise ValueError(
+                f"Feature dimension mismatch: expected {self.config.n_features}, got {F}"
+            )
 
         if context is None:
             context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
@@ -193,7 +243,9 @@ class NHSMM(nn.Module):
                 context_tensor = context_tensor.unsqueeze(0).expand(B, T, -1)
             elif context_tensor.ndim == 3:
                 if context_tensor.shape[:2] != (B, T):
-                    raise ValueError(f"context shape {context_tensor.shape} incompatible with batch {B}, seq {T}")
+                    raise ValueError(
+                        f"context shape {context_tensor.shape} incompatible with batch {B}, seq {T}"
+                    )
             else:
                 raise ValueError(f"Unsupported context ndim {context_tensor.ndim}")
             canonical = context_tensor[:, :1]
@@ -211,7 +263,7 @@ class NHSMM(nn.Module):
             masks=mask.unsqueeze(-1),
             contexts=context_tensor,
             canonical=canonical,
-            log_probs=log_probs
+            log_probs=log_probs,
         )
 
     def _forward_causal_hazard(
@@ -253,9 +305,13 @@ class NHSMM(nn.Module):
         expected_initial = (B, 1, K)
         expected_duration = (B, T, K, D)
         if initial_logits.shape != expected_initial:
-            raise ValueError(f"initial logits must be {expected_initial}, got {initial_logits.shape}")
+            raise ValueError(
+                f"initial logits must be {expected_initial}, got {initial_logits.shape}"
+            )
         if duration_logits.shape != expected_duration:
-            raise ValueError(f"duration logits must be {expected_duration}, got {duration_logits.shape}")
+            raise ValueError(
+                f"duration logits must be {expected_duration}, got {duration_logits.shape}"
+            )
 
         duration_dependent_transition = self.dist.transition.max_duration is not None
         expected_transition = (B, T, K, D, K) if duration_dependent_transition else (B, T, K, K)
@@ -264,16 +320,12 @@ class NHSMM(nn.Module):
                 f"transition logits must be {expected_transition}, got {transition_logits.shape}"
             )
 
-        log_end, log_continue = duration_log_hazard(
-            duration_logits.reshape(B * T, K, D)
-        )
+        log_end, log_continue = duration_log_hazard(duration_logits.reshape(B * T, K, D))
         log_end = log_end.reshape(B, T, K, D)
         log_continue = log_continue.reshape(B, T, K, D)
 
         valid0 = X.lengths > 0
-        alpha[valid0, 0, :, 0] = (
-            initial_logits[valid0, 0] + router.log_probs[valid0, 0]
-        )
+        alpha[valid0, 0, :, 0] = initial_logits[valid0, 0] + router.log_probs[valid0, 0]
 
         for t in range(1, T):
             valid = t < X.lengths
@@ -284,9 +336,7 @@ class NHSMM(nn.Module):
             predicted = previous.new_full((B, K, D), float("-inf"))
 
             if D > 1:
-                predicted[..., 1:] = (
-                    previous[..., :-1] + log_continue[:, t - 1, :, :-1]
-                )
+                predicted[..., 1:] = previous[..., :-1] + log_continue[:, t - 1, :, :-1]
 
             boundary = previous + log_end[:, t - 1]
             if duration_dependent_transition:
@@ -310,12 +360,19 @@ class NHSMM(nn.Module):
 
         return alpha
 
-    def forward(self,
+    def forward(
+        self,
         X: SequenceSet,
         context: Optional[Union[torch.Tensor, ContextRouter]] = None,
-        temperature: Optional[float] = None, timestep: Optional[int] = None) -> torch.Tensor:
+        temperature: Optional[float] = None,
+        timestep: Optional[int] = None,
+    ) -> torch.Tensor:
 
-        router = ContextRouter.from_tensor(X, context=context) if not isinstance(context, ContextRouter) else context
+        router = (
+            ContextRouter.from_tensor(X, context=context)
+            if not isinstance(context, ContextRouter)
+            else context
+        )
         if self.config.causal:
             if timestep is not None:
                 raise ValueError("timestep is not supported by the full causal forward recursion")
@@ -352,9 +409,7 @@ class NHSMM(nn.Module):
 
         alpha = torch.full((B, T, K, Dmax), NEG_INF, device=device)
         alpha[:, 0, :, 0] = (
-            initial_logits.squeeze(1)
-            + duration_logits[:, 0, :, 0]
-            + emit_sums[:, 0, :, 0]
+            initial_logits.squeeze(1) + duration_logits[:, 0, :, 0] + emit_sums[:, 0, :, 0]
         )
 
         d_idx = torch.arange(1, Dmax + 1, device=device).view(1, 1, 1, Dmax)
@@ -420,16 +475,16 @@ class NHSMM(nn.Module):
                 predicted.append(router.log_probs.new_empty(0, dtype=torch.long))
                 continue
 
-            initial_logits = self.dist.initial.log_matrix(
-                context=router.canonical[b:b + 1], T=L
-            )[0, 0]
+            initial_logits = self.dist.initial.log_matrix(context=router.canonical[b : b + 1], T=L)[
+                0, 0
+            ]
             duration_logits = self.dist.duration.log_matrix(
-                context=router.context[b:b + 1, :L],
+                context=router.context[b : b + 1, :L],
                 T=L,
                 soft_dmax=self.duration_logits_bias,
             )[0]
             transition_logits = self.dist.transition.log_matrix(
-                context=router.context[b:b + 1, :L],
+                context=router.context[b : b + 1, :L],
                 T=L,
                 soft_dmax=self.duration_logits_bias,
             )[0]
@@ -446,9 +501,7 @@ class NHSMM(nn.Module):
 
             for t in range(1, L):
                 if D > 1:
-                    continuation = (
-                        score[t - 1, :, :-1] + log_continue[t - 1, :, :-1]
-                    )
+                    continuation = score[t - 1, :, :-1] + log_continue[t - 1, :, :-1]
                     score[t, :, 1:] = continuation + router.log_probs[b, t].unsqueeze(-1)
                     prev_state[t, :, 1:] = state_indices.expand(K, D - 1)
                     prev_age[t, :, 1:] = age_indices.expand(K, D - 1)
@@ -489,14 +542,18 @@ class NHSMM(nn.Module):
 
         return predicted
 
-    def _viterbi(self,
-        X: SequenceSet,
-        context: Optional[Union[torch.Tensor, ContextRouter]] = None) -> List[torch.Tensor]:
+    def _viterbi(
+        self, X: SequenceSet, context: Optional[Union[torch.Tensor, ContextRouter]] = None
+    ) -> List[torch.Tensor]:
 
         K = self.config.n_states
         Dmax = self.dist.duration.max_duration
 
-        router = context if isinstance(context, ContextRouter) else ContextRouter.from_tensor(X, context=context)
+        router = (
+            context
+            if isinstance(context, ContextRouter)
+            else ContextRouter.from_tensor(X, context=context)
+        )
         if self.config.causal:
             return self._viterbi_causal_hazard(X, router)
 
@@ -513,16 +570,14 @@ class NHSMM(nn.Module):
                 predicted.append(router.log_probs.new_empty(0, dtype=torch.long))
                 continue
 
-            initial_logits = self.dist.initial.log_matrix(
-                context=router.canonical[b:b + 1], T=L
-            )[0, 0]
+            initial_logits = self.dist.initial.log_matrix(context=router.canonical[b : b + 1], T=L)[
+                0, 0
+            ]
             duration_logits = self.dist.duration.log_matrix(
-                context=router.context[b:b + 1, :L], T=L,
-                soft_dmax=self.duration_logits_bias
+                context=router.context[b : b + 1, :L], T=L, soft_dmax=self.duration_logits_bias
             )[0]
             transition_logits = self.dist.transition.log_matrix(
-                context=router.context[b:b + 1, :L], T=L,
-                soft_dmax=self.duration_logits_bias
+                context=router.context[b : b + 1, :L], T=L, soft_dmax=self.duration_logits_bias
             )[0]
 
             emit_log = router.log_probs[b, :L]
@@ -596,24 +651,30 @@ class NHSMM(nn.Module):
                     state = prev
 
             segments.reverse()
-            path = torch.cat([
-                router.log_probs.new_full((end - start + 1,), st, dtype=torch.long)
-                for start, end, st in segments
-            ])
+            path = torch.cat(
+                [
+                    router.log_probs.new_full((end - start + 1,), st, dtype=torch.long)
+                    for start, end, st in segments
+                ]
+            )
 
             predicted.append(path[:L])
         return predicted
 
-    def log_likelihood(self,
+    def log_likelihood(
+        self,
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
-        reduce: bool = False) -> torch.Tensor:
+        reduce: bool = False,
+    ) -> torch.Tensor:
 
         X, context = self._ensure_tensor(X), self._ensure_tensor(context)
         B, T, F = X.shape
 
         if F != self.config.n_features:
-            raise ValueError(f"Feature dimension mismatch: expected {self.config.n_features}, got {F}")
+            raise ValueError(
+                f"Feature dimension mismatch: expected {self.config.n_features}, got {F}"
+            )
 
         seq_set = self._build_sequence_set(X, context=context)
         alpha = self.forward(seq_set, context=context)
@@ -622,20 +683,19 @@ class NHSMM(nn.Module):
         log_likelihoods = alpha.new_full((B,), NEG_INF)
         valid = lengths > 0
         if valid.any():
-            last_alpha = alpha[valid, lengths[valid]-1]
+            last_alpha = alpha[valid, lengths[valid] - 1]
             log_likelihoods[valid] = torch.logsumexp(last_alpha.flatten(1), dim=1)
 
-        log_likelihoods = torch.nan_to_num(
-            log_likelihoods,
-            nan=NEG_INF,
-            neginf=NEG_INF
-        )
+        log_likelihoods = torch.nan_to_num(log_likelihoods, nan=NEG_INF, neginf=NEG_INF)
         return log_likelihoods.sum() if reduce else log_likelihoods
 
-    def predict(self,
+    def predict(
+        self,
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
-        mode: Literal["viterbi", "log_likelihood"] = "viterbi", verbose: bool = True) -> torch.Tensor | list[torch.Tensor]:
+        mode: Literal["viterbi", "log_likelihood"] = "viterbi",
+        verbose: bool = True,
+    ) -> torch.Tensor | list[torch.Tensor]:
 
         X, context = self._ensure_tensor(X), self._ensure_tensor(context)
         B, T, F = X.shape
@@ -667,10 +727,14 @@ class NHSMM(nn.Module):
 
         raise ValueError(f"Unsupported decoding mode '{mode}'")
 
-    def decode(self,
+    def decode(
+        self,
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
-        mode: Literal["viterbi"] = "viterbi", first_only: bool = True, verbose: bool = True) -> Union[torch.Tensor, list[torch.Tensor]]:
+        mode: Literal["viterbi"] = "viterbi",
+        first_only: bool = True,
+        verbose: bool = True,
+    ) -> Union[torch.Tensor, list[torch.Tensor]]:
 
         B = X.shape[0] if X.ndim == 3 else 1
         if verbose:
@@ -679,9 +743,9 @@ class NHSMM(nn.Module):
         preds = self.predict(X, mode=mode, context=context, verbose=verbose)
         return preds[0] if first_only and B == 1 else preds
 
-    def _ensure_tensor(self,
-        X: Union[torch.Tensor, List[torch.Tensor], None],
-        return_mask: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.BoolTensor], None]:
+    def _ensure_tensor(
+        self, X: Union[torch.Tensor, List[torch.Tensor], None], return_mask: bool = False
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.BoolTensor], None]:
 
         if X is None:
             return (None, None) if return_mask else None
@@ -693,18 +757,23 @@ class NHSMM(nn.Module):
                 X = X.unsqueeze(0)
             elif X.ndim != 3:
                 raise ValueError(f"Unsupported X shape {X.shape}")
+            X = X.to(device=device, dtype=DTYPE)
             mask = torch.ones(X.shape[:2], dtype=torch.bool, device=device)
-            return (X.to(device), mask) if return_mask else X.to(device)
+            return (X, mask) if return_mask else X
 
         if isinstance(X, list):
             if not X:
                 if return_mask:
-                    return torch.empty(0, 0, 0, device=device), torch.empty(0, 0, dtype=torch.bool, device=device)
+                    return torch.empty(0, 0, 0, device=device), torch.empty(
+                        0, 0, dtype=torch.bool, device=device
+                    )
                 return torch.empty(0, 0, 0, device=device)
 
-            X_tensors = [torch.as_tensor(x, device=device) for x in X]
+            X_tensors = [torch.as_tensor(x, device=device, dtype=DTYPE) for x in X]
             lengths = [x.shape[0] for x in X_tensors]
-            X_padded = pad_sequence(X_tensors, batch_first=True, padding_value=self.config.pad_value)
+            X_padded = pad_sequence(
+                X_tensors, batch_first=True, padding_value=self.config.pad_value
+            )
             mask = torch.zeros(X_padded.shape[:2], dtype=torch.bool, device=device)
             for i, L in enumerate(lengths):
                 mask[i, :L] = 1
@@ -712,10 +781,7 @@ class NHSMM(nn.Module):
 
         raise TypeError(f"Unsupported type: {type(X)}")
 
-
-    def _training_observations(
-        self, X: Union[torch.Tensor, List[torch.Tensor]]
-    ) -> torch.Tensor:
+    def _training_observations(self, X: Union[torch.Tensor, List[torch.Tensor]]) -> torch.Tensor:
         if torch.is_tensor(X):
             tensor = self._ensure_tensor(X)
             return tensor.reshape(-1, tensor.shape[-1])
@@ -750,9 +816,7 @@ class NHSMM(nn.Module):
             else:
                 index = int(torch.multinomial(closest / total, 1).item())
             centers.append(x[index])
-            closest = torch.minimum(
-                closest, (x - centers[-1]).square().sum(dim=-1)
-            )
+            closest = torch.minimum(closest, (x - centers[-1]).square().sum(dim=-1))
 
         current = torch.stack(centers)
         for _ in range(n_iter):
@@ -772,9 +836,7 @@ class NHSMM(nn.Module):
         return current
 
     @torch.no_grad()
-    def _initialize_emission_from_observations(
-        self, observations: torch.Tensor
-    ) -> None:
+    def _initialize_emission_from_observations(self, observations: torch.Tensor) -> None:
         emission = self.dist.emission
         observations = observations.to(device=self.device, dtype=DTYPE)
         centers = self._kmeans_centers(observations, self.config.n_states)
@@ -784,7 +846,7 @@ class NHSMM(nn.Module):
         else:
             emission.loc = nn.Parameter(centers.clone(), requires_grad=True)
             emission.scale_param = nn.Parameter(torch.ones_like(centers), requires_grad=True)
-            emission.dof.data.clamp_(min=2.1)
+            emission.dof.clamp_(min=2.1)
 
     def _initialize_run_state(
         self,
@@ -795,23 +857,19 @@ class NHSMM(nn.Module):
         context: Optional[torch.Tensor] = None,
     ) -> None:
         """Initialize one optimization run without warm-starting from another run."""
-        dist_type = type(self.dist)
-        self.dist = dist_type(config=self.config).to(device=self.device, dtype=DTYPE)
+        self.dist = self.dist.fresh().to(device=self.device, dtype=DTYPE)
 
-        init_context = context
-        if init_context is not None:
-            while init_context.ndim > 1:
-                init_context = init_context.mean(dim=0)
-
+        # Base distribution parameters are initialized independently of
+        # observed context. Context modulation is learned through likelihood.
         for name in ("initial", "transition", "duration"):
-            getattr(self.dist, name).initialize(context=init_context)
+            getattr(self.dist, name).initialize(context=None)
 
         mode = emission_init_mode or self.config.emission_init_mode
         emission = self.dist.emission
         if mode == "kmeans":
             self._initialize_emission_from_observations(observations)
         else:
-            emission.initialize(mode=mode, context=init_context)
+            emission.initialize(mode=mode, context=None)
 
         with torch.no_grad():
             self.duration_logits_bias.fill_(1.0)
@@ -848,13 +906,21 @@ class NHSMM(nn.Module):
         if self.encoder is not None and "encoder" in self._best_state:
             self.encoder.load_state_dict(self._best_state["encoder"])
 
-    def _compute_loss(self,
-        X: torch.Tensor, context: torch.Tensor = None,
-        loss_bias: float = 1e-3, it: int = 0, max_iter: int = 20,
-        t_min: float = 0.3, t_max: float = 1.0) -> tuple[torch.Tensor, torch.Tensor]:
+    def _compute_loss(
+        self,
+        X: torch.Tensor,
+        context: torch.Tensor = None,
+        loss_bias: float = 1e-3,
+        it: int = 0,
+        max_iter: int = 20,
+        t_min: float = 0.3,
+        t_max: float = 1.0,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
 
         seq_set = self._build_sequence_set(X, context=context)
-        temperature = t_min + (t_max - t_min) / (1 + math.exp((10 / max_iter) * (it - max_iter / 2)))
+        temperature = t_min + (t_max - t_min) / (
+            1 + math.exp((10 / max_iter) * (it - max_iter / 2))
+        )
         alpha = self.forward(seq_set, temperature=temperature)
         lengths = seq_set.lengths
 
@@ -867,16 +933,19 @@ class NHSMM(nn.Module):
         ll = log_likelihoods.sum()
 
         loss = -ll
-        loss += loss_bias * nnF.relu(
-            self.duration_logits_bias[:, 1:] - self.duration_logits_bias[:, :-1]
-        ).mean()
+        loss += (
+            loss_bias
+            * nnF.relu(self.duration_logits_bias[:, 1:] - self.duration_logits_bias[:, :-1]).mean()
+        )
 
         return ll, loss
 
-    def optimize(self,
+    def optimize(
+        self,
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
-        cfg: Optional[ModelConfig] = None):
+        cfg: Optional[ModelConfig] = None,
+    ):
         """
         Optimize NHSMM parameters using the provided configuration.
 
@@ -905,9 +974,7 @@ class NHSMM(nn.Module):
             verbose=cfg.verbose,
         )
 
-        encoder_state = (
-            self._clone_state_dict(self.encoder) if self.encoder is not None else None
-        )
+        encoder_state = self._clone_state_dict(self.encoder) if self.encoder is not None else None
 
         best_score = -float("inf")
         for run_idx in range(cfg.n_init):
