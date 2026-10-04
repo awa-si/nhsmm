@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet
+from nhsmm.encoder import DefaultEncoder
 
 
 class _IdentityEncoder(nn.Module):
@@ -76,9 +77,7 @@ def test_context_encoder_forwards_supported_mask():
 
 
 def test_sequence_update_preserves_temporal_context_shape():
-    sequence = SequenceSet.from_unbatched(
-        [torch.tensor([[1.0], [3.0]]), torch.tensor([[10.0]])]
-    )
+    sequence = SequenceSet.from_unbatched([torch.tensor([[1.0], [3.0]]), torch.tensor([[10.0]])])
     encoder = ContextEncoder(_IdentityEncoder(), pool="mean", layer_norm=False)
 
     sequence.update(encoder)
@@ -125,3 +124,64 @@ def test_prepare_mask_normalizes_device_and_dtype():
 
     assert prepared.dtype == torch.bool
     assert prepared.device == x.device
+
+
+def test_context_encoder_caches_do_not_retain_autograd_graph() -> None:
+    torch.manual_seed(71)
+    raw = DefaultEncoder(
+        n_features=3,
+        hidden_dim=4,
+        cnn_channels=5,
+        cnn_kernel=3,
+        bidirectional=False,
+        dropout=0.0,
+        causal=True,
+    )
+    encoder = ContextEncoder(raw, pool="mean")
+    x = torch.randn(2, 5, 3, requires_grad=True)
+
+    sequence, canonical, _ = encoder(
+        x,
+        return_sequence=True,
+        return_context=True,
+    )
+
+    assert sequence.grad_fn is not None
+    assert canonical is not None
+    assert canonical.grad_fn is not None
+    assert encoder._sequence is not None
+    assert encoder._context is not None
+    assert encoder._sequence.grad_fn is None
+    assert encoder._context.grad_fn is None
+
+    (sequence.sum() + canonical.sum()).backward()
+    assert x.grad is not None
+    assert torch.isfinite(x.grad).all()
+
+
+def test_context_encoder_reset_clears_only_transient_detached_caches() -> None:
+    torch.manual_seed(73)
+    raw = DefaultEncoder(
+        n_features=3,
+        hidden_dim=4,
+        cnn_channels=5,
+        cnn_kernel=3,
+        bidirectional=False,
+        dropout=0.0,
+        causal=True,
+    )
+    encoder = ContextEncoder(raw, pool="attn")
+    x = torch.randn(2, 5, 3)
+
+    encoder(x, return_sequence=True, return_context=True)
+    attn_parameter = encoder._attn_vector
+
+    assert encoder._sequence is not None
+    assert encoder._context is not None
+    assert attn_parameter is not None
+
+    encoder.reset()
+
+    assert encoder._sequence is None
+    assert encoder._context is None
+    assert encoder._attn_vector is attn_parameter

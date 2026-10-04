@@ -84,9 +84,7 @@ class SequenceSet:
 
         B = len(sequences)
         if contexts is not None and len(contexts) != B:
-            raise ValueError(
-                f"contexts length {len(contexts)} does not match sequences length {B}"
-            )
+            raise ValueError(f"contexts length {len(contexts)} does not match sequences length {B}")
         if log_probs is not None and len(log_probs) != B:
             raise ValueError(
                 f"log_probs length {len(log_probs)} does not match sequences length {B}"
@@ -113,21 +111,13 @@ class SequenceSet:
 
         seq_tensor = pad_sequence(seq_tensors, batch_first=True, padding_value=pad_value)
         mask_tensor = (
-            torch.arange(T_max, device=seq_tensor.device).expand(B, T_max)
-            < lengths.unsqueeze(1)
+            torch.arange(T_max, device=seq_tensor.device).expand(B, T_max) < lengths.unsqueeze(1)
         ).unsqueeze(-1)
 
         ctx_dim = F
         if contexts is not None:
-            context_tensors = [
-                c if c is None or c.ndim > 1 else c.unsqueeze(-1)
-                for c in contexts
-            ]
-            explicit_dims = {
-                c.shape[1]
-                for c in context_tensors
-                if c is not None
-            }
+            context_tensors = [c if c is None or c.ndim > 1 else c.unsqueeze(-1) for c in contexts]
+            explicit_dims = {c.shape[1] for c in context_tensors if c is not None}
             if len(explicit_dims) > 1:
                 raise ValueError("all explicit contexts must have the same feature dimension")
             if explicit_dims:
@@ -169,14 +159,9 @@ class SequenceSet:
         logp_tensor = None
         if log_probs is not None:
             logp_tensors = [
-                lp if lp is None or lp.ndim > 1 else lp.unsqueeze(-1)
-                for lp in log_probs
+                lp if lp is None or lp.ndim > 1 else lp.unsqueeze(-1) for lp in log_probs
             ]
-            state_dims = {
-                lp.shape[1]
-                for lp in logp_tensors
-                if lp is not None
-            }
+            state_dims = {lp.shape[1] for lp in logp_tensors if lp is not None}
             if len(state_dims) > 1:
                 raise ValueError("all log_probs must have the same state dimension")
             K = state_dims.pop() if state_dims else 1
@@ -236,9 +221,7 @@ class SequenceSet:
 
     def select(self, indices: torch.Tensor | list[int]) -> "SequenceSet":
         if isinstance(indices, list):
-            indices = torch.tensor(
-                indices, dtype=torch.long, device=self.sequences.device
-            )
+            indices = torch.tensor(indices, dtype=torch.long, device=self.sequences.device)
         return SequenceSet(
             sequences=self.sequences[indices],
             lengths=self.lengths[indices],
@@ -302,9 +285,7 @@ class ContextRouter:
 
     def __post_init__(self):
         if self.canonical.ndim != 3 or self.canonical.shape[1] != 1:
-            raise ValueError(
-                f"canonical must be [B,1,H], got {tuple(self.canonical.shape)}"
-            )
+            raise ValueError(f"canonical must be [B,1,H], got {tuple(self.canonical.shape)}")
         if self.context.ndim != 3:
             raise ValueError(f"context must be [B,T,H], got {tuple(self.context.shape)}")
 
@@ -318,9 +299,7 @@ class ContextRouter:
             raise ValueError(f"names length {len(self.names)} != H={H}")
 
         if self.mask is None:
-            self.mask = torch.ones(
-                B, T, 1, dtype=torch.bool, device=self.context.device
-            )
+            self.mask = torch.ones(B, T, 1, dtype=torch.bool, device=self.context.device)
         else:
             self.mask = self.mask.to(device=self.context.device, dtype=torch.bool)
             if self.mask.ndim == 2:
@@ -334,9 +313,7 @@ class ContextRouter:
 
         if self.log_probs is not None:
             if self.log_probs.ndim != 3:
-                raise ValueError(
-                    f"log_probs must be [B,T,K], got {tuple(self.log_probs.shape)}"
-                )
+                raise ValueError(f"log_probs must be [B,T,K], got {tuple(self.log_probs.shape)}")
             if self.log_probs.shape[:2] != (B, T):
                 raise ValueError(
                     "log_probs batch/time dimensions must match context: "
@@ -405,9 +382,7 @@ class ContextRouter:
         return self.mask
 
     def select_features(self, keys: list[str]) -> "ContextRouter":
-        idx = torch.tensor(
-            [self.names.index(k) for k in keys], device=self.context.device
-        )
+        idx = torch.tensor([self.names.index(k) for k in keys], device=self.context.device)
         return ContextRouter(
             canonical=self.canonical[:, :, idx],
             context=self.context[:, :, idx],
@@ -418,9 +393,7 @@ class ContextRouter:
 
     def select(self, indices: torch.Tensor | list[int]) -> "ContextRouter":
         if isinstance(indices, list):
-            indices = torch.tensor(
-                indices, dtype=torch.long, device=self.context.device
-            )
+            indices = torch.tensor(indices, dtype=torch.long, device=self.context.device)
         return ContextRouter(
             canonical=self.canonical[indices],
             context=self.context[indices],
@@ -498,13 +471,13 @@ class ContextEncoder(nn.Module):
             out = out[0]
 
         context = out.masked_fill(~mask.unsqueeze(-1), 0.0)
-        self._sequence = context
+        self._sequence = context.detach()
         pooled, attn = self._pool_context(context, mask, return_attn_weights)
         if self.layer_norm:
             pooled = nnF.layer_norm(pooled, (pooled.shape[-1],))
         pooled = self.dropout_layer(torch.tanh(pooled * self.context_scale))
         canonical = pooled.unsqueeze(1)
-        self._context = canonical
+        self._context = canonical.detach()
         seq_out = context if return_sequence else self._last_timestep(context, mask)
         return (
             seq_out,
@@ -553,9 +526,7 @@ class ContextEncoder(nn.Module):
     ) -> torch.Tensor:
         if mask is not None:
             idx = torch.clamp(mask.sum(dim=1) - 1, min=0)
-            return context[
-                torch.arange(context.shape[0], device=context.device), idx
-            ]
+            return context[torch.arange(context.shape[0], device=context.device), idx]
         return context[:, -1, :]
 
     def _pool_context(
@@ -585,13 +556,9 @@ class ContextEncoder(nn.Module):
             ctx = context.max(dim=1).values
         return ctx, None
 
-    def _init_attn_vector(
-        self, H: int, *, device: torch.device, dtype: torch.dtype
-    ):
+    def _init_attn_vector(self, H: int, *, device: torch.device, dtype: torch.dtype):
         if self._attn_vector is None:
-            self._attn_vector = nn.Parameter(
-                torch.randn(H, device=device, dtype=dtype) * 0.1
-            )
+            self._attn_vector = nn.Parameter(torch.randn(H, device=device, dtype=dtype) * 0.1)
             self.register_parameter("_attn_vector", self._attn_vector)
         elif self._attn_vector.shape != (H,):
             raise ValueError(
@@ -620,19 +587,13 @@ class ContextEncoder(nn.Module):
                 num_heads=self.n_heads,
                 batch_first=True,
                 dropout=(
-                    self.dropout_layer.p
-                    if isinstance(self.dropout_layer, nn.Dropout)
-                    else 0.0
+                    self.dropout_layer.p if isinstance(self.dropout_layer, nn.Dropout) else 0.0
                 ),
             ).to(device=context.device, dtype=context.dtype)
         elif self._mha.embed_dim != H:
-            raise ValueError(
-                f"mha pooling dimension changed from {self._mha.embed_dim} to {H}"
-            )
+            raise ValueError(f"mha pooling dimension changed from {self._mha.embed_dim} to {H}")
         key_padding_mask = ~mask if mask is not None else None
-        out, attn = self._mha(
-            context, context, context, key_padding_mask=key_padding_mask
-        )
+        out, attn = self._mha(context, context, context, key_padding_mask=key_padding_mask)
         pooled = out.mean(dim=1)
         return pooled, attn if ret_attn else None
 

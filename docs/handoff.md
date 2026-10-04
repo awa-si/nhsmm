@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-175 passed, 3 skipped in 37.25 s
+177 passed, 3 skipped in 41.71 s
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `175 passed, 3 skipped`.
+The corresponding current local full suite is `177 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -197,6 +197,8 @@ Default-distribution math/performance hardening is also complete:
 
 Measured CPU microbenchmarks showed about 12x lower Gaussian batch-emission scoring latency, about 2x lower Student-t batch-emission latency, and about 8x lower static transition-constraint cost for the tested shapes.
 
+ContextEncoder transient-cache retention is also resolved: `_sequence` and `_context` store detached diagnostic snapshots while returned tensors retain their autograd graph. `reset()` continues to clear only transient caches and preserves learned attention/MHA parameters.
+
 DefaultEncoder audit/hardening is complete:
 
 - non-causal CNN output preserves sequence length for odd and even kernels;
@@ -215,7 +217,7 @@ Canonical remaining findings are in `docs/validation/code-scan-2026-09-28.md`:
 - P1: define transition-refinement behavior when context is absent.
 - P2: resolve base `DistributionSet` injectable-factory semantics.
 - P2: decide whether artifact construction preserves model train/eval mode.
-- P2: review ContextEncoder cache graph retention and package-level logging policy.
+- P2: review package-level logging policy.
 
 ## Next-chat execution order
 
