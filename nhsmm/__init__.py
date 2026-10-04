@@ -15,6 +15,16 @@ from .benchmark import benchmark_cpu_runtime
 from .filtering import HSMMFilterState
 from .runtime import HSMMFilterRuntime, HSMMRuntimeState
 from .diagnostics import ModelHealthReport, evaluate_model_health
+from .tuning import (
+    Choice,
+    ConfigTuner,
+    FloatRange,
+    IntRange,
+    TuneEvaluation,
+    TuneReport,
+    TuneTrial,
+    apply_config_overrides,
+)
 from .validation import (
     ContextEffectComponent,
     ContextEvidence,
@@ -42,6 +52,14 @@ __all__ = [
     "ModelHealthReport",
     "ModelHealthThresholds",
     "evaluate_model_health",
+    "Choice",
+    "ConfigTuner",
+    "FloatRange",
+    "IntRange",
+    "TuneEvaluation",
+    "TuneReport",
+    "TuneTrial",
+    "apply_config_overrides",
     "load_inference_model",
     "prepare_inference",
     "build_artifact",

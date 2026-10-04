@@ -18,6 +18,7 @@ from nhsmm import (
     evaluate_validation_snapshot,
     ValidationConfig,
     ValidationScenarioConfig,
+    apply_config_overrides,
 )
 from nhsmm.filtering import filter_model_sequence
 
@@ -655,22 +656,10 @@ def _apply_overrides(
 ) -> ValidationConfig:
     result = config
     for path, value in overrides:
-        parts = path.split(".")
-        if len(parts) == 2 and parts[0] == "model":
-            result = result.with_overrides(model={parts[1]: value})
-        elif len(parts) == 2 and parts[0] == "data":
-            result = result.with_overrides(data={parts[1]: value})
-        elif len(parts) == 2 and parts[0] == "health":
-            result = result.with_overrides(health={parts[1]: value})
-        elif len(parts) == 3 and parts[0] == "scenario":
-            result = result.with_overrides(scenarios={parts[1]: {parts[2]: value}})
-        elif path == "boundary_tolerance":
-            result = result.with_overrides(boundary_tolerance=value)
-        else:
-            raise ValueError(
-                "override path must be model.<field>, data.<field>, health.<field>, "
-                "scenario.<name>.<field>, or boundary_tolerance"
-            )
+        tuned = apply_config_overrides(result, {path: value})
+        if not isinstance(tuned, ValidationConfig):
+            raise TypeError("validation overrides must produce ValidationConfig")
+        result = tuned
     return result
 
 

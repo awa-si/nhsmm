@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `f4db8681943be0b2f975d9af7cd76be17fe7c651`
+- base head for this handoff update: `1e9bf315942c714ad4e0c304ead5119f0c8e8fe6`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-277 passed, 3 skipped
+285 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `277 passed, 3 skipped`.
+The corresponding current local full suite is `285 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -265,7 +265,9 @@ Structural usefulness validation is now part of the maintained learning/predicti
 - null is retained strictly as a negative control and does not receive a usefulness claim;
 - usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
 
-Configuration ownership is consolidated in `nhsmm/config.py`; the previous validation-local config module was removed. Public imports remain unchanged, while model, health, data, scenario, and validation contracts now use the same strict helpers. Full local regression: `277 passed, 3 skipped`.
+A public `ConfigTuner` layer now sits above the centralized configuration contracts. It supports validated grid/random candidate generation, maximize/minimize objectives, reusable dotted overrides, serializable trial evidence, and deterministic best-config selection. Full regression after this addition: `285 passed, 3 skipped`.
+
+Configuration ownership is consolidated in `nhsmm/config.py`; the previous validation-local config module was removed. Public imports remain unchanged, while model, health, data, scenario, and validation contracts now use the same strict helpers. Full local regression: `285 passed, 3 skipped`.
 
 Configuration/tuning contract is implemented:
 
@@ -273,7 +275,7 @@ Configuration/tuning contract is implemented:
 - public schema-versioned `ValidationConfig` owns acceptance dataset/model/health/scenario policy;
 - validation thresholds and health/collapse policy are tuneable without editing the harness;
 - CLI supports JSON config loading, resolved-config dumping, and strict dotted overrides;
-- latest full local suite after this change: `277 passed, 3 skipped`.
+- latest full local suite after this change: `285 passed, 3 skipped`.
 
 Production-boundary hardening is complete:
 

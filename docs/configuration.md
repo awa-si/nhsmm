@@ -122,3 +122,7 @@ python scripts/validate_learning_prediction.py \
 ```
 
 The output report embeds the full resolved `validation_config`, making each acceptance result reproducible from its exact configuration.
+
+## Tuner interface
+
+For systematic search over validated configurations, use the public `ConfigTuner` interface. See [tuning.md](tuning.md) for search-space, objective, reproducibility, and report examples.
