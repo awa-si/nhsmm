@@ -17,12 +17,19 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
-- **Full local repository regression on current `develop`:** 226 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
+- **Full local repository regression on current `develop`:** 235 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner; current local consistency scan also rebuilt sdist + wheel and passed `twine check` after migrating package license metadata to SPDX.
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
 - **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp. CPU-only development uses `scripts/install_cpu_dev.py`, which installs the official CPU PyTorch wheel before the normal editable dev environment and avoids unnecessary CUDA dependency resolution.
 
 The Python 3.12 baseline, selected P0 code-scan fixes, distribution/encoder/model/convergence/transition hardening, repository-wide static/API consistency cleanup, and file/code consolidation are complete. Downstream Nautilus integration remains a separate empirical validation boundary.
+
+Model-health diagnostics are now part of the public package API:
+
+- `evaluate_model_health(...)` reports posterior occupancy, effective state count, Viterbi state usage, posterior entropy, duration entropy/peaks, transition entropy/peaks, and explicit collapse/degeneration flags;
+- health evaluation is observational and restores the model train/eval mode;
+- variable-length `predict()` now preserves original per-sequence output lengths instead of returning padded paths;
+- synthetic health validation separates signal from no-signal behavior: strong/moderate runs stay non-collapsed while null-signal runs collapse as expected.
 
 ## Accepted package-core evidence
 
@@ -149,7 +156,7 @@ Safe behavior-preserving hardening already applied:
 Verification after these changes:
 
 ```text
-226 passed, 3 skipped
+235 passed, 3 skipped
 ```
 
 The three skips require CUDA and were run on a CPU-only local runtime.
@@ -230,7 +237,7 @@ pytest: 96 passed
 runtime benchmark: PASS
 ```
 
-The later hardening has local full-suite evidence (`226 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
+The later hardening has local full-suite evidence (`235 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
 
 ## Package boundary / next slice
 

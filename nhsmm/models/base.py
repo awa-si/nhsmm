@@ -734,11 +734,11 @@ class NHSMM(nn.Module):
         verbose: bool = True,
     ) -> torch.Tensor | list[torch.Tensor]:
 
-        X = self._ensure_tensor(X)
-        B, T, F = X.shape
+        X_tensor = self._ensure_tensor(X)
+        B, T, F = X_tensor.shape
 
         if B == 0 or T == 0:
-            return [torch.empty(0, dtype=torch.long, device=X.device) for _ in range(B)]
+            return [torch.empty(0, dtype=torch.long, device=X_tensor.device) for _ in range(B)]
 
         if verbose:
             logger.info(f"[Predict] Sequences: {B}, max_len: {T}")
@@ -747,7 +747,7 @@ class NHSMM(nn.Module):
         router = ContextRouter.from_tensor(seq_set, context=context)
 
         if mode == "viterbi":
-            results = [torch.empty(0, dtype=torch.long, device=X.device) for _ in range(B)]
+            results = [torch.empty(0, dtype=torch.long, device=X_tensor.device) for _ in range(B)]
             nonzero_idx = torch.nonzero(seq_set.lengths, as_tuple=False).squeeze(-1)
 
             if len(nonzero_idx) > 0:
@@ -756,7 +756,8 @@ class NHSMM(nn.Module):
                 decoded_paths = self._viterbi(seq_set_nz, context=router_nz)
 
                 for i, path in zip(nonzero_idx.tolist(), decoded_paths):
-                    results[i] = path.to(dtype=torch.long)
+                    length = int(seq_set.lengths[i].item())
+                    results[i] = path[:length].to(dtype=torch.long)
             return results
 
         if mode == "log_likelihood":

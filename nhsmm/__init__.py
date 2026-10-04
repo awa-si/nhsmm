@@ -7,6 +7,7 @@ from .artifact import build_artifact, load_artifact, save_artifact
 from .benchmark import benchmark_cpu_runtime
 from .filtering import HSMMFilterState
 from .runtime import HSMMFilterRuntime, HSMMRuntimeState
+from .diagnostics import ModelHealthReport, ModelHealthThresholds, evaluate_model_health
 from .validation import (
     ContextEffectComponent,
     ContextEvidence,
@@ -26,6 +27,9 @@ __all__ = [
     "HSMMFilterState",
     "HSMMFilterRuntime",
     "HSMMRuntimeState",
+    "ModelHealthReport",
+    "ModelHealthThresholds",
+    "evaluate_model_health",
     "load_inference_model",
     "prepare_inference",
     "build_artifact",

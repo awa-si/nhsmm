@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `6c863e9b732cee3624eefc8ba1d29154765b139d`
+- base head for this handoff update: `eb2983c7547ddb42dc0468518a645df0cbe2e74e`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-226 passed, 3 skipped
+235 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `226 passed, 3 skipped`.
+The corresponding current local full suite is `235 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -245,6 +245,15 @@ Unused public config cleanup is complete:
 - model-level `self.debug` was removed with the dead config field;
 - distribution/runtime temperature APIs remain intact because they are active consumers and separate from the removed config field;
 - artifact payloads no longer persist the removed dead fields.
+
+Model-health diagnostics are implemented and validated:
+
+- public `evaluate_model_health(...)`, `ModelHealthReport`, and `ModelHealthThresholds`;
+- state-collapse detection combines effective state count, max occupancy, and decoded state usage;
+- duration and transition degeneration are reported separately from state collapse;
+- diagnostics use actual aligned sequence context and only valid unpadded timesteps;
+- variable-length Viterbi prediction now trims each decoded path to its original sequence length;
+- empirical gate over 15 fits: strong 0/5 collapsed, moderate 0/5 collapsed, null 5/5 collapsed; duration/transition degeneration 0/15.
 
 File/code consolidation is complete:
 
