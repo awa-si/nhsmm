@@ -75,6 +75,14 @@ python scripts/validate_state_recovery.py \
 
 The benchmark evaluates state identity only up to permutation and explicitly uses `emission_init_mode="kmeans"`; package default remains `spread`.
 
+## Controlled learning/prediction acceptance
+
+    python scripts/validate_learning_prediction.py --scenario all --seeds 401,402,403,404,405 --max-iter 40 --workers 4 --output /tmp/nhsmm-learning-prediction.json
+
+This is the canonical empirical proof that optimize() changes learned state and that the fitted model improves held-out likelihood and predicts identifiable latent states on disjoint OOS sequences. It covers strong, moderate, weak, and null signals; parameter movement; pre/post OOS likelihood; permutation-invariant state recovery; ARI; train/OOS generalization gap; model-health collapse; validation fingerprints; and variable-length Viterbi outputs.
+
+The hard state-identification acceptance explicitly uses emission_init_mode="kmeans". A separate default-spread probe is recorded in validation/learning-prediction-2026-10-04.md.
+
 ## Controlled transition-context acceptance
 
 ```bash

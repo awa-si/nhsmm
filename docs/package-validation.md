@@ -36,6 +36,25 @@ Acceptance: **PASS**.
 
 The earlier data-independent `spread` initialization could enter persistent two-state local minima on strongly identifiable synthetic data. More iterations and marginal state-usage regularization did not reliably rescue those seeds. Training-time K-Means++/Lloyd initialization did, so K-Means remains an explicit opt-in rather than the global default.
 
+## End-to-end learning and held-out prediction
+
+A dedicated end-to-end harness tests whether training changes the model and improves prediction on strictly disjoint OOS sequences rather than merely exercising package APIs.
+
+Five independent seeds were run for each of four signal strengths using emission_init_mode="kmeans" for identifiable-state acceptance:
+
+| Scenario | Median OOS LL gain | Median OOS accuracy | Median accuracy gain | Median OOS ARI | OOS collapse |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| strong | +7.8224 | 0.9978 | +0.3433 | 0.9934 | 0/5 |
+| moderate | +2.1719 | 0.9656 | +0.3367 | 0.8979 | 0/5 |
+| weak | +1.1146 | 0.7611 | +0.1733 | 0.4085 | 1/5 |
+| null | +1.0093 | 0.3589 | -0.0144 | 0.0000 | 5/5 |
+
+All 20 fits changed parameters, preserved train/OOS model fingerprints, used distinct train/OOS data fingerprints, and passed the variable-length prediction contract. The null control improves density fit without creating meaningful state-label recovery.
+
+Acceptance: **PASS**.
+
+Detailed evidence: validation/learning-prediction-2026-10-04.md.
+
 ## Transition-context recovery
 
 The transition benchmark isolates transition learning with `K=3`, strongly identifiable Gaussian emissions, `max_duration=1`, and a binary causal context `c_t` that selects the known transition law for boundary `t -> t+1`. State identity is aligned up to permutation before transition matrices are scored.
@@ -76,5 +95,6 @@ These results do **not** establish domain semantics or downstream predictive val
 ```bash
 python scripts/validate_duration_context.py --output /tmp/nhsmm-duration-context.json
 python scripts/validate_state_recovery.py --scenario all --output /tmp/nhsmm-state-recovery.json
+python scripts/validate_learning_prediction.py --scenario all --seeds 401,402,403,404,405 --max-iter 40 --workers 4 --output /tmp/nhsmm-learning-prediction.json
 python scripts/validate_transition_context.py --scenario all --output /tmp/nhsmm-transition-context.json
 ```

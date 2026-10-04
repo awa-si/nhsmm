@@ -17,12 +17,19 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
-- **Full local repository regression on current `develop`:** 261 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
+- **Full local repository regression on current `develop`:** 263 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner; current local consistency scan also rebuilt sdist + wheel and passed `twine check` after migrating package license metadata to SPDX.
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
 - **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp. CPU-only development uses `scripts/install_cpu_dev.py`, which installs the official CPU PyTorch wheel before the normal editable dev environment and avoids unnecessary CUDA dependency resolution.
 
 The Python 3.12 baseline, selected P0 code-scan fixes, distribution/encoder/model/convergence/transition hardening, repository-wide static/API consistency cleanup, and file/code consolidation are complete. Downstream Nautilus integration remains a separate empirical validation boundary.
+
+End-to-end learning/prediction acceptance is now maintained:
+
+- a dedicated multi-seed harness proves parameter movement, pre/post held-out likelihood improvement, permutation-invariant OOS state recovery, ARI, train/OOS generalization, collapse behavior, validation provenance, and variable-length prediction semantics;
+- strong/moderate/weak/null controlled scenarios all pass their maintained gates;
+- null controls remain at chance-like state recovery while density likelihood can still improve;
+- package-default spread initialization improves OOS likelihood in the supplementary probe but remains less reliable for latent-state identity, so hard recovery acceptance continues to opt into K-Means.
 
 Production-boundary hardening is complete:
 
@@ -172,7 +179,7 @@ Safe behavior-preserving hardening already applied:
 Verification after these changes:
 
 ```text
-261 passed, 3 skipped
+263 passed, 3 skipped
 ```
 
 The three skips require CUDA and were run on a CPU-only local runtime.
@@ -253,7 +260,7 @@ pytest: 96 passed
 runtime benchmark: PASS
 ```
 
-The later hardening has local full-suite evidence (`261 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
+The later hardening has local full-suite evidence (`263 passed, 3 skipped`) but has **not** yet been covered by a new CI run. Keep the established gate: local pre-test first; CI only after local green.
 
 ## Package boundary / next slice
 

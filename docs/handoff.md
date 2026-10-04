@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `1cd1090cf5e648fe155129df4536bcba147ff328`
+- base head for this handoff update: `ebd52cc517e01c4f838bb5b7ecc7ffdebb07f31e`
 
 ## Current state
 
@@ -74,7 +74,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-261 passed, 3 skipped
+263 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +171,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `261 passed, 3 skipped`.
+The corresponding current local full suite is `263 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -245,6 +245,16 @@ Unused public config cleanup is complete:
 - model-level `self.debug` was removed with the dead config field;
 - distribution/runtime temperature APIs remain intact because they are active consumers and separate from the removed config field;
 - artifact payloads no longer persist the removed dead fields.
+
+End-to-end learning/prediction acceptance is implemented:
+
+- canonical harness: scripts/validate_learning_prediction.py;
+- 20-fit acceptance run covers strong/moderate/weak/null signal regimes over disjoint train/OOS data;
+- every run changed parameters and passed model/data fingerprint plus variable-length prediction contracts;
+- median OOS accuracy: strong 0.9978, moderate 0.9656, weak 0.7611, null 0.3589;
+- median OOS LL gains: +7.8224, +2.1719, +1.1146, +1.0093 respectively;
+- null median ARI is 0.0 and all 5 null runs collapse, demonstrating no spurious state-identity recovery;
+- detailed evidence is recorded in docs/validation/learning-prediction-2026-10-04.md.
 
 Production-boundary hardening is complete:
 
