@@ -1,4 +1,10 @@
-# utilities/loader.py
+"""Optional data helpers and synthetic sequence fixtures.
+
+`load_dataframe` is a legacy convenience loader with Freqtrade-style filename
+semantics. It is not part of the root public API and should not be used as a
+domain-integration boundary; framework adapters belong in nhsmm-interfaces.
+"""
+
 import os
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -21,7 +27,7 @@ def load_dataframe(data_dir: str, pair: str, timeframe: str) -> Any:
     filename = f"{symbol}-{timeframe}-futures.feather"
     path = os.path.join(data_dir, filename)
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Freqtrade data not found for {pair} @ {timeframe}: {path}")
+        raise FileNotFoundError(f"data file not found for {pair} @ {timeframe}: {path}")
     return pl.read_ipc(path, memory_map=False).sort("date")
 
 

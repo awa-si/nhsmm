@@ -17,9 +17,24 @@ repository_map:
 - model_core: nhsmm/models/base.py
 - convergence: nhsmm/convergence.py
 - data: nhsmm/data.py
+- diagnostics: nhsmm/diagnostics.py
+- tuning: nhsmm/tuning.py
+- runtime: nhsmm/runtime.py
+- artifacts: nhsmm/artifact.py
+- validation: nhsmm/validation/
 - experiments_consumers: scripts/
 - tests: tests/
 - public_exports: nhsmm/__init__.py|package___init__.py_files
+
+configuration_contract:
+- ownership: nhsmm/config.py
+- model_training: ModelConfig
+- health: ModelHealthThresholds
+- validation: ValidationConfig|ValidationDataConfig|ValidationScenarioConfig
+- tuning_interface: nhsmm/tuning.py|ConfigTuner
+- tuning_objective_is_caller_policy: true
+- unknown_config_or_tuning_paths: reject
+- scenario_names_have_hidden_semantics: false
 
 construction_contract:
 - canonical_config: ModelConfig
@@ -102,3 +117,9 @@ testing_contract:
 documentation_contract:
 - terminology: HSMM_vs_HMM|duration_vs_transition|filtering_vs_smoothing|likelihood_vs_loss|probability_vs_log_probability_vs_logits|latent_state_vs_observed_feature|context_vs_observation|train_validation_test
 - unsupported_claims_prohibited_without_evidence: production_ready|memory_efficient|scalable|causal|gpu_optimized
+
+data_boundary:
+- synthetic_sequence_helpers: allowed
+- legacy_dataframe_loader: internal_non_root_api
+- framework_specific_mapping: move_to_nhsmm_interfaces_on_breaking_api_window
+- new_framework_specific_loaders_in_core: prohibited

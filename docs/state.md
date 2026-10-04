@@ -40,6 +40,16 @@ Structural usefulness validation is now part of the maintained learning/predicti
 - null is retained strictly as a negative control and does not receive a usefulness claim;
 - usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
 
+Repository-wide file consistency audit completed on 2026-10-04:
+
+- all 121 tracked files classified and reviewed in `docs/validation/repository-consistency-2026-10-04.md`;
+- 28/28 package modules import cleanly; root `__all__` has no missing or duplicate exports; package import graph has no cycles;
+- model core no longer imports through the package root;
+- artifact/snapshot configuration serialization now uses the canonical `ModelConfig.to_dict()/from_dict()` contract;
+- README and normative agent-domain documentation were synchronized with diagnostics, snapshots, validation config, and tuner ownership;
+- package-validation workflow now includes the maintained learning/prediction usefulness gate; release installed-package smoke covers `ValidationConfig` / `ConfigTuner`;
+- the only retained architectural exception is the non-root legacy Freqtrade-style loader in `nhsmm/data.py`, explicitly deferred to a breaking API window.
+
 A public configuration tuner interface is now available:
 
 - `ConfigTuner` searches validated `ModelConfig` or `ValidationConfig` candidates;

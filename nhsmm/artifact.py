@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -10,7 +9,7 @@ import torch
 from nhsmm.config import ModelConfig
 from nhsmm.context import ContextEncoder
 from nhsmm.encoder import DefaultEncoder
-from nhsmm.inference import _validate_finite_state_tensors, load_inference_model
+from nhsmm.inference import validate_finite_state_tensors, load_inference_model
 from nhsmm.models import NHSMM
 
 ARTIFACT_TYPE = "nhsmm"
@@ -65,10 +64,10 @@ def build_artifact(model: NHSMM) -> dict[str, Any]:
     if model.dist is None:
         raise RuntimeError("model distributions must be initialized before artifact creation")
     state_dict = model.state_dict()
-    _validate_finite_state_tensors(state_dict, owner="model state")
+    validate_finite_state_tensors(state_dict, owner="model state")
 
     encoder = _raw_default_encoder(model)
-    config = asdict(model.config)
+    config = model.config.to_dict()
     return {
         "artifact_type": ARTIFACT_TYPE,
         "artifact_version": ARTIFACT_VERSION,
@@ -108,7 +107,7 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
 
     config_data = _require_mapping(payload["model_config"], "model_config")
     try:
-        config = ModelConfig(**dict(config_data))
+        config = ModelConfig.from_dict(config_data)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"invalid ModelConfig in artifact: {exc}") from exc
 
@@ -163,7 +162,7 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
     if not state_dict:
         raise ValueError("artifact state_dict must not be empty")
     try:
-        _validate_finite_state_tensors(state_dict, owner="artifact state_dict")
+        validate_finite_state_tensors(state_dict, owner="artifact state_dict")
     except (TypeError, ValueError) as exc:
         raise ValueError(f"invalid artifact state_dict: {exc}") from exc
     return config, state_dict

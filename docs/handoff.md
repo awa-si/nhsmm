@@ -7,7 +7,7 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 - repository: `awa-si/nhsmm`
 - branch: `develop`
 - snapshot date: `2026-10-04`
-- base head for this handoff update: `1e9bf315942c714ad4e0c304ead5119f0c8e8fe6`
+- base head for this handoff update: `9832e9fa00a4b788ae7581c7bbaf3067a073a457`
 
 ## Current state
 
@@ -264,6 +264,8 @@ Structural usefulness validation is now part of the maintained learning/predicti
 - weak passes a lower-confidence usefulness contract, with exact boundary timing explicitly qualified and ±1-timestep timing reported separately;
 - null is retained strictly as a negative control and does not receive a usefulness claim;
 - usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
+
+Repository-wide file consistency audit completed: 121 tracked files reviewed; 28/28 package modules import; no root-export gaps, import cycles, tracked bytecode, or broken local Markdown links. Safe consistency fixes aligned model imports, artifact/snapshot config serialization, README/agent-domain ownership, and empirical/release workflows. The retained `nhsmm/data.py` Freqtrade-style loader is explicitly legacy/non-root and deferred to a breaking API window. Full regression remains `285 passed, 3 skipped`.
 
 A public `ConfigTuner` layer now sits above the centralized configuration contracts. It supports validated grid/random candidate generation, maximize/minimize objectives, reusable dotted overrides, serializable trial evidence, and deterministic best-config selection. Full regression after this addition: `285 passed, 3 skipped`.
 

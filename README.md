@@ -16,7 +16,9 @@ NHSMM provides the model/core runtime layer:
 - causal streaming filtering;
 - retrospective/batch inference;
 - model artifacts and inference loading;
-- context-effect validation utilities.
+- context-effect validation utilities;
+- reproducible model-health and validation snapshots;
+- strict configuration contracts and a reusable configuration tuner.
 
 Domain/framework integration is intentionally kept outside this repository.
 
@@ -66,7 +68,10 @@ model = NHSMM(config=config)
 model.initialize_distributions()
 ```
 
-`ModelConfig` is the main configuration contract.
+`ModelConfig` is the runtime/training configuration contract. Validation policy is
+kept separately in `ValidationConfig`; systematic search is provided by
+`ConfigTuner`. See [`docs/configuration.md`](docs/configuration.md) and
+[`docs/tuning.md`](docs/tuning.md).
 
 ## Architecture
 
@@ -86,7 +91,7 @@ Main package areas:
 
 ```text
 nhsmm/
-├── config.py          # model configuration
+├── config.py          # model, health, and validation configuration contracts
 ├── context.py         # context routing and sequence containers
 ├── encoder.py         # neural context encoder
 ├── filtering.py       # filter-state semantics
@@ -95,6 +100,8 @@ nhsmm/
 ├── survival.py        # survival forecasts
 ├── transitions.py     # transition forecasts
 ├── artifact.py        # model artifact IO
+├── diagnostics.py     # model-health diagnostics
+├── tuning.py          # validated configuration search
 ├── distributions/     # probabilistic components
 ├── models/            # model and training implementation
 └── validation/        # context-effect validation API
@@ -238,6 +245,10 @@ initial | duration | emission | transition
 
 Validation is separate from model optimization. Evidence thresholds are caller policy rather than universal package defaults.
 
+For reproducible Train/OOS evidence, the package also exposes
+`evaluate_validation_snapshot(...)`, `compare_validation_snapshots(...)`, and
+`evaluate_model_health(...)`.
+
 See [`docs/validation-api.md`](docs/validation-api.md).
 
 ## Artifacts and inference
@@ -273,6 +284,8 @@ Tests live under `tests/`.
 ## Documentation
 
 - [`docs/model.md`](docs/model.md) — model and runtime contract
+- [`docs/configuration.md`](docs/configuration.md) — configuration contracts
+- [`docs/tuning.md`](docs/tuning.md) — configuration tuner
 - [`docs/validation-api.md`](docs/validation-api.md) — validation API
 - [`docs/testing.md`](docs/testing.md) — verification policy
 - [`docs/package-validation.md`](docs/package-validation.md) — controlled package-level validation

@@ -89,10 +89,9 @@ def model_fingerprint(model: Any) -> str:
     if config is None or not callable(state_dict):
         raise TypeError("model must expose config and state_dict()")
 
-    try:
-        config_data = asdict(config)
-    except TypeError as exc:
-        raise TypeError("model.config must be a dataclass instance") from exc
+    if not hasattr(config, "to_dict") or not callable(config.to_dict):
+        raise TypeError("model.config must expose to_dict()")
+    config_data = config.to_dict()
 
     hasher = hashlib.sha256()
     hasher.update(

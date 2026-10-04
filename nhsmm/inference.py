@@ -13,7 +13,7 @@ _INFERENCE_CONTEXT_WEIGHT = "_inference_context_weight"
 _INFERENCE_CONTEXT_BIAS = "_inference_context_bias"
 
 
-def _validate_finite_state_tensors(
+def validate_finite_state_tensors(
     tensors: Mapping[str, torch.Tensor],
     *,
     owner: str,
@@ -74,7 +74,7 @@ def prepare_inference(model: NHSMM, *, freeze: bool = True) -> NHSMM:
 
     This function does not deserialize artifacts. It establishes the runtime
     contract after construction/loading: distributions must be initialized,
-    all floating model parameters must be finite, the model is switched to
+    all persistent floating model-state tensors must be finite, the model is switched to
     eval mode, and parameters are frozen by default to prevent accidental
     training-time mutation in production inference code.
     """
@@ -84,7 +84,7 @@ def prepare_inference(model: NHSMM, *, freeze: bool = True) -> NHSMM:
     if model.dist is None:
         raise RuntimeError("model distributions must be initialized before inference")
 
-    _validate_finite_state_tensors(model.state_dict(), owner="model state")
+    validate_finite_state_tensors(model.state_dict(), owner="model state")
 
     model.eval()
     if freeze:
@@ -118,7 +118,7 @@ def load_inference_model(
         raise TypeError("state_dict must be a mapping of parameter names to tensors")
     if not state_dict:
         raise ValueError("state_dict must not be empty")
-    _validate_finite_state_tensors(state_dict, owner="state_dict")
+    validate_finite_state_tensors(state_dict, owner="state_dict")
 
     model = NHSMM(config=config, device=device)
     model.initialize_distributions()

@@ -7,7 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as nnF
 from torch.nn.utils.rnn import pad_sequence
 
-from nhsmm import Convergence, DefaultEncoder
+from nhsmm.convergence import Convergence
+from nhsmm.encoder import DefaultEncoder
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
 from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.filtering import duration_log_hazard
