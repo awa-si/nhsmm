@@ -145,6 +145,7 @@ class NHSMM(nn.Module):
                 hidden_dim=encoder_hidden_dim,
                 bidirectional=not self.config.causal,
                 causal=self.config.causal,
+                dropout=self.config.dropout,
             )
         elif self.config.causal:
             raw_encoder = encoder.encoder if isinstance(encoder, ContextEncoder) else encoder

@@ -162,6 +162,20 @@ def test_optimize_runs_multiple_restarts_without_warm_start_errors() -> None:
 
 
 
+def test_model_config_dropout_reaches_default_encoder() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=4,
+        causal=True,
+        dropout=0.0,
+        verbose=False,
+    )
+    model = NHSMM(cfg, device="cpu")
+
+    assert model.encoder.encoder.dropout.p == pytest.approx(0.0)
+
+
 def test_restart_scores_use_final_post_step_parameters() -> None:
     torch.manual_seed(39)
     cfg = ModelConfig(
