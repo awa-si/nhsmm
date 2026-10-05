@@ -1080,6 +1080,7 @@ class NHSMM(nn.Module):
 
         encoder_state = self._clone_state_dict(self.encoder) if self.encoder is not None else None
 
+        self._restart_scores = []
         best_score = -float("inf")
         for run_idx in range(cfg.n_init):
             self._initialize_run_state(
@@ -1134,8 +1135,22 @@ class NHSMM(nn.Module):
 
                 prev_ll = ll_val
 
-            if ll_val > best_score:
-                best_score = ll_val
+            # Score the restart under the parameters that actually remain
+            # after the final optimizer step. ll_val above is computed before
+            # optimizer.step(), so it is stale with respect to the snapshot.
+            with torch.no_grad():
+                final_ll, _ = self._compute_loss(
+                    X,
+                    context=context,
+                    loss_bias=cfg.loss_bias,
+                    it=it,
+                    max_iter=cfg.max_iter,
+                )
+            final_ll_val = float(final_ll.item())
+            self._restart_scores.append(final_ll_val)
+
+            if final_ll_val > best_score:
+                best_score = final_ll_val
                 self._snapshot_best_params()
 
         if cfg.n_init > 1:
