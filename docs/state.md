@@ -6,7 +6,7 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 
 **Phase:** package-core mechanism research, context-effect validation API consolidation, packaging verification, repository/GitHub cleanup, full local regression, and first code-scan hardening are complete.
 
-**Saved snapshot:** 2026-10-04 after code-scan fixes, context-invariant hardening, and full local regression.
+**Saved snapshot:** 2026-10-05 after distribution initialization hardening, encoder-dropout propagation, full local regression, and downstream Nautilus 3-vs-4 state-count evaluation.
 
 - **Duration context:** PASS.
 - **Latent-state recovery:** PASS.
@@ -17,10 +17,34 @@ Current package readiness and next package-level boundary. Detailed semantics: [
 - **Canonical public facade:** `component=` selects initial, duration, emission, or transition effects for extraction, replica evaluation, and split-fit evidence; component-specific helpers are internal.
 - **Focused validation/API tests:** 23/23 PASS locally.
 - **Normalized public API stress:** PASS — 4,800 effect extractions, 160 replication evaluations, and 16 real optimize-based split-fits across all four components without shape, finiteness, normalization, mode-restoration, determinism, or split-contract failures.
-- **Full local repository regression on current `develop`:** 297 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
+- **Full local repository regression on current `develop`:** 314 passed, 3 skipped. The skips are CUDA-only tests on a CPU runtime.
 - **Packaging dry-run:** PASS on GitHub runner; current local consistency scan also rebuilt sdist + wheel and passed `twine check` after migrating package license metadata to SPDX.
 - **Production release workflow:** `.github/workflows/release.yml` gates build/publish on the full pytest suite; manual runs stop after verification, while PyPI publication is restricted to pushed `v*` tags.
-- **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp. CPU-only development uses `scripts/install_cpu_dev.py`, which installs the official CPU PyTorch wheel before the normal editable dev environment and avoids unnecessary CUDA dependency resolution.
+- **AWA development workspace:** `workspace.ini` allocates 4 CPU, 8 GiB RAM, 8 GiB storage, 512 PIDs, and 1 GiB tmp and declares `data = nautilus`; AWA mounts that dataset read-only at `/data/nautilus`. CPU-only development uses `scripts/install_cpu_dev.py`, which installs the official CPU PyTorch wheel before the normal editable dev environment and avoids unnecessary CUDA dependency resolution.
+
+### 2026-10-05 distribution/runtime hardening and Nautilus usability
+
+Current `develop` includes verified core fixes:
+
+- distribution `initialize(context=...)` no longer bakes context into base parameters and then applies it a second time; base parameters remain context-free and context modulation is applied exactly once;
+- emission reinitialization and K-Means initialization update registered parameters in place instead of replacing `nn.Parameter` objects;
+- `ModelConfig.dropout` is now propagated into the internal `DefaultEncoder`; this closed the deterministic restart-scoring regression where `dropout=0.0` had not actually disabled encoder dropout.
+
+Verification after these changes:
+
+```text
+314 passed, 3 skipped
+```
+
+Downstream Nautilus state-count usability was rerun on the current head using the mounted dataset and the public NHSMM API. Across 3 seed bases x 2 chronological OOS folds:
+
+- 3 states: 6/6 healthy, mean OOS LL/step `-13.074227`, mean effective states `2.7878`, minimum Viterbi states used `2`;
+- 4 states: 5/6 healthy, mean OOS LL/step `-13.080162`, mean effective states `3.8317`, minimum Viterbi states used `1`;
+- 4-state minus 3-state OOS LL: `-0.005935` per timestep.
+
+Operational conclusion: keep `n_states=3` as the Nautilus baseline. Four states add soft posterior capacity but do not improve OOS likelihood and are less robust in hard decoding.
+
+See [`validation/nautilus-state-count-3v4-2026-10-05.md`](validation/nautilus-state-count-3v4-2026-10-05.md).
 
 The Python 3.12 baseline, selected P0 code-scan fixes, distribution/encoder/model/convergence/transition hardening, repository-wide static/API consistency cleanup, and file/code consolidation are complete. Downstream Nautilus integration remains a separate empirical validation boundary.
 

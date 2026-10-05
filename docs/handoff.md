@@ -6,12 +6,62 @@ Operational continuation point for the next chat. `docs/state.md` remains the ca
 
 - repository: `awa-si/nhsmm`
 - branch: `develop`
-- snapshot date: `2026-10-04`
-- base head for this handoff update: `9f4f2f16e037acf1581380bb839c9eea93282035`
+- snapshot date: `2026-10-05`
+- base head for this handoff update: `c41bc19737d7010f00bcecd936875e9ac6a840dd`
 
 ## Current state
 
-Package-core mechanism research, canonical context-effect validation API, stress validation, packaging dry-run, GitHub metadata cleanup, full local regression, and the first repository code-scan/hardening pass are complete.
+### 2026-10-05 active continuation
+
+Current verified core commits before this documentation update:
+
+- `eca455392bbdcde1be7d5f45f2d9ddbd84bdba2e` — distribution initialization contracts: context-free stored base parameters, context applied exactly once, and emission/K-Means reinitialization preserves registered parameter identity.
+- `22a298a8ec3a10e146b4afe0a2cc5d3e4354be64` — propagate configured dropout into `DefaultEncoder`.
+- `c41bc19737d7010f00bcecd936875e9ac6a840dd` — `workspace.ini` declares `data = nautilus`.
+
+Full local suite after the core fixes:
+
+```text
+314 passed
+3 skipped  # CUDA unavailable
+0 failed
+```
+
+AWA dataset rule:
+
+```text
+workspace.ini: data = nautilus
+runtime mount: /data/nautilus (read-only)
+```
+
+Do not transfer/copy the Nautilus dataset between workspaces. A fresh repository import resolves the declared dataset and mounts it automatically.
+
+Current Nautilus 3-vs-4 result (`3 seed bases x 2 folds`, public NHSMM API, `max_iter=8`, `n_init=1`, K-Means init, causal, dropout 0):
+
+| metric | 3 states | 4 states |
+| --- | ---: | ---: |
+| healthy | **6/6** | 5/6 |
+| mean OOS LL / step | **-13.074227** | -13.080162 |
+| mean effective states | 2.7878 | **3.8317** |
+| min Viterbi states | **2** | 1 |
+| min posterior-MAP states | **2** | 1 |
+
+Decision: **retain `n_states=3` as the Nautilus operational baseline.** Four states add posterior capacity but currently reduce robustness and do not improve OOS likelihood.
+
+The 3-state third latent state is typically soft/non-dominant. Do not add a Viterbi-usage penalty merely to force all three states into the hard path. Prior probes rejected transition entropy, posterior entropy, static emission-separation/accessibility penalties, and decoder substitution as fixes.
+
+Detailed evidence: `docs/validation/nautilus-state-count-3v4-2026-10-05.md`.
+
+Research workspace used for the current Nautilus study:
+
+```text
+workspace_id: 27089405d2c2400192164b0866536016
+repo head: c41bc19737d7010f00bcecd936875e9ac6a840dd
+dataset mount: /data/nautilus
+```
+
+
+Package-core mechanism research, canonical context-effect validation API, distribution initialization hardening, deterministic encoder-dropout propagation, full local regression, and the current downstream Nautilus state-count usability study are complete.
 
 Do not reopen accepted detector tuning or change probabilistic semantics without new evidence.
 
@@ -74,7 +124,7 @@ Python-tracked peak memory=53.47 MiB
 Full repository pre-CI regression on current `develop` after the latest context-invariant hardening:
 
 ```text
-297 passed, 3 skipped
+314 passed, 3 skipped
 ```
 
 The three skips are CUDA-only tests on a CPU runtime. No failing local test remains in that verified workspace.
@@ -171,7 +221,7 @@ Safe behavior-preserving fixes already committed:
 - unused encoder logger import removed
 - `tests/test_context_hardening.py` added
 
-The corresponding current local full suite is `297 passed, 3 skipped`.
+The corresponding current local full suite is `314 passed, 3 skipped`.
 
 ## Code-scan maintenance status
 
@@ -265,11 +315,11 @@ Structural usefulness validation is now part of the maintained learning/predicti
 - null is retained strictly as a negative control and does not receive a usefulness claim;
 - usefulness metrics cover boundary timing, run lengths, transition recovery, occupancy recovery, posterior calibration, and collapse behavior.
 
-Repository-wide file consistency audit completed: 121 tracked files reviewed; 28/28 package modules import; no root-export gaps, import cycles, tracked bytecode, or broken local Markdown links. Safe consistency fixes aligned model imports, artifact/snapshot config serialization, README/agent-domain ownership, and empirical/release workflows. The legacy Freqtrade/Polars loader and dataframe path have now been removed from `nhsmm/data.py`; data helpers are core-only synthetic fixtures. Full regression remains `297 passed, 3 skipped`.
+Repository-wide file consistency audit completed: 121 tracked files reviewed; 28/28 package modules import; no root-export gaps, import cycles, tracked bytecode, or broken local Markdown links. Safe consistency fixes aligned model imports, artifact/snapshot config serialization, README/agent-domain ownership, and empirical/release workflows. The legacy Freqtrade/Polars loader and dataframe path have now been removed from `nhsmm/data.py`; data helpers are core-only synthetic fixtures. Full regression remains `314 passed, 3 skipped`.
 
-A public `ConfigTuner` layer now sits above the centralized configuration contracts. It supports validated grid/random candidate generation, maximize/minimize objectives, reusable dotted overrides, serializable trial evidence, and deterministic best-config selection. Full regression after this addition: `297 passed, 3 skipped`.
+A public `ConfigTuner` layer now sits above the centralized configuration contracts. It supports validated grid/random candidate generation, maximize/minimize objectives, reusable dotted overrides, serializable trial evidence, and deterministic best-config selection. Full regression after this addition: `314 passed, 3 skipped`.
 
-Configuration ownership is consolidated in `nhsmm/config.py`; the previous validation-local config module was removed. Public imports remain unchanged, while model, health, data, scenario, and validation contracts now use the same strict helpers. Full local regression: `297 passed, 3 skipped`.
+Configuration ownership is consolidated in `nhsmm/config.py`; the previous validation-local config module was removed. Public imports remain unchanged, while model, health, data, scenario, and validation contracts now use the same strict helpers. Full local regression: `314 passed, 3 skipped`.
 
 Configuration/tuning contract is implemented:
 
@@ -277,7 +327,7 @@ Configuration/tuning contract is implemented:
 - public schema-versioned `ValidationConfig` owns acceptance dataset/model/health/scenario policy;
 - validation thresholds and health/collapse policy are tuneable without editing the harness;
 - CLI supports JSON config loading, resolved-config dumping, and strict dotted overrides;
-- latest full local suite after this change: `297 passed, 3 skipped`.
+- latest full local suite after this change: `314 passed, 3 skipped`.
 
 Production-boundary hardening is complete:
 

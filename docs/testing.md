@@ -130,3 +130,16 @@ Latency and Python-allocation measurements use separate passes; `tracemalloc` is
 ## Integration smoke
 
 `.github/workflows/smoke.yml` is a clean-runner integration diagnostic started manually with `workflow_dispatch`. Run the local/focused checks first and use the smoke workflow after the relevant local gate is green. Routine edit/test work remains local; GitHub Actions is not the primary edit/test loop.
+
+## Downstream Nautilus usability check
+
+Nautilus empirical checks are downstream validation, not package-core acceptance. The repository workspace profile declares:
+
+```ini
+[workspace]
+data = nautilus
+```
+
+AWA mounts the dataset read-only at `/data/nautilus`; do not copy the dataset into the repository or workspace.
+
+The maintained current state-count evidence is recorded in [`validation/nautilus-state-count-3v4-2026-10-05.md`](validation/nautilus-state-count-3v4-2026-10-05.md). Re-run that comparison after material model/training/decoder changes or changes to the Nautilus 18-D observation mapping.
