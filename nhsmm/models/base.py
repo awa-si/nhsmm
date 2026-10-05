@@ -880,11 +880,11 @@ class NHSMM(nn.Module):
         observations = observations.to(device=self.device, dtype=DTYPE)
         centers = self._kmeans_centers(observations, self.config.n_states)
         if emission.emission_type == "gaussian":
-            emission.mu = nn.Parameter(centers.clone(), requires_grad=True)
-            emission.log_var = nn.Parameter(torch.zeros_like(centers), requires_grad=True)
+            emission.mu.copy_(centers)
+            emission.log_var.zero_()
         else:
-            emission.loc = nn.Parameter(centers.clone(), requires_grad=True)
-            emission.scale_param = nn.Parameter(torch.ones_like(centers), requires_grad=True)
+            emission.loc.copy_(centers)
+            emission.scale_param.fill_(1.0)
             emission.dof.clamp_(min=2.1)
 
     def _initialize_run_state(

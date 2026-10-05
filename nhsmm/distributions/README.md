@@ -139,6 +139,8 @@ When context is present, accepted shapes are:
 
 The component projects and maps context into an additive parameter delta. The delta is bounded by `max_delta` after scaling by the trainable `delta_scale`.
 
+Initialization establishes context-free base parameters. When `initialize(context=...)` is used, the supplied context is applied exactly once when constructing the returned distribution; it is not baked into the stored base parameters. Reinitialization updates existing registered parameters in place so optimizer and external parameter references remain valid.
+
 A `timestep` selects one causal context position where supported.
 
 ## Causal duration-context contract

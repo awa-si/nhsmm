@@ -11,6 +11,8 @@ from torch.distributions import Distribution, MultivariateNormal, StudentT
 from nhsmm.config import EPS, MIN_LOGITS, MAX_LOGITS, NEG_INF
 
 
+
+
 class Categorical(Distribution):
     has_rsample = True
     arg_constraints = {
@@ -534,7 +536,7 @@ class Initial(Neural):
         context: Optional[torch.Tensor] = None,
         jitter: float = 1e-5,
     ) -> Distribution:
-        self.logits.copy_(self._init_params(mode, context, jitter))
+        self.logits.copy_(self._init_params(mode, None, jitter))
         return self._get_dist(context=context)
 
     def _apply_constraints(
@@ -631,7 +633,7 @@ class Duration(Neural):
         context: Optional[torch.Tensor] = None,
         jitter: float = 1e-5,
     ) -> Distribution:
-        self.logits.copy_(self._init_params(mode, context, jitter))
+        self.logits.copy_(self._init_params(mode, None, jitter))
         return self._get_dist(context=context)
 
     def _apply_constraints(
@@ -799,7 +801,7 @@ class Transition(Neural):
         context: Optional[torch.Tensor] = None,
         jitter: float = 1e-5,
     ) -> Distribution:
-        self.logits.copy_(self._init_params(mode, context, jitter))
+        self.logits.copy_(self._init_params(mode, None, jitter))
         return self._get_dist(context=context)
 
     def _apply_constraints(
@@ -927,11 +929,11 @@ class Emission(Neural):
         )
         init_var += torch.rand_like(init_var) * jitter
         if self.emission_type == "gaussian":
-            self.mu = nn.Parameter(init_mean, requires_grad=True)
-            self.log_var = nn.Parameter(torch.log(init_var), requires_grad=True)
+            self.mu.copy_(init_mean)
+            self.log_var.copy_(torch.log(init_var))
         else:
-            self.loc = nn.Parameter(init_mean, requires_grad=True)
-            self.scale_param = nn.Parameter(init_var.sqrt(), requires_grad=True)
+            self.loc.copy_(init_mean)
+            self.scale_param.copy_(init_var.sqrt())
         return self.base
 
     @torch.no_grad()
@@ -941,7 +943,7 @@ class Emission(Neural):
         context: Optional[torch.Tensor] = None,
         jitter: float = 1e-5,
     ) -> Distribution:
-        self._init_params(mode, context, jitter)
+        self._init_params(mode, None, jitter)
         return self._get_dist(context=context)
 
     def _apply_constraints(
