@@ -121,6 +121,35 @@ Model-health diagnostics are now part of the public package API:
 - variable-length `predict()` now preserves original per-sequence output lengths instead of returning padded paths;
 - synthetic health validation separates signal from no-signal behavior: strong/moderate runs stay non-collapsed while null-signal runs collapse as expected.
 
+## 2026-10-05 production-readiness profiling
+
+A bounded CPU production profile was run on the current 3-state/18-feature/12-duration causal configuration using the same operational training shape as the Nautilus state-count study (`max_iter=8`, `n_init=1`, K-Means emission initialization, dropout 0).
+
+Observed pilot (`train=1200`, `OOS=600`):
+
+- fit time: `13.22 s`;
+- OOS log-likelihood per step: `-13.0633`;
+- model health: healthy, effective states `2.996`, all 3 Viterbi states used;
+- artifact save/load roundtrip preserved likelihood exactly and reproduced the Viterbi path exactly;
+- artifact size: `119505` bytes;
+- incremental CPU runtime (`256` measured steps, `32` warmup, batch 1): p50 `1.98 ms`, p95 `5.47 ms`, mean `2.61 ms`;
+- Python allocation peak during the runtime benchmark: `38904` bytes;
+- bounded runtime state: `306` tensor elements.
+
+A 5-seed replication was healthy in every run. All runs used all 3 Viterbi states; mean effective-state count was approximately `2.992`, and mean OOS log-likelihood per step was approximately `-13.0653`. Fit times for the four additional runs were `25.98 s`, `23.92 s`, `16.25 s`, and `19.68 s`.
+
+Current local verification after repository hygiene cleanup:
+
+```text
+ruff check nhsmm tests scripts: PASS
+black --check nhsmm tests scripts: PASS
+pytest -q: 314 passed, 3 skipped
+```
+
+The three skips are CUDA-only tests on the CPU workspace.
+
+Production-readiness integration gap discovered during this profile: the currently mounted `/data/nautilus/regime_model.joblib` is an older 29-feature `hmmlearn` artifact, while the current `nhsmm-interfaces` Nautilus contract requires 18 temporal observation coordinates. Therefore the mounted artifact cannot serve as reproducible evidence for the current 18-D integration path. This is an integration/data-fixture mismatch, not an NHSMM core failure. Real downstream production validation should use a current 18-coordinate chronological observation fixture or replay source.
+
 ## Accepted package-core evidence
 
 ### Duration context

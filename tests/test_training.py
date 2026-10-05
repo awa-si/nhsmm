@@ -161,7 +161,6 @@ def test_optimize_runs_multiple_restarts_without_warm_start_errors() -> None:
     assert torch.isfinite(model.log_likelihood(x, reduce=True))
 
 
-
 def test_model_config_dropout_reaches_default_encoder() -> None:
     cfg = ModelConfig(
         n_states=2,
@@ -207,6 +206,7 @@ def test_restart_scores_use_final_post_step_parameters() -> None:
             max_iter=cfg.max_iter,
         )
     assert float(final_ll.item()) == pytest.approx(max(model._restart_scores), rel=1e-6, abs=1e-6)
+
 
 def test_scalar_external_context_uses_non_degenerate_distribution_hidden_space() -> None:
     torch.manual_seed(31)

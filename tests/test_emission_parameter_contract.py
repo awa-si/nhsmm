@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-
 import pytest
 import torch
 
@@ -92,7 +90,6 @@ def test_kmeans_initialize_preserves_emission_parameter_identity_and_unit_varian
     model.initialize_distributions()
 
     emission = model.dist.emission
-    before = (id(emission.mu), id(emission.log_var))
     observations = torch.cat(
         [
             torch.tensor([-3.0, 0.0]) + 0.05 * torch.randn(30, 2),

@@ -15,12 +15,28 @@ def _clone_pair(factory, **kwargs):
     return a, b
 
 
-@pytest.mark.parametrize("factory,kwargs", [
-    (Initial, dict(n_states=3, activation="tanh", init_mode="normal", context_dim=2)),
-    (Duration, dict(n_states=3, activation="tanh", max_duration=4, init_mode="normal", context_dim=2)),
-    (Transition, dict(n_states=3, n_features=2, activation="tanh", transition_type="ergodic",
-                      max_duration=4, init_mode="normal", context_dim=2)),
-])
+@pytest.mark.parametrize(
+    "factory,kwargs",
+    [
+        (Initial, dict(n_states=3, activation="tanh", init_mode="normal", context_dim=2)),
+        (
+            Duration,
+            dict(n_states=3, activation="tanh", max_duration=4, init_mode="normal", context_dim=2),
+        ),
+        (
+            Transition,
+            dict(
+                n_states=3,
+                n_features=2,
+                activation="tanh",
+                transition_type="ergodic",
+                max_duration=4,
+                init_mode="normal",
+                context_dim=2,
+            ),
+        ),
+    ],
+)
 def test_categorical_component_initialize_does_not_bake_context_into_base(factory, kwargs) -> None:
     no_ctx, with_ctx = _clone_pair(factory, **kwargs)
     context = torch.tensor([0.25, -0.5])
@@ -53,12 +69,28 @@ def test_emission_initialize_does_not_bake_context_into_base(emission_type: str)
     torch.testing.assert_close(with_ctx.base, no_ctx.base)
 
 
-@pytest.mark.parametrize("factory,kwargs", [
-    (Initial, dict(n_states=3, activation="tanh", init_mode="normal", context_dim=2)),
-    (Duration, dict(n_states=3, activation="tanh", max_duration=4, init_mode="normal", context_dim=2)),
-    (Transition, dict(n_states=3, n_features=2, activation="tanh", transition_type="ergodic",
-                      max_duration=4, init_mode="normal", context_dim=2)),
-])
+@pytest.mark.parametrize(
+    "factory,kwargs",
+    [
+        (Initial, dict(n_states=3, activation="tanh", init_mode="normal", context_dim=2)),
+        (
+            Duration,
+            dict(n_states=3, activation="tanh", max_duration=4, init_mode="normal", context_dim=2),
+        ),
+        (
+            Transition,
+            dict(
+                n_states=3,
+                n_features=2,
+                activation="tanh",
+                transition_type="ergodic",
+                max_duration=4,
+                init_mode="normal",
+                context_dim=2,
+            ),
+        ),
+    ],
+)
 def test_initialize_context_is_applied_exactly_once(factory, kwargs) -> None:
     component, reference = _clone_pair(factory, **kwargs)
     context = torch.tensor([0.25, -0.5])

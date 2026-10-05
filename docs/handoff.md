@@ -383,6 +383,24 @@ Packaging/static consistency verification is also green:
 
 The maintained repository-consistency scan has no unresolved finding.
 
+## 2026-10-05 production-readiness continuation
+
+Current `develop` was profiled on a representative causal `K=3`, `F=18`, `D=12` workload before any further semantic change.
+
+Observed:
+
+- pilot fit `13.22 s`;
+- OOS LL/step `-13.0633`;
+- healthy model with effective states `2.996` and 3/3 Viterbi states used;
+- artifact load/save roundtrip preserved LL and decode exactly;
+- streaming CPU p50 `1.98 ms`, p95 `5.47 ms`, mean `2.61 ms`;
+- runtime state stayed bounded at `306` tensor elements;
+- five-seed health replication: `5/5` healthy.
+
+Repository hygiene drift found during the same pass was formatting/static-only and has been normalized. Final local gate: Ruff PASS, Black PASS, `314 passed, 3 skipped`.
+
+Important integration blocker: `/data/nautilus/regime_model.joblib` currently describes an older 29-feature HMM/scaler/schema, but the canonical `nhsmm-interfaces` Nautilus temporal contract is 18-dimensional. Do not treat that mounted Joblib artifact as current 18-D validation data. The next real-Nautilus production gate requires a current 18-coordinate chronological fixture/replay source.
+
 ## Next-chat execution order
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.

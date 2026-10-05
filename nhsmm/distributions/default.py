@@ -11,8 +11,6 @@ from torch.distributions import Distribution, MultivariateNormal, StudentT
 from nhsmm.config import EPS, MIN_LOGITS, MAX_LOGITS, NEG_INF
 
 
-
-
 class Categorical(Distribution):
     has_rsample = True
     arg_constraints = {
