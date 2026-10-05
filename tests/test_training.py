@@ -161,6 +161,39 @@ def test_optimize_runs_multiple_restarts_without_warm_start_errors() -> None:
     assert torch.isfinite(model.log_likelihood(x, reduce=True))
 
 
+
+def test_restart_scores_use_final_post_step_parameters() -> None:
+    torch.manual_seed(39)
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=4,
+        causal=True,
+        dropout=0.0,
+        seed=39,
+        n_init=2,
+        max_iter=1,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    x = torch.randn(2, 16, cfg.n_features)
+
+    model.optimize(x)
+
+    assert len(model._restart_scores) == cfg.n_init
+    assert all(torch.isfinite(torch.tensor(score)) for score in model._restart_scores)
+    with torch.no_grad():
+        final_ll, _ = model._compute_loss(
+            model._ensure_tensor(x),
+            loss_bias=cfg.loss_bias,
+            it=0,
+            max_iter=cfg.max_iter,
+        )
+    assert float(final_ll.item()) == pytest.approx(max(model._restart_scores), rel=1e-6, abs=1e-6)
+
 def test_scalar_external_context_uses_non_degenerate_distribution_hidden_space() -> None:
     torch.manual_seed(31)
     cfg = ModelConfig(
