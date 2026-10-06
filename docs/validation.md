@@ -223,7 +223,7 @@ The complete controlled suite was re-run after the ContextEncoder opt-in migrati
 
 ### Interpretation
 
-Current controlled evidence supports three narrow package claims: duration-context ordering is recoverable without spurious null separation; identifiable latent states are recoverable up to permutation with explicit K-Means initialization; and known context-conditioned transition laws are recoverable with explicit transition capacity/refinement while preserving a near-zero null effect.
+Current controlled evidence supports four narrow package claims: duration-context ordering is recoverable without spurious null separation; identifiable latent states are recoverable up to permutation with explicit K-Means initialization; fitting changes model parameters and improves held-out density/state recovery on the maintained strong/moderate/weak synthetic contracts while the null control does not support a state-usefulness claim; and known context-conditioned transition laws are recoverable with explicit transition capacity/refinement while preserving a near-zero null effect.
 
 These results do **not** establish domain semantics or downstream predictive value.
 

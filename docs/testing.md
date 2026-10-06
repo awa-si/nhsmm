@@ -94,10 +94,10 @@ Latest 5-seed evidence:
 
 | scenario | OOS accuracy | ARI | boundary F1 | boundary F1 ±1 | run-length rel. error | transition MAE | occupancy L1 | posterior ECE |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| strong | 0.9978 | 0.9934 | 0.9831 | 0.9944 | 0.0108 | 0.0029 | 0.0022 | 0.0031 |
-| moderate | 0.9656 | 0.8979 | 0.7386 | 0.9274 | 0.0204 | 0.0112 | 0.0200 | 0.0345 |
-| weak | 0.7611 | 0.4085 | 0.3152 | 0.5525 | 0.0787 | 0.0579 | 0.2244 | 0.1866 |
-| null | 0.3589 | 0.0000 | 0.0000 | 0.0000 | 17.8000 | 0.3333 | 1.2822 | 0.6260 |
+| strong | 0.9989 | 0.9965 | 0.9890 | 0.9944 | 0.0108 | 0.0029 | 0.0022 | 0.0032 |
+| moderate | 0.9633 | 0.8936 | 0.7568 | 0.9205 | 0.0213 | 0.0096 | 0.0222 | 0.0309 |
+| weak | 0.7856 | 0.4642 | 0.3222 | 0.6000 | 0.0652 | 0.0788 | 0.1733 | 0.1687 |
+| null | 0.3589 | 0.0000 | 0.0000 | 0.0000 | 17.8000 | 0.3333 | 1.2822 | 0.6238 |
 
 Strong and moderate pass both learning and usefulness cleanly. Weak passes a deliberately lower-confidence usefulness contract; exact boundary timing is explicitly weaker, while ±1-timestep timing, durations, transitions, occupancy, and calibration remain informative. Null is a negative control: learning-control checks pass, but usefulness is not applicable and no predictive state identity is claimed.
 

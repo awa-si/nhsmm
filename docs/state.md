@@ -89,20 +89,20 @@ Closed and regression-tested:
 
 ## Verification
 
-Latest code gate after the duration-validation harness repair:
+Latest standalone core gate on `7029d4da8926e2f7b7e2824eab4113f8ffb3970f`:
 
     ruff check nhsmm tests scripts: PASS
     black --check nhsmm tests scripts: PASS
     git diff --check: PASS
     python -m pytest -q: 346 passed, 3 skipped
 
-The three skips are CUDA-only tests on the CPU workspace.
+The three skips are CUDA-only tests on the CPU workspace. A public-API artifact/inference/runtime round-trip also passed: artifact save/load preserved batch likelihood exactly, artifact-loaded and `load_inference_model(...)` runtimes produced identical posteriors across 17 causal streaming steps, state/age posteriors remained normalized, reset semantics passed, inference parameters were frozen, and variable-length list likelihood remained finite.
 
 Full controlled revalidation on 2026-10-06 also passed:
 
 - duration context: strong/moderate/null PASS;
 - latent-state recovery: strong/moderate/null PASS;
-- learning/prediction: strong/moderate/weak/null PASS;
+- learning/prediction: strong/moderate/weak learning+usefulness PASS; null learning-control PASS with usefulness not applicable;
 - transition context: strong/moderate/null PASS.
 
 The validation harnesses were run in scenario-sized batches with persistent JSON artifacts under the AWA workspace work store. See [validation.md](validation.md) for the current measured summaries.
@@ -119,12 +119,8 @@ That study predates the current real-data integration gate and is not a substitu
 
 ## Next package boundary
 
-The next material acceptance step is outside additional package-core refactoring:
+No further package-core refactoring is currently required by the maintained acceptance evidence. The next NHSMM work should be driven by a new core defect, a deliberate model/API change, or a package-level performance/validation objective.
 
-1. use the current Nautilus observation contract from the integration repository;
-2. build a real chronological 18-D replay/fixture from the mounted Nautilus data;
-3. run the current NHSMM end to end on that fixture;
-4. verify causal behavior, state usage, OOS likelihood, runtime characteristics, and artifact round-trip;
-5. keep integration ownership outside the NHSMM core package.
+Downstream Nautilus integration is intentionally deferred and is not part of the current NHSMM core acceptance gate. When resumed, it remains owned outside this repository and must be revalidated against the then-current downstream framework/runtime contract.
 
 No unresolved package-core mathematical defect is currently known.
