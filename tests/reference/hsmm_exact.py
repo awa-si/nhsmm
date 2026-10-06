@@ -311,3 +311,49 @@ def age_posterior_from_joint(log_joint: torch.Tensor) -> torch.Tensor:
     if log_joint.ndim != 3:
         raise ValueError("log_joint must be [T,K,D]")
     return torch.logsumexp(log_joint, dim=1).exp()
+
+
+def causal_one_step_transition_forecast(
+    log_joint_posterior: torch.Tensor,
+    log_duration: torch.Tensor,
+    log_transition: torch.Tensor,
+) -> dict[str, torch.Tensor]:
+    """Independent one-step latent forecast from an exact normalized posterior."""
+    if log_joint_posterior.ndim != 2:
+        raise ValueError("log_joint_posterior must be [K,D]")
+    if log_duration.ndim != 2:
+        raise ValueError("log_duration must be [K,D]")
+    if log_transition.ndim != 3:
+        raise ValueError("log_transition must be [K,D,K]")
+
+    log_duration = _normalize_last_dim(log_duration, "log_duration")
+    log_transition = _normalize_last_dim(log_transition, "log_transition")
+    log_end, log_continue = duration_hazards_from_pmf(log_duration.unsqueeze(0))
+    log_end = log_end[0]
+    log_continue = log_continue[0]
+
+    K, D = log_joint_posterior.shape
+    boundary_joint = log_joint_posterior.new_zeros((K, K))
+    continuation = log_joint_posterior.new_zeros(K)
+    for src in range(K):
+        for age_index in range(D):
+            mass = log_joint_posterior[src, age_index].exp()
+            if mass == 0:
+                continue
+            if torch.isfinite(log_continue[src, age_index]):
+                continuation[src] += mass * log_continue[src, age_index].exp()
+            if torch.isfinite(log_end[src, age_index]):
+                end_mass = mass * log_end[src, age_index].exp()
+                boundary_joint[src] += end_mass * log_transition[src, age_index].exp()
+
+    next_episode = boundary_joint.sum(dim=0)
+    episode_end = next_episode.sum()
+    next_state_prior = continuation + next_episode
+    diagonal_boundary = boundary_joint.diagonal().sum()
+    return {
+        "episode_end_probability": episode_end,
+        "boundary_transition_joint": boundary_joint,
+        "next_episode_state_joint": next_episode,
+        "next_state_prior": next_state_prior,
+        "state_change_probability": episode_end - diagonal_boundary,
+    }

@@ -104,6 +104,8 @@ Checks include:
 
 **Acceptance:** all outputs agree with the independent oracle within the dtype-specific numerical contract.
 
+**Current status:** complete. Causal batch forward, `filter_model_sequence`, public `filter_step`, and `HSMMFilterRuntime.step` are independently checked against exhaustive prefix posteriors. The maintained Gate-3 matrix covers uniform, random, near-deterministic, and impossible-support scores across `K={1,2,3}`, `D={1,2,3}`, and tractable sequence lengths. Joint `(state,age)` posterior, state marginal, age marginal, prefix evidence, episode-end probability, boundary-transition joint mass, next-episode state mass, next-state prior, and state-change probability all agree with the oracle.
+
 **Stop condition:** production paths may not be considered mutually validating when they disagree with the independent oracle.
 
 ## Gate 4 — Viterbi/MAP equivalence
