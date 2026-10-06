@@ -122,10 +122,21 @@ The maintained 2026-10-05 3-vs-4 state-count study favored three states:
 
 That study predates the current real-data integration gate and is not a substitute for a fresh current-feature replay.
 
-## Next package boundary
+## Research/correctness milestone — independently verified HSMM core
 
-No further package-core refactoring is currently required by the maintained acceptance evidence. The next NHSMM work should be driven by a new core defect, a deliberate model/API change, or a package-level performance/validation objective.
+The next package-level research milestone is to raise the HSMM core from regression-tested correctness to independent mathematical verification. This milestone is package-internal and precedes any renewed downstream Nautilus acceptance claim.
 
-Downstream Nautilus integration is intentionally deferred and is not part of the current NHSMM core acceptance gate. When resumed, it remains owned outside this repository and must be revalidated against the then-current downstream framework/runtime contract.
+The milestone is complete only when all of the following are observed:
 
-No unresolved package-core mathematical defect is currently known.
+- an intentionally simple exhaustive reference implementation enumerates all valid segment/state paths for small `K`, `D`, and `T` without importing production recursion, filtering, hazard, or runtime helpers;
+- production `log_likelihood`, causal filtering, state/age posteriors, episode-boundary probabilities, and Viterbi decoding agree with that independent reference across the maintained small-model matrix, including `K=1`, `D=1`, `T=1`, self-transitions, impossible durations, and near-deterministic probabilities;
+- causal batch forward, stateless model filtering, and stateful runtime agree within an explicitly measured Float32 numerical contract, while a Float64 reference gate uses materially tighter tolerances;
+- end-to-end likelihood gradients for initial, duration, transition, and emission parameters pass `torch.autograd.gradcheck` or an equivalent finite-difference reference on small Float64 models;
+- property-based tests cover normalization, causal prefix invariance, padding invariance, streaming equivalence, support preservation, and episode-age reset semantics;
+- the full canonical pytest/static gate remains green after the new correctness harness is integrated.
+
+Passing this milestone supports the precise claim: **the maintained HSMM recurrence and outputs are independently verified against exhaustive small-model reference calculations**. It does not imply formal proof for arbitrary floating-point executions, statistical identifiability on every dataset, or downstream trading utility.
+
+No unresolved package-core mathematical defect is currently known. The open work is stronger independent verification, not a known bug fix.
+
+Downstream Nautilus integration remains intentionally deferred and outside this milestone.

@@ -52,6 +52,29 @@ pytest -q
 
 `tests/test_context_hardening.py` owns external-context shape, finiteness, variable-length, and width contracts. `tests/test_context_optin.py` owns internal-encoder opt-in and model-construction contracts. `tests/test_default_distributions.py` verifies fail-closed categorical labels/temperature controls plus frozen context-free neural-control parameters.
 
+## HSMM research/correctness milestone gate
+
+The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.
+
+Required reference coverage:
+
+- exhaustive small-model joint path enumeration for likelihood and filtering;
+- exact MAP/Viterbi reference from the same enumerated path set;
+- explicit state-age and episode-boundary marginals;
+- degenerate cases `K=1`, `D=1`, `T=1`, self-transitions, impossible support, and near-deterministic probabilities;
+- Float64 gradient checks for initial, duration, transition, emission, and end-to-end log-likelihood;
+- property-based invariants for normalization, causal prefixes, right padding, streaming equivalence, support preservation, and age reset on episode boundaries.
+
+Reference code must not call `NHSMM.forward`, `NHSMM.decode`, `filter_step`, `filter_model_sequence`, `duration_log_hazard`, `HSMMFilterRuntime`, or private production recursion helpers. Shared data containers and raw distribution parameter extraction are allowed only when they do not reproduce production inference logic.
+
+Numerical acceptance must distinguish mathematical equality from floating-point execution:
+
+- Float64 reference comparisons use the tightest tolerance justified by observed error;
+- Float32 batch/filter/runtime comparisons use a measured bounded tolerance recorded with the test;
+- impossible support remains exact where the contract requires `-inf`/zero mass.
+
+Statistical recovery harnesses remain a separate acceptance layer and do not substitute for this mathematical gate.
+
 ## Static checks
 
 ```bash
