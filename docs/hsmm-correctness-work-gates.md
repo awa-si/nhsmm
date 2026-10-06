@@ -52,6 +52,8 @@ The oracle must expose enough information to compute independently:
 
 **Acceptance:** oracle results match manually calculated tiny fixtures from Gate 0.
 
+**Current status:** complete. `tests/reference/hsmm_exact.py` independently enumerates causal state-age paths and non-causal segment paths, exposes likelihood, prefix evidence, joint/state/age posterior derivation, episode-end probability, and MAP outputs, and is guarded by a test forbidding imports from `nhsmm`. Hand-check fixtures cover `K=1/D=1`, deterministic duration two, self-transition age reset, impossible support, a manual two-timestep segment likelihood, and the duration-dependent MAP counterexample.
+
 **Stop condition:** oracle and manual fixture disagree.
 
 ## Gate 2 — Production likelihood equivalence

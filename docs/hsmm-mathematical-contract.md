@@ -126,15 +126,15 @@ The production non-causal forward recursion sums exactly over predecessor state 
 
 ### Relationship to the causal model
 
-With context-free duration probabilities, the hazard identity telescopes:
+For a completed episode with a fixed duration PMF, the hazard identity telescopes:
 
 ```text
 product_{a=1..d-1} h_cont(k,a) * h_end(k,d) = q(k,d).
 ```
 
-Therefore causal state-age paths and segment paths assign the same duration mass when the duration PMF is fixed across the episode and boundary transition/emission factors are aligned.
+This establishes agreement for **completed episode factors**, not equality of the package's two sequence-likelihood contracts. The causal forward/filter evaluates an observed prefix and therefore marginalizes an active final episode that may continue beyond `T-1` (right censoring). The non-causal segment DP requires its final segment to end exactly at `T-1` and scores a duration PMF factor for that completed final segment. Consequently, even with context-free parameters, causal prefix likelihood and non-causal complete-segmentation likelihood are generally different.
 
-With time-varying duration context, the production causal and non-causal paths are intentionally **not assumed equivalent**: causal inference composes boundary-local hazards `q_t`, whereas non-causal segment inference scores one `q_t(k,d)` at the segment end. Correctness gates must validate each contract separately unless a stronger context equivalence is explicitly established.
+With time-varying duration context there is an additional difference: causal inference composes boundary-local hazards `q_t`, whereas non-causal segment inference scores one `q_t(k,d)` at the segment end. Correctness gates must therefore validate the causal prefix model and non-causal complete-segmentation model separately.
 
 ## Viterbi contract
 
