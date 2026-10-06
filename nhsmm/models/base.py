@@ -370,32 +370,28 @@ class NHSMM(nn.Module):
             valid = t < X.lengths
             if not bool(valid.any()):
                 break
+            active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
 
-            previous = alpha[:, t - 1]
-            predicted = previous.new_full((B, K, D), float("-inf"))
+            previous = alpha[active, t - 1]
+            predicted = previous.new_full((active.numel(), K, D), float("-inf"))
 
             if D > 1:
-                predicted[..., 1:] = previous[..., :-1] + log_continue[:, t - 1, :, :-1]
+                predicted[..., 1:] = previous[..., :-1] + log_continue[active, t - 1, :, :-1]
 
-            boundary = previous + log_end[:, t - 1]
+            boundary = previous + log_end[active, t - 1]
             if duration_dependent_transition:
                 new_episode = torch.logsumexp(
-                    boundary.unsqueeze(-1) + transition_logits[:, t - 1],
+                    boundary.unsqueeze(-1) + transition_logits[active, t - 1],
                     dim=(1, 2),
                 )
             else:
                 boundary_state = torch.logsumexp(boundary, dim=-1)
                 new_episode = torch.logsumexp(
-                    boundary_state.unsqueeze(-1) + transition_logits[:, t - 1],
+                    boundary_state.unsqueeze(-1) + transition_logits[active, t - 1],
                     dim=1,
                 )
             predicted[..., 0] = new_episode
-            candidate = predicted + router.log_probs[:, t].unsqueeze(-1)
-            alpha[:, t] = torch.where(
-                valid.view(B, 1, 1),
-                candidate,
-                alpha[:, t],
-            )
+            alpha[active, t] = predicted + router.log_probs[active, t].unsqueeze(-1)
 
         return alpha
 
@@ -447,37 +443,39 @@ class NHSMM(nn.Module):
         emit_sums = emit_sums.clamp(min=MIN_LOGITS, max=MAX_LOGITS)
 
         alpha = torch.full((B, T, K, Dmax), NEG_INF, device=device)
-        alpha[:, 0, :, 0] = (
-            initial_logits.squeeze(1) + duration_logits[:, 0, :, 0] + emit_sums[:, 0, :, 0]
+        valid0 = X.lengths > 0
+        alpha[valid0, 0, :, 0] = (
+            initial_logits[valid0, 0]
+            + duration_logits[valid0, 0, :, 0]
+            + emit_sums[valid0, 0, :, 0]
         )
 
-        d_idx = torch.arange(1, Dmax + 1, device=device).view(1, 1, 1, Dmax)
-        t_idx = torch.arange(T, device=device).view(1, T, 1, 1)
-        duration_mask = d_idx <= (t_idx + 1)
-        duration_mask = duration_mask.expand(B, T, K, Dmax) & router.mask.unsqueeze(-1)
-
         for t in range(1, T):
+            valid = t < X.lengths
+            if not bool(valid.any()):
+                break
+            active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
             max_d = min(Dmax, t + 1)
-            alpha_t = alpha.new_full((B, K, max_d), NEG_INF)
+            alpha_t = alpha.new_full((active.numel(), K, max_d), NEG_INF)
 
             for duration_index in range(max_d):
                 duration = duration_index + 1
                 start = t - duration + 1
 
                 if start == 0:
-                    predecessor = initial_logits.squeeze(1)
+                    predecessor = initial_logits[active, 0]
                 else:
                     prev_t = start - 1
-                    prev_alpha = alpha[:, prev_t]
+                    prev_alpha = alpha[active, prev_t]
                     if self.dist.transition.max_duration is None:
                         prev_state = torch.logsumexp(prev_alpha, dim=-1)
-                        trans = transition_logits[:, prev_t]
+                        trans = transition_logits[active, prev_t]
                         predecessor = torch.logsumexp(
                             prev_state.unsqueeze(-1) + trans,
                             dim=1,
                         )
                     else:
-                        trans = transition_logits[:, prev_t]
+                        trans = transition_logits[active, prev_t]
                         predecessor = torch.logsumexp(
                             prev_alpha.unsqueeze(-1) + trans,
                             dim=(1, 2),
@@ -485,13 +483,13 @@ class NHSMM(nn.Module):
 
                 alpha_t[..., duration_index] = (
                     predecessor
-                    + duration_logits[:, t, :, duration_index]
-                    + emit_sums[:, t, :, duration_index]
+                    + duration_logits[active, t, :, duration_index]
+                    + emit_sums[active, t, :, duration_index]
                 )
 
-            full_alpha = torch.full((B, K, Dmax), NEG_INF, device=device)
+            full_alpha = alpha.new_full((active.numel(), K, Dmax), NEG_INF)
             full_alpha[..., :max_d] = alpha_t
-            alpha[:, t] = full_alpha.masked_fill(~duration_mask[:, t], NEG_INF)
+            alpha[active, t] = full_alpha
 
         length_mask = torch.arange(T, device=device).unsqueeze(0) < X.lengths.unsqueeze(1)
         alpha = alpha.masked_fill(~length_mask.unsqueeze(-1).unsqueeze(-1), NEG_INF)
@@ -707,16 +705,9 @@ class NHSMM(nn.Module):
         reduce: bool = False,
     ) -> torch.Tensor:
 
-        X = self._ensure_tensor(X)
-        B, T, F = X.shape
-
-        if F != self.config.n_features:
-            raise ValueError(
-                f"Feature dimension mismatch: expected {self.config.n_features}, got {F}"
-            )
-
         seq_set = self._build_sequence_set(X, context=context)
-        alpha = self.forward(seq_set, context=context)
+        B = seq_set.sequences.shape[0]
+        alpha = self.forward(seq_set)
 
         lengths = seq_set.lengths
         log_likelihoods = alpha.new_full((B,), NEG_INF)
@@ -748,7 +739,7 @@ class NHSMM(nn.Module):
             logger.info(f"[Predict] Sequences: {B}, max_len: {T}")
 
         seq_set = self._build_sequence_set(X, context=context)
-        router = ContextRouter.from_tensor(seq_set, context=context)
+        router = ContextRouter.from_tensor(seq_set)
 
         if mode == "viterbi":
             results = [torch.empty(0, dtype=torch.long, device=X_tensor.device) for _ in range(B)]
@@ -951,8 +942,8 @@ class NHSMM(nn.Module):
 
     def _compute_loss(
         self,
-        X: torch.Tensor,
-        context: torch.Tensor = None,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         loss_bias: float = 1e-3,
         it: int = 0,
         max_iter: int = 20,
@@ -976,17 +967,20 @@ class NHSMM(nn.Module):
         ll = log_likelihoods.sum()
 
         loss = -ll
-        loss += (
-            loss_bias
-            * nnF.relu(self.duration_logits_bias[:, 1:] - self.duration_logits_bias[:, :-1]).mean()
-        )
+        if self.duration_logits_bias.shape[1] > 1 and loss_bias != 0.0:
+            loss = loss + (
+                loss_bias
+                * nnF.relu(
+                    self.duration_logits_bias[:, 1:] - self.duration_logits_bias[:, :-1]
+                ).mean()
+            )
 
         return ll, loss
 
     def _refine_transition_likelihood(
         self,
-        X: torch.Tensor,
-        context: Optional[torch.Tensor],
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]],
         *,
         steps: int,
         lr: float,
@@ -1067,7 +1061,6 @@ class NHSMM(nn.Module):
         cfg = cfg or self.config
         observations = self._training_observations(X)
         context = self._align_external_context(X, context)
-        X = self._ensure_tensor(X)
 
         self._convergence = Convergence(
             tol=cfg.tol,
@@ -1101,7 +1094,11 @@ class NHSMM(nn.Module):
             # Optimize every trainable model parameter. The causal context
             # encoder participates in the likelihood graph and must be updated
             # alongside the probabilistic components.
-            params = [p for p in self.parameters() if p.requires_grad]
+            params = [
+                parameter
+                for name, parameter in self.named_parameters()
+                if parameter.requires_grad and not name.endswith(".log_temperature")
+            ]
             if not params:
                 raise RuntimeError("NHSMM has no trainable parameters")
 

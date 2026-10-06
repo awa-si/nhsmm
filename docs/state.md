@@ -169,6 +169,28 @@ pytest -q: 317 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace.
 
+## 2026-10-06 mathematical and PyTorch correctness hardening
+
+A focused audit of HSMM mathematics, PyTorch autograd behavior, masking, and logical API consistency closed reproduced defects in variable-length handling, padded-row autograd, external-context routing, the `max_duration=1` regularizer edge case, and standard-optimizer temperature handling.
+
+Independent mathematical checks performed during the audit:
+
+- explicit `(state, age)` filtering matched an independent probability-space brute-force recursion for `K=1..3`, `D=1..3`, `T<=4`;
+- causal full-forward and public filter posteriors matched within floating-point tolerance;
+- batch-vs-single filtering matched within floating-point tolerance;
+- Gaussian and Student-t active gradients were finite.
+
+Verification after hardening:
+
+```text
+focused math/torch regressions: 20 passed
+ruff check nhsmm tests scripts: PASS
+black --check nhsmm tests scripts: PASS
+pytest -q: 321 passed, 3 skipped
+```
+
+The three skips are CUDA-only tests on the CPU workspace.
+
 ## Accepted package-core evidence
 
 ### Duration context

@@ -407,6 +407,12 @@ The follow-up code audit found and closed three core defects: stale runtime scor
 
 Current verification after the fixes: focused regressions `4 passed`; Ruff PASS; Black PASS; full suite `317 passed, 3 skipped` (CUDA unavailable).
 
+## 2026-10-06 math/Torch correctness closure
+
+The mathematical/PyTorch audit closed variable-length padding leakage, padded-row NaN autograd in causal and non-causal forward recursions, duplicate external-context application, the `max_duration=1` NaN regularizer edge case, and standard-optimizer inclusion of scheduled temperature parameters.
+
+Independent brute-force filtering checks and forward/filter equivalence checks passed. Final local gate: focused regressions `20 passed`; Ruff PASS; Black PASS; full suite `321 passed, 3 skipped` (CUDA unavailable).
+
 ## Next-chat execution order
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.

@@ -485,3 +485,55 @@ def test_external_context_list_accepts_matching_variable_lengths() -> None:
 
     assert sequence.lengths.tolist() == [3, 5]
     assert sequence.contexts.shape == (2, 5, 2)
+
+
+def test_compute_loss_is_finite_when_max_duration_is_one() -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=1,
+        causal=True,
+        dropout=0.0,
+        seed=233,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions()
+
+    ll, loss = model._compute_loss(torch.randn(1, 4, 2), it=0, max_iter=2)
+
+    assert torch.isfinite(ll)
+    assert torch.isfinite(loss)
+
+
+def test_optimize_preserves_variable_length_mask_and_excludes_scheduled_temperatures() -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+        max_iter=1,
+        n_init=1,
+        seed=239,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions()
+    sequences = [torch.randn(6, 2), torch.randn(3, 2)]
+
+    model.optimize(sequences)
+
+    optimizer_ids = {
+        id(parameter) for group in model._optimizer.param_groups for parameter in group["params"]
+    }
+    for component in (model.dist.initial, model.dist.duration, model.dist.transition):
+        assert id(component.log_temperature) not in optimizer_ids
+
+    model.eval()
+    batched = model.log_likelihood(sequences, reduce=False)
+    separate = torch.stack(
+        [
+            model.log_likelihood(sequences[0], reduce=False)[0],
+            model.log_likelihood(sequences[1], reduce=False)[0],
+        ]
+    )
+    assert torch.allclose(batched, separate, atol=1e-5, rtol=1e-5)
