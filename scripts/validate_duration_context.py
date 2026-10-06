@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
+import os
 import random
 from pathlib import Path
 
@@ -40,12 +42,8 @@ def _generate(seed: int, *, n_sequences: int, steps: int, short_mean: int, long_
     return np.stack(sequences), contexts
 
 
-def _train(seed: int, *, short_mean: int, long_mean: int) -> NHSMM:
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    random.seed(seed)
-    x, _ = _generate(seed, n_sequences=8, steps=180, short_mean=short_mean, long_mean=long_mean)
-    cfg = ModelConfig(
+def _model_config(seed: int) -> ModelConfig:
+    return ModelConfig(
         n_states=2,
         n_features=3,
         max_duration=30,
@@ -53,10 +51,19 @@ def _train(seed: int, *, short_mean: int, long_mean: int) -> NHSMM:
         seed=seed,
         n_init=1,
         max_iter=40,
+        use_context_encoder=True,
         use_scheduler=False,
         convergence_stop=False,
         verbose=False,
     )
+
+
+def _train(seed: int, *, short_mean: int, long_mean: int) -> NHSMM:
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    x, _ = _generate(seed, n_sequences=8, steps=180, short_mean=short_mean, long_mean=long_mean)
+    cfg = _model_config(seed)
     model = NHSMM(cfg, device="cpu")
     model.initialize_distributions()
     model.optimize(torch.as_tensor(x, dtype=torch.float32))
@@ -94,6 +101,37 @@ def _evaluate(model: NHSMM, x: np.ndarray, contexts: list[np.ndarray]) -> dict[s
     }
 
 
+def _worker_init() -> None:
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
+
+
+def _run_seed(
+    seed: int,
+    *,
+    short_mean: int,
+    long_mean: int,
+) -> dict[str, float | int]:
+    model = _train(seed, short_mean=short_mean, long_mean=long_mean)
+    x, contexts = _generate(
+        seed + 10000,
+        n_sequences=5,
+        steps=180,
+        short_mean=short_mean,
+        long_mean=long_mean,
+    )
+    return {"seed": seed, **_evaluate(model, x, contexts)}
+
+
+def _run_seed_payload(payload: tuple[int, int, int]) -> dict[str, float | int]:
+    seed, short_mean, long_mean = payload
+    return _run_seed(
+        seed,
+        short_mean=short_mean,
+        long_mean=long_mean,
+    )
+
+
 def _summary(rows: list[dict[str, float]]) -> dict[str, float | int]:
     gaps = np.asarray([row["gap"] for row in rows], dtype=np.float64)
     return {
@@ -114,20 +152,38 @@ def main() -> int:
         description="Validate context-conditioned duration recovery on controlled synthetic data."
     )
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=min(4, os.cpu_count() or 1),
+        help="Independent seed workers (default: min(4, CPU count)).",
+    )
     args = parser.parse_args()
+    if args.workers < 1:
+        parser.error("--workers must be >= 1")
 
     scenarios = []
     for name, short_mean, long_mean in SCENARIOS:
-        rows = []
-        for seed in DEFAULT_SEEDS:
-            model = _train(seed, short_mean=short_mean, long_mean=long_mean)
-            x, contexts = _generate(
-                seed + 10000, n_sequences=5, steps=180, short_mean=short_mean, long_mean=long_mean
-            )
-            metrics = _evaluate(model, x, contexts)
-            rows.append({"seed": seed, **metrics})
+        if args.workers == 1:
+            rows = [
+                _run_seed(
+                    seed,
+                    short_mean=short_mean,
+                    long_mean=long_mean,
+                )
+                for seed in DEFAULT_SEEDS
+            ]
+        else:
+            payloads = [(seed, short_mean, long_mean) for seed in DEFAULT_SEEDS]
+            with concurrent.futures.ProcessPoolExecutor(
+                max_workers=args.workers,
+                initializer=_worker_init,
+            ) as executor:
+                rows = list(executor.map(_run_seed_payload, payloads))
+        for metrics in rows:
             print(
-                json.dumps({"scenario": name, "seed": seed, **metrics}, sort_keys=True), flush=True
+                json.dumps({"scenario": name, **metrics}, sort_keys=True),
+                flush=True,
             )
         scenarios.append(
             {

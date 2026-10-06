@@ -62,6 +62,8 @@ black --check nhsmm tests scripts
 python scripts/validate_duration_context.py --output /tmp/nhsmm-duration-context.json
 ```
 
+The harness explicitly opts into the internal ContextEncoder because duration context is derived from observations. Independent seed runs are process-parallel by default with up to four single-threaded workers; use `--workers 1` for serial diagnostics.
+
 Re-run after material changes to training objective, restart semantics, duration parameterization, context encoder, optimizer coverage, causal filtering, or survival semantics.
 
 ## Controlled latent-state acceptance

@@ -135,7 +135,7 @@ This document records controlled package-level empirical evidence. It is indepen
 
 ### Duration-context recovery
 
-The duration benchmark uses two latent states and an observed context that changes episode-duration ground truth. Training uses causal NHSMM, `K=2`, `D=30`, `max_iter=40`, and independent evaluation sequences. The main diagnostic is the difference in mean probability of ending within five steps between short- and long-duration contexts. The null guard requires both absolute median and mean gaps to stay at or below `0.015`.
+The duration benchmark uses two latent states and an observed context that changes episode-duration ground truth. Training explicitly opts into the internal `ContextEncoder` and uses causal NHSMM, `K=2`, `D=30`, `max_iter=40`, and independent evaluation sequences. Independent seed runs may execute in parallel; model, data, seeds, thresholds, and per-seed semantics are unchanged. The main diagnostic is the difference in mean probability of ending within five steps between short- and long-duration contexts. The null guard requires both absolute median and mean gaps to stay at or below `0.015`.
 
 Seeds `201..215`, default `emission_init_mode="spread"`:
 
