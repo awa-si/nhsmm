@@ -401,6 +401,12 @@ Repository hygiene drift found during the same pass was formatting/static-only a
 
 Important integration blocker: `/data/nautilus/regime_model.joblib` currently describes an older 29-feature HMM/scaler/schema, but the canonical `nhsmm-interfaces` Nautilus temporal contract is 18-dimensional. Do not treat that mounted Joblib artifact as current 18-D validation data. The next real-Nautilus production gate requires a current 18-coordinate chronological fixture/replay source.
 
+## 2026-10-06 production-hardening closure
+
+The follow-up code audit found and closed three core defects: stale runtime score-cache reuse after parameter replacement, `decode()` failure for variable-length list input, and silent conversion of positive-infinite likelihood to dtype maximum.
+
+Current verification after the fixes: focused regressions `4 passed`; Ruff PASS; Black PASS; full suite `317 passed, 3 skipped` (CUDA unavailable).
+
 ## Next-chat execution order
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.

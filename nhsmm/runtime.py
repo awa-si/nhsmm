@@ -26,14 +26,14 @@ class _RuntimeScoreCache:
     """Version-aware cache for static terms used by canonical runtime scorers."""
 
     def __init__(self) -> None:
-        self._duration_key: Optional[tuple[int, torch.device, torch.dtype]] = None
+        self._duration_key: Optional[tuple[int, int, torch.device, torch.dtype]] = None
         self._duration_gate_log: Optional[torch.Tensor] = None
-        self._emission_key: Optional[tuple[int, torch.device, torch.dtype]] = None
+        self._emission_key: Optional[tuple[int, int, torch.device, torch.dtype]] = None
         self._emission_var: Optional[torch.Tensor] = None
         self._emission_log_norm: Optional[torch.Tensor] = None
 
     def duration_gate_log(self, bias: torch.Tensor) -> torch.Tensor:
-        key = (int(bias._version), bias.device, bias.dtype)
+        key = (id(bias), int(bias._version), bias.device, bias.dtype)
         if self._duration_gate_log is None or key != self._duration_key:
             with torch.no_grad():
                 self._duration_gate_log = torch.sigmoid(bias).clamp_min(EPS).log()
@@ -46,7 +46,7 @@ class _RuntimeScoreCache:
         *,
         min_covar: float,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        key = (int(log_var._version), log_var.device, log_var.dtype)
+        key = (id(log_var), int(log_var._version), log_var.device, log_var.dtype)
         if self._emission_var is None or key != self._emission_key:
             with torch.no_grad():
                 var = torch.nn.functional.softplus(log_var).clamp_min(min_covar)

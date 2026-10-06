@@ -725,6 +725,8 @@ class NHSMM(nn.Module):
             last_alpha = alpha[valid, lengths[valid] - 1]
             log_likelihoods[valid] = torch.logsumexp(last_alpha.flatten(1), dim=1)
 
+        if torch.isposinf(log_likelihoods).any():
+            raise ValueError("log_likelihood produced +inf")
         log_likelihoods = torch.nan_to_num(log_likelihoods, nan=NEG_INF, neginf=NEG_INF)
         return log_likelihoods.sum() if reduce else log_likelihoods
 
@@ -776,7 +778,8 @@ class NHSMM(nn.Module):
         verbose: bool = True,
     ) -> Union[torch.Tensor, list[torch.Tensor]]:
 
-        B = X.shape[0] if X.ndim == 3 else 1
+        X_tensor = self._ensure_tensor(X)
+        B = X_tensor.shape[0]
         if verbose:
             logger.info(f"[decode] mode={mode}, batch_size={B}")
 

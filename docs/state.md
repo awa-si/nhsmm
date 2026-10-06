@@ -150,6 +150,25 @@ The three skips are CUDA-only tests on the CPU workspace.
 
 Production-readiness integration gap discovered during this profile: the currently mounted `/data/nautilus/regime_model.joblib` is an older 29-feature `hmmlearn` artifact, while the current `nhsmm-interfaces` Nautilus contract requires 18 temporal observation coordinates. Therefore the mounted artifact cannot serve as reproducible evidence for the current 18-D integration path. This is an integration/data-fixture mismatch, not an NHSMM core failure. Real downstream production validation should use a current 18-coordinate chronological observation fixture or replay source.
 
+## 2026-10-06 production-hardening audit fixes
+
+Three reproduced production-readiness defects from the current-head audit were fixed and regression-tested:
+
+- runtime score-cache keys now include tensor identity as well as version/device/dtype, preventing stale duration/emission terms after parameter-object replacement;
+- `NHSMM.decode()` now accepts variable-length `list[Tensor]` input consistently with the public prediction path;
+- `NHSMM.log_likelihood()` rejects positive infinity instead of silently converting it to dtype maximum.
+
+Verification after the fixes:
+
+```text
+focused regressions: 4 passed
+ruff check nhsmm tests scripts: PASS
+black --check nhsmm tests scripts: PASS
+pytest -q: 317 passed, 3 skipped
+```
+
+The three skips are CUDA-only tests on the CPU workspace.
+
 ## Accepted package-core evidence
 
 ### Duration context
