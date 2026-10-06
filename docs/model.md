@@ -49,6 +49,8 @@ model.initialize_distributions()
 # use_context_encoder=False by default
 ```
 
+`NHSMM` owns a resolved copy of the supplied `ModelConfig`; constructing a model, including construction with an explicitly injected encoder, does not mutate the caller's reusable config object.
+
 A model intended for streaming use must be causal.
 
 ## Public runtime API
@@ -187,7 +189,7 @@ state = runtime.step(
 )
 ```
 
-External context requires `ModelConfig.context_dim`; its dimensionality must equal `model.context_dim`. An internal encoder is not required.
+External context requires `ModelConfig.context_dim`; its dimensionality must equal `model.context_dim`. An internal encoder is not required. Variable-length external-context lists are validated against `context_dim` independently of the observation feature width.
 
 External context remains the caller's responsibility for every step in that runtime session.
 

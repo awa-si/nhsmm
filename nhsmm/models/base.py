@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import replace
 from typing import Optional, List, Tuple, Any, Literal, Dict, Union
 import math
 
@@ -105,7 +106,12 @@ class NHSMM(nn.Module):
     ):
         super().__init__()
 
-        self.config = config
+        if not isinstance(config, ModelConfig):
+            raise TypeError("config must be a ModelConfig")
+        # Own a resolved configuration copy. Model construction may infer
+        # encoder dimensions or mark an explicitly injected encoder as opt-in;
+        # those resolutions must never mutate the caller's reusable config.
+        self.config = replace(config)
         self.device = (
             torch.device(device)
             if device is not None
@@ -124,7 +130,9 @@ class NHSMM(nn.Module):
         self.hidden_dim = self.config.hidden_dim
 
         self.dist: Optional[DistributionSet] = None
-        self.duration_logits_bias = nn.Parameter(torch.ones(config.n_states, config.max_duration))
+        self.duration_logits_bias = nn.Parameter(
+            torch.ones(self.config.n_states, self.config.max_duration)
+        )
 
         self.initialize_encoder(encoder=encoder)
         self.to(device=self.device, dtype=DTYPE)
@@ -269,9 +277,12 @@ class NHSMM(nn.Module):
     ) -> Optional[torch.Tensor]:
         if context is None:
             return None
+        if self.context_dim is None:
+            raise ValueError("external context requires ModelConfig.context_dim to be configured")
 
         X_tensor = self._ensure_tensor(X)
         B, T, _ = X_tensor.shape
+        context_dim = int(self.context_dim)
         if isinstance(context, list):
             if len(context) != B:
                 raise ValueError(
@@ -282,8 +293,13 @@ class NHSMM(nn.Module):
                 if isinstance(X, list)
                 else [T] * B
             )
+            context_tensors = []
             for index, (item, expected_length) in enumerate(zip(context, expected_lengths)):
-                item_tensor = torch.as_tensor(item)
+                item_tensor = torch.as_tensor(
+                    item,
+                    device=X_tensor.device,
+                    dtype=X_tensor.dtype,
+                )
                 if item_tensor.ndim != 2:
                     raise ValueError(
                         "context list entries must be [T,H] tensors; "
@@ -294,7 +310,19 @@ class NHSMM(nn.Module):
                         f"context sequence {index} length {item_tensor.shape[0]} "
                         f"does not match observation length {expected_length}"
                     )
-            context = self._ensure_tensor(context)
+                if item_tensor.shape[1] != context_dim:
+                    raise ValueError(
+                        f"context sequence {index} feature dimension {item_tensor.shape[1]} "
+                        f"does not match expected context_dim {context_dim}"
+                    )
+                if not torch.isfinite(item_tensor).all():
+                    raise ValueError(f"context sequence {index} must contain only finite values")
+                context_tensors.append(item_tensor)
+            context = (
+                pad_sequence(context_tensors, batch_first=True, padding_value=0.0)
+                if context_tensors
+                else X_tensor.new_empty((0, T, context_dim))
+            )
         elif not torch.is_tensor(context):
             raise TypeError(f"Unsupported context type: {type(context)}")
 
@@ -302,7 +330,7 @@ class NHSMM(nn.Module):
             context,
             batch_size=B,
             timesteps=T,
-            context_dim=int(self.context_dim),
+            context_dim=context_dim,
             device=X_tensor.device,
             dtype=X_tensor.dtype,
         )
@@ -1159,114 +1187,119 @@ class NHSMM(nn.Module):
         self._validate_optimization_config(cfg)
         original_training = self.training
         self.train()
-        observations = self._training_observations(X)
-        context = self._align_external_context(X, context)
+        try:
+            observations = self._training_observations(X)
+            context = self._align_external_context(X, context)
 
-        self._convergence = Convergence(
-            tol=cfg.tol,
-            rel_tol=cfg.tol,
-            n_init=cfg.n_init,
-            max_iter=cfg.max_iter,
-            mode=cfg.convergence_mode,
-            plateau_tol=cfg.plateau_tol,
-            early_stop=cfg.convergence_stop,
-            plateau_window=cfg.plateau_window,
-            patience=max(1, cfg.plateau_window // 2),
-            verbose=cfg.verbose,
-        )
-
-        encoder_state = self._clone_state_dict(self.encoder) if self.encoder is not None else None
-
-        self._restart_scores = []
-        best_score = -float("inf")
-        for run_idx in range(cfg.n_init):
-            self._initialize_run_state(
-                run_idx,
-                observations=observations,
-                encoder_state=encoder_state,
-                emission_init_mode=cfg.emission_init_mode,
-                context=context,
+            self._convergence = Convergence(
+                tol=cfg.tol,
+                rel_tol=cfg.tol,
+                n_init=cfg.n_init,
+                max_iter=cfg.max_iter,
+                mode=cfg.convergence_mode,
+                plateau_tol=cfg.plateau_tol,
+                early_stop=cfg.convergence_stop,
+                plateau_window=cfg.plateau_window,
+                patience=max(1, cfg.plateau_window // 2),
+                verbose=cfg.verbose,
             )
 
-            if cfg.verbose:
-                logger.info(f"\n=== Run {run_idx + 1}/{cfg.n_init} ===")
+            encoder_state = (
+                self._clone_state_dict(self.encoder) if self.encoder is not None else None
+            )
 
-            # Optimize every trainable model parameter. The causal context
-            # encoder participates in the likelihood graph and must be updated
-            # alongside the probabilistic components.
-            params = [
-                parameter
-                for name, parameter in self.named_parameters()
-                if parameter.requires_grad and not name.endswith(".log_temperature")
-            ]
-            if not params:
-                raise RuntimeError("NHSMM has no trainable parameters")
-
-            self._optimizer = torch.optim.Adam(params, lr=cfg.lr)
-            if cfg.use_scheduler:
-                scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    self._optimizer,
-                    mode="max",
-                    factor=0.5,
-                    patience=max(2, cfg.plateau_window // 2),
+            self._restart_scores = []
+            best_score = -float("inf")
+            for run_idx in range(cfg.n_init):
+                self._initialize_run_state(
+                    run_idx,
+                    observations=observations,
+                    encoder_state=encoder_state,
+                    emission_init_mode=cfg.emission_init_mode,
+                    context=context,
                 )
-                self._convergence.attach_scheduler(scheduler)
-
-            prev_ll = None
-            for it in range(cfg.max_iter):
-                self._optimizer.zero_grad()
-                ll, loss = self._compute_loss(
-                    X, context=context, loss_bias=cfg.loss_bias, it=it, max_iter=cfg.max_iter
-                )
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(params, 5.0)
-                self._optimizer.step()
-
-                ll_val = float(ll.item())
-                converged = self._convergence.update(ll_val, it, run_idx)
 
                 if cfg.verbose:
-                    delta = ll_val - prev_ll if prev_ll is not None else float("nan")
-                    logger.info(f"[Iter {it:03d}] LL={ll_val:.6f} Δ={delta:.3e}")
+                    logger.info(f"\n=== Run {run_idx + 1}/{cfg.n_init} ===")
 
-                if converged:
+                # Optimize every trainable model parameter. The causal context
+                # encoder participates in the likelihood graph and must be updated
+                # alongside the probabilistic components.
+                params = [
+                    parameter
+                    for name, parameter in self.named_parameters()
+                    if parameter.requires_grad and not name.endswith(".log_temperature")
+                ]
+                if not params:
+                    raise RuntimeError("NHSMM has no trainable parameters")
+
+                self._optimizer = torch.optim.Adam(params, lr=cfg.lr)
+                if cfg.use_scheduler:
+                    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                        self._optimizer,
+                        mode="max",
+                        factor=0.5,
+                        patience=max(2, cfg.plateau_window // 2),
+                    )
+                    self._convergence.attach_scheduler(scheduler)
+
+                prev_ll = None
+                for it in range(cfg.max_iter):
+                    self._optimizer.zero_grad()
+                    ll, loss = self._compute_loss(
+                        X, context=context, loss_bias=cfg.loss_bias, it=it, max_iter=cfg.max_iter
+                    )
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(params, 5.0)
+                    self._optimizer.step()
+
+                    ll_val = float(ll.item())
+                    converged = self._convergence.update(ll_val, it, run_idx)
+
                     if cfg.verbose:
-                        logger.info(f"[Run {run_idx + 1}] Converged at iteration {it}.")
-                    break
+                        delta = ll_val - prev_ll if prev_ll is not None else float("nan")
+                        logger.info(f"[Iter {it:03d}] LL={ll_val:.6f} Δ={delta:.3e}")
 
-                prev_ll = ll_val
+                    if converged:
+                        if cfg.verbose:
+                            logger.info(f"[Run {run_idx + 1}] Converged at iteration {it}.")
+                        break
 
-            # Score the restart under the parameters that actually remain
-            # after the final optimizer step. ll_val above is computed before
-            # optimizer.step(), so it is stale with respect to the snapshot.
-            with torch.no_grad():
-                final_ll, _ = self._compute_loss(
+                    prev_ll = ll_val
+
+                # Score the restart under the parameters that actually remain
+                # after the final optimizer step. ll_val above is computed before
+                # optimizer.step(), so it is stale with respect to the snapshot.
+                with torch.no_grad():
+                    final_ll, _ = self._compute_loss(
+                        X,
+                        context=context,
+                        loss_bias=cfg.loss_bias,
+                        it=it,
+                        max_iter=cfg.max_iter,
+                    )
+                final_ll_val = float(final_ll.item())
+                self._restart_scores.append(final_ll_val)
+
+                if final_ll_val > best_score:
+                    best_score = final_ll_val
+                    self._snapshot_best_params()
+
+            if cfg.n_init > 1:
+                self._restore_best_params()
+
+            if cfg.transition_refine_steps > 0:
+                if context is None:
+                    raise ValueError(
+                        "transition_refine_steps > 0 requires explicit external context"
+                    )
+                self._refine_transition_likelihood(
                     X,
-                    context=context,
-                    loss_bias=cfg.loss_bias,
-                    it=it,
-                    max_iter=cfg.max_iter,
+                    context,
+                    steps=cfg.transition_refine_steps,
+                    lr=cfg.transition_refine_lr,
                 )
-            final_ll_val = float(final_ll.item())
-            self._restart_scores.append(final_ll_val)
 
-            if final_ll_val > best_score:
-                best_score = final_ll_val
-                self._snapshot_best_params()
-
-        if cfg.n_init > 1:
-            self._restore_best_params()
-
-        if cfg.transition_refine_steps > 0:
-            if context is None:
-                self.train(original_training)
-                raise ValueError("transition_refine_steps > 0 requires explicit external context")
-            self._refine_transition_likelihood(
-                X,
-                context,
-                steps=cfg.transition_refine_steps,
-                lr=cfg.transition_refine_lr,
-            )
-
-        self.train(original_training)
-        return self
+            return self
+        finally:
+            self.train(original_training)

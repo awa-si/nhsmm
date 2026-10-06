@@ -95,11 +95,20 @@ class Categorical(Distribution):
         return nnF.gumbel_softmax(logits_exp, tau=tau, hard=hard, dim=-1)
 
     def log_prob(self, value: torch.Tensor):
+        value = torch.as_tensor(value, device=self._log_probs.device)
+        if value.is_floating_point():
+            if not torch.isfinite(value).all():
+                raise ValueError("categorical observations must contain only finite values")
+            if not torch.equal(value, value.round()):
+                raise ValueError("categorical observations must be integer-valued")
         value = value.long()
+        n_states = self._log_probs.shape[-1]
+        if ((value < 0) | (value >= n_states)).any():
+            raise ValueError(f"categorical observations must be in [0, {n_states - 1}]")
         log_probs = self._log_probs
         while log_probs.ndim < value.ndim + 1:
             log_probs = log_probs.unsqueeze(0)
-        log_probs = log_probs.expand(*value.shape, self._log_probs.shape[-1])
+        log_probs = log_probs.expand(*value.shape, n_states)
         return log_probs.gather(-1, value.unsqueeze(-1)).squeeze(-1)
 
     def entropy(self):
@@ -264,8 +273,16 @@ class Neural(nn.Module, ABC):
         self._init_weights(self.context_net)
         self._init_weights(self._proj)
 
-        self.delta_scale = nn.Parameter(torch.tensor(delta_scale))
-        self.log_temperature = nn.Parameter(torch.zeros(()))
+        self.delta_scale = nn.Parameter(
+            torch.tensor(delta_scale),
+            requires_grad=context_dim is not None,
+        )
+        # Temperature is an explicit inference/training control, not an
+        # independently learned model parameter. Keeping it frozen prevents a
+        # generic optimizer over model.parameters() from changing HSMM
+        # semantics behind NHSMM.optimize(), which already treats temperature
+        # as scheduled/external.
+        self.log_temperature = nn.Parameter(torch.zeros(()), requires_grad=False)
         self.logits = nn.Parameter(torch.zeros(*self._shape))
 
     def _get_activation(self, mode: str = "tanh") -> nn.Module:
@@ -330,7 +347,8 @@ class Neural(nn.Module, ABC):
             if temperature is None
             else torch.as_tensor(temperature, device=logits.device, dtype=logits.dtype)
         )
-        tau = tau.clamp_min(torch.finfo(logits.dtype).eps)
+        if tau.numel() != 1 or not torch.isfinite(tau).all() or bool((tau <= 0).any()):
+            raise ValueError("temperature must be a finite scalar > 0")
         return logits / tau
 
     def _prepare_context(self, context: Optional[torch.Tensor]) -> Optional[torch.Tensor]:

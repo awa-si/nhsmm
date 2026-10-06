@@ -45,6 +45,33 @@ def test_context_encoder_is_opt_in_by_default() -> None:
     assert torch.isfinite(values).all()
 
 
+def test_explicit_encoder_does_not_mutate_reusable_config() -> None:
+    config = _config()
+    source = NHSMM(_config(use_context_encoder=True), device="cpu")
+    encoder = source.encoder
+
+    model = NHSMM(config, encoder=encoder, device="cpu")
+
+    assert model.config.use_context_encoder is True
+    assert model.encoder is encoder
+    assert config.use_context_encoder is False
+    assert config.context_dim is None
+    assert config.hidden_dim is None
+
+    plain = NHSMM(config, device="cpu")
+    assert plain.encoder is None
+    assert plain.config.use_context_encoder is False
+
+
+def test_plain_hsmm_has_no_trainable_neural_controls() -> None:
+    model = NHSMM(_config(), device="cpu")
+    model.initialize_distributions()
+
+    trainable = {name for name, parameter in model.named_parameters() if parameter.requires_grad}
+    assert not any(name.endswith(".delta_scale") for name in trainable)
+    assert not any(name.endswith(".log_temperature") for name in trainable)
+
+
 def test_internal_context_encoder_requires_explicit_opt_in() -> None:
     model = NHSMM(_config(use_context_encoder=True), device="cpu")
 

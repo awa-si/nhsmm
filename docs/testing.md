@@ -47,7 +47,11 @@ pytest -q
 - scalar external-context training with non-degenerate distribution hidden width;
 - transition-only refinement parameter isolation;
 - refinement opt-in defaults;
-- transition-specific context capacity without changing Initial/Duration/Emission bounds.
+- transition-specific context capacity without changing Initial/Duration/Emission bounds;
+- variable-length external context whose width differs from observation features;
+- caller train/eval mode restoration when optimization fails during input validation.
+
+`tests/test_context_optin.py` also verifies that explicit encoder injection does not mutate a reusable caller `ModelConfig`, and `tests/test_default_distributions.py` verifies fail-closed categorical labels/temperature controls plus frozen context-free neural-control parameters.
 
 ## Static checks
 

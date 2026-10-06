@@ -161,7 +161,7 @@ For non-causal retrospective inference, a separate explicitly documented segment
 
 ## Temperature
 
-Temperature scaling applies to categorical state/duration/transition logits before structural hard masks are imposed. Emission location parameters are not temperature-scaled. This ordering preserves hard support for impossible durations/transitions.
+Temperature scaling applies to categorical state/duration/transition logits before structural hard masks are imposed. Emission location parameters are not temperature-scaled. Temperature is an explicit finite scalar control greater than zero; the stored categorical temperature parameters are frozen and are not part of generic model optimization. This ordering preserves hard support for impossible durations/transitions.
 
 ## Numerical and support rules
 

@@ -66,7 +66,9 @@ Closed and regression-tested:
 - observation rank, feature width, and finiteness validate at the model boundary;
 - empty-sequence likelihood behavior is consistent;
 - structurally incompatible optimize(..., cfg=...) configs fail closed;
-- optimization preserves the caller's train/eval mode across restart-created distributions.
+- optimization preserves the caller's train/eval mode across restart-created distributions and validation failures;
+- model construction owns a resolved config copy, so explicit encoder injection cannot mutate a reusable caller config and leak Neural opt-in into later models;
+- variable-length external context validates against `context_dim` independently of observation feature width.
 
 ### ContextEncoder opt-in
 
@@ -85,16 +87,19 @@ Closed and regression-tested:
 - categorical log_prob rejects fractional, non-finite, and out-of-support labels instead of silently truncating them;
 - emission context deltas remain state-centered while respecting max_delta;
 - the unused internal Neural.alpha parameter was removed;
-- temperature remains categorical-logit semantics and does not alter continuous emission location parameters.
+- temperature remains categorical-logit semantics and does not alter continuous emission location parameters;
+- categorical temperature controls fail closed for non-finite/non-positive values and their stored parameters are frozen;
+- context-free `delta_scale` controls are frozen because they are behaviorally inactive without context networks.
 
 ## Verification
 
-Latest standalone core gate on `7029d4da8926e2f7b7e2824eab4113f8ffb3970f`:
+Latest standalone core gate after the package audit fixes:
 
     ruff check nhsmm tests scripts: PASS
     black --check nhsmm tests scripts: PASS
     git diff --check: PASS
-    python -m pytest -q: 346 passed, 3 skipped
+    focused regression suite: 131 passed
+    python -m pytest -q: 360 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace. A public-API artifact/inference/runtime round-trip also passed: artifact save/load preserved batch likelihood exactly, artifact-loaded and `load_inference_model(...)` runtimes produced identical posteriors across 17 causal streaming steps, state/age posteriors remained normalized, reset semantics passed, inference parameters were frozen, and variable-length list likelihood remained finite.
 

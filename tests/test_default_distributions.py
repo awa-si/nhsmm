@@ -604,3 +604,49 @@ def test_emission_context_delta_respects_bound_after_state_centering() -> None:
 
     assert delta.abs().max() <= emission.max_delta + 1e-6
     assert torch.allclose(delta.mean(dim=-2), torch.zeros_like(delta.mean(dim=-2)), atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "value, match",
+    [
+        (torch.tensor(1.9), "integer-valued"),
+        (torch.tensor(float("nan")), "finite"),
+        (torch.tensor(-1), r"\[0, 2\]"),
+        (torch.tensor(3), r"\[0, 2\]"),
+    ],
+)
+def test_categorical_primitive_log_prob_rejects_invalid_labels(
+    value: torch.Tensor, match: str
+) -> None:
+    dist = Categorical(logits=torch.zeros(3))
+
+    with pytest.raises(ValueError, match=match):
+        dist.log_prob(value)
+
+
+@pytest.mark.parametrize("temperature", [0.0, -1.0, float("nan"), float("inf")])
+def test_distribution_log_matrix_rejects_invalid_temperature(temperature: float) -> None:
+    initial = Initial(n_states=2, activation="tanh", context_dim=None)
+
+    with pytest.raises(ValueError, match="temperature must be a finite scalar > 0"):
+        initial.log_matrix(temperature=temperature)
+
+
+def test_categorical_distribution_temperature_is_not_trainable() -> None:
+    initial = Initial(n_states=2, activation="tanh", context_dim=None)
+    duration = Duration(n_states=2, activation="tanh", max_duration=3, context_dim=None)
+    transition = Transition(
+        n_states=2,
+        n_features=1,
+        activation="tanh",
+        transition_type="ergodic",
+        max_duration=3,
+        context_dim=None,
+    )
+
+    assert not initial.log_temperature.requires_grad
+    assert not duration.log_temperature.requires_grad
+    assert not transition.log_temperature.requires_grad
+    assert not initial.delta_scale.requires_grad
+    assert not duration.delta_scale.requires_grad
+    assert not transition.delta_scale.requires_grad

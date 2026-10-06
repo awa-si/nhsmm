@@ -491,6 +491,72 @@ def test_external_context_list_accepts_matching_variable_lengths() -> None:
     assert sequence.contexts.shape == (2, 5, 2)
 
 
+def test_external_context_list_accepts_context_width_distinct_from_features() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=3,
+        max_duration=3,
+        context_dim=2,
+        hidden_dim=2,
+        causal=True,
+        dropout=0.0,
+        n_init=1,
+        max_iter=1,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    observations = [torch.randn(3, 3), torch.randn(5, 3)]
+    context = [torch.randn(3, 2), torch.randn(5, 2)]
+
+    sequence = model._build_sequence_set(observations, context=context)
+    values = model.log_likelihood(observations, context=context, reduce=False)
+
+    assert sequence.contexts.shape == (2, 5, 2)
+    assert values.shape == (2,)
+    assert torch.isfinite(values).all()
+
+
+def test_external_context_requires_configured_context_dim() -> None:
+    model = NHSMM(
+        ModelConfig(n_states=2, n_features=2, max_duration=3, causal=True),
+        device="cpu",
+    )
+    model.initialize_distributions()
+
+    with pytest.raises(ValueError, match="external context requires ModelConfig.context_dim"):
+        model.log_likelihood(torch.randn(1, 4, 2), context=torch.randn(4, 2))
+
+
+def test_optimize_restores_eval_mode_when_input_validation_fails() -> None:
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=3,
+        max_duration=3,
+        context_dim=2,
+        hidden_dim=2,
+        causal=True,
+        dropout=0.0,
+        n_init=1,
+        max_iter=1,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions()
+    model.eval()
+    observations = [torch.randn(3, 3), torch.randn(5, 3)]
+    bad_context = [torch.randn(2, 2), torch.randn(5, 2)]
+
+    with pytest.raises(ValueError, match="does not match observation length"):
+        model.optimize(observations, context=bad_context)
+
+    assert model.training is False
+
+
 def test_compute_loss_is_finite_when_max_duration_is_one() -> None:
     config = ModelConfig(
         n_states=2,
