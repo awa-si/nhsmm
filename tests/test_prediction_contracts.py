@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
 from nhsmm import ModelConfig, NHSMM
@@ -76,3 +77,60 @@ def test_external_context_is_not_applied_twice_in_public_likelihood() -> None:
     actual = model.log_likelihood(observations, context=context, reduce=False)[0]
 
     assert torch.allclose(actual, expected, atol=1e-6, rtol=1e-6)
+
+
+def test_log_likelihood_empty_sequence_returns_negative_infinity() -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+        seed=241,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions()
+
+    result = model.log_likelihood(torch.empty(1, 0, 2), reduce=False)
+
+    assert result.shape == (1,)
+    assert result.item() < -1e30
+
+
+def test_public_prediction_requires_initialized_distributions() -> None:
+    model = NHSMM(
+        ModelConfig(
+            n_states=2,
+            n_features=2,
+            max_duration=3,
+            causal=True,
+            dropout=0.0,
+        ),
+        device="cpu",
+    )
+
+    with pytest.raises(RuntimeError, match="initialize_distributions"):
+        model.log_likelihood(torch.randn(4, 2))
+
+
+def test_observation_boundary_rejects_nonfinite_and_malformed_lists() -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions()
+
+    bad = torch.randn(4, 2)
+    bad[1, 0] = float("nan")
+    with pytest.raises(ValueError, match="observations must contain only finite values"):
+        model.log_likelihood(bad)
+
+    with pytest.raises(ValueError, match=r"entries must be \[T,F\]"):
+        model.log_likelihood([torch.randn(4, 2), torch.randn(3)])
+
+    with pytest.raises(ValueError, match="feature dimension"):
+        model.log_likelihood([torch.randn(4, 2), torch.randn(3, 3)])

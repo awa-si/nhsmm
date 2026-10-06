@@ -223,6 +223,37 @@ class NHSMM(nn.Module):
         except Exception as err:
             raise RuntimeError(f"Failed to initialize NHSMM PDFs: {err}") from err
 
+    def _require_distributions(self) -> DistributionSet:
+        if self.dist is None:
+            raise RuntimeError(
+                "NHSMM distributions are not initialized; call initialize_distributions() first"
+            )
+        return self.dist
+
+    def _validate_optimization_config(self, cfg: ModelConfig) -> None:
+        structural_fields = (
+            "n_states",
+            "n_features",
+            "max_duration",
+            "causal",
+            "context_dim",
+            "hidden_dim",
+            "transition_type",
+            "emission_type",
+            "activation",
+        )
+        mismatches = [
+            name for name in structural_fields if getattr(cfg, name) != getattr(self.config, name)
+        ]
+        if mismatches:
+            details = ", ".join(
+                f"{name}={getattr(cfg, name)!r} (model {getattr(self.config, name)!r})"
+                for name in mismatches
+            )
+            raise ValueError(
+                "optimization config is structurally incompatible with this NHSMM: " + details
+            )
+
     def _align_external_context(
         self,
         X: Union[torch.Tensor, List[torch.Tensor]],
@@ -273,6 +304,7 @@ class NHSMM(nn.Module):
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
     ) -> SequenceSet:
+        self._require_distributions()
         context = self._align_external_context(X, context)
         X, mask = self._ensure_tensor(X, return_mask=True)
         B, T, F = X.shape
@@ -402,6 +434,7 @@ class NHSMM(nn.Module):
         temperature: Optional[float] = None,
         timestep: Optional[int] = None,
     ) -> torch.Tensor:
+        self._require_distributions()
 
         router = (
             ContextRouter.from_tensor(X, context=context)
@@ -704,9 +737,14 @@ class NHSMM(nn.Module):
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         reduce: bool = False,
     ) -> torch.Tensor:
+        self._require_distributions()
+        X_tensor, mask = self._ensure_tensor(X, return_mask=True)
+        B = X_tensor.shape[0]
+        if X_tensor.shape[1] == 0:
+            result = X_tensor.new_full((B,), NEG_INF)
+            return result.sum() if reduce else result
 
         seq_set = self._build_sequence_set(X, context=context)
-        B = seq_set.sequences.shape[0]
         alpha = self.forward(seq_set)
 
         lengths = seq_set.lengths
@@ -792,6 +830,8 @@ class NHSMM(nn.Module):
             elif X.ndim != 3:
                 raise ValueError(f"Unsupported X shape {X.shape}")
             X = X.to(device=device, dtype=DTYPE)
+            if not torch.isfinite(X).all():
+                raise ValueError("observations must contain only finite values")
             mask = torch.ones(X.shape[:2], dtype=torch.bool, device=device)
             return (X, mask) if return_mask else X
 
@@ -804,6 +844,21 @@ class NHSMM(nn.Module):
                 return torch.empty(0, 0, 0, device=device)
 
             X_tensors = [torch.as_tensor(x, device=device, dtype=DTYPE) for x in X]
+            for index, item in enumerate(X_tensors):
+                if item.ndim != 2:
+                    raise ValueError(
+                        "observation list entries must be [T,F] tensors; "
+                        f"entry {index} has shape {tuple(item.shape)}"
+                    )
+                if item.shape[1] != self.config.n_features:
+                    raise ValueError(
+                        f"observation sequence {index} feature dimension {item.shape[1]} "
+                        f"does not match expected {self.config.n_features}"
+                    )
+                if not torch.isfinite(item).all():
+                    raise ValueError(
+                        f"observation sequence {index} must contain only finite values"
+                    )
             lengths = [x.shape[0] for x in X_tensors]
             X_padded = pad_sequence(
                 X_tensors, batch_first=True, padding_value=self.config.pad_value
@@ -892,6 +947,7 @@ class NHSMM(nn.Module):
     ) -> None:
         """Initialize one optimization run without warm-starting from another run."""
         self.dist = self.dist.fresh().to(device=self.device, dtype=DTYPE)
+        self.dist.train(self.training)
 
         # Base distribution parameters are initialized independently of
         # observed context. Context modulation is learned through likelihood.
@@ -1055,10 +1111,12 @@ class NHSMM(nn.Module):
             context: Optional context features
             cfg: ModelConfig object controlling learning and convergence
         """
-        if self.dist is None:
-            raise RuntimeError("Distributions not initialized.")
+        self._require_distributions()
 
         cfg = cfg or self.config
+        self._validate_optimization_config(cfg)
+        original_training = self.training
+        self.train()
         observations = self._training_observations(X)
         context = self._align_external_context(X, context)
 
@@ -1159,6 +1217,7 @@ class NHSMM(nn.Module):
 
         if cfg.transition_refine_steps > 0:
             if context is None:
+                self.train(original_training)
                 raise ValueError("transition_refine_steps > 0 requires explicit external context")
             self._refine_transition_likelihood(
                 X,
@@ -1167,4 +1226,5 @@ class NHSMM(nn.Module):
                 lr=cfg.transition_refine_lr,
             )
 
+        self.train(original_training)
         return self

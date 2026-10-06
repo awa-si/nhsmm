@@ -413,6 +413,12 @@ The mathematical/PyTorch audit closed variable-length padding leakage, padded-ro
 
 Independent brute-force filtering checks and forward/filter equivalence checks passed. Final local gate: focused regressions `20 passed`; Ruff PASS; Black PASS; full suite `321 passed, 3 skipped` (CUDA unavailable).
 
+## 2026-10-06 models/base audit closure
+
+`nhsmm/models/base.py` was audited independently. Causal and non-causal recursion checks passed, including full small-model enumeration for non-causal likelihood and Viterbi under both transition forms. Boundary hardening now covers uninitialized distributions, malformed/non-finite observations, empty likelihood batches, structurally incompatible optimization configs, and train/eval restoration across restarts.
+
+Final local gate: focused regressions `5 passed`; Ruff PASS; Black PASS; full suite `330 passed, 3 skipped` (CUDA unavailable).
+
 ## Next-chat execution order
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.

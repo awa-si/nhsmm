@@ -537,3 +537,57 @@ def test_optimize_preserves_variable_length_mask_and_excludes_scheduled_temperat
         ]
     )
     assert torch.allclose(batched, separate, atol=1e-5, rtol=1e-5)
+
+
+def test_optimize_rejects_structurally_incompatible_config() -> None:
+    base = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+        max_iter=1,
+        n_init=1,
+        verbose=False,
+    )
+    model = NHSMM(base, device="cpu")
+    model.initialize_distributions()
+
+    incompatible = ModelConfig(
+        n_states=3,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+        max_iter=1,
+        n_init=1,
+        verbose=False,
+    )
+
+    with pytest.raises(ValueError, match="structurally incompatible"):
+        model.optimize(torch.randn(6, 2), cfg=incompatible)
+
+
+def test_optimize_restores_eval_mode_for_restarted_distributions() -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        dropout=0.0,
+        max_iter=1,
+        n_init=1,
+        use_scheduler=False,
+        convergence_stop=False,
+        verbose=False,
+        seed=251,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions()
+    model.eval()
+
+    model.optimize(torch.randn(6, 2))
+
+    assert not model.training
+    assert not model.encoder.training
+    assert not model.dist.training

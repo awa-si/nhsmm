@@ -191,6 +191,35 @@ pytest -q: 321 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace.
 
+## 2026-10-06 models/base audit hardening
+
+A focused audit of `nhsmm/models/base.py` verified both causal and non-causal HSMM recursions and closed boundary/state-management defects.
+
+Mathematical checks:
+
+- causal `(state, age)` recursion remained consistent with the independent filter/brute-force checks;
+- non-causal forward likelihood and Viterbi decoding matched complete enumeration of segmentations and latent-state sequences for small models, for both duration-dependent and duration-independent transitions;
+- variable-length batch likelihood/Viterbi matched per-sequence execution within floating-point tolerance.
+
+Hardening applied:
+
+- public likelihood/prediction paths now fail clearly when distributions have not been initialized;
+- observation tensors/lists validate rank, feature width, and finiteness at the model boundary;
+- an all-empty likelihood batch returns the same negative-infinity sentinel semantics as empty rows in mixed variable-length batches;
+- `optimize(..., cfg=...)` rejects structurally incompatible model configuration while allowing unspecified inferred context/hidden dimensions;
+- optimization forces training mode during fitting and restores the caller's previous train/eval mode, including newly-created restart distributions.
+
+Verification:
+
+```text
+focused boundary/state regressions: 5 passed
+ruff check nhsmm tests scripts: PASS
+black --check nhsmm tests scripts: PASS
+pytest -q: 330 passed, 3 skipped
+```
+
+The three skips are CUDA-only tests on the CPU workspace.
+
 ## Accepted package-core evidence
 
 ### Duration context
