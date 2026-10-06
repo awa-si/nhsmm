@@ -145,6 +145,8 @@ Required invariant families:
 
 **Acceptance:** invariant tests pass in both representative Float64 and Float32 configurations where meaningful.
 
+**Current status:** complete. An explicit structural-invariant suite now locks `K=1`, `D=1`, `T=1`, self-transition age reset, exact impossible support, right-padding invariance, batch-vs-single equivalence, causal future-observation invariance, per-timestep posterior normalization, and the bounded-age invariant. Representative probability/normalization checks run in both Float32 and Float64.
+
 ## Gate 6 — Gradient correctness
 
 **Goal:** verify training follows the intended likelihood, not merely a finite differentiable expression.
