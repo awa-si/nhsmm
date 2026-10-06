@@ -127,6 +127,7 @@ That study predates the current real-data integration gate and is not a substitu
 The next package-level research milestone is to raise the HSMM core from regression-tested correctness to independent mathematical verification. This milestone is package-internal and precedes any renewed downstream Nautilus acceptance claim.
 
 Execution is staged by [hsmm-correctness-work-gates.md](hsmm-correctness-work-gates.md).
+Gate 0 mathematical semantics are frozen in [hsmm-mathematical-contract.md](hsmm-mathematical-contract.md); Gate 1 is currently blocked by the audited non-causal duration-dependent Viterbi predecessor-collapse defect.
 
 The milestone is complete only when all of the following are observed:
 

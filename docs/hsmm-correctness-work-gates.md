@@ -21,6 +21,8 @@ Required decisions and fixtures:
 
 **Stop condition:** do not implement the exhaustive oracle if any factorization or indexing rule is ambiguous.
 
+**Current status:** contract complete / implementation blocked. The frozen semantics are in [hsmm-mathematical-contract.md](hsmm-mathematical-contract.md). Audit found that non-causal Viterbi collapses predecessor duration before applying duration-dependent destination transitions; fix and regression are required before Gate 1.
+
 ## Gate 1 — Independent exhaustive path oracle
 
 **Goal:** implement a deliberately slow mathematical oracle under `tests/reference/`.
