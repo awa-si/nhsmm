@@ -99,7 +99,7 @@ Latest standalone core gate after the package audit fixes:
     black --check nhsmm tests scripts: PASS
     git diff --check: PASS
     focused regression suite: 131 passed
-    python -m pytest -q: 360 passed, 3 skipped
+    python -m pytest -q: 361 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace. A public-API artifact/inference/runtime round-trip also passed: artifact save/load preserved batch likelihood exactly, artifact-loaded and `load_inference_model(...)` runtimes produced identical posteriors across 17 causal streaming steps, state/age posteriors remained normalized, reset semantics passed, inference parameters were frozen, and variable-length list likelihood remained finite.
 

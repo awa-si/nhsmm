@@ -4,7 +4,8 @@ import pytest
 import torch
 import torch.nn as nn
 
-from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet
+from nhsmm import ModelConfig, NHSMM
+from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
 from nhsmm.encoder import DefaultEncoder
 
 
@@ -185,3 +186,121 @@ def test_context_encoder_reset_clears_only_transient_detached_caches() -> None:
     assert encoder._sequence is None
     assert encoder._context is None
     assert encoder._attn_vector is attn_parameter
+
+
+def _external_context_model(*, n_features: int = 2, context_dim: int = 2) -> NHSMM:
+    model = NHSMM(
+        ModelConfig(
+            n_states=2,
+            n_features=n_features,
+            max_duration=3,
+            context_dim=context_dim,
+            hidden_dim=context_dim,
+            causal=True,
+            dropout=0.0,
+            verbose=False,
+        ),
+        device="cpu",
+    )
+    model.initialize_distributions()
+    return model
+
+
+def test_external_context_shape_contract() -> None:
+    batch, timesteps, context_dim = 2, 3, 4
+    accepted = (
+        torch.zeros(context_dim),
+        torch.zeros(timesteps, context_dim),
+        torch.zeros(batch, 1, context_dim),
+        torch.zeros(batch, timesteps, context_dim),
+    )
+    for context in accepted:
+        aligned = align_context_tensor(
+            context,
+            batch_size=batch,
+            timesteps=timesteps,
+            context_dim=context_dim,
+        )
+        assert aligned.shape == (batch, timesteps, context_dim)
+
+    with pytest.raises(ValueError, match=r"2D context must be \[T,H\]"):
+        align_context_tensor(
+            torch.zeros(batch, context_dim),
+            batch_size=batch,
+            timesteps=timesteps,
+            context_dim=context_dim,
+        )
+
+
+def test_ambiguous_2d_context_is_always_temporal_when_batch_equals_time() -> None:
+    context = torch.tensor([[10.0], [20.0]])
+    aligned = align_context_tensor(context, batch_size=2, timesteps=2, context_dim=1)
+    assert aligned[:, :, 0].tolist() == [[10.0, 20.0], [10.0, 20.0]]
+
+
+@pytest.mark.parametrize(
+    "context_factory",
+    [
+        lambda batch, timesteps, width: torch.zeros(width),
+        lambda batch, timesteps, width: torch.zeros(timesteps, width),
+        lambda batch, timesteps, width: torch.zeros(batch, 1, width),
+        lambda batch, timesteps, width: torch.zeros(batch, timesteps, width),
+    ],
+)
+def test_model_build_sequence_set_accepts_public_context_shapes(context_factory) -> None:
+    model = _external_context_model()
+    batch, timesteps, width = 2, 3, 2
+    observations = torch.zeros(batch, timesteps, 2)
+    sequence = model._build_sequence_set(
+        observations,
+        context=context_factory(batch, timesteps, width),
+    )
+    assert sequence.contexts.shape == (batch, timesteps, width)
+
+
+def test_model_build_sequence_set_rejects_batch_static_2d_context() -> None:
+    model = _external_context_model()
+    with pytest.raises(ValueError, match=r"2D context must be \[T,H\]"):
+        model._build_sequence_set(torch.zeros(2, 3, 2), context=torch.zeros(2, 2))
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_align_context_tensor_rejects_nonfinite_values(value: float) -> None:
+    context = torch.tensor([0.0, value])
+    with pytest.raises(ValueError, match="finite"):
+        align_context_tensor(context, batch_size=1, timesteps=2, context_dim=2)
+
+
+def test_external_context_list_requires_per_sequence_length_alignment() -> None:
+    model = _external_context_model()
+    observations = [torch.randn(3, 2), torch.randn(5, 2)]
+    context = [torch.randn(2, 2), torch.randn(5, 2)]
+
+    with pytest.raises(ValueError, match="does not match observation length"):
+        model._build_sequence_set(observations, context=context)
+
+
+@pytest.mark.parametrize(("n_features", "context_dim"), [(2, 2), (3, 2)])
+def test_external_context_list_accepts_variable_lengths(n_features: int, context_dim: int) -> None:
+    model = _external_context_model(n_features=n_features, context_dim=context_dim)
+    observations = [torch.randn(3, n_features), torch.randn(5, n_features)]
+    context = [torch.randn(3, context_dim), torch.randn(5, context_dim)]
+
+    sequence = model._build_sequence_set(observations, context=context)
+    values = model.log_likelihood(observations, context=context, reduce=False)
+
+    assert sequence.lengths.tolist() == [3, 5]
+    assert sequence.contexts.shape == (2, 5, context_dim)
+    assert values.shape == (2,)
+    assert torch.isfinite(values).all()
+
+
+def test_external_context_requires_configured_context_dim() -> None:
+    model = NHSMM(
+        ModelConfig(n_states=2, n_features=2, max_duration=3, causal=True),
+        device="cpu",
+    )
+    model.initialize_distributions()
+
+    with pytest.raises(ValueError, match="external context requires ModelConfig.context_dim"):
+        model.log_likelihood(torch.randn(1, 4, 2), context=torch.randn(4, 2))

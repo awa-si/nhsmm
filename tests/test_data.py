@@ -106,3 +106,21 @@ def test_sequence_dataset_loader_validates_arguments() -> None:
         dataset.loader(batch_size=0)
     with pytest.raises(ValueError, match="shuffle"):
         dataset.loader(shuffle=1)
+
+
+def test_variable_length_dataset_collates_state_sequence() -> None:
+    dataset = SequenceDataset(
+        n_states=2,
+        n_features=2,
+        seed=3,
+        n_segments_per_state=1,
+        context_dim=2,
+        variable_length=True,
+    )
+    assert len(dataset) == 1
+    x, context, states = dataset[0]
+    assert x.shape[0] == context.shape[0] == states.shape[0]
+
+    x_pad, context_pad, states_pad, lengths = next(iter(dataset.loader(batch_size=1)))
+    assert x_pad.shape[:2] == context_pad.shape[:2] == states_pad.shape
+    assert lengths.tolist() == [x.shape[0]]

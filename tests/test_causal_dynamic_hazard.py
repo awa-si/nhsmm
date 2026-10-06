@@ -123,3 +123,13 @@ def test_causal_forward_keeps_gradient_paths() -> None:
     assert model.dist.transition.logits.grad is not None
     assert torch.isfinite(model.dist.duration.logits.grad).all()
     assert torch.isfinite(model.dist.transition.logits.grad).all()
+
+
+def test_causal_forward_starts_every_sequence_at_age_one() -> None:
+    model = _make_model()
+    sequence = model._build_sequence_set(torch.randn(2, 5, model.config.n_features))
+
+    alpha = model.forward(sequence)
+
+    assert torch.isfinite(alpha[:, 0, :, 0]).all()
+    assert torch.isneginf(alpha[:, 0, :, 1:]).all()

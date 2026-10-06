@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
-from nhsmm import ModelConfig, NHSMM
+from nhsmm import DefaultEncoder, ModelConfig, NHSMM
 from nhsmm.artifact import build_artifact, load_artifact, save_artifact
 from nhsmm.context import ContextEncoder
 from nhsmm.filtering import filter_model_sequence
@@ -181,3 +182,85 @@ def test_artifact_loader_preserves_legacy_encoder_payload_semantics(tmp_path) ->
 
     assert isinstance(loaded.encoder, ContextEncoder)
     assert loaded.config.use_context_encoder is True
+
+
+def test_mha_default_head_count_is_compatible_with_default_encoder() -> None:
+    model = NHSMM(_config(use_context_encoder=True, pool="mha"), device="cpu")
+    assert model.config.n_heads == 4
+    assert model.encoder._mha is not None
+    assert model.encoder._mha.embed_dim % model.config.n_heads == 0
+
+
+@pytest.mark.parametrize("pool", ["attn", "mha"])
+def test_learned_pooling_parameters_survive_reset(pool: str) -> None:
+    model = NHSMM(_config(use_context_encoder=True, pool=pool), device="cpu")
+    before = {name: id(parameter) for name, parameter in model.encoder.named_parameters()}
+    assert any(name.startswith("_attn_vector") or name.startswith("_mha.") for name in before)
+
+    model.encoder.reset()
+
+    after = {name: id(parameter) for name, parameter in model.encoder.named_parameters()}
+    assert after == before
+    model_parameter_ids = {
+        id(parameter) for parameter in model.parameters() if parameter.requires_grad
+    }
+    assert set(after.values()).issubset(model_parameter_ids)
+
+
+def test_explicit_context_dim_controls_default_encoder_output_width() -> None:
+    model = NHSMM(
+        _config(use_context_encoder=True, context_dim=2, hidden_dim=2),
+        device="cpu",
+    )
+    assert model.context_dim == 2
+    assert model.hidden_dim == 2
+    assert model.config.context_dim == 2
+    assert model.config.hidden_dim == 2
+    assert model.encoder.encoder.hidden_dim == 2
+
+
+def test_explicit_context_dim_rejects_incompatible_custom_encoder() -> None:
+    encoder = DefaultEncoder(
+        n_features=2,
+        hidden_dim=4,
+        cnn_channels=5,
+        cnn_kernel=3,
+        causal=True,
+    )
+    with pytest.raises(
+        ValueError, match=r"encoder output dimension \(4\) must equal context_dim \(2\)"
+    ):
+        NHSMM(
+            _config(context_dim=2, hidden_dim=2),
+            encoder=encoder,
+            device="cpu",
+        )
+
+
+def test_noncausal_explicit_context_dim_controls_bidirectional_output_width() -> None:
+    model = NHSMM(
+        _config(
+            causal=False,
+            use_context_encoder=True,
+            context_dim=2,
+            hidden_dim=2,
+        ),
+        device="cpu",
+    )
+    assert model.encoder.encoder.bidirectional is True
+    assert model.encoder.encoder.hidden_dim == 1
+    assert model.encoder.encoder.out_dim == 2
+    assert model.context_dim == 2
+
+
+def test_noncausal_default_encoder_rejects_odd_context_dim() -> None:
+    with pytest.raises(ValueError, match="context_dim must be divisible by 2"):
+        NHSMM(
+            _config(
+                causal=False,
+                use_context_encoder=True,
+                context_dim=3,
+                hidden_dim=3,
+            ),
+            device="cpu",
+        )

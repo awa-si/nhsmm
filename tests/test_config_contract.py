@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import json
 
 import pytest
@@ -136,3 +137,58 @@ def test_health_threshold_contract_is_central_and_tunable() -> None:
     assert ModelHealthThresholds.from_dict(thresholds.__dict__) == thresholds
     with pytest.raises(ValueError, match="unknown ModelHealthThresholds fields"):
         thresholds.with_overrides(typo=1)
+
+
+def test_python_tooling_baseline_is_312() -> None:
+    text = Path("pyproject.toml").read_text()
+    assert 'requires-python = ">=3.12"' in text
+    assert 'target-version = ["py312"]' in text
+    assert 'target-version = "py312"' in text
+    assert 'python_version = "3.12"' in text
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("n_states", 0),
+        ("n_features", 0),
+        ("n_heads", 0),
+        ("cnn_kernel", 0),
+        ("max_duration", 0),
+        ("n_init", 0),
+        ("max_iter", 0),
+        ("transition_refine_steps", -1),
+        ("dropout", 1.0),
+        ("min_covar", 0.0),
+        ("lr", 0.0),
+        ("transition_context_max_delta", -0.1),
+        ("dropout", float("nan")),
+        ("min_covar", float("nan")),
+        ("lr", float("nan")),
+        ("transition_refine_lr", float("inf")),
+        ("transition_context_max_delta", float("nan")),
+        ("tol", float("inf")),
+        ("loss_bias", float("nan")),
+        ("plateau_tol", float("inf")),
+        ("pool", "bogus"),
+        ("emission_init_mode", "bogus"),
+        ("initial_init_mode", "bogus"),
+        ("duration_init_mode", "bogus"),
+        ("transition_init_mode", "bogus"),
+        ("transition_type", "bogus"),
+        ("activation", "bogus"),
+        ("emission_type", "bogus"),
+        ("convergence_mode", "bogus"),
+    ],
+)
+def test_model_config_rejects_invalid_public_values(field: str, value) -> None:
+    kwargs = {"n_states": 2, "n_features": 2, field: value}
+    with pytest.raises(ValueError):
+        ModelConfig(**kwargs)
+
+
+@pytest.mark.parametrize("field", ["causal", "use_scheduler", "convergence_stop", "verbose"])
+def test_model_config_rejects_non_boolean_flags(field: str) -> None:
+    kwargs = {"n_states": 2, "n_features": 2, field: 1}
+    with pytest.raises(ValueError):
+        ModelConfig(**kwargs)

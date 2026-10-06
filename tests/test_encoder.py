@@ -116,3 +116,26 @@ def test_noncausal_masked_padding_cannot_change_valid_outputs() -> None:
     perturbed_out = encoder(perturbed, mask=mask)
 
     torch.testing.assert_close(baseline_out[:, :3], perturbed_out[:, :3])
+
+
+def test_causal_encoder_is_prefix_invariant() -> None:
+    torch.manual_seed(7)
+    encoder = DefaultEncoder(
+        n_features=4,
+        hidden_dim=4,
+        cnn_channels=8,
+        cnn_kernel=3,
+        bidirectional=False,
+        dropout=0.0,
+        causal=True,
+    ).eval()
+    x = torch.randn(1, 8, 4)
+    prefix_len = 5
+    changed_future = x.clone()
+    changed_future[:, prefix_len:] = torch.randn_like(changed_future[:, prefix_len:]) * 100.0
+
+    with torch.inference_mode():
+        prefix_a = encoder(x)[:, :prefix_len]
+        prefix_b = encoder(changed_future)[:, :prefix_len]
+
+    torch.testing.assert_close(prefix_a, prefix_b, atol=1e-6, rtol=1e-6)

@@ -48,10 +48,9 @@ pytest -q
 - transition-only refinement parameter isolation;
 - refinement opt-in defaults;
 - transition-specific context capacity without changing Initial/Duration/Emission bounds;
-- variable-length external context whose width differs from observation features;
 - caller train/eval mode restoration when optimization fails during input validation.
 
-`tests/test_context_optin.py` also verifies that explicit encoder injection does not mutate a reusable caller `ModelConfig`, and `tests/test_default_distributions.py` verifies fail-closed categorical labels/temperature controls plus frozen context-free neural-control parameters.
+`tests/test_context_hardening.py` owns external-context shape, finiteness, variable-length, and width contracts. `tests/test_context_optin.py` owns internal-encoder opt-in and model-construction contracts. `tests/test_default_distributions.py` verifies fail-closed categorical labels/temperature controls plus frozen context-free neural-control parameters.
 
 ## Static checks
 
