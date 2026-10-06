@@ -550,7 +550,7 @@ class NHSMM(nn.Module):
         duration_logits = self._expand_batch(duration_logits, B, "duration logits")
         transition_logits = self._expand_batch(transition_logits, B, "transition logits")
 
-        cumsum_emit = torch.zeros((B, T + 1, K), device=device)
+        cumsum_emit = router.log_probs.new_zeros((B, T + 1, K))
         cumsum_emit[:, 1:] = torch.cumsum(router.log_probs, dim=1)
 
         d_range = torch.arange(1, Dmax + 1, device=device)
@@ -565,7 +565,7 @@ class NHSMM(nn.Module):
         emit_sums = cumsum_expand.gather(1, end_idx) - cumsum_expand.gather(1, start_idx)
         emit_sums = emit_sums.clamp(min=MIN_LOGITS, max=MAX_LOGITS)
 
-        alpha = torch.full((B, T, K, Dmax), NEG_INF, device=device)
+        alpha = router.log_probs.new_full((B, T, K, Dmax), float("-inf"))
         valid0 = X.lengths > 0
         alpha[valid0, 0, :, 0] = (
             initial_logits[valid0, 0]
@@ -579,7 +579,7 @@ class NHSMM(nn.Module):
                 break
             active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
             max_d = min(Dmax, t + 1)
-            alpha_t = alpha.new_full((active.numel(), K, max_d), NEG_INF)
+            alpha_t = alpha.new_full((active.numel(), K, max_d), float("-inf"))
 
             for duration_index in range(max_d):
                 duration = duration_index + 1
@@ -610,7 +610,7 @@ class NHSMM(nn.Module):
                     + emit_sums[active, t, :, duration_index]
                 )
 
-            full_alpha = alpha.new_full((active.numel(), K, Dmax), NEG_INF)
+            full_alpha = alpha.new_full((active.numel(), K, Dmax), float("-inf"))
             full_alpha[..., :max_d] = alpha_t
             alpha[active, t] = full_alpha
 
@@ -903,7 +903,11 @@ class NHSMM(nn.Module):
 
         if torch.isposinf(log_likelihoods).any():
             raise ValueError("log_likelihood produced +inf")
-        log_likelihoods = torch.nan_to_num(log_likelihoods, nan=NEG_INF, neginf=NEG_INF)
+        log_likelihoods = torch.where(
+            torch.isnan(log_likelihoods),
+            log_likelihoods.new_full((), NEG_INF),
+            log_likelihoods,
+        )
         return log_likelihoods.sum() if reduce else log_likelihoods
 
     def predict(

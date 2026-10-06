@@ -78,6 +78,8 @@ Run the oracle primarily in Float64. Float32 is a separate numerical gate.
 
 **Acceptance:** every maintained matrix case passes the Float64 tolerance recorded in the test; no expected-failure exemptions.
 
+**Current status:** complete. Production causal and non-causal forward likelihoods plus public `log_likelihood` reduction are checked against the independent exhaustive reference across uniform, random, near-deterministic, and impossible-support cases spanning `K={1,2,3}`, `D={1,2,3}`, `T=1..6` representative tractable combinations, with variable-length batch equivalence. Gate 2 exposed and fixed two core numerical-contract defects: non-causal DP temporaries now preserve the input dtype, and impossible valid sequence mass remains exact `-inf` instead of being coerced to the Float32 minimum sentinel.
+
 **Stop condition:** any mismatch larger than the justified numerical tolerance is treated as a model-core defect, not a test relaxation opportunity.
 
 ## Gate 3 — Causal filtering and posterior equivalence
