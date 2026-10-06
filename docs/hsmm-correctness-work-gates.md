@@ -166,6 +166,8 @@ The numerical reference must perturb the actual parameter under test and recompu
 
 **Acceptance:** all maintained differentiable parameter groups pass the documented gradient tolerance. Parameters intentionally excluded from optimization are checked separately for frozen/no-gradient semantics.
 
+**Current status:** complete. Float64 `torch.autograd.gradcheck` covers the causal and non-causal likelihood recurrences jointly over initial, duration, transition, and emission score tensors. Central finite-difference checks additionally validate the actual model parameterization for initial logits, duration logits, duration soft-max bias, transition logits, Gaussian `mu`/`log_var`, and Student-t `loc`/`scale_param`/`dof`. Frozen plain-HSMM controls (`log_temperature`, context-disabled `delta_scale`, and legacy emission logits) are verified to remain non-trainable with no gradients.
+
 **Stop condition:** finite gradients alone are insufficient; numerical derivative disagreement is a correctness failure.
 
 ## Gate 7 — Property-based state-space exploration
