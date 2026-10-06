@@ -296,14 +296,13 @@ The core repository should not absorb:
 
 Context-effect validation remains separate from model training and runtime integration.
 
-See [validation-api.md](validation-api.md).
+See [validation.md](validation.md).
 
 ## Related documentation
 
 - [README](../README.md)
-- [Validation API](validation-api.md)
+- [Validation API](validation.md)
 - [Testing](testing.md)
-- [Package validation](package-validation.md)
 - [Development state](state.md)
 - [Release](release.md)
 - [NHSMM Interfaces](https://github.com/awa-si/nhsmm-interfaces)

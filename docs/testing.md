@@ -99,7 +99,7 @@ Latest 5-seed evidence:
 
 Strong and moderate pass both learning and usefulness cleanly. Weak passes a deliberately lower-confidence usefulness contract; exact boundary timing is explicitly weaker, while ±1-timestep timing, durations, transitions, occupancy, and calibration remain informative. Null is a negative control: learning-control checks pass, but usefulness is not applicable and no predictive state identity is claimed.
 
-The hard state-identification acceptance explicitly uses emission_init_mode="kmeans". A separate default-spread probe is recorded in validation/learning-prediction-2026-10-04.md.
+The hard state-identification acceptance explicitly uses emission_init_mode="kmeans". A separate default-spread probe is recorded in validation/README.md.
 
 The harness configuration is now externalized through the public `ValidationConfig` contract. A complete JSON contract can be supplied with `--config`; `--dump-config` writes the fully resolved contract; repeated `--set` arguments tune fields such as `model.max_iter`, `data.steps`, `health.max_state_occupancy`, `boundary_tolerance`, or `scenario.moderate.max_median_ece` without code edits. See [configuration.md](configuration.md).
 
@@ -117,7 +117,7 @@ The transition harness uses known context-dependent transition matrices, permuta
 
 Re-run after changes to transition context parameterization, context-network hidden dimensions, refinement likelihood, filtering boundary semantics, state recovery, or external-context handling.
 
-Acceptance thresholds and latest observed results are recorded in [`package-validation.md`](package-validation.md).
+Acceptance thresholds and latest observed results are recorded in [`validation.md`](validation.md).
 
 ## Runtime benchmark
 
@@ -142,4 +142,4 @@ data = nautilus
 
 AWA mounts the dataset read-only at `/data/nautilus`; do not copy the dataset into the repository or workspace.
 
-The maintained current state-count evidence is recorded in [`validation/nautilus-state-count-3v4-2026-10-05.md`](validation/nautilus-state-count-3v4-2026-10-05.md). Re-run that comparison after material model/training/decoder changes or changes to the Nautilus 18-D observation mapping.
+The maintained current state-count evidence is recorded in [`validation/README.md`](validation/README.md). Re-run that comparison after material model/training/decoder changes or changes to the Nautilus 18-D observation mapping.
