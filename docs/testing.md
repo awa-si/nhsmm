@@ -56,6 +56,8 @@ pytest -q
 
 The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.
 
+The execution sequence and stop/go criteria are defined in [hsmm-correctness-work-gates.md](hsmm-correctness-work-gates.md).
+
 Required reference coverage:
 
 - exhaustive small-model joint path enumeration for likelihood and filtering;

@@ -126,6 +126,8 @@ That study predates the current real-data integration gate and is not a substitu
 
 The next package-level research milestone is to raise the HSMM core from regression-tested correctness to independent mathematical verification. This milestone is package-internal and precedes any renewed downstream Nautilus acceptance claim.
 
+Execution is staged by [hsmm-correctness-work-gates.md](hsmm-correctness-work-gates.md).
+
 The milestone is complete only when all of the following are observed:
 
 - an intentionally simple exhaustive reference implementation enumerates all valid segment/state paths for small `K`, `D`, and `T` without importing production recursion, filtering, hazard, or runtime helpers;
