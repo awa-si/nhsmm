@@ -125,6 +125,8 @@ Required cases:
 
 **Acceptance:** state path and MAP score agree with the exhaustive oracle for all maintained cases.
 
+**Current status:** complete. Causal and non-causal production Viterbi paths are checked against exhaustive MAP enumeration across uniform/tied, random, near-deterministic, and impossible-support cases. The maintained matrix includes `D=1`, forced duration/transition support, duration-dependent transitions, explicit self-transition episode reset semantics, and a regression where a locally best predecessor duration loses to the globally optimal destination-conditioned path. For tied state paths, the production state sequence is accepted only when the best compatible oracle latent path attains the global MAP score.
+
 ## Gate 5 — Degenerate and structural invariants
 
 **Goal:** lock the semantics that are easy to violate during optimization/refactoring.
