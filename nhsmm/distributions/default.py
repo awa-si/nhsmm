@@ -271,14 +271,23 @@ class Neural(nn.Module, ABC):
         self.logits = nn.Parameter(torch.zeros(*self._shape))
 
     def _get_activation(self, mode: str = "tanh") -> nn.Module:
-        return {
-            "tanh": nn.Tanh(),
-            "relu": nn.ReLU(),
-            "gelu": nn.GELU(),
-            "softplus": nn.Softplus(),
-            "identity": nn.Identity(),
-            "leaky_relu": nn.LeakyReLU(0.01),
-        }.get(mode.lower(), nn.Identity())
+        activations = {
+            "tanh": nn.Tanh,
+            "relu": nn.ReLU,
+            "gelu": nn.GELU,
+            "softplus": nn.Softplus,
+            "identity": nn.Identity,
+            "leaky_relu": lambda: nn.LeakyReLU(0.01),
+        }
+        key = mode.lower()
+        try:
+            factory = activations[key]
+        except KeyError as exc:
+            allowed = ", ".join(sorted(activations))
+            raise ValueError(
+                f"Unsupported activation {mode!r}; expected one of: {allowed}"
+            ) from exc
+        return factory()
 
     def _init_weights(self, module: Optional[nn.Module]) -> None:
         if module is None:

@@ -530,3 +530,31 @@ def test_categorical_rsample_rejects_invalid_temperature(temperature) -> None:
 def test_categorical_rejects_nonfloating_inputs() -> None:
     with pytest.raises(TypeError, match="floating dtype"):
         Categorical(logits=torch.tensor([[1, 2, 3]]))
+
+
+@pytest.mark.parametrize("factory", [Initial, Duration, Transition, Emission])
+def test_distribution_constructors_reject_unknown_activation(factory) -> None:
+    if factory is Initial:
+        kwargs = dict(n_states=2, activation="bogus", context_dim=None)
+    elif factory is Duration:
+        kwargs = dict(n_states=2, activation="bogus", max_duration=3, context_dim=None)
+    elif factory is Transition:
+        kwargs = dict(
+            n_states=2,
+            n_features=1,
+            activation="bogus",
+            transition_type="ergodic",
+            max_duration=2,
+            context_dim=None,
+        )
+    else:
+        kwargs = dict(
+            n_states=2,
+            n_features=1,
+            activation="bogus",
+            emission_type="gaussian",
+            context_dim=None,
+        )
+
+    with pytest.raises(ValueError, match="Unsupported activation"):
+        factory(**kwargs)
