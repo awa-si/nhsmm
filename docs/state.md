@@ -13,6 +13,7 @@ Current maintained defaults and contracts:
 - The canonical production causal path is the NHSMM causal filter/runtime contract documented in [model.md](model.md).
 - n_states=3 remains the current Nautilus baseline from the maintained 3-vs-4 usability study.
 - Historical machine-readable validation evidence is retained under [validation/README.md](validation/README.md).
+- The full controlled package acceptance suite was re-run batchwise on 2026-10-06 after the ContextEncoder opt-in migration; duration, state recovery, learning/prediction, and transition-context gates all passed.
 
 ## Accepted package-core evidence
 
@@ -88,13 +89,23 @@ Closed and regression-tested:
 
 ## Verification
 
-Latest code gate before this documentation-only consolidation:
+Latest code gate after the duration-validation harness repair:
 
     ruff check nhsmm tests scripts: PASS
     black --check nhsmm tests scripts: PASS
-    pytest -q: 345 passed, 3 skipped
+    git diff --check: PASS
+    python -m pytest -q: 346 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace.
+
+Full controlled revalidation on 2026-10-06 also passed:
+
+- duration context: strong/moderate/null PASS;
+- latent-state recovery: strong/moderate/null PASS;
+- learning/prediction: strong/moderate/weak/null PASS;
+- transition context: strong/moderate/null PASS.
+
+The validation harnesses were run in scenario-sized batches with persistent JSON artifacts under the AWA workspace work store. See [validation.md](validation.md) for the current measured summaries.
 
 ## Nautilus usability boundary
 
