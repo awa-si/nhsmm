@@ -193,6 +193,8 @@ Every randomized failure must print or persist a deterministic reproducer.
 
 **Acceptance:** the maintained property budget passes repeatedly without flakes.
 
+**Current status:** complete. `hypothesis` is not part of the project test/dev dependency contract, so Gate 7 uses an in-repo deterministic property generator with explicit `seed-N` pytest IDs for direct reproduction. The maintained property budget explores varying `K`, `D`, `T`, score scales, and support patterns and checks posterior normalization, finite sequence evidence for finite-score cases, exact impossible-support preservation, causal prefix invariance, right-padding invariance, batch-vs-single equivalence, streaming-vs-batch filter equivalence, self-transition age reset, bounded episode age, and production likelihood agreement with independently enumerated causal/segment decompositions.
+
 ## Gate 8 — Numerical precision envelope
 
 **Goal:** distinguish mathematical correctness from implementation precision.

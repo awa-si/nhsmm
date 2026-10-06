@@ -99,7 +99,7 @@ Latest standalone core gate after the package audit fixes:
     black --check nhsmm tests scripts: PASS
     git diff --check: PASS
     focused regression suite: 131 passed
-    python -m pytest -q: 544 passed, 3 skipped
+    python -m pytest -q: 665 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace. A public-API artifact/inference/runtime round-trip also passed: artifact save/load preserved batch likelihood exactly, artifact-loaded and `load_inference_model(...)` runtimes produced identical posteriors across 17 causal streaming steps, state/age posteriors remained normalized, reset semantics passed, inference parameters were frozen, and variable-length list likelihood remained finite.
 
@@ -127,7 +127,7 @@ That study predates the current real-data integration gate and is not a substitu
 The next package-level research milestone is to raise the HSMM core from regression-tested correctness to independent mathematical verification. This milestone is package-internal and precedes any renewed downstream Nautilus acceptance claim.
 
 Execution is staged by [hsmm-correctness-work-gates.md](hsmm-correctness-work-gates.md).
-Gate 0 mathematical semantics are frozen in [hsmm-mathematical-contract.md](hsmm-mathematical-contract.md). The audited non-causal duration-dependent Viterbi predecessor-collapse defect is fixed and regression-tested. Gates 1–6 are complete: independent exhaustive reference, production likelihood equivalence, causal filtering/posterior equivalence, Viterbi/MAP equivalence, structural invariants, and gradient correctness. Gate 7 (property-based state-space exploration) is next.
+Gate 0 mathematical semantics are frozen in [hsmm-mathematical-contract.md](hsmm-mathematical-contract.md). The audited non-causal duration-dependent Viterbi predecessor-collapse defect is fixed and regression-tested. Gates 1–7 are complete: independent exhaustive reference, production likelihood equivalence, causal filtering/posterior equivalence, Viterbi/MAP equivalence, structural invariants, gradient correctness, and deterministic property-based state-space exploration. Gate 8 (numerical precision envelope) is next.
 
 The milestone is complete only when all of the following are observed:
 
