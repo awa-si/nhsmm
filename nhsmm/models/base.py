@@ -722,7 +722,7 @@ class NHSMM(nn.Module):
 
         predicted: List[torch.Tensor] = []
         durations_full = torch.arange(1, Dmax + 1, device=device)
-        state_indices = torch.arange(K, device=device)
+        duration_dependent_transition = self.dist.transition.max_duration is not None
 
         for b in range(B):
             L = int(router.mask[b].sum())
@@ -748,6 +748,69 @@ class NHSMM(nn.Module):
             cumsum_emit = torch.zeros((L + 1, K), device=device)
             cumsum_emit[1:] = torch.cumsum(emit_log, dim=0)
 
+            if duration_dependent_transition:
+                # Keep the ending segment duration in the Viterbi state. A future
+                # transition is conditioned on that duration, so collapsing it
+                # before scoring the destination can discard the global MAP path.
+                score = torch.full((L, K, Dmax), NEG_INF, device=device)
+                prev_state = torch.full((L, K, Dmax), -1, dtype=torch.long, device=device)
+                prev_duration = torch.full((L, K, Dmax), -1, dtype=torch.long, device=device)
+
+                for t in range(L):
+                    max_d = min(Dmax, t + 1)
+                    durations = durations_full[:max_d]
+                    starts = t - durations + 1
+                    emit_sums = (cumsum_emit[t + 1] - cumsum_emit[starts.clamp_min(0)]).T
+                    scores_dur = duration_logits[t, :, :max_d] + emit_sums
+
+                    for duration_index in range(max_d):
+                        duration = duration_index + 1
+                        start_t = t - duration + 1
+                        segment_score = scores_dur[:, duration_index]
+
+                        if start_t == 0:
+                            score[t, :, duration_index] = initial_logits + segment_score
+                            continue
+
+                        predecessor_t = start_t - 1
+                        candidates = (
+                            score[predecessor_t].unsqueeze(-1) + transition_logits[predecessor_t]
+                        )
+                        flat = candidates.reshape(K * Dmax, K)
+                        predecessor_score, flat_index = flat.max(dim=0)
+                        score[t, :, duration_index] = predecessor_score + segment_score
+                        prev_state[t, :, duration_index] = flat_index // Dmax
+                        prev_duration[t, :, duration_index] = flat_index % Dmax
+
+                flat_index = int(score[L - 1].reshape(-1).argmax().item())
+                state = flat_index // Dmax
+                duration_index = flat_index % Dmax
+                segments = []
+                t = L - 1
+                while t >= 0:
+                    duration = duration_index + 1
+                    start_t = t - duration + 1
+                    segments.append((start_t, t, state))
+                    if start_t == 0:
+                        break
+                    predecessor_t = start_t - 1
+                    state_next = int(prev_state[t, state, duration_index].item())
+                    duration_next = int(prev_duration[t, state, duration_index].item())
+                    if state_next < 0 or duration_next < 0:
+                        raise RuntimeError("non-causal Viterbi backpointer is incomplete")
+                    state, duration_index = state_next, duration_next
+                    t = predecessor_t
+
+                segments.reverse()
+                path = torch.cat(
+                    [
+                        router.log_probs.new_full((end - start_t + 1,), st, dtype=torch.long)
+                        for start_t, end, st in segments
+                    ]
+                )
+                predicted.append(path[:L])
+                continue
+
             V = torch.full((L, K), NEG_INF, device=device)
             back_ptr = torch.full((L, K), -1, dtype=torch.long, device=device)
             best_dur = torch.zeros((L, K), dtype=torch.long, device=device)
@@ -765,26 +828,16 @@ class NHSMM(nn.Module):
 
                 for duration_index in range(max_d):
                     duration = duration_index + 1
-                    start = t - duration + 1
+                    start_t = t - duration + 1
                     segment_score = scores_dur[:, duration_index]
 
-                    if start == 0:
+                    if start_t == 0:
                         candidate = initial_logits + segment_score
                         candidate_prev = torch.full((K,), -1, dtype=torch.long, device=device)
                     else:
-                        prev_t = start - 1
-                        if self.dist.transition.max_duration is None:
-                            trans = transition_logits[prev_t]
-                        else:
-                            prev_duration_index = (best_dur[prev_t] - 1).clamp(min=0)
-                            trans = transition_logits[
-                                prev_t,
-                                state_indices,
-                                prev_duration_index,
-                                :,
-                            ]
-
-                        predecessor_scores = V[prev_t].unsqueeze(-1) + trans
+                        predecessor_t = start_t - 1
+                        trans = transition_logits[predecessor_t]
+                        predecessor_scores = V[predecessor_t].unsqueeze(-1) + trans
                         predecessor, predecessor_state = predecessor_scores.max(dim=0)
                         candidate = predecessor + segment_score
                         candidate_prev = predecessor_state
@@ -807,18 +860,18 @@ class NHSMM(nn.Module):
             segments = []
             while t >= 0:
                 d = int(best_dur[t, state])
-                start = max(0, t - d + 1)
-                segments.append((start, t, state))
+                start_t = max(0, t - d + 1)
+                segments.append((start_t, t, state))
                 prev = int(back_ptr[t, state])
-                t = start - 1
+                t = start_t - 1
                 if prev >= 0:
                     state = prev
 
             segments.reverse()
             path = torch.cat(
                 [
-                    router.log_probs.new_full((end - start + 1,), st, dtype=torch.long)
-                    for start, end, st in segments
+                    router.log_probs.new_full((end - start_t + 1,), st, dtype=torch.long)
+                    for start_t, end, st in segments
                 ]
             )
 

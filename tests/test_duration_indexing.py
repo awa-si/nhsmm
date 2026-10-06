@@ -158,3 +158,59 @@ def test_survival_horizon_one_matches_duration_two_age_contract() -> None:
     state1 = runtime.step(x1)
     f1 = active_episode_survival_forecast(state1, runtime.state.duration_log_prob, [1])
     assert torch.allclose(f1.survival_probability, torch.zeros_like(f1.survival_probability))
+
+
+def test_noncausal_viterbi_keeps_predecessor_duration_for_transition(monkeypatch) -> None:
+    """A locally worse duration can be globally best after a destination transition."""
+    from nhsmm.context import SequenceSet
+
+    cfg = ModelConfig(
+        n_states=2,
+        n_features=1,
+        max_duration=2,
+        causal=False,
+        transition_type="ergodic",
+        seed=17,
+    )
+    model = NHSMM(cfg, device="cpu")
+    model.initialize_distributions(jitter=0.0)
+    model.eval()
+
+    initial = torch.tensor([[[0.0, -100.0]]])
+    duration = torch.tensor(
+        [
+            [
+                [[0.0, -100.0], [-100.0, -100.0]],
+                [[0.0, -0.1], [-100.0, -100.0]],
+                [[-5.0, -100.0], [0.0, -100.0]],
+            ]
+        ]
+    )
+    transition = torch.full((1, 3, 2, 2, 2), -100.0)
+    transition[0, 0, 0, 0, 0] = 0.0
+    transition[0, 1, 0, 0, 0] = 0.0
+    transition[0, 1, 0, 0, 1] = -10.0
+    transition[0, 1, 0, 1, 0] = 0.0
+    transition[0, 1, 0, 1, 1] = 0.0
+
+    monkeypatch.setattr(model.dist.initial, "log_matrix", lambda **_: initial)
+    monkeypatch.setattr(model.dist.duration, "log_matrix", lambda **_: duration)
+    monkeypatch.setattr(model.dist.transition, "log_matrix", lambda **_: transition)
+
+    log_probs = torch.zeros(1, 3, 2)
+    sequence = SequenceSet(
+        sequences=torch.zeros(1, 3, 1),
+        lengths=torch.tensor([3]),
+        masks=torch.ones(1, 3, 1, dtype=torch.bool),
+        contexts=torch.zeros(1, 3, 0),
+        canonical=torch.zeros(1, 1, 0),
+        log_probs=log_probs,
+    )
+
+    # At t=1/state=0, duration 1 has local score 0.0 and duration 2 has -0.1.
+    # The boundary to destination state 1 at t=2 scores those durations -10 and
+    # 0 respectively. Global MAP must therefore preserve duration 2 and choose
+    # state 1 at the final timestep. Collapsing to the locally best duration
+    # would incorrectly choose the state-0 alternative with score -5.
+    path = model._viterbi(sequence)[0]
+    assert path.tolist() == [0, 0, 1]

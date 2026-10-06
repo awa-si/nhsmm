@@ -188,6 +188,6 @@ If `q(k,1)=0`, an episode in state `k` that has reached age one cannot end at th
 
 ## Gate-0 status
 
-The mathematical semantics above are frozen for the correctness milestone with one implementation blocker: non-causal Viterbi with duration-dependent transitions violates the stated global-MAP recurrence. The blocker is a code defect, not an ambiguity in the contract.
+The mathematical semantics above are frozen for the correctness milestone. The audited non-causal duration-dependent Viterbi predecessor-collapse defect has been corrected by retaining predecessor duration in the MAP dynamic-programming state, with a dedicated regression protecting the counterexample.
 
-Gate 0 is therefore **contract complete / implementation blocked**. Correct the non-causal Viterbi recurrence and add its regression before beginning the independent exhaustive oracle in Gate 1.
+Gate 0 is therefore **complete** and Gate 1 is unblocked.
