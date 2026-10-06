@@ -12,7 +12,7 @@ from nhsmm.convergence import Convergence
 from nhsmm.encoder import DefaultEncoder
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
 from nhsmm.distributions import Initial, Duration, Transition, Emission
-from nhsmm.filtering import duration_log_hazard
+from nhsmm.filtering import _duration_log_hazard_from_log_p, duration_log_hazard
 from nhsmm.config import DTYPE, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
 
 
@@ -448,12 +448,28 @@ class NHSMM(nn.Module):
                 f"transition logits must be {expected_transition}, got {transition_logits.shape}"
             )
 
-        log_end, log_continue = duration_log_hazard(duration_logits.reshape(B * T, K, D))
+        log_end, log_continue = _duration_log_hazard_from_log_p(
+            duration_logits.reshape(B * T, K, D)
+        )
         log_end = log_end.reshape(B, T, K, D)
         log_continue = log_continue.reshape(B, T, K, D)
 
+        # Recurse on a normalized frontier and carry the cumulative evidence
+        # separately. This preserves the public unnormalized-alpha contract while
+        # preventing avoidable Float32 drift from repeatedly propagating a large
+        # sequence-level log offset through logsumexp operations.
+        frontier = alpha.new_full((B, K, D), float("-inf"))
+        cumulative_log_z = alpha.new_zeros(B)
+
         valid0 = X.lengths > 0
-        alpha[valid0, 0, :, 0] = initial_logits[valid0, 0] + router.log_probs[valid0, 0]
+        initial_score = initial_logits[valid0, 0] + router.log_probs[valid0, 0]
+        initial_frontier = initial_score.new_full((initial_score.shape[0], K, D), float("-inf"))
+        initial_frontier[..., 0] = initial_score
+        initial_log_z = torch.logsumexp(initial_frontier.flatten(1), dim=1)
+        normalized_initial = initial_frontier - initial_log_z[:, None, None]
+        frontier[valid0] = normalized_initial
+        cumulative_log_z[valid0] = initial_log_z
+        alpha[valid0, 0] = normalized_initial + initial_log_z[:, None, None]
 
         for t in range(1, T):
             valid = t < X.lengths
@@ -461,7 +477,7 @@ class NHSMM(nn.Module):
                 break
             active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
 
-            previous = alpha[active, t - 1]
+            previous = frontier[active]
             predicted = previous.new_full((active.numel(), K, D), float("-inf"))
 
             if D > 1:
@@ -474,13 +490,21 @@ class NHSMM(nn.Module):
                     dim=(1, 2),
                 )
             else:
-                boundary_state = torch.logsumexp(boundary, dim=-1)
+                # Match the runtime kernel's reduction order exactly. Expanding
+                # the duration-independent transition over episode age avoids a
+                # different two-stage Float32 logsumexp path in batch forward.
                 new_episode = torch.logsumexp(
-                    boundary_state.unsqueeze(-1) + transition_logits[active, t - 1],
-                    dim=1,
+                    boundary.unsqueeze(-1) + transition_logits[active, t - 1].unsqueeze(2),
+                    dim=(1, 2),
                 )
             predicted[..., 0] = new_episode
-            alpha[active, t] = predicted + router.log_probs[active, t].unsqueeze(-1)
+
+            posterior_score = predicted + router.log_probs[active, t].unsqueeze(-1)
+            step_log_z = torch.logsumexp(posterior_score.flatten(1), dim=1)
+            normalized = posterior_score - step_log_z[:, None, None]
+            frontier[active] = normalized
+            cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
+            alpha[active, t] = normalized + cumulative_log_z[active, None, None]
 
         return alpha
 

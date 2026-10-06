@@ -160,6 +160,10 @@ A runtime session uses either:
 
 The external-vs-non-external mode is fixed on the first step and cannot change until `runtime.reset()`.
 
+## Causal Float32 recursion
+
+The causal batch forward recursion propagates a normalized `(state, age)` frontier at each timestep and carries cumulative log evidence separately. This preserves the public unnormalized `alpha`/log-likelihood semantics while avoiding repeated propagation of a growing sequence-level log offset in Float32. Model-bound filtering and runtime use the same normalized recursion semantics; the public `filter_step()` still validates and normalizes arbitrary caller-provided scores.
+
 ## No internal context — default
 
 With `use_context_encoder=False` and no external context, observations are scored directly by the emission model and initial/duration/transition use their context-free parameters. No `ContextEncoder` is constructed. The canonical causal runtime remains bounded and retains only the latest accepted observation plus HSMM filter state.

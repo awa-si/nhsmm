@@ -109,6 +109,32 @@ def test_causal_viterbi_matches_dynamic_hazard_bruteforce() -> None:
     assert decoded.tolist() == expected
 
 
+def test_causal_float32_forward_tracks_normalized_filter_over_longer_sequence() -> None:
+    torch.manual_seed(53)
+    model = _make_model()
+    x = torch.randn(2, 17, model.config.n_features)
+
+    sequence = model._build_sequence_set(x)
+    alpha = model.forward(sequence)
+    trace = filter_model_sequence(model, x)
+    log_z = torch.logsumexp(alpha.flatten(2), dim=-1, keepdim=True).unsqueeze(-1)
+    normalized = alpha - log_z
+    finite = torch.isfinite(normalized) & torch.isfinite(trace.log_posterior)
+
+    torch.testing.assert_close(
+        normalized[finite],
+        trace.log_posterior[finite],
+        atol=2e-6,
+        rtol=2e-6,
+    )
+    torch.testing.assert_close(
+        normalized.exp(),
+        trace.log_posterior.exp(),
+        atol=2e-6,
+        rtol=2e-6,
+    )
+
+
 def test_causal_forward_keeps_gradient_paths() -> None:
     torch.manual_seed(37)
     model = _make_model()

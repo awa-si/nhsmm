@@ -397,11 +397,11 @@ def filter_model_sequence(
             trace[b, 0] = state.log_posterior[0]
 
             for t in range(1, length):
-                state = filter_step(
+                state = _filter_step_normalized(
                     state,
-                    sequence.log_probs[b, t],
-                    duration_logits[b, t - 1],
-                    transition_logits[b, t - 1],
+                    sequence.log_probs[b : b + 1, t],
+                    duration_logits[b : b + 1, t - 1],
+                    transition_logits[b : b + 1, t - 1],
                 )
                 trace[b, t] = state.log_posterior[0]
 
