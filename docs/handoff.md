@@ -419,6 +419,12 @@ Independent brute-force filtering checks and forward/filter equivalence checks p
 
 Final local gate: focused regressions `5 passed`; Ruff PASS; Black PASS; full suite `330 passed, 3 skipped` (CUDA unavailable).
 
+## 2026-10-06 ContextEncoder opt-in closure
+
+The default model is now encoderless (`use_context_encoder=False`). Internal learned context is explicit opt-in; external context does not require the internal encoder. The encoderless causal runtime is bounded, artifact roundtrip supports absent encoders, and legacy v1 encoder artifacts remain load-compatible.
+
+Final local gate: focused `54 passed`, affected-area `82 passed`, Ruff PASS, Black PASS, full suite `339 passed, 3 skipped` (CUDA unavailable).
+
 ## Next-chat execution order
 
 1. Read `AGENTS.md`, `docs/state.md`, this handoff, and `docs/validation/code-scan-2026-09-28.md`.

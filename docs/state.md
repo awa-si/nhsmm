@@ -220,6 +220,24 @@ pytest -q: 330 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace.
 
+## 2026-10-06 ContextEncoder opt-in
+
+`ContextEncoder` is no longer implicit. `ModelConfig.use_context_encoder` defaults to `False`, so the baseline NHSMM has no internal encoder and no context networks when `context_dim` is unset. Learned observation-derived context is enabled explicitly with `use_context_encoder=True`; passing an explicit `encoder=` also opts in and records that choice in the config. External context remains independent: configure `context_dim` and pass context explicitly without constructing an internal encoder.
+
+The encoderless causal runtime now stays bounded and scores each observation directly instead of retaining/re-encoding the full prefix. Artifacts support `encoder_config=None`; v1 payloads created before this field existed remain compatible by inferring encoder use from their stored encoder metadata.
+
+Verification:
+
+```text
+focused opt-in/runtime/artifact gate: 54 passed
+follow-up affected-area gate: 82 passed
+ruff check nhsmm tests scripts: PASS
+black --check nhsmm tests scripts: PASS
+pytest -q: 339 passed, 3 skipped
+```
+
+The three skips are CUDA-only tests on the CPU workspace.
+
 ## Accepted package-core evidence
 
 ### Duration context
