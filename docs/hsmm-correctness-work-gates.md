@@ -215,6 +215,8 @@ Float64 establishes the tight mathematical-reference baseline. Float32 limits mu
 
 **Acceptance:** bounds are documented in tests or `testing.md`, remain below the level at which state/MAP/boundary semantics change, and long-sequence recursion remains stable.
 
+**Current status:** complete. Deterministic precision probes measured Float64 maxima of approximately `1.8e-15` likelihood error, `1.5e-14` finite log-posterior error, and `<3.0e-15` posterior-marginal probability error. The corresponding Float32 maxima were approximately `1.7e-6`, `5.8e-6`, and `<8.1e-7`. Over 128-step Float32 sequences, causal batch-vs-filter/runtime maxima were approximately `1.15e-5` in finite log posterior and `<7.4e-6` in joint/state/age probabilities. Regression bounds in `tests/reference/test_numerical_precision_envelope.py` retain measured headroom (`3e-6` likelihood, `1e-5` short log posterior, `2e-5` long log posterior, and `<=1e-5` probability errors) while remaining well below `1e-4`. Extreme-logit cases additionally require Float32 to preserve dominant state/age decisions whenever the Float64 reference winner margin exceeds `1e-4`.
+
 ## Gate 9 — Statistical recovery remains separate
 
 **Goal:** confirm that mathematically correct inference still recovers known synthetic structure.
