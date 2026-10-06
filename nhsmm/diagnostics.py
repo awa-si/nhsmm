@@ -133,16 +133,21 @@ def evaluate_model_health(
             viterbi_states_used = int((viterbi_usage >= thresholds.min_state_occupancy).sum())
 
             B, T = valid.shape
+            sequence_context = sequence.contexts if sequence.contexts.shape[-1] > 0 else None
             duration_log = model.dist.duration.log_matrix(
-                context=sequence.contexts,
+                context=sequence_context,
                 T=T,
                 soft_dmax=model.duration_logits_bias,
             )
             transition_log = model.dist.transition.log_matrix(
-                context=sequence.contexts,
+                context=sequence_context,
                 T=T,
                 soft_dmax=model.duration_logits_bias,
             )
+            if duration_log.shape[0] == 1 and B > 1:
+                duration_log = duration_log.expand(B, *duration_log.shape[1:])
+            if transition_log.shape[0] == 1 and B > 1:
+                transition_log = transition_log.expand(B, *transition_log.shape[1:])
             if duration_log.shape[:2] != (B, T):
                 raise RuntimeError("duration diagnostics received incompatible shape")
             if transition_log.shape[:2] != (B, T):

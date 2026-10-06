@@ -342,23 +342,31 @@ def filter_model_sequence(
         if T == 0:
             return HSMMFilterTrace(trace, sequence.lengths.clone())
 
+        canonical_context = sequence.canonical if sequence.canonical.shape[-1] > 0 else None
+        sequence_context = sequence.contexts if sequence.contexts.shape[-1] > 0 else None
         initial_logits = model.dist.initial.log_matrix(
-            context=sequence.canonical,
+            context=canonical_context,
             temperature=temperature,
             T=T,
         )
         duration_logits = model.dist.duration.log_matrix(
-            context=sequence.contexts,
+            context=sequence_context,
             temperature=temperature,
             T=T,
             soft_dmax=model.duration_logits_bias,
         )
         transition_logits = model.dist.transition.log_matrix(
-            context=sequence.contexts,
+            context=sequence_context,
             temperature=temperature,
             T=T,
             soft_dmax=model.duration_logits_bias,
         )
+        if initial_logits.shape[0] == 1 and B > 1:
+            initial_logits = initial_logits.expand(B, *initial_logits.shape[1:])
+        if duration_logits.shape[0] == 1 and B > 1:
+            duration_logits = duration_logits.expand(B, *duration_logits.shape[1:])
+        if transition_logits.shape[0] == 1 and B > 1:
+            transition_logits = transition_logits.expand(B, *transition_logits.shape[1:])
 
         expected_initial = (B, 1, K)
         expected_duration = (B, T, K, D)

@@ -13,6 +13,7 @@ def _make_model() -> NHSMM:
         n_features=4,
         max_duration=5,
         causal=True,
+        use_context_encoder=True,
         dropout=0.0,
         seed=29,
     )
@@ -120,6 +121,7 @@ def test_runtime_matches_batch_filter_with_explicit_context_dim() -> None:
         n_features=4,
         max_duration=5,
         causal=True,
+        use_context_encoder=True,
         context_dim=2,
         dropout=0.0,
         seed=41,

@@ -91,7 +91,8 @@ class ModelConfig:
     n_features: int
     pad_value: float = 0.0
 
-    # Encoder
+    # Encoder / context
+    use_context_encoder: bool = False
     n_heads: int = 4
     cnn_kernel: int = 3
     cnn_channels: int = 5
@@ -180,7 +181,13 @@ class ModelConfig:
         ):
             _require_finite(name, getattr(self, name), minimum=0.0)
 
-        for name in ("causal", "use_scheduler", "convergence_stop", "verbose"):
+        for name in (
+            "use_context_encoder",
+            "causal",
+            "use_scheduler",
+            "convergence_stop",
+            "verbose",
+        ):
             _require_bool(name, getattr(self, name))
 
         choices = {
@@ -395,6 +402,7 @@ def _default_validation_model() -> ModelConfig:
         convergence_stop=False,
         verbose=False,
         dropout=0.0,
+        use_context_encoder=True,
         emission_init_mode="kmeans",
     )
 

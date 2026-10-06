@@ -15,6 +15,7 @@ def test_optimize_updates_causal_encoder_parameters() -> None:
         n_features=3,
         max_duration=6,
         causal=True,
+        use_context_encoder=True,
         dropout=0.0,
         seed=17,
         n_init=1,
@@ -53,6 +54,7 @@ def test_run_initialization_does_not_warm_start_encoder_or_duration_bias() -> No
         n_features=2,
         max_duration=5,
         causal=True,
+        use_context_encoder=True,
         dropout=0.0,
         seed=23,
         n_init=2,
@@ -127,7 +129,7 @@ def test_kmeans_emission_initialization_recovers_separated_centers() -> None:
     model._initialize_run_state(
         0,
         observations=observations,
-        encoder_state=model._clone_state_dict(model.encoder),
+        encoder_state=None,
         emission_init_mode="kmeans",
     )
 
@@ -157,7 +159,8 @@ def test_optimize_runs_multiple_restarts_without_warm_start_errors() -> None:
 
     model.optimize(x)
 
-    assert set(model._best_state) >= {"dist", "encoder", "duration_logits_bias"}
+    assert set(model._best_state) >= {"dist", "duration_logits_bias"}
+    assert "encoder" not in model._best_state
     assert torch.isfinite(model.log_likelihood(x, reduce=True))
 
 
@@ -167,6 +170,7 @@ def test_model_config_dropout_reaches_default_encoder() -> None:
         n_features=2,
         max_duration=4,
         causal=True,
+        use_context_encoder=True,
         dropout=0.0,
         verbose=False,
     )
@@ -589,5 +593,5 @@ def test_optimize_restores_eval_mode_for_restarted_distributions() -> None:
     model.optimize(torch.randn(6, 2))
 
     assert not model.training
-    assert not model.encoder.training
+    assert model.encoder is None
     assert not model.dist.training

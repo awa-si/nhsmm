@@ -60,6 +60,8 @@ config = ModelConfig(
 
 model = NHSMM(config=config)
 model.initialize_distributions()
+
+# ContextEncoder is opt-in; the default model has no internal encoder.
 ```
 
 `ModelConfig` is the runtime/training configuration contract. Validation policy is
@@ -143,9 +145,15 @@ See [`docs/model.md`](docs/model.md) for the detailed model/runtime contract.
 
 ## Context modes
 
-NHSMM supports two runtime context paths.
+NHSMM supports three runtime context paths. `ContextEncoder` is opt-in.
 
-### Internal context
+### No context — default
+
+`ModelConfig.use_context_encoder` defaults to `False`. No internal encoder is constructed; the probabilistic HSMM runs directly on its base distribution parameters and emission likelihoods. This is the smallest model surface for direct math, distribution, training, and runtime tests.
+
+### Internal context — opt-in
+
+Enable learned observation-derived context explicitly with `use_context_encoder=True`. Passing an explicit `encoder=` to `NHSMM(...)` is also treated as an opt-in and is recorded in the model config.
 
 The configured causal encoder derives context from observations.
 
@@ -155,7 +163,7 @@ runtime.step(observation)
 
 ### External context
 
-The caller supplies context explicitly.
+The caller can supply context explicitly without enabling the internal encoder. Configure `context_dim` to the external context width.
 
 ```python
 runtime.step(
@@ -205,7 +213,7 @@ The interface repository must consume this package through public exports such a
 
 ## Causal and retrospective paths
 
-`ModelConfig(causal=True)` enables the causal encoder/runtime path.
+`ModelConfig(causal=True)` enables causal HSMM/runtime semantics; add `use_context_encoder=True` only when learned internal context is required.
 
 The causal filter state is represented over latent state and episode age:
 

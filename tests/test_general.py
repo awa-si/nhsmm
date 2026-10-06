@@ -11,6 +11,7 @@ def _make_model(*, causal: bool = True) -> NHSMM:
         n_features=4,
         max_duration=5,
         causal=causal,
+        use_context_encoder=True,
         dropout=0.0,
         seed=7,
     )

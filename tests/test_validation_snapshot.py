@@ -21,6 +21,7 @@ def _model(seed: int = 41) -> NHSMM:
             n_features=2,
             max_duration=5,
             causal=True,
+            use_context_encoder=True,
             dropout=0.0,
             seed=seed,
             max_iter=1,

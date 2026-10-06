@@ -24,14 +24,18 @@ _ARTIFACT_KEYS = {
 }
 
 
-def _raw_default_encoder(model: NHSMM) -> DefaultEncoder:
+def _raw_default_encoder(model: NHSMM) -> Optional[DefaultEncoder]:
+    if model.encoder is None:
+        return None
     encoder = model.encoder.encoder if isinstance(model.encoder, ContextEncoder) else model.encoder
     if not isinstance(encoder, DefaultEncoder):
         raise ValueError("artifact v1 supports only the canonical DefaultEncoder")
     return encoder
 
 
-def _encoder_config(encoder: DefaultEncoder) -> dict[str, Any]:
+def _encoder_config(encoder: Optional[DefaultEncoder]) -> Optional[dict[str, Any]]:
+    if encoder is None:
+        return None
     return {
         "type": "DefaultEncoder",
         "n_features": int(encoder.n_features),
@@ -105,7 +109,9 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
     if payload["artifact_version"] != ARTIFACT_VERSION:
         raise ValueError(f"unsupported artifact version: {payload['artifact_version']!r}")
 
-    config_data = _require_mapping(payload["model_config"], "model_config")
+    config_data = dict(_require_mapping(payload["model_config"], "model_config"))
+    if "use_context_encoder" not in config_data:
+        config_data["use_context_encoder"] = payload["encoder_config"] is not None
     try:
         config = ModelConfig.from_dict(config_data)
     except (TypeError, ValueError) as exc:
@@ -119,44 +125,51 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
             f"expected={expected_schema}, got={dict(schema)}"
         )
 
-    encoder_meta = _require_mapping(payload["encoder_config"], "encoder_config")
-    expected_encoder_keys = {
-        "type",
-        "n_features",
-        "cnn_kernel",
-        "hidden_dim",
-        "cnn_channels",
-        "bidirectional",
-        "return_sequence",
-        "use_packed",
-        "causal",
-    }
-    if set(encoder_meta) != expected_encoder_keys:
-        raise ValueError("encoder_config keys do not match DefaultEncoder artifact v1 schema")
-    if encoder_meta["type"] != "DefaultEncoder":
-        raise ValueError("artifact v1 supports only DefaultEncoder")
-    if int(encoder_meta["n_features"]) != config.n_features:
-        raise ValueError("encoder n_features does not match ModelConfig")
-    if int(encoder_meta["cnn_kernel"]) != config.cnn_kernel:
-        raise ValueError("encoder cnn_kernel does not match ModelConfig")
-    if int(encoder_meta["cnn_channels"]) != config.cnn_channels:
-        raise ValueError("encoder cnn_channels does not match ModelConfig")
-    if bool(encoder_meta["causal"]) != config.causal:
-        raise ValueError("encoder causal mode does not match ModelConfig")
-    if bool(encoder_meta["bidirectional"]) != (not config.causal):
-        raise ValueError("encoder directionality does not match ModelConfig.causal")
-    encoder_output_dim = int(encoder_meta["hidden_dim"]) * (
-        2 if bool(encoder_meta["bidirectional"]) else 1
-    )
-    if (
-        config.hidden_dim is None
-        or config.context_dim is None
-        or config.hidden_dim != config.context_dim
-        or encoder_output_dim != config.context_dim
-    ):
-        raise ValueError(
-            "encoder output dimension does not match resolved ModelConfig context dimension"
+    encoder_payload = payload["encoder_config"]
+    if encoder_payload is None:
+        if config.use_context_encoder:
+            raise ValueError("encoder_config is required when use_context_encoder=True")
+    else:
+        if not config.use_context_encoder:
+            raise ValueError("encoder_config requires use_context_encoder=True")
+        encoder_meta = _require_mapping(encoder_payload, "encoder_config")
+        expected_encoder_keys = {
+            "type",
+            "n_features",
+            "cnn_kernel",
+            "hidden_dim",
+            "cnn_channels",
+            "bidirectional",
+            "return_sequence",
+            "use_packed",
+            "causal",
+        }
+        if set(encoder_meta) != expected_encoder_keys:
+            raise ValueError("encoder_config keys do not match DefaultEncoder artifact v1 schema")
+        if encoder_meta["type"] != "DefaultEncoder":
+            raise ValueError("artifact v1 supports only DefaultEncoder")
+        if int(encoder_meta["n_features"]) != config.n_features:
+            raise ValueError("encoder n_features does not match ModelConfig")
+        if int(encoder_meta["cnn_kernel"]) != config.cnn_kernel:
+            raise ValueError("encoder cnn_kernel does not match ModelConfig")
+        if int(encoder_meta["cnn_channels"]) != config.cnn_channels:
+            raise ValueError("encoder cnn_channels does not match ModelConfig")
+        if bool(encoder_meta["causal"]) != config.causal:
+            raise ValueError("encoder causal mode does not match ModelConfig")
+        if bool(encoder_meta["bidirectional"]) != (not config.causal):
+            raise ValueError("encoder directionality does not match ModelConfig.causal")
+        encoder_output_dim = int(encoder_meta["hidden_dim"]) * (
+            2 if bool(encoder_meta["bidirectional"]) else 1
         )
+        if (
+            config.hidden_dim is None
+            or config.context_dim is None
+            or config.hidden_dim != config.context_dim
+            or encoder_output_dim != config.context_dim
+        ):
+            raise ValueError(
+                "encoder output dimension does not match resolved ModelConfig context dimension"
+            )
 
     state_dict = _require_mapping(payload["state_dict"], "state_dict")
     if not state_dict:
@@ -195,6 +208,9 @@ def load_artifact(
         freeze=freeze,
     )
     actual_encoder = _encoder_config(_raw_default_encoder(model))
-    if actual_encoder != dict(payload["encoder_config"]):
+    expected_encoder = payload["encoder_config"]
+    if expected_encoder is not None:
+        expected_encoder = dict(expected_encoder)
+    if actual_encoder != expected_encoder:
         raise ValueError("reconstructed encoder does not match artifact encoder configuration")
     return model

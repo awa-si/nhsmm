@@ -8,7 +8,7 @@ NHSMM separates model/training configuration from validation policy.
 
 `ModelConfig` is the runtime/training contract used by `NHSMM`.
 
-It remains the single source of truth for model architecture, encoder dimensions and causality, distribution and initialization choices, duration/transition capacity, optimizer/convergence policy, seed, and training budget.
+It remains the single source of truth for model architecture, optional context-encoder use, context dimensions and causality, distribution and initialization choices, duration/transition capacity, optimizer/convergence policy, seed, and training budget.
 
 The contract is strict:
 
@@ -32,6 +32,8 @@ payload = tuned.to_dict()
 ```
 
 Unknown keys are rejected. Overrides return a newly validated config and never silently ignore misspelled tuning parameters.
+
+`use_context_encoder=False` is the default. In that mode `NHSMM` does not construct a `ContextEncoder`. Set `use_context_encoder=True` to opt into learned observation-derived context. External context is independent of this switch: configure `context_dim` and pass context explicitly when needed.
 
 ## ValidationConfig
 

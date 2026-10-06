@@ -13,7 +13,7 @@ The NHSMM separates four probabilistic components:
 3. duration distribution;
 4. emission distribution.
 
-An optional context encoder can condition these components on sequence context.
+An optional, explicitly enabled context encoder can condition these components on sequence context. The default model has no internal encoder.
 
 ```text
 observations
@@ -45,6 +45,8 @@ config = ModelConfig(
 
 model = NHSMM(config=config)
 model.initialize_distributions()
+
+# use_context_encoder=False by default
 ```
 
 A model intended for streaming use must be causal.
@@ -151,12 +153,18 @@ If the first step omits a timestamp, timestamps cannot be enabled later without 
 
 A runtime session uses either:
 
-- internal model context; or
+- the model's no-external-context path, which may be encoderless or use an opted-in internal encoder; or
 - external caller-provided context.
 
-The mode is fixed on the first step and cannot change until `runtime.reset()`.
+The external-vs-non-external mode is fixed on the first step and cannot change until `runtime.reset()`.
 
-## Internal context
+## No internal context — default
+
+With `use_context_encoder=False` and no external context, observations are scored directly by the emission model and initial/duration/transition use their context-free parameters. No `ContextEncoder` is constructed. The canonical causal runtime remains bounded and retains only the latest accepted observation plus HSMM filter state.
+
+## Internal context — opt-in
+
+Set `use_context_encoder=True` in `ModelConfig` when learned observation-derived context is required.
 
 With no external context:
 
@@ -179,7 +187,7 @@ state = runtime.step(
 )
 ```
 
-Context dimensionality must equal `model.context_dim`.
+External context requires `ModelConfig.context_dim`; its dimensionality must equal `model.context_dim`. An internal encoder is not required.
 
 External context remains the caller's responsibility for every step in that runtime session.
 

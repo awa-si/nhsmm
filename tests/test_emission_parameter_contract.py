@@ -102,7 +102,7 @@ def test_kmeans_initialize_preserves_emission_parameter_identity_and_unit_varian
     model._initialize_run_state(
         0,
         observations=observations,
-        encoder_state=model._clone_state_dict(model.encoder),
+        encoder_state=None,
         emission_init_mode="kmeans",
     )
 

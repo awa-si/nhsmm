@@ -14,6 +14,7 @@ def _model() -> NHSMM:
         n_features=4,
         max_duration=5,
         causal=True,
+        use_context_encoder=True,
         dropout=0.0,
         seed=41,
     )
@@ -76,6 +77,7 @@ def test_artifact_round_trip_with_explicit_context_dim(tmp_path) -> None:
         n_features=4,
         max_duration=5,
         causal=True,
+        use_context_encoder=True,
         context_dim=2,
         dropout=0.0,
         seed=47,
@@ -102,6 +104,7 @@ def test_noncausal_artifact_round_trip_preserves_explicit_context_dim(tmp_path) 
         n_features=3,
         max_duration=4,
         causal=False,
+        use_context_encoder=True,
         context_dim=2,
         hidden_dim=2,
         dropout=0.0,

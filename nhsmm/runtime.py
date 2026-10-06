@@ -156,11 +156,21 @@ def _as_observation(observation: torch.Tensor, *, n_features: int) -> torch.Tens
 
 def _boundary_scores(
     model: Any,
-    context: torch.Tensor,
+    context: Optional[torch.Tensor],
     *,
     temperature: Optional[float],
     cache: Optional[_RuntimeScoreCache] = None,
+    batch_size: Optional[int] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    context_arg = context
+    if context_arg is not None and context_arg.shape[-1] == 0:
+        context_arg = None
+    if context_arg is None:
+        if batch_size is None:
+            raise ValueError("batch_size is required when context is None")
+        B = int(batch_size)
+    else:
+        B = context_arg.shape[0]
     duration_dist = model.dist.duration
     duration_bias = model.duration_logits_bias
     if (
@@ -169,7 +179,7 @@ def _boundary_scores(
         and duration_bias.shape == (int(model.config.n_states), int(duration_dist.max_duration))
     ):
         duration_mod = duration_dist._modulate(
-            context=context,
+            context=context_arg,
             temperature=temperature,
         )
         gate_log = cache.duration_gate_log(duration_bias)
@@ -180,13 +190,17 @@ def _boundary_scores(
         while duration.ndim < 4:
             duration = duration.unsqueeze(0)
         duration = duration[:, 0]
+        if duration.shape[0] == 1 and B > 1:
+            duration = duration.expand(B, *duration.shape[1:])
     else:
         duration = duration_dist.log_matrix(
-            context=context,
+            context=context_arg,
             temperature=temperature,
             T=1,
             soft_dmax=duration_bias,
         )[:, 0]
+        if duration.shape[0] == 1 and B > 1:
+            duration = duration.expand(B, *duration.shape[1:])
 
     transition_dist = model.dist.transition
     if (
@@ -196,7 +210,7 @@ def _boundary_scores(
         and getattr(transition_dist, "max_duration", None) is not None
     ):
         base = transition_dist._tensor_shape(transition_dist.base)
-        delta = transition_dist._apply_context(base, context)
+        delta = transition_dist._apply_context(base, context_arg)
         transition_mod = transition_dist._validate_base(base + delta)
         transition_mod = transition_dist._apply_temperature(
             transition_mod,
@@ -206,15 +220,18 @@ def _boundary_scores(
         while transition.ndim < 5:
             transition = transition.unsqueeze(0)
         transition = transition[:, 0]
+        if transition.shape[0] == 1 and B > 1:
+            transition = transition.expand(B, *transition.shape[1:])
     else:
         transition = transition_dist.log_matrix(
-            context=context,
+            context=context_arg,
             temperature=temperature,
             T=1,
             soft_dmax=duration_bias,
         )[:, 0]
+        if transition.shape[0] == 1 and B > 1:
+            transition = transition.expand(B, *transition.shape[1:])
 
-    B = context.shape[0]
     K = int(model.config.n_states)
     D = int(model.dist.duration.max_duration)
     if duration.shape != (B, K, D):
@@ -239,7 +256,7 @@ def _stream_encoder(model: Any) -> Optional[Any]:
 def _emission_log_prob(
     model: Any,
     observation: torch.Tensor,
-    context: torch.Tensor,
+    context: Optional[torch.Tensor],
     cache: Optional[_RuntimeScoreCache] = None,
 ) -> torch.Tensor:
     B = observation.shape[0]
@@ -341,6 +358,10 @@ class HSMMFilterRuntime:
 
         external_context = None
         if uses_external_context:
+            if self.model.context_dim is None:
+                raise ValueError(
+                    "external context requires ModelConfig.context_dim to be configured"
+                )
             external_context = align_context_tensor(
                 context,
                 batch_size=obs.shape[0],
@@ -428,6 +449,47 @@ class HSMMFilterRuntime:
                     duration_log_prob=duration,
                     transition_log_prob=transition,
                     encoder_state=encoder_state,
+                    last_timestamp=timestamp,
+                    uses_timestamps=timestamp is not None,
+                )
+                return filter_state
+
+            if getattr(self.model, "encoder", None) is None:
+                B = obs.shape[0]
+                K = int(self.model.config.n_states)
+                emission = _emission_log_prob(
+                    self.model,
+                    obs,
+                    None,
+                    self._score_cache,
+                )
+                initial = self.model.dist.initial.log_matrix(
+                    context=None,
+                    temperature=self.temperature,
+                    T=1,
+                )
+                if initial.shape[0] == 1 and B > 1:
+                    initial = initial.expand(B, *initial.shape[1:])
+                if initial.shape != (B, 1, K):
+                    raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
+                filter_state = initialize_filter(
+                    initial[:, 0],
+                    emission,
+                    int(self.model.dist.duration.max_duration),
+                )
+                duration, transition = _boundary_scores(
+                    self.model,
+                    None,
+                    temperature=self.temperature,
+                    cache=self._score_cache,
+                    batch_size=B,
+                )
+                self.state = HSMMRuntimeState(
+                    filter_state=filter_state,
+                    observations=obs.clone(),
+                    duration_log_prob=duration,
+                    transition_log_prob=transition,
+                    encoder_state=None,
                     last_timestamp=timestamp,
                     uses_timestamps=timestamp is not None,
                 )
@@ -544,6 +606,37 @@ class HSMMFilterRuntime:
                 duration_log_prob=duration,
                 transition_log_prob=transition,
                 encoder_state=encoder_state,
+                last_timestamp=timestamp if previous.uses_timestamps else None,
+                uses_timestamps=previous.uses_timestamps,
+            )
+            return filter_state
+
+        if getattr(self.model, "encoder", None) is None:
+            emission = _emission_log_prob(
+                self.model,
+                obs,
+                None,
+                self._score_cache,
+            )
+            filter_state = _filter_step_normalized(
+                previous.filter_state,
+                emission,
+                previous.duration_log_prob,
+                previous.transition_log_prob,
+            )
+            duration, transition = _boundary_scores(
+                self.model,
+                None,
+                temperature=self.temperature,
+                cache=self._score_cache,
+                batch_size=obs.shape[0],
+            )
+            self.state = HSMMRuntimeState(
+                filter_state=filter_state,
+                observations=obs.clone(),
+                duration_log_prob=duration,
+                transition_log_prob=transition,
+                encoder_state=None,
                 last_timestamp=timestamp if previous.uses_timestamps else None,
                 uses_timestamps=previous.uses_timestamps,
             )

@@ -117,6 +117,9 @@ class NHSMM(nn.Module):
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(self.config.seed)
 
+        if encoder is not None:
+            self.config.use_context_encoder = True
+
         self.context_dim = self.config.context_dim
         self.hidden_dim = self.config.hidden_dim
 
@@ -127,6 +130,10 @@ class NHSMM(nn.Module):
         self.to(device=self.device, dtype=DTYPE)
 
     def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
+        if encoder is None and not self.config.use_context_encoder:
+            self.encoder = None
+            return
+
         if encoder is None:
             if self.config.context_dim is None:
                 encoder_hidden_dim = max(32, min(64, self.config.n_features * 2))
@@ -241,6 +248,7 @@ class NHSMM(nn.Module):
             "transition_type",
             "emission_type",
             "activation",
+            "use_context_encoder",
         )
         mismatches = [
             name for name in structural_fields if getattr(cfg, name) != getattr(self.config, name)
@@ -314,18 +322,23 @@ class NHSMM(nn.Module):
             )
 
         if context is None:
-            context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
-            if self.config.causal:
-                canonical = context_tensor[:, :1]
+            if self.encoder is None:
+                context_tensor = X.new_zeros((B, T, 0))
+                canonical = X.new_zeros((B, 1, 0))
+            else:
+                context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
+                if self.config.causal:
+                    canonical = context_tensor[:, :1]
         else:
             context_tensor = context
             canonical = context_tensor[:, :1]
 
         K = self.config.n_states
+        emission_context = context_tensor if context_tensor.shape[-1] > 0 else None
         if T == 0:
             log_probs = X.new_empty(B, 0, K)
         else:
-            log_probs = self.dist.emission.log_prob(X, context=context_tensor)
+            log_probs = self.dist.emission.log_prob(X, context=emission_context)
             log_probs = log_probs.masked_fill(~mask.unsqueeze(-1), float("-inf"))
 
         return SequenceSet(
@@ -336,6 +349,18 @@ class NHSMM(nn.Module):
             canonical=canonical,
             log_probs=log_probs,
         )
+
+    @staticmethod
+    def _active_context(context: torch.Tensor) -> Optional[torch.Tensor]:
+        return context if context.shape[-1] > 0 else None
+
+    @staticmethod
+    def _expand_batch(tensor: torch.Tensor, batch_size: int, name: str) -> torch.Tensor:
+        if tensor.shape[0] == batch_size:
+            return tensor
+        if tensor.shape[0] == 1:
+            return tensor.expand(batch_size, *tensor.shape[1:])
+        raise ValueError(f"{name} batch dimension must be 1 or {batch_size}, got {tensor.shape[0]}")
 
     def _forward_causal_hazard(
         self,
@@ -356,22 +381,26 @@ class NHSMM(nn.Module):
             return alpha
 
         initial_logits = self.dist.initial.log_matrix(
-            context=router.canonical,
+            context=self._active_context(router.canonical),
             temperature=temperature,
             T=T,
         )
         duration_logits = self.dist.duration.log_matrix(
-            context=router.context,
+            context=self._active_context(router.context),
             temperature=temperature,
             T=T,
             soft_dmax=self.duration_logits_bias,
         )
         transition_logits = self.dist.transition.log_matrix(
-            context=router.context,
+            context=self._active_context(router.context),
             temperature=temperature,
             T=T,
             soft_dmax=self.duration_logits_bias,
         )
+
+        initial_logits = self._expand_batch(initial_logits, B, "initial logits")
+        duration_logits = self._expand_batch(duration_logits, B, "duration logits")
+        transition_logits = self._expand_batch(transition_logits, B, "transition logits")
 
         expected_initial = (B, 1, K)
         expected_duration = (B, T, K, D)
@@ -456,9 +485,18 @@ class NHSMM(nn.Module):
             timestep=timestep,
             T=T,
         )
-        initial_logits = self.dist.initial.log_matrix(context=router.canonical, **kwargs)
-        duration_logits = self.dist.duration.log_matrix(context=router.context, **kwargs)
-        transition_logits = self.dist.transition.log_matrix(context=router.context, **kwargs)
+        initial_logits = self.dist.initial.log_matrix(
+            context=self._active_context(router.canonical), **kwargs
+        )
+        duration_logits = self.dist.duration.log_matrix(
+            context=self._active_context(router.context), **kwargs
+        )
+        transition_logits = self.dist.transition.log_matrix(
+            context=self._active_context(router.context), **kwargs
+        )
+        initial_logits = self._expand_batch(initial_logits, B, "initial logits")
+        duration_logits = self._expand_batch(duration_logits, B, "duration logits")
+        transition_logits = self._expand_batch(transition_logits, B, "transition logits")
 
         cumsum_emit = torch.zeros((B, T + 1, K), device=device)
         cumsum_emit[:, 1:] = torch.cumsum(router.log_probs, dim=1)
@@ -545,16 +583,16 @@ class NHSMM(nn.Module):
                 predicted.append(router.log_probs.new_empty(0, dtype=torch.long))
                 continue
 
-            initial_logits = self.dist.initial.log_matrix(context=router.canonical[b : b + 1], T=L)[
-                0, 0
-            ]
+            initial_logits = self.dist.initial.log_matrix(
+                context=self._active_context(router.canonical[b : b + 1]), T=L
+            )[0, 0]
             duration_logits = self.dist.duration.log_matrix(
-                context=router.context[b : b + 1, :L],
+                context=self._active_context(router.context[b : b + 1, :L]),
                 T=L,
                 soft_dmax=self.duration_logits_bias,
             )[0]
             transition_logits = self.dist.transition.log_matrix(
-                context=router.context[b : b + 1, :L],
+                context=self._active_context(router.context[b : b + 1, :L]),
                 T=L,
                 soft_dmax=self.duration_logits_bias,
             )[0]
@@ -640,14 +678,18 @@ class NHSMM(nn.Module):
                 predicted.append(router.log_probs.new_empty(0, dtype=torch.long))
                 continue
 
-            initial_logits = self.dist.initial.log_matrix(context=router.canonical[b : b + 1], T=L)[
-                0, 0
-            ]
+            initial_logits = self.dist.initial.log_matrix(
+                context=self._active_context(router.canonical[b : b + 1]), T=L
+            )[0, 0]
             duration_logits = self.dist.duration.log_matrix(
-                context=router.context[b : b + 1, :L], T=L, soft_dmax=self.duration_logits_bias
+                context=self._active_context(router.context[b : b + 1, :L]),
+                T=L,
+                soft_dmax=self.duration_logits_bias,
             )[0]
             transition_logits = self.dist.transition.log_matrix(
-                context=router.context[b : b + 1, :L], T=L, soft_dmax=self.duration_logits_bias
+                context=self._active_context(router.context[b : b + 1, :L]),
+                T=L,
+                soft_dmax=self.duration_logits_bias,
             )[0]
 
             emit_log = router.log_probs[b, :L]

@@ -12,6 +12,7 @@ def _model() -> NHSMM:
         n_features=4,
         max_duration=5,
         causal=True,
+        use_context_encoder=True,
         dropout=0.0,
         seed=97,
     )
