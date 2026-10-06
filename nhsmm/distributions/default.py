@@ -228,7 +228,6 @@ class Neural(nn.Module, ABC):
         allow_projection: bool = True,
         delta_scale: float = 0.1,
         max_delta: float = 0.5,
-        alpha: float = 1.0,
     ):
         super().__init__()
 
@@ -239,7 +238,6 @@ class Neural(nn.Module, ABC):
         if int(math.prod(self._shape)) != target_dim:
             raise ValueError("target_dim != prod(_shape)")
 
-        self.alpha = alpha
         self.max_delta = max_delta
         self.target_dim = target_dim
         self.context_dim = context_dim
@@ -458,8 +456,16 @@ class Neural(nn.Module, ABC):
         timestep: Optional[int] = None,
         **kwargs,
     ) -> torch.Tensor:
+        x = torch.as_tensor(x)
+        if x.is_floating_point():
+            if not torch.isfinite(x).all():
+                raise ValueError("categorical observations must contain only finite values")
+            if not torch.equal(x, x.round()):
+                raise ValueError("categorical observations must be integer-valued")
         x = x.long()
         n_states = self._shape[-1]
+        if ((x < 0) | (x >= n_states)).any():
+            raise ValueError(f"categorical observations must be in [0, {n_states - 1}]")
         logits = self._modulate(
             context=context, temperature=temperature, timestep=timestep, **kwargs
         )
@@ -978,7 +984,12 @@ class Emission(Neural):
         delta = super()._apply_context(
             base, context=context, timestep=timestep, grad_scale=grad_scale
         )
-        return delta - delta.mean(dim=-2, keepdim=True)
+        delta = delta - delta.mean(dim=-2, keepdim=True)
+        max_abs = delta.abs().amax(dim=-2, keepdim=True)
+        scale = torch.clamp(
+            self.max_delta / max_abs.clamp_min(torch.finfo(delta.dtype).eps), max=1.0
+        )
+        return delta * scale
 
     def _apply_temperature(
         self, logits: torch.Tensor, temperature: Optional[float] = None

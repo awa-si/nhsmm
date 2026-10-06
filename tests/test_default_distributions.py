@@ -558,3 +558,49 @@ def test_distribution_constructors_reject_unknown_activation(factory) -> None:
 
     with pytest.raises(ValueError, match="Unsupported activation"):
         factory(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "value, match",
+    [
+        (torch.tensor(1.9), "integer-valued"),
+        (torch.tensor(-0.2), "integer-valued"),
+        (torch.tensor(float("nan")), "finite"),
+        (torch.tensor(-1), r"\[0, 2\]"),
+        (torch.tensor(3), r"\[0, 2\]"),
+    ],
+)
+def test_categorical_log_prob_rejects_invalid_labels(value: torch.Tensor, match: str) -> None:
+    distribution = Initial(
+        n_states=3,
+        activation="tanh",
+        context_dim=None,
+        init_mode="uniform",
+    )
+
+    with pytest.raises(ValueError, match=match):
+        distribution.log_prob(value)
+
+
+def test_emission_context_delta_respects_bound_after_state_centering() -> None:
+    emission = Emission(
+        n_states=3,
+        n_features=1,
+        activation="identity",
+        emission_type="gaussian",
+        context_dim=1,
+        hidden_dim=2,
+        allow_projection=False,
+    )
+    emission.max_delta = 0.5
+
+    with torch.no_grad():
+        for parameter in emission.context_net.parameters():
+            parameter.zero_()
+        emission.context_net[3].bias.copy_(torch.tensor([10.0, 10.0, -10.0]))
+        emission.delta_scale.fill_(1.0)
+
+    delta = emission._apply_context(emission.base, torch.ones(1, 1, 1))
+
+    assert delta.abs().max() <= emission.max_delta + 1e-6
+    assert torch.allclose(delta.mean(dim=-2), torch.zeros_like(delta.mean(dim=-2)), atol=1e-6)
