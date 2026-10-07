@@ -357,3 +357,54 @@ def causal_one_step_transition_forecast(
         "next_state_prior": next_state_prior,
         "state_change_probability": episode_end - diagonal_boundary,
     }
+
+
+def duration_hazards_from_tail_mass(
+    log_duration_mass: torch.Tensor,
+    tail_end_probability: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Independent bounded-tail mass-to-hazard transform.
+
+    ``log_duration_mass[..., :-1]`` represents exact durations ``1..D-1``.
+    The final mass is ``P(total_duration >= D)``. The final returned hazard
+    bucket represents ``age >= D`` and uses ``tail_end_probability``.
+    """
+    log_mass = _normalize_last_dim(log_duration_mass, "log_duration_mass")
+    if log_mass.ndim != 3:
+        raise ValueError("log_duration_mass must be [T,K,D]")
+    if not isinstance(tail_end_probability, torch.Tensor):
+        raise TypeError("tail_end_probability must be a torch.Tensor")
+    if tail_end_probability.shape != log_mass.shape[:2]:
+        raise ValueError("tail_end_probability must be [T,K]")
+    if not tail_end_probability.is_floating_point():
+        raise TypeError("tail_end_probability must use a floating dtype")
+    if not torch.isfinite(tail_end_probability).all():
+        raise ValueError("tail_end_probability must be finite")
+    if bool(((tail_end_probability <= 0) | (tail_end_probability > 1)).any()):
+        raise ValueError("tail_end_probability must satisfy 0 < h <= 1")
+
+    T, K, D = log_mass.shape
+    log_end = torch.full_like(log_mass, float("-inf"))
+    log_continue = torch.full_like(log_mass, float("-inf"))
+
+    for t in range(T):
+        for k in range(K):
+            probs = log_mass[t, k].exp()
+            for age_index in range(max(D - 1, 0)):
+                survival = probs[age_index:].sum()
+                if survival <= 0:
+                    continue
+                p_end = probs[age_index] / survival
+                p_continue = probs[age_index + 1 :].sum() / survival
+                if p_end > 0:
+                    log_end[t, k, age_index] = p_end.log()
+                if p_continue > 0:
+                    log_continue[t, k, age_index] = p_continue.log()
+
+            h_tail = tail_end_probability[t, k]
+            log_end[t, k, D - 1] = h_tail.log()
+            p_continue_tail = 1.0 - h_tail
+            if p_continue_tail > 0:
+                log_continue[t, k, D - 1] = p_continue_tail.log()
+
+    return log_end, log_continue
