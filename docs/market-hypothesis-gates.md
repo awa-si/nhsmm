@@ -21,7 +21,39 @@ Required evidence:
 
 **Failure meaning:** if duration is effectively geometric or unstable OOS, explicit-duration structure is not justified for the trading application.
 
-**Current status:** pending.
+**Frozen first-pass contract (2026-10-07):**
+
+- market/data: Binance BTCUSDT perpetual, completed Nautilus daily catalogs only;
+- usable interval: 2023-10-03 through 2023-11-25; incomplete `2023-11-26.building` is excluded;
+- decision cadence: 5-minute trigger;
+- observation contract: `axis-observation-v2-to-nautilus-temporal-observations-v1`, 18 coordinates;
+- causal equal-timestamp event order: `1m -> 5m -> 15m -> 1h`;
+- state count: `K=3`;
+- emissions: Gaussian;
+- initialization: `emission_init_mode="kmeans"`;
+- internal ContextEncoder: disabled;
+- optimization: package default `n_init=3`, `max_iter=40`;
+- preprocessing: feature-wise mean/std fitted on training observations only and then applied unchanged to OOS;
+- HMM baseline: causal NHSMM recurrence with `max_duration=1`;
+- explicit-duration candidate: causal NHSMM with `max_duration=96` (8 hours at the 5-minute cadence);
+- W1 train: 2023-10-03..2023-10-20, OOS: 2023-10-21..2023-10-31;
+- W2 train: 2023-10-03..2023-10-31, OOS: 2023-11-01..2023-11-12;
+- W3 train: 2023-10-03..2023-11-12, OOS: 2023-11-13..2023-11-25;
+- model seeds by split: W1=1101, W2=1102, W3=1103.
+
+Primary OOS metric is per-timestep log-likelihood gain:
+
+```text
+delta_ll = HSMM_oos_log_likelihood_per_step - HMM_oos_log_likelihood_per_step
+```
+
+A split has a material OOS duration advantage when `delta_ll >= 0.01` nats/timestep. Replication requires at least 2 of 3 splits to meet that bound and median `delta_ll > 0`.
+
+The mechanism guard evaluates the learned context-free HSMM duration hazard only over materially supported ages: ages whose survival probability is at least `0.10`. For states with fitted training occupancy at least `0.10`, a material non-geometric duration effect requires `max(hazard)-min(hazard) >= 0.10`. At least one materially occupied state must meet this condition in at least 2 of 3 splits.
+
+Gate 11 first-pass acceptance requires **both** replicated OOS likelihood advantage and replicated material hazard non-constancy. If the K=3 first pass passes, state-count sensitivity at K=2 and K=4 is confirmatory work required before final Gate-11 closure. Thresholds above remain frozen for that confirmation.
+
+**Current status:** running under the frozen first-pass contract.
 
 ## Gate 12 — Predictive state separation
 
