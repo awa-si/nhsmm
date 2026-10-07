@@ -154,3 +154,10 @@ The next research block is defined in [market-hypothesis-gates.md](market-hypoth
 - Gate 14: replicated OOS utility against HMM/state-only/no-regime baselines.
 
 These gates are intentionally falsifiable and downstream-facing. They do not reopen Gates 0–10 and cannot weaken the accepted package-core correctness claim.
+
+
+## Catalog prerequisite for Gates 11–14
+
+Real-market hypothesis execution is currently **blocked pending completion of the canonical Nautilus catalog**. The package-core milestone remains complete and unaffected.
+
+Before Gate 11 starts, the downstream data foundation must be completed and verified first. No temporary or partial catalog, simplified OHLC substitute, or ad-hoc feature reconstruction is accepted as evidence for Gates 11–14. The later market-hypothesis runs must consume the maintained Nautilus causal feature pipeline and its canonical catalog contract.

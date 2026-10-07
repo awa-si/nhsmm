@@ -4,6 +4,14 @@ This milestone begins only after the package-core correctness milestone (Gates 0
 
 The gates are deliberately falsifiable. A negative result is an accepted outcome and must not be repaired by weakening thresholds after observing test results.
 
+## Prerequisite — canonical Nautilus catalog
+
+Gates 11–14 must not execute against a partial, temporary, reconstructed, or simplified market dataset. First complete and verify the canonical Nautilus catalog and its causal multi-timeframe feature-production path.
+
+The frozen application evidence source must use the maintained Nautilus data/feature contracts, including the versioned 18-coordinate temporal mapping where applicable. Dataset provenance, available date range, bar completeness, mismatch diagnostics, and catalog identity must be recorded before fitting any market-hypothesis model.
+
+**Current status:** prerequisite in progress; Gate 11 is blocked.
+
 ## Gate 11 — Non-geometric regime duration structure
 
 **Hypothesis:** real inferred market regimes exhibit persistence that is not adequately explained by the geometric-duration assumption of an ordinary HMM.
@@ -80,7 +88,7 @@ Required controls:
 
 **Failure meaning:** if states are statistically distinguishable only in contemporaneous features but not future outcomes, they do not yet support a predictive trading-regime claim.
 
-**Current status:** pending.
+**Current status:** blocked pending canonical Nautilus catalog completion.
 
 ## Gate 13 — Incremental episode-age information
 
