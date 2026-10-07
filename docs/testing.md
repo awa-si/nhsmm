@@ -156,6 +156,19 @@ Re-run after changes to transition context parameterization, context-network hid
 
 Acceptance thresholds and latest observed results are recorded in [`validation.md`](validation.md).
 
+## External HSMM reference cross-check
+
+The external implementation cross-check is intentionally optional and is not part of the canonical pytest suite. It compares fixed-parameter stationary non-causal explicit-duration inference against `gaussian-hsmm==0.1.0`:
+
+```bash
+python scripts/validate_external_hsmm_reference.py \
+  --cases 20 \
+  --seed-base 1000 \
+  --output /tmp/external-hsmm-reference.json
+```
+
+Run it in a dedicated reference environment with `gaussian-hsmm==0.1.0` available. The harness does not call the external model's `fit()` path and does not compare optimizers; it exercises only the external explicit-duration `score()` and `decode()` inference paths with parameters matched to NHSMM. A pass requires zero Viterbi mismatches and maximum absolute marginal log-likelihood difference <= `1e-12`.
+
 ## Runtime benchmark
 
 ```bash

@@ -239,6 +239,8 @@ Results:
 
 The external package imports `hmmlearn` for its `fit()` initializer, but its fixed-parameter `score()` and `decode()` paths use its own explicit-duration HSMM inference. The cross-check therefore tests inference semantics rather than optimizer agreement.
 
+The maintained reproduction harness is `scripts/validate_external_hsmm_reference.py`; it emits a JSON summary and fails non-zero if any Viterbi path differs or the maximum absolute log-likelihood difference exceeds `1e-12`. The external package is deliberately not a core/test dependency.
+
 Claim boundary: this supports the shared stationary non-causal explicit-duration HSMM core only. It is not evidence for NHSMM causal dynamic hazard, context-dependent duration/transition behavior, Neural ContextEncoder semantics, training recovery, or real-market utility.
 
 ### Interpretation
