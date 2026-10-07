@@ -147,6 +147,25 @@ Seeds `201..215`, default `emission_init_mode="spread"`:
 
 Acceptance: **PASS**.
 
+### Bounded D+ duration-tail recovery and fallback
+
+The advanced-duration harness compares `duration_tail=True` against the historical finite-support model with all other model/training settings matched. It uses causal `K=2`, `D=8`, eight deterministic seeds (`321..328`), disjoint OOS sequences, and survival forecasts at horizons `1,3,5,8`.
+
+The `true_tail` generator places about 59% of completed sampled durations above `D` with mean duration about `11.11`. The `finite_control` generator has no duration above `D` and mean duration about `5.00`.
+
+Observed summaries:
+
+| Scenario | Positive OOS LL gain | Median OOS LL gain | Positive survival Brier gain | Median Brier gain | Positive survival MAE gain | Median MAE gain | Median learned h_tail |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| true_tail | 6/8 | +0.00219 | 8/8 | +0.05844 | 8/8 | +0.01630 | 0.2460 |
+| finite_control | 6/8 | +0.000075 | 0/8 | -0.000093 | 2/8 | -0.000185 | 1.0000 |
+
+Acceptance is intentionally mechanism-specific. True-tail data must show broad survival-calibration improvement, non-negative median held-out likelihood gain with at least 5/8 positive seeds, and an activated tail hazard. The finite control must return to `h_tail>=0.99` and remain within `0.001` median drift in likelihood, MAE, and Brier score.
+
+Acceptance: **PASS**.
+
+This supports the narrow claim that the bounded `D+` extension can learn/use genuine beyond-`D` duration structure while collapsing back to the historical finite-support semantics when the data contain no tail. It is not evidence that real market regimes require a duration tail or that enabling the option improves trading utility.
+
 ### Permutation-invariant latent-state recovery
 
 The state benchmark uses `K=3`, three observed coordinates, explicit-duration episodes, and state-dependent Gaussian means. Labels are scored only up to permutation. The benchmark explicitly opts into `emission_init_mode="kmeans"`; the package default remains `spread`.
@@ -263,6 +282,7 @@ These results do **not** establish domain semantics or downstream predictive val
 
 ```bash
 python scripts/validate_duration_context.py --workers 4 --output /tmp/nhsmm-duration-context.json
+python scripts/validate_duration_tail.py --workers 4 --output /tmp/nhsmm-duration-tail.json
 python scripts/validate_state_recovery.py --scenario all --workers 1 --output /tmp/nhsmm-state-recovery.json
 python scripts/validate_learning_prediction.py --scenario all --seeds 401,402,403,404,405 --max-iter 40 --workers 4 --output /tmp/nhsmm-learning-prediction.json
 python scripts/validate_transition_context.py --scenario all --workers 1 --output /tmp/nhsmm-transition-context.json

@@ -87,9 +87,9 @@ black --check nhsmm tests scripts
 Final Gate-10 package acceptance on 2026-10-07 used the documented CPU bootstrap on Python 3.12 and passed:
 
 - `ruff check nhsmm tests scripts`;
-- `black --check nhsmm tests scripts` — 86 files unchanged;
+- `black --check nhsmm tests scripts` — 90 files unchanged;
 - `git diff --check`;
-- `python -m pytest -q` — `668 passed, 3 skipped`, with the three skips CUDA-only.
+- `python -m pytest -q` — `712 passed, 3 skipped`, with the three skips CUDA-only.
 
 ## Controlled duration-context acceptance
 
@@ -100,6 +100,16 @@ python scripts/validate_duration_context.py --output /tmp/nhsmm-duration-context
 The harness explicitly opts into the internal ContextEncoder because duration context is derived from observations. Independent seed runs are process-parallel by default with up to four single-threaded workers; use `--workers 1` for serial diagnostics.
 
 Re-run after material changes to training objective, restart semantics, duration parameterization, context encoder, optimizer coverage, causal filtering, or survival semantics.
+
+## Controlled duration-tail acceptance
+
+```bash
+python scripts/validate_duration_tail.py --workers 4 --output /tmp/nhsmm-duration-tail.json
+```
+
+This gate compares the opt-in bounded `D+` tail against the historical finite-support model on matched controlled data. The true-tail scenario places substantial duration mass beyond `D=8` and evaluates held-out log likelihood plus episode-end survival calibration at horizons `1,3,5,8`. The finite-support control contains no duration above `D` and requires the learned tail hazard to return to the compatibility boundary `h_tail≈1` without material metric drift.
+
+Re-run after changes to duration-tail parameterization, hazard semantics, optimization coverage, causal filtering/runtime, or survival forecasting.
 
 ## Controlled latent-state acceptance
 

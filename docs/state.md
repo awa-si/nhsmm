@@ -20,6 +20,7 @@ Current maintained defaults and contracts:
 Controlled package evidence currently supports these narrow claims:
 
 - **Duration context:** PASS for strong/moderate recovery with a bounded null control.
+- **Advanced duration tail:** PASS on the maintained synthetic D+ gate; true-tail data improve survival calibration while the finite-support control drives `h_tail` to `1.0` and remains behaviorally equivalent.
 - **Latent-state recovery:** PASS up to permutation when the controlled acceptance harness explicitly uses K-Means initialization.
 - **Learning and held-out prediction:** PASS for the maintained strong/moderate/weak contracts; null remains a negative control.
 - **Transition context:** PASS for strong/moderate recovery with near-zero null effect under the maintained refinement policy.
@@ -99,7 +100,7 @@ Latest standalone core gate after the package audit fixes:
     black --check nhsmm tests scripts: PASS
     git diff --check: PASS
     focused causal-context regression suite: 37 passed
-    python -m pytest -q: 710 passed, 3 skipped
+    python -m pytest -q: 712 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace. A public-API artifact/inference/runtime round-trip also passed: artifact save/load preserved batch likelihood exactly, artifact-loaded and `load_inference_model(...)` runtimes produced identical posteriors across 17 causal streaming steps, state/age posteriors remained normalized, reset semantics passed, inference parameters were frozen, and variable-length list likelihood remained finite.
 
