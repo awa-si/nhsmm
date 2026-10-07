@@ -84,6 +84,13 @@ ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 ```
 
+Final Gate-10 package acceptance on 2026-10-07 used the documented CPU bootstrap on Python 3.12 and passed:
+
+- `ruff check nhsmm tests scripts`;
+- `black --check nhsmm tests scripts` — 86 files unchanged;
+- `git diff --check`;
+- `python -m pytest -q` — `668 passed, 3 skipped`, with the three skips CUDA-only.
+
 ## Controlled duration-context acceptance
 
 ```bash

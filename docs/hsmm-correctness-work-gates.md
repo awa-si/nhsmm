@@ -236,6 +236,8 @@ This gate validates identifiability/usefulness of the implementation under known
 
 ## Gate 10 — Final package acceptance
 
+**Current status:** complete. Final acceptance ran on 2026-10-07 in a clean Python 3.12 CPU environment using the repository CPU bootstrap. Ruff, Black, `git diff --check`, and the canonical pytest suite all passed; pytest reported `668 passed, 3 skipped`, with the skips CUDA-only.
+
 Required final checks:
 
 ```bash

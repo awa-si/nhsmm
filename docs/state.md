@@ -4,7 +4,7 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Current status
 
-**Phase:** package-core hardening and validation are complete enough for the next integration gate. The current model core has been audited for distribution semantics, HSMM recursion, variable-length handling, runtime state, context routing, and Neural context modulation.
+**Phase:** independent HSMM correctness milestone complete; package core is accepted for the next integration/research gate. The current model core has been audited for distribution semantics, HSMM recursion, variable-length handling, runtime state, context routing, and Neural context modulation.
 
 Current maintained defaults and contracts:
 
@@ -127,7 +127,7 @@ That study predates the current real-data integration gate and is not a substitu
 The next package-level research milestone is to raise the HSMM core from regression-tested correctness to independent mathematical verification. This milestone is package-internal and precedes any renewed downstream Nautilus acceptance claim.
 
 Execution is staged by [hsmm-correctness-work-gates.md](hsmm-correctness-work-gates.md).
-Gate 0 mathematical semantics are frozen in [hsmm-mathematical-contract.md](hsmm-mathematical-contract.md). The audited non-causal duration-dependent Viterbi predecessor-collapse defect is fixed and regression-tested. Gates 1–9 are complete: independent exhaustive reference, production likelihood equivalence, causal filtering/posterior equivalence, Viterbi/MAP equivalence, structural invariants, gradient correctness, deterministic property-based state-space exploration, measured numerical precision bounds, and statistical recovery revalidation. Gate 10 (final package acceptance) is next.
+Gate 0 mathematical semantics are frozen in [hsmm-mathematical-contract.md](hsmm-mathematical-contract.md). The audited non-causal duration-dependent Viterbi predecessor-collapse defect is fixed and regression-tested. Gates 1–10 are complete: independent exhaustive reference, production likelihood equivalence, causal filtering/posterior equivalence, Viterbi/MAP equivalence, structural invariants, gradient correctness, deterministic property-based state-space exploration, measured numerical precision bounds, statistical recovery revalidation, and final package acceptance.
 
 The milestone is complete only when all of the following are observed:
 
@@ -140,6 +140,6 @@ The milestone is complete only when all of the following are observed:
 
 Passing this milestone supports the precise claim: **the maintained HSMM recurrence and outputs are independently verified against exhaustive small-model reference calculations**. It does not imply formal proof for arbitrary floating-point executions, statistical identifiability on every dataset, or downstream trading utility.
 
-No unresolved package-core mathematical defect is currently known. The open work is stronger independent verification, not a known bug fix.
+No unresolved package-core mathematical defect is currently known. Gate 10 closed on 2026-10-07 with Ruff, Black, diff-check, and the canonical CPU suite green (`668 passed, 3 skipped`).
 
-Downstream Nautilus integration remains intentionally deferred and outside this milestone.
+Downstream integration is a separate post-milestone scope and is not evidence for this core correctness claim.

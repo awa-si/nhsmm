@@ -175,17 +175,13 @@ A runtime session must remain in the selected mode until reset.
 
 ## Interfaces and adapters
 
-Domain-facing integration is maintained in the separate repository:
+Domain-facing integration is owned by each maintained host repository. The public
+[awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces) repository is deprecated and retained as reference/history only.
 
-**[awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces)**
-
-The repository boundary is:
+The dependency boundary remains:
 
 ```text
-host / domain system
-        |
-        v
-nhsmm-interfaces
+host / domain adapter
         |
         v
 nhsmm public runtime API
@@ -194,21 +190,16 @@ nhsmm public runtime API
 NHSMM core
 ```
 
-`nhsmm-interfaces` provides:
-
-- canonical `Observation`, `Context`, and `StateEstimate` contracts;
-- `Adapter`;
-- `NHSMMRuntimeAdapter`;
-- domain/framework adapters such as `StructuredEventAdapter`;
-- integration guidance for systems such as Nautilus Trader and Freqtrade.
+For NautilusTrader, the active integration owner is `awa-si/nautilus@main/adapters/nhsmm`.
+Other hosts should likewise keep framework-specific mapping and lifecycle code outside this core package.
 
 The core package does not contain trading policy, medical/research workflow policy, execution logic, or other domain decisions.
 
 ### Cross-repository contract
 
-`awa-si/nhsmm` is the source of truth for model/runtime behavior, artifacts, filtering, forecasting, and context-effect validation. `awa-si/nhsmm-interfaces` is the source of truth for host/framework mapping, adapter lifecycle, and canonical `Observation`/`Context`/`StateEstimate` contracts.
+`awa-si/nhsmm` is the source of truth for model/runtime behavior, artifacts, filtering, forecasting, and context-effect validation. Active host repositories own their mapping and lifecycle integration. The deprecated `nhsmm-interfaces` repository remains a public reference for historical adapter contracts and walk-forward patterns.
 
-The interface repository must consume this package through public exports such as `HSMMFilterRuntime`, `load_artifact`, and the documented validation surface; it must not depend on model internals. Conversely, framework-specific adapter code does not belong in this core repository.
+Host adapters must consume this package through public exports such as `HSMMFilterRuntime`, `load_artifact`, and the documented validation surface; they must not depend on model internals. Conversely, framework-specific adapter code does not belong in this core repository.
 
 ## Causal and retrospective paths
 

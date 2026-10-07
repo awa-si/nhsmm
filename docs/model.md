@@ -2,7 +2,7 @@
 
 This document describes the core model/runtime boundary of `nhsmm`.
 
-Domain/framework integration belongs in [awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces).
+Domain/framework integration belongs in the maintained host repository. `awa-si/nhsmm-interfaces` is deprecated and retained as public reference/history only.
 
 ## Model
 
@@ -263,32 +263,23 @@ A loaded model intended for streaming must satisfy the same causal/runtime invar
 
 The NHSMM core intentionally stops at model/runtime outputs.
 
-Framework/domain mapping belongs in:
-
-[awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces)
+Framework/domain mapping belongs in the maintained host repository.
 
 ```text
 external event
     |
-nhsmm-interfaces adapter
+host adapter
     |
-Observation / Context
+nhsmm public runtime API
     |
-HSMMFilterRuntime
+HSMMFilterRuntime / HSMMFilterState
     |
-HSMMFilterState
-    |
-StateEstimate / downstream representation
+downstream representation
 ```
 
-The dependency direction is one-way: `nhsmm-interfaces` may depend on the public `nhsmm` package API; `nhsmm` must not depend on `nhsmm-interfaces` or any framework package.
+The dependency direction is one-way: host adapters may depend on the public `nhsmm` package API; `nhsmm` must not depend on host/framework packages. For NautilusTrader, the active adapter owner is `awa-si/nautilus@main/adapters/nhsmm`.
 
-The interface repository owns host/domain contracts such as:
-
-- `Adapter`;
-- `NHSMMRuntimeAdapter`;
-- `StructuredEventAdapter`;
-- framework-specific adapters.
+The deprecated [awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces) repository remains available as public reference/history for earlier adapter and walk-forward contracts.
 
 The core repository should not absorb:
 
@@ -311,4 +302,4 @@ See [validation.md](validation.md).
 - [Testing](testing.md)
 - [Development state](state.md)
 - [Release](release.md)
-- [NHSMM Interfaces](https://github.com/awa-si/nhsmm-interfaces)
+- [Deprecated NHSMM Interfaces reference](https://github.com/awa-si/nhsmm-interfaces)

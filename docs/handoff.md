@@ -22,7 +22,7 @@
 - Gate 7: COMPLETE — deterministic property-based state-space exploration
 - Gate 8: COMPLETE — numerical precision envelope
 - Gate 9: COMPLETE — statistical recovery revalidation
-- Gate 10: NEXT — final package acceptance
+- Gate 10: COMPLETE — final package acceptance
 
 Canonical docs: `docs/hsmm-mathematical-contract.md`, `docs/hsmm-correctness-work-gates.md`, `docs/state.md`, `docs/testing.md`. Independent oracle: `tests/reference/hsmm_exact.py`.
 
@@ -59,20 +59,13 @@ Gate 9 reran the canonical statistical harnesses unchanged:
 - learning/prediction: strong/moderate/weak usefulness PASS; null learning-control PASS with usefulness intentionally not applicable
 - transition-context: strong/moderate/null-control PASS; median correlations `0.999987`, `0.993766`, `0.0`
 
-Latest full package suite before Gate-9 documentation: `668 passed, 3 skipped`; skips are CUDA-only on the CPU workspace.
+Gate 10 final package acceptance: Ruff PASS; Black PASS (`86 files would be left unchanged`); `git diff --check` PASS; `python -m pytest -q` PASS with `668 passed, 3 skipped` in the clean Python 3.12 CPU acceptance environment. The skips are CUDA-only.
 
-## Immediate next work — Gate 10
+## Milestone closure
 
-Re-read Gate 10 in `docs/hsmm-correctness-work-gates.md`, then run:
+The HSMM correctness milestone is complete through Gate 10. The independent reference suite remains under normal pytest discovery, the final static/full-package gate is green, and the canonical model/testing/state documentation has been reconciled to the observed behavior.
 
-```text
-ruff check nhsmm tests scripts
-black --check nhsmm tests scripts
-git diff --check
-python -m pytest -q
-```
-
-Confirm independent reference tests remain in normal discovery, worktree is clean, docs reflect observed behavior, then update milestone status and commit Gate 10 closure.
+The next work is outside this milestone and must be treated as a separate integration or research gate.
 
 Allowed final claim:
 
