@@ -212,12 +212,8 @@ def test_noncausal_viterbi_preserves_float64_close_margin_map_choice() -> None:
     scale = 2e-7
     g = torch.Generator().manual_seed(1)
     initial = (torch.randn(K, generator=g, dtype=torch.float64) * scale).log_softmax(-1)
-    duration = (
-        torch.randn(T, K, D, generator=g, dtype=torch.float64) * scale
-    ).log_softmax(-1)
-    transition = (
-        torch.randn(T, K, D, K, generator=g, dtype=torch.float64) * scale
-    ).log_softmax(-1)
+    duration = (torch.randn(T, K, D, generator=g, dtype=torch.float64) * scale).log_softmax(-1)
+    transition = (torch.randn(T, K, D, K, generator=g, dtype=torch.float64) * scale).log_softmax(-1)
     emission = torch.randn(T, K, generator=g, dtype=torch.float64) * scale
 
     paths = enumerate_segment_paths(initial, duration, transition, emission)
@@ -239,12 +235,8 @@ def test_noncausal_viterbi_preserves_float64_close_margin_map_choice() -> None:
     model.eval()
     with (
         patch.object(model.dist.initial, "log_matrix", return_value=initial.view(1, 1, K)),
-        patch.object(
-            model.dist.duration, "log_matrix", return_value=duration.unsqueeze(0)
-        ),
-        patch.object(
-            model.dist.transition, "log_matrix", return_value=transition.unsqueeze(0)
-        ),
+        patch.object(model.dist.duration, "log_matrix", return_value=duration.unsqueeze(0)),
+        patch.object(model.dist.transition, "log_matrix", return_value=transition.unsqueeze(0)),
     ):
         actual = model._viterbi(sequence)[0].tolist()
 
