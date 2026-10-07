@@ -178,7 +178,7 @@ With no external context:
 state = runtime.step(observation)
 ```
 
-the causal model derives context through its configured encoder/runtime path.
+the causal model derives context through its configured encoder/runtime path. The per-timestep encoder output is passed through the `ContextEncoder` sequence transform (optional layer normalization, context scaling/tanh, and configured wrapper dropout) before it reaches initial/duration/transition/emission modulation. Batched causal inference and incremental streaming use the same transform.
 
 When the configured encoder exposes incremental streaming state, the runtime keeps bounded encoder state. Custom causal encoders without that contract may use the correctness-first retained-prefix fallback.
 

@@ -356,6 +356,9 @@ class NHSMM(nn.Module):
             else:
                 context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
                 if self.config.causal:
+                    context_tensor = self.encoder.transform_sequence_context(
+                        context_tensor, mask=mask
+                    )
                     canonical = context_tensor[:, :1]
         else:
             context_tensor = context
