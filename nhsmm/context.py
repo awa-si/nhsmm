@@ -489,28 +489,6 @@ class ContextEncoder(nn.Module):
             attn if return_attn_weights else None,
         )
 
-    def transform_sequence_context(
-        self,
-        context: torch.Tensor,
-        mask: Optional[torch.BoolTensor] = None,
-    ) -> torch.Tensor:
-        """Apply the wrapper context transform to per-timestep encoder output.
-
-        This is used by the causal internal-context path so batched encoding and
-        incremental streaming feed identically normalized/scaled context into
-        the HSMM component modulators.
-        """
-
-        if context.ndim != 3:
-            raise ValueError("sequence context must be [B,T,H]")
-        B, T, H = context.shape
-        mask = self._prepare_mask(mask, B, T, device=context.device)
-        transformed = context
-        if self.layer_norm:
-            transformed = nnF.layer_norm(transformed, (H,))
-        transformed = self.dropout_layer(torch.tanh(transformed * self.context_scale))
-        return transformed.masked_fill(~mask.unsqueeze(-1), 0.0)
-
     def encode(
         self,
         sequences: torch.Tensor,

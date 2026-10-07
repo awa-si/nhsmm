@@ -40,7 +40,7 @@ def test_default_encoder_stream_matches_full_causal_context() -> None:
         streamed = []
         for t in range(x.shape[1]):
             context, state = encoder.stream_step(x[:, t], state)
-            streamed.append(model.encoder.transform_sequence_context(context))
+            streamed.append(context)
 
     streamed_context = torch.cat(streamed, dim=1)
     assert torch.allclose(
@@ -84,7 +84,7 @@ def test_streaming_lstm_gate_cache_invalidates_without_changing_state_dict() -> 
         streamed = []
         for t in range(x.shape[1]):
             context, state = encoder.stream_step(x[:, t], state)
-            streamed.append(model.encoder.transform_sequence_context(context))
+            streamed.append(context)
 
     assert encoder._stream_lstm_cache_key != first_key
     assert set(model.state_dict()) == state_keys

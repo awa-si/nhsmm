@@ -442,7 +442,6 @@ class HSMMFilterRuntime:
                     dtype=obs.dtype,
                 )
                 context, encoder_state = encoder.stream_step(obs, encoder_state)
-                context = self.model.encoder.transform_sequence_context(context)
                 emission = _emission_log_prob(
                     self.model,
                     obs,
@@ -621,7 +620,6 @@ class HSMMFilterRuntime:
             if encoder is None:
                 raise RuntimeError("runtime encoder lost its incremental state contract")
             context, encoder_state = encoder.stream_step(obs, previous.encoder_state)
-            context = self.model.encoder.transform_sequence_context(context)
             emission = _emission_log_prob(
                 self.model,
                 obs,

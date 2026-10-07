@@ -266,7 +266,7 @@ def test_noncausal_default_encoder_rejects_odd_context_dim() -> None:
         )
 
 
-def test_causal_internal_context_uses_wrapper_sequence_transform() -> None:
+def test_causal_internal_context_uses_raw_sequence_features() -> None:
     torch.manual_seed(277)
     model = NHSMM(_config(use_context_encoder=True, dropout=0.0), device="cpu")
     model.initialize_distributions(jitter=0.0)
@@ -277,9 +277,7 @@ def test_causal_internal_context_uses_wrapper_sequence_transform() -> None:
 
     with torch.no_grad():
         raw = model.encoder.encoder(observations, mask=mask)
-        expected = model.encoder.transform_sequence_context(raw, mask=mask)
         sequence = model._build_sequence_set(observations)
 
-    torch.testing.assert_close(sequence.contexts, expected)
-    torch.testing.assert_close(sequence.canonical, expected[:, :1])
-    assert not torch.equal(sequence.contexts, raw)
+    torch.testing.assert_close(sequence.contexts, raw)
+    torch.testing.assert_close(sequence.canonical, raw[:, :1])
