@@ -221,6 +221,26 @@ Acceptance: **PASS**. The null control remains far below the `0.08` spurious-eff
 
 The complete controlled suite was re-run after the ContextEncoder opt-in migration and duration-harness repair. Every maintained scenario gate passed. Runs were split into scenario-sized batches so each result had an independent timeout and persistent workspace artifact; this batching changes execution orchestration only, not model/data/seed/threshold semantics.
 
+### External implementation cross-check
+
+On 2026-10-07 the maintained non-causal explicit-duration inference path was cross-checked against the independently developed `gaussian-hsmm 0.1.0` implementation.
+
+The comparison deliberately bypassed both training procedures and used matched fixed parameters. The external package's own explicit-duration `score()` and `decode()` dynamic programs were compared with NHSMM forward likelihood and non-causal Viterbi. Twenty deterministic random cases used `K=3`, `Dmax=5`, `F=2`, and `T=11`, with identical initial distributions, zero-diagonal boundary transition matrices, arbitrary positive duration distributions over `1..Dmax`, and diagonal-Gaussian emission log probabilities.
+
+Results:
+
+| Measure | Result |
+| --- | ---: |
+| Cases | 20 |
+| Exact Viterbi path matches | 20/20 |
+| Viterbi mismatches | 0 |
+| Max absolute log-likelihood difference | 2.84217094304e-14 |
+| Median absolute log-likelihood difference | 3.5527136788e-15 |
+
+The external package imports `hmmlearn` for its `fit()` initializer, but its fixed-parameter `score()` and `decode()` paths use its own explicit-duration HSMM inference. The cross-check therefore tests inference semantics rather than optimizer agreement.
+
+Claim boundary: this supports the shared stationary non-causal explicit-duration HSMM core only. It is not evidence for NHSMM causal dynamic hazard, context-dependent duration/transition behavior, Neural ContextEncoder semantics, training recovery, or real-market utility.
+
 ### Interpretation
 
 Current controlled evidence supports four narrow package claims: duration-context ordering is recoverable without spurious null separation; identifiable latent states are recoverable up to permutation with explicit K-Means initialization; fitting changes model parameters and improves held-out density/state recovery on the maintained strong/moderate/weak synthetic contracts while the null control does not support a state-usefulness claim; and known context-conditioned transition laws are recoverable with explicit transition capacity/refinement while preserving a near-zero null effect.

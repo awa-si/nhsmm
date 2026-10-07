@@ -112,6 +112,27 @@ Full controlled revalidation on 2026-10-06 also passed:
 
 The validation harnesses were run in scenario-sized batches with persistent JSON artifacts under the AWA workspace work store. See [validation.md](validation.md) for the current measured summaries.
 
+## External HSMM reference cross-check
+
+A fixed-parameter cross-check against the independently developed `gaussian-hsmm 0.1.0` explicit-duration implementation was completed on 2026-10-07.
+
+Scope:
+
+- non-causal stationary explicit-duration HSMM semantics shared by both implementations;
+- identical initial probabilities, zero-diagonal boundary transitions, explicit duration distributions, and diagonal-Gaussian emission log probabilities;
+- 20 deterministic random small models with `K=3`, `Dmax=5`, `F=2`, `T=11`;
+- comparison of total marginal log likelihood and global Viterbi/MAP state path;
+- fixed parameters only; optimizer/training behavior was intentionally excluded.
+
+Results:
+
+- 20/20 Viterbi paths matched exactly;
+- maximum absolute log-likelihood difference: `2.84217094304e-14`;
+- median absolute log-likelihood difference: `3.5527136788e-15`;
+- Viterbi mismatches: `0`.
+
+This is external implementation evidence for the shared classical non-causal explicit-duration core. It does not validate NHSMM-specific causal dynamic-hazard semantics, context modulation, Neural encoding, training policy, or downstream market usefulness.
+
 ## Nautilus usability boundary
 
 The maintained 2026-10-05 3-vs-4 state-count study favored three states:
