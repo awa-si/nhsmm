@@ -745,14 +745,14 @@ class NHSMM(nn.Module):
             )[0]
 
             emit_log = router.log_probs[b, :L]
-            cumsum_emit = torch.zeros((L + 1, K), device=device)
+            cumsum_emit = router.log_probs.new_zeros((L + 1, K))
             cumsum_emit[1:] = torch.cumsum(emit_log, dim=0)
 
             if duration_dependent_transition:
                 # Keep the ending segment duration in the Viterbi state. A future
                 # transition is conditioned on that duration, so collapsing it
                 # before scoring the destination can discard the global MAP path.
-                score = torch.full((L, K, Dmax), NEG_INF, device=device)
+                score = router.log_probs.new_full((L, K, Dmax), float("-inf"))
                 prev_state = torch.full((L, K, Dmax), -1, dtype=torch.long, device=device)
                 prev_duration = torch.full((L, K, Dmax), -1, dtype=torch.long, device=device)
 
@@ -811,7 +811,7 @@ class NHSMM(nn.Module):
                 predicted.append(path[:L])
                 continue
 
-            V = torch.full((L, K), NEG_INF, device=device)
+            V = router.log_probs.new_full((L, K), float("-inf"))
             back_ptr = torch.full((L, K), -1, dtype=torch.long, device=device)
             best_dur = torch.zeros((L, K), dtype=torch.long, device=device)
 
@@ -822,7 +822,7 @@ class NHSMM(nn.Module):
                 emit_sums = (cumsum_emit[t + 1] - cumsum_emit[starts.clamp_min(0)]).T
                 scores_dur = duration_logits[t, :, :max_d] + emit_sums
 
-                best_score_t = torch.full((K,), NEG_INF, device=device)
+                best_score_t = router.log_probs.new_full((K,), float("-inf"))
                 best_prev_t = torch.full((K,), -1, dtype=torch.long, device=device)
                 best_duration_t = torch.ones((K,), dtype=torch.long, device=device)
 

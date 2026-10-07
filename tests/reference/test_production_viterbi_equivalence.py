@@ -205,3 +205,53 @@ def test_causal_viterbi_self_transition_reset_affects_future_map_choice() -> Non
 
     assert actual == expected_states
     torch.testing.assert_close(_compatible_causal_score(paths, actual), expected_score)
+
+
+def test_noncausal_viterbi_preserves_float64_close_margin_map_choice() -> None:
+    K, D, T = 2, 2, 4
+    scale = 2e-7
+    g = torch.Generator().manual_seed(1)
+    initial = (torch.randn(K, generator=g, dtype=torch.float64) * scale).log_softmax(-1)
+    duration = (
+        torch.randn(T, K, D, generator=g, dtype=torch.float64) * scale
+    ).log_softmax(-1)
+    transition = (
+        torch.randn(T, K, D, K, generator=g, dtype=torch.float64) * scale
+    ).log_softmax(-1)
+    emission = torch.randn(T, K, generator=g, dtype=torch.float64) * scale
+
+    paths = enumerate_segment_paths(initial, duration, transition, emission)
+    expected_path, expected_score = segment_map_state_path(paths)
+
+    sequence = _sequence(emission)
+    model = NHSMM(
+        ModelConfig(
+            n_states=K,
+            n_features=1,
+            max_duration=D,
+            causal=False,
+            dropout=0.0,
+            verbose=False,
+        ),
+        device="cpu",
+    )
+    model.initialize_distributions(jitter=0.0)
+    model.eval()
+    with (
+        patch.object(model.dist.initial, "log_matrix", return_value=initial.view(1, 1, K)),
+        patch.object(
+            model.dist.duration, "log_matrix", return_value=duration.unsqueeze(0)
+        ),
+        patch.object(
+            model.dist.transition, "log_matrix", return_value=transition.unsqueeze(0)
+        ),
+    ):
+        actual = model._viterbi(sequence)[0].tolist()
+
+    assert actual == expected_path
+    torch.testing.assert_close(
+        _compatible_segment_score(paths, actual),
+        expected_score,
+        atol=1e-12,
+        rtol=1e-12,
+    )
