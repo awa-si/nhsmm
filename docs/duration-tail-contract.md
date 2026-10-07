@@ -106,6 +106,14 @@ In the causal model, both the mass vector and `h_tail` are evaluated from the in
 
 This preserves the existing dynamic-hazard interpretation: no future observation may influence whether the current boundary ends the episode.
 
+## Survival and one-step forecast semantics
+
+When tail mode is enabled, survival forecasting freezes the current duration mass and current tail hazard, consistent with the existing no-future-context forecast contract. For a path that reaches `D+`, each additional future boundary contributes another factor of `1-h_tail`. Therefore survival horizons may extend arbitrarily beyond `D` while runtime state remains bounded.
+
+The one-step transition forecast uses the same tail-aware end/continue hazard as filtering. Mass that continues in `D+` remains in the same latent state; mass that ends in `D+` uses transition slice `D-1` and starts the next episode at age `1`.
+
+`h_tail=1` must reproduce the previous finite-support survival and transition forecasts exactly.
+
 ## Non-causal interpretation
 
 A non-causal completed segment of duration `d >= D` receives the implied tail duration mass:

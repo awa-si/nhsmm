@@ -335,6 +335,7 @@ class HSMMFilterRuntime:
             self.state.filter_state,
             self.state.duration_log_prob,
             horizons,
+            self.state.tail_end_probability,
         )
 
     @torch.inference_mode()
@@ -347,6 +348,7 @@ class HSMMFilterRuntime:
             self.state.filter_state,
             self.state.duration_log_prob,
             self.state.transition_log_prob,
+            self.state.tail_end_probability,
         )
 
     @torch.inference_mode()

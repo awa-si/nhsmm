@@ -101,6 +101,7 @@ def test_runtime_survival_forecast_uses_current_filter_state() -> None:
     one_step = next_episode_end_probability(
         runtime.state.filter_state,
         runtime.state.duration_log_prob,
+        runtime.state.tail_end_probability,
     )
 
     assert forecast.horizons.tolist() == [1, 3, 6]
@@ -280,3 +281,38 @@ def test_runtime_state_rejects_zero_mass_probability_rows() -> None:
         assert "finite probability mass" in str(exc)
     else:
         raise AssertionError("zero-mass runtime probability rows must fail closed")
+
+
+def test_runtime_tail_forecasts_use_runtime_tail_state() -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=2,
+        max_duration=3,
+        causal=True,
+        duration_tail=True,
+        duration_tail_init_probability=0.25,
+        dropout=0.0,
+        seed=109,
+    )
+    model = NHSMM(config, device="cpu")
+    model.initialize_distributions(jitter=0.0)
+    model.eval()
+    runtime = HSMMFilterRuntime(model)
+    runtime.step(torch.zeros(1, 2))
+    assert runtime.state is not None
+
+    survival = runtime.forecast_survival((1, 5, 10))
+    transition = runtime.forecast_transition()
+    expected_end = next_episode_end_probability(
+        runtime.state.filter_state,
+        runtime.state.duration_log_prob,
+        runtime.state.tail_end_probability,
+    )
+
+    torch.testing.assert_close(
+        survival.end_within_probability[:, 0], expected_end, atol=1e-6, rtol=1e-6
+    )
+    torch.testing.assert_close(
+        transition.episode_end_probability, expected_end, atol=1e-6, rtol=1e-6
+    )
+    assert torch.all(survival.survival_probability[:, -1] >= 0.0)

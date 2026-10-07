@@ -155,3 +155,38 @@ def test_state_change_probability_matches_boundary_minus_self_transition_mass() 
         atol=1e-12,
         rtol=1e-12,
     )
+
+
+def test_tail_transition_forecast_uses_tail_boundary_probability() -> None:
+    state = _state(0, 2)
+    transition = torch.full((1, 2, 2, 2), float("-inf"), dtype=torch.float64)
+    transition[0, 0, :, 1] = 0.0
+    transition[0, 1, :, 1] = 0.0
+    tail = torch.tensor([[0.25, 0.5]], dtype=torch.float64)
+
+    forecast = one_step_transition_forecast(state, _duration_d2(), transition, tail)
+
+    torch.testing.assert_close(
+        forecast.episode_end_probability, torch.tensor([0.25], dtype=torch.float64)
+    )
+    torch.testing.assert_close(
+        forecast.next_state_prior, torch.tensor([[0.75, 0.25]], dtype=torch.float64)
+    )
+
+
+def test_tail_hazard_one_matches_finite_transition_forecast_exactly() -> None:
+    torch.manual_seed(107)
+    posterior = torch.log_softmax(
+        torch.randn(2, 3, 4, dtype=torch.float64).flatten(1), dim=1
+    ).reshape(2, 3, 4)
+    state = HSMMFilterState(posterior)
+    duration = torch.randn(2, 3, 4, dtype=torch.float64)
+    transition = torch.randn(2, 3, 4, 3, dtype=torch.float64)
+
+    finite = one_step_transition_forecast(state, duration, transition)
+    tailed = one_step_transition_forecast(
+        state, duration, transition, torch.ones(2, 3, dtype=torch.float64)
+    )
+
+    for name in finite.__dataclass_fields__:
+        torch.testing.assert_close(getattr(tailed, name), getattr(finite, name), atol=0.0, rtol=0.0)

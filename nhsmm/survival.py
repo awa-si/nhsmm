@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from numbers import Integral
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 
 import torch
 
@@ -109,6 +109,7 @@ def active_episode_survival_forecast(
     state: HSMMFilterState,
     log_duration: torch.Tensor,
     horizons: HorizonInput,
+    tail_end_probability: Optional[torch.Tensor] = None,
 ) -> HSMMSurvivalForecast:
     """Forecast survival/end-within-h for the currently active episode.
 
@@ -142,21 +143,35 @@ def active_episode_survival_forecast(
         raise ValueError("log_duration dtype must match filter state")
 
     horizon_tensor = _as_horizons(horizons, device=posterior.device)
-    _, log_continue = duration_log_hazard(log_duration)
+    _, log_continue = duration_log_hazard(log_duration, tail_end_probability)
 
     survival_by_horizon = []
     for horizon_tensor_value in horizon_tensor:
         horizon = int(horizon_tensor_value.item())
         component_log_survival = posterior.new_full((B, K, D), float("-inf"))
 
-        # From age index ``a``, surviving h future boundaries requires valid
-        # continuation at a, a+1, ..., a+h-1. Ages that would exceed D have
-        # zero survival probability by construction.
-        if horizon < D:
-            for age_index in range(D - horizon):
-                component_log_survival[..., age_index] = log_continue[
-                    ..., age_index : age_index + horizon
-                ].sum(dim=-1)
+        if tail_end_probability is None:
+            # Historical finite-support behavior: ages that would exceed D
+            # have zero survival probability.
+            if horizon < D:
+                for age_index in range(D - horizon):
+                    component_log_survival[..., age_index] = log_continue[
+                        ..., age_index : age_index + horizon
+                    ].sum(dim=-1)
+        else:
+            # Tail mode caps the age bucket at D+. Exact-age continuation is
+            # accumulated only until the tail is reached; every remaining
+            # boundary then contributes the same frozen tail continuation.
+            for age_index in range(D):
+                steps_to_tail = D - 1 - age_index
+                exact_steps = min(horizon, steps_to_tail)
+                total = posterior.new_zeros((B, K))
+                if exact_steps > 0:
+                    total = log_continue[..., age_index : age_index + exact_steps].sum(dim=-1)
+                tail_steps = horizon - exact_steps
+                if tail_steps > 0:
+                    total = total + tail_steps * log_continue[..., -1]
+                component_log_survival[..., age_index] = total
 
         log_survival = torch.logsumexp(
             posterior + component_log_survival,

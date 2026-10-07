@@ -91,3 +91,78 @@ def test_horizons_must_be_positive_and_strictly_increasing() -> None:
             pass
         else:
             raise AssertionError(f"invalid horizons must fail: {horizons}")
+
+
+def test_tail_hazard_one_matches_finite_survival_exactly() -> None:
+    torch.manual_seed(101)
+    state = _normalized_state(torch.randn(2, 3, 5))
+    log_duration = torch.randn(2, 3, 5)
+    horizons = (1, 2, 4, 7)
+
+    finite = active_episode_survival_forecast(state, log_duration, horizons)
+    tailed = active_episode_survival_forecast(
+        state,
+        log_duration,
+        horizons,
+        torch.ones(2, 3),
+    )
+
+    torch.testing.assert_close(
+        tailed.survival_probability, finite.survival_probability, atol=0.0, rtol=0.0
+    )
+    torch.testing.assert_close(
+        tailed.end_within_probability, finite.end_within_probability, atol=0.0, rtol=0.0
+    )
+
+
+def test_tail_survival_extends_geometrically_beyond_max_duration() -> None:
+    log_posterior = torch.full((1, 1, 3), float("-inf"))
+    log_posterior[..., -1] = 0.0
+    state = HSMMFilterState(log_posterior)
+    log_duration = torch.log(torch.tensor([[[0.2, 0.3, 0.5]]]))
+    tail = torch.tensor([[0.25]])
+
+    forecast = active_episode_survival_forecast(
+        state,
+        log_duration,
+        horizons=(1, 2, 5, 10),
+        tail_end_probability=tail,
+    )
+
+    expected = torch.tensor(
+        [[0.75, 0.75**2, 0.75**5, 0.75**10]], dtype=forecast.survival_probability.dtype
+    )
+    torch.testing.assert_close(forecast.survival_probability, expected, atol=1e-6, rtol=1e-6)
+
+
+def test_tail_horizon_one_matches_tail_end_probability() -> None:
+    torch.manual_seed(103)
+    state = _normalized_state(torch.randn(2, 3, 4))
+    log_duration = torch.randn(2, 3, 4)
+    tail = torch.full((2, 3), 0.35)
+
+    forecast = active_episode_survival_forecast(
+        state, log_duration, horizons=(1, 3), tail_end_probability=tail
+    )
+    one_step = next_episode_end_probability(state, log_duration, tail)
+
+    torch.testing.assert_close(
+        forecast.end_within_probability[:, 0], one_step, atol=1e-6, rtol=1e-6
+    )
+
+
+def test_tail_survival_supports_large_horizon_without_unbounded_age_state() -> None:
+    log_posterior = torch.tensor([[[float("-inf"), 0.0]]])
+    state = HSMMFilterState(log_posterior)
+    log_duration = torch.log(torch.tensor([[[0.4, 0.6]]]))
+    tail = torch.tensor([[0.1]])
+
+    forecast = active_episode_survival_forecast(
+        state,
+        log_duration,
+        horizons=(10_000,),
+        tail_end_probability=tail,
+    )
+
+    expected = torch.tensor([[0.9**10_000]], dtype=forecast.survival_probability.dtype)
+    torch.testing.assert_close(forecast.survival_probability, expected, atol=1e-7, rtol=1e-6)

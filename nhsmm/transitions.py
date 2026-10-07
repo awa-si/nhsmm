@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 import torch
 
@@ -129,6 +130,7 @@ def one_step_transition_forecast(
     state: HSMMFilterState,
     log_duration: torch.Tensor,
     transition_log_prob: torch.Tensor,
+    tail_end_probability: Optional[torch.Tensor] = None,
 ) -> HSMMTransitionForecast:
     """Forecast the next latent-state transition using only ``F_t``.
 
@@ -153,7 +155,7 @@ def one_step_transition_forecast(
         )
 
     log_transition = _normalize_transition(transition_log_prob)
-    log_end, log_continue = duration_log_hazard(log_duration)
+    log_end, log_continue = duration_log_hazard(log_duration, tail_end_probability)
 
     # Joint boundary mass for source state -> destination state, marginalized over age.
     log_boundary_by_age = posterior + log_end
