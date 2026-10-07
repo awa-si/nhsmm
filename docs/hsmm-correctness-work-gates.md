@@ -232,6 +232,8 @@ This gate validates identifiability/usefulness of the implementation under known
 
 **Acceptance:** applicable maintained validation thresholds remain green without weakening thresholds because of the correctness work.
 
+**Current status:** complete. The canonical validation harnesses were rerun unchanged after Gates 0–8. Duration-context recovery passed strong, moderate, and null-control acceptance. Latent-state recovery passed strong, moderate, and null scenarios. Learning/prediction passed strong, moderate, weak, and null learning controls; usefulness is PASS for strong/moderate/weak and intentionally not applicable for the null scenario. Transition-context recovery passed strong, moderate, and null-control acceptance. No production change or threshold relaxation was required.
+
 ## Gate 10 — Final package acceptance
 
 Required final checks:
