@@ -34,6 +34,7 @@ Required evidence:
 - internal ContextEncoder: disabled;
 - optimization: package default `n_init=3`, `max_iter=40`;
 - preprocessing: feature-wise mean/std fitted on training observations only and then applied unchanged to OOS;
+- sequence unit: UTC daily sequences; model state resets at each day boundary for both train and OOS, identically for HMM and HSMM;
 - HMM baseline: causal NHSMM recurrence with `max_duration=1`;
 - explicit-duration candidate: causal NHSMM with `max_duration=96` (8 hours at the 5-minute cadence);
 - W1 train: 2023-10-03..2023-10-20, OOS: 2023-10-21..2023-10-31;
