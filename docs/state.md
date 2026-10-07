@@ -98,10 +98,12 @@ Latest standalone core gate after the package audit fixes:
     ruff check nhsmm tests scripts: PASS
     black --check nhsmm tests scripts: PASS
     git diff --check: PASS
-    focused regression suite: 131 passed
-    python -m pytest -q: 668 passed, 3 skipped
+    focused causal-context regression suite: 37 passed
+    python -m pytest -q: 710 passed, 3 skipped
 
 The three skips are CUDA-only tests on the CPU workspace. A public-API artifact/inference/runtime round-trip also passed: artifact save/load preserved batch likelihood exactly, artifact-loaded and `load_inference_model(...)` runtimes produced identical posteriors across 17 causal streaming steps, state/age posteriors remained normalized, reset semantics passed, inference parameters were frozen, and variable-length list likelihood remained finite.
+
+Post-fix causal-context revalidation on 2026-10-07 also passed on `9c4429b`: duration context returned to `13/15` positive moderate seeds without threshold changes, and transition context retained strong/moderate median correlations of `0.999987`/`0.993766` with a null median absolute context delta of `6.90e-7`.
 
 Full controlled revalidation on 2026-10-06 also passed:
 

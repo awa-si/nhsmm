@@ -221,6 +221,16 @@ Acceptance: **PASS**. The null control remains far below the `0.08` spurious-eff
 
 The complete controlled suite was re-run after the ContextEncoder opt-in migration and duration-harness repair. Every maintained scenario gate passed. Runs were split into scenario-sized batches so each result had an independent timeout and persistent workspace artifact; this batching changes execution orchestration only, not model/data/seed/threshold semantics.
 
+### 2026-10-07 causal-context regression repair revalidation
+
+After restoring raw causal per-timestep encoder features for HSMM component modulation, the maintained duration- and transition-context acceptance harnesses were rerun on commit `9c4429b`. No acceptance threshold was changed.
+
+Duration context again passed all maintained gates: strong `15/15` positive, moderate `13/15` positive with median gap `0.02716`, and the null guard passed with median gap `0.01138` and mean gap `0.01266`.
+
+Transition context also remained accepted across all `15` seeds per scenario: strong median delta correlation `0.999987`, moderate `0.993766`, and null median absolute learned context delta `6.90e-7`; all scenarios were `15/15` non-collapsed.
+
+This revalidation confirms that the causal sequence-context repair restores the maintained duration benchmark without weakening transition-context recovery or its null guard.
+
 ### External implementation cross-check
 
 On 2026-10-07 the maintained non-causal explicit-duration inference path was cross-checked against the independently developed `gaussian-hsmm 0.1.0` implementation.
