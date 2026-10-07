@@ -56,6 +56,8 @@ class DistributionSet(nn.Module):
             max_duration=self.config.max_duration,
             init_mode=self.config.duration_init_mode,
             activation=self.config.activation,
+            tail_enabled=self.config.duration_tail,
+            tail_init_probability=self.config.duration_tail_init_probability,
         )
         self.transition = transition(
             hidden_dim=distribution_hidden_dim,

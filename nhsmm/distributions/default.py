@@ -613,9 +613,15 @@ class Duration(Neural):
         allow_projection: bool = True,
         hidden_dim: Optional[int] = None,
         context_dim: Optional[int] = None,
+        tail_enabled: bool = False,
+        tail_init_probability: float = 0.5,
     ):
         if max_duration < 1:
             raise ValueError("max_duration must be >= 1")
+        if not isinstance(tail_enabled, bool):
+            raise TypeError("tail_enabled must be a bool")
+        if not math.isfinite(tail_init_probability) or not 0.0 < tail_init_probability <= 1.0:
+            raise ValueError("tail_init_probability must be finite and in (0,1]")
         self._shape = (n_states, max_duration)
         super().__init__(
             target_dim=n_states * max_duration,
@@ -628,6 +634,13 @@ class Duration(Neural):
         self.n_states = n_states
         self.init_mode = init_mode
         self.max_duration = max_duration
+        self.tail_enabled = tail_enabled
+        if tail_enabled:
+            self.tail_end_probability = nn.Parameter(
+                torch.full((n_states,), float(tail_init_probability))
+            )
+        else:
+            self.register_parameter("tail_end_probability", None)
         with torch.no_grad():
             self.logits.copy_(self._init_params(mode=init_mode))
 
@@ -689,6 +702,18 @@ class Duration(Neural):
         else:
             raise ValueError("duration mask must have shape [D] or [K,D]")
         return logits.masked_fill(~mask.expand_as(logits), NEG_INF)
+
+    def tail_probability(self) -> Optional[torch.Tensor]:
+        """Return the bounded-tail end probability per state when enabled.
+
+        The parameter is represented directly in probability space so the
+        compatibility boundary ``h_tail=1`` is exactly representable. Values
+        are constrained to ``(0,1]`` at use time; forward/filter integration
+        is intentionally deferred to the next implementation step.
+        """
+        if self.tail_end_probability is None:
+            return None
+        return self.tail_end_probability.clamp(min=EPS, max=1.0)
 
     def log_matrix(
         self,

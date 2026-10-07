@@ -104,6 +104,8 @@ class ModelConfig:
 
     # HMM / distributions
     max_duration: int = 35
+    duration_tail: bool = False
+    duration_tail_init_probability: float = 0.5
     min_covar: float = 1e-6
     emission_init_mode: Literal["random", "spread", "kmeans"] = "spread"
     initial_init_mode: Literal["normal", "biased", "uniform"] = "normal"
@@ -173,6 +175,15 @@ class ModelConfig:
                 minimum=0.0,
                 minimum_inclusive=False,
             )
+        _require_finite(
+            "duration_tail_init_probability",
+            self.duration_tail_init_probability,
+            minimum=0.0,
+            minimum_inclusive=False,
+        )
+        if self.duration_tail_init_probability > 1.0:
+            raise ValueError("duration_tail_init_probability must be in (0,1]")
+
         for name in (
             "transition_context_max_delta",
             "tol",
@@ -183,6 +194,7 @@ class ModelConfig:
 
         for name in (
             "use_context_encoder",
+            "duration_tail",
             "causal",
             "use_scheduler",
             "convergence_stop",

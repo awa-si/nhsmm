@@ -187,8 +187,29 @@ def test_model_config_rejects_invalid_public_values(field: str, value) -> None:
         ModelConfig(**kwargs)
 
 
-@pytest.mark.parametrize("field", ["causal", "use_scheduler", "convergence_stop", "verbose"])
+@pytest.mark.parametrize(
+    "field", ["duration_tail", "causal", "use_scheduler", "convergence_stop", "verbose"]
+)
 def test_model_config_rejects_non_boolean_flags(field: str) -> None:
     kwargs = {"n_states": 2, "n_features": 2, field: 1}
     with pytest.raises(ValueError):
         ModelConfig(**kwargs)
+
+
+def test_duration_tail_config_is_opt_in_and_round_trips() -> None:
+    base = ModelConfig(n_states=3, n_features=2)
+    assert base.duration_tail is False
+    assert base.duration_tail_init_probability == 0.5
+
+    enabled = base.with_overrides(duration_tail=True, duration_tail_init_probability=0.25)
+    restored = ModelConfig.from_dict(enabled.to_dict())
+
+    assert restored == enabled
+    assert restored.duration_tail is True
+    assert restored.duration_tail_init_probability == 0.25
+
+
+@pytest.mark.parametrize("value", [0.0, -0.1, 1.1, float("nan"), float("inf")])
+def test_duration_tail_config_rejects_invalid_initial_probability(value: float) -> None:
+    with pytest.raises(ValueError, match="duration_tail_init_probability"):
+        ModelConfig(n_states=2, n_features=1, duration_tail_init_probability=value)

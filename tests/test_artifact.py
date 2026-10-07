@@ -178,3 +178,32 @@ def test_load_artifact_rejects_nonfinite_state_tensor(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="invalid artifact state_dict"):
         load_artifact(path, device="cpu")
+
+
+def test_duration_tail_artifact_round_trip_preserves_parameter_and_config(tmp_path) -> None:
+    config = ModelConfig(
+        n_states=2,
+        n_features=3,
+        max_duration=4,
+        causal=True,
+        duration_tail=True,
+        duration_tail_init_probability=0.35,
+        dropout=0.0,
+        seed=61,
+    )
+    source = NHSMM(config, device="cpu")
+    source.initialize_distributions(jitter=0.0)
+    source.eval()
+    with torch.no_grad():
+        source.dist.duration.tail_end_probability.copy_(torch.tensor([0.2, 1.0]))
+
+    path = save_artifact(source, tmp_path / "duration-tail.nhsmm.pt")
+    loaded = load_artifact(path, device="cpu", require_causal=True)
+
+    assert loaded.config.duration_tail is True
+    assert loaded.config.duration_tail_init_probability == 0.35
+    assert loaded.dist.duration.tail_enabled is True
+    torch.testing.assert_close(
+        loaded.dist.duration.tail_probability(),
+        torch.tensor([0.2, 1.0]),
+    )

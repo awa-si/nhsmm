@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+from nhsmm import ModelConfig, NHSMM
 from nhsmm.distributions.default import (
     Categorical,
     Duration,
@@ -650,3 +651,56 @@ def test_categorical_distribution_temperature_is_not_trainable() -> None:
     assert not initial.delta_scale.requires_grad
     assert not duration.delta_scale.requires_grad
     assert not transition.delta_scale.requires_grad
+
+
+def test_duration_tail_parameter_is_absent_by_default() -> None:
+    duration = Duration(n_states=3, activation="tanh", max_duration=4, context_dim=None)
+
+    assert duration.tail_enabled is False
+    assert duration.tail_end_probability is None
+    assert duration.tail_probability() is None
+    assert "tail_end_probability" not in dict(duration.named_parameters())
+
+
+def test_duration_tail_parameter_is_opt_in_trainable_and_exact_at_one() -> None:
+    duration = Duration(
+        n_states=3,
+        activation="tanh",
+        max_duration=4,
+        context_dim=None,
+        tail_enabled=True,
+        tail_init_probability=1.0,
+    )
+
+    assert duration.tail_enabled is True
+    assert duration.tail_end_probability is not None
+    assert duration.tail_end_probability.requires_grad
+    torch.testing.assert_close(duration.tail_probability(), torch.ones(3))
+
+    duration.tail_end_probability.grad = None
+    loss = duration.tail_probability().sum()
+    loss.backward()
+    assert duration.tail_end_probability.grad is not None
+    assert torch.isfinite(duration.tail_end_probability.grad).all()
+
+
+def test_distribution_set_wires_duration_tail_config_without_changing_duration_mass_shape() -> None:
+    model = NHSMM(
+        ModelConfig(
+            n_states=2,
+            n_features=1,
+            max_duration=5,
+            duration_tail=True,
+            duration_tail_init_probability=0.3,
+            verbose=False,
+        ),
+        device="cpu",
+    )
+    model.initialize_distributions(jitter=0.0)
+
+    assert model.dist.duration.tail_enabled is True
+    torch.testing.assert_close(
+        model.dist.duration.tail_probability(),
+        torch.full((2,), 0.3),
+    )
+    assert model.dist.duration.log_matrix().shape == (1, 1, 2, 5)
