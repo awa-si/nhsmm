@@ -131,10 +131,17 @@ def _normalize_filter_posterior(log_values: torch.Tensor) -> torch.Tensor:
     return normalized.reshape_as(log_values)
 
 
-def _duration_log_hazard_from_log_p(log_p: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Compute hazards from an already normalized duration log-PMF."""
+def _duration_log_hazard_from_log_p(
+    log_p: torch.Tensor,
+    tail_end_probability: Optional[torch.Tensor] = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Compute hazards from normalized duration mass.
 
-    _, _, D = log_p.shape
+    With tail_end_probability, the final duration entry is tail mass
+    P(total_duration >= D) and the final age bucket represents D+.
+    """
+
+    B, K, D = log_p.shape
     rev_cumsum = torch.logcumsumexp(log_p.flip(-1), dim=-1).flip(-1)
     log_end = torch.full_like(log_p, float("-inf"))
     valid_survival = torch.isfinite(rev_cumsum)
@@ -150,10 +157,36 @@ def _duration_log_hazard_from_log_p(log_p: torch.Tensor) -> tuple[torch.Tensor, 
             continue_values,
             log_continue[..., :-1],
         )
+
+    if tail_end_probability is not None:
+        if not isinstance(tail_end_probability, torch.Tensor):
+            raise TypeError("tail_end_probability must be a torch.Tensor")
+        if tail_end_probability.shape == (K,):
+            tail_end_probability = tail_end_probability.unsqueeze(0).expand(B, K)
+        if tail_end_probability.shape != (B, K):
+            raise ValueError(
+                f"tail_end_probability must be {(B, K)} or {(K,)}, "
+                f"got {tail_end_probability.shape}"
+            )
+        _require_compatible(log_p, tail_end_probability, "tail_end_probability")
+        if not torch.isfinite(tail_end_probability).all():
+            raise ValueError("tail_end_probability must be finite")
+        if bool(((tail_end_probability <= 0) | (tail_end_probability > 1)).any()):
+            raise ValueError("tail_end_probability must satisfy 0 < h <= 1")
+        log_end[..., -1] = tail_end_probability.log()
+        tail_continue = 1.0 - tail_end_probability
+        log_continue[..., -1] = torch.where(
+            tail_continue > 0,
+            tail_continue.clamp_min(torch.finfo(log_p.dtype).tiny).log(),
+            torch.full_like(tail_continue, float("-inf")),
+        )
     return log_end, log_continue
 
 
-def duration_log_hazard(log_duration: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+def duration_log_hazard(
+    log_duration: torch.Tensor,
+    tail_end_probability: Optional[torch.Tensor] = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Convert duration scores into end/continue log hazards.
 
     ``log_duration`` may contain unnormalized log scores, but every state must
@@ -163,7 +196,7 @@ def duration_log_hazard(log_duration: torch.Tensor) -> tuple[torch.Tensor, torch
 
     log_duration = _as_batched(log_duration, 3, "log_duration")
     log_p = _normalize_log_probs(log_duration, dim=-1, name="log_duration")
-    return _duration_log_hazard_from_log_p(log_p)
+    return _duration_log_hazard_from_log_p(log_p, tail_end_probability)
 
 
 def initialize_filter(
@@ -199,6 +232,7 @@ def _filter_step_normalized(
     emission_log_prob: torch.Tensor,
     log_duration: torch.Tensor,
     transition_log_prob: torch.Tensor,
+    tail_end_probability: Optional[torch.Tensor] = None,
 ) -> HSMMFilterState:
     """Fast runtime step for model-produced normalized duration/transition scores.
 
@@ -209,7 +243,9 @@ def _filter_step_normalized(
 
     prev = previous.log_posterior
     B, K, D = prev.shape
-    log_end, log_continue = _duration_log_hazard_from_log_p(log_duration)
+    log_end, log_continue = _duration_log_hazard_from_log_p(
+        log_duration, tail_end_probability
+    )
 
     predicted = prev.new_full((B, K, D), float("-inf"))
     if D > 1:
@@ -220,6 +256,14 @@ def _filter_step_normalized(
         boundary.unsqueeze(-1) + transition_log_prob,
         dim=(1, 2),
     )
+    if tail_end_probability is not None:
+        tail_continuation = prev[..., -1] + log_continue[..., -1]
+        if D == 1:
+            predicted[..., 0] = torch.logaddexp(predicted[..., 0], tail_continuation)
+        else:
+            predicted[..., -1] = torch.logaddexp(
+                predicted[..., -1], tail_continuation
+            )
 
     posterior = predicted + emission_log_prob.unsqueeze(-1)
     flat = posterior.flatten(1)
@@ -233,6 +277,7 @@ def filter_step(
     emission_log_prob: torch.Tensor,
     log_duration: torch.Tensor,
     transition_log_prob: torch.Tensor,
+    tail_end_probability: Optional[torch.Tensor] = None,
 ) -> HSMMFilterState:
     """Advance a causal explicit-duration HSMM filter by one observation.
 
@@ -282,6 +327,7 @@ def filter_step(
         emission_log_prob,
         normalized_duration,
         transition_log_prob,
+        tail_end_probability,
     )
 
 
