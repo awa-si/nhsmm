@@ -105,6 +105,15 @@ def _as_batched(tensor: torch.Tensor, ndim: int, name: str) -> torch.Tensor:
     return tensor
 
 
+def _safe_logaddexp(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
+    """Autograd-safe logaddexp for two impossible log-probability paths."""
+    both_impossible = torch.isneginf(left) & torch.isneginf(right)
+    safe_left = torch.where(both_impossible, torch.zeros_like(left), left)
+    safe_right = torch.where(both_impossible, torch.zeros_like(right), right)
+    combined = torch.logaddexp(safe_left, safe_right)
+    return torch.where(both_impossible, torch.full_like(combined, float("-inf")), combined)
+
+
 def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
     if not isinstance(tensor, torch.Tensor):
         raise TypeError(f"{name} must be a torch.Tensor")
@@ -173,13 +182,15 @@ def _duration_log_hazard_from_log_p(
             raise ValueError("tail_end_probability must be finite")
         if bool(((tail_end_probability <= 0) | (tail_end_probability > 1)).any()):
             raise ValueError("tail_end_probability must satisfy 0 < h <= 1")
-        log_end[..., -1] = tail_end_probability.log()
+        tail_log_end = tail_end_probability.log().unsqueeze(-1)
         tail_continue = 1.0 - tail_end_probability
-        log_continue[..., -1] = torch.where(
+        tail_log_continue = torch.where(
             tail_continue > 0,
             tail_continue.clamp_min(torch.finfo(log_p.dtype).tiny).log(),
             torch.full_like(tail_continue, float("-inf")),
-        )
+        ).unsqueeze(-1)
+        log_end = torch.cat((log_end[..., :-1], tail_log_end), dim=-1)
+        log_continue = torch.cat((log_continue[..., :-1], tail_log_continue), dim=-1)
     return log_end, log_continue
 
 
@@ -257,9 +268,9 @@ def _filter_step_normalized(
     if tail_end_probability is not None:
         tail_continuation = prev[..., -1] + log_continue[..., -1]
         if D == 1:
-            predicted[..., 0] = torch.logaddexp(predicted[..., 0], tail_continuation)
+            predicted[..., 0] = _safe_logaddexp(predicted[..., 0], tail_continuation)
         else:
-            predicted[..., -1] = torch.logaddexp(predicted[..., -1], tail_continuation)
+            predicted[..., -1] = _safe_logaddexp(predicted[..., -1], tail_continuation)
 
     posterior = predicted + emission_log_prob.unsqueeze(-1)
     flat = posterior.flatten(1)

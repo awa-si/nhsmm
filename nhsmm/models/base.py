@@ -12,7 +12,7 @@ from nhsmm.convergence import Convergence
 from nhsmm.encoder import DefaultEncoder
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
 from nhsmm.distributions import Initial, Duration, Transition, Emission
-from nhsmm.filtering import _duration_log_hazard_from_log_p, duration_log_hazard
+from nhsmm.filtering import _duration_log_hazard_from_log_p, _safe_logaddexp, duration_log_hazard
 from nhsmm.config import DTYPE, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
 
 
@@ -388,6 +388,45 @@ class NHSMM(nn.Module):
         return context if context.shape[-1] > 0 else None
 
     @staticmethod
+    def _segment_duration_log_score(
+        log_duration_at_end: torch.Tensor,
+        duration: int,
+        tail_end_probability: Optional[torch.Tensor],
+    ) -> torch.Tensor:
+        """Return completed-segment duration score for one actual duration.
+
+        ``log_duration_at_end`` is ``[..., K, D]``. Without tail mode,
+        ``duration`` must lie in ``1..D``. With tail mode, entries ``1..D-1``
+        remain exact and any completed segment ``duration >= D`` uses the
+        geometric tail mass ``q_tail * (1-h)^(duration-D) * h``.
+        """
+        D = log_duration_at_end.shape[-1]
+        if duration < 1:
+            raise ValueError("duration must be >= 1")
+        if tail_end_probability is None:
+            if duration > D:
+                raise ValueError("finite-support duration exceeds max_duration")
+            return log_duration_at_end[..., duration - 1]
+        if duration < D:
+            return log_duration_at_end[..., duration - 1]
+
+        tail = tail_end_probability.to(
+            device=log_duration_at_end.device, dtype=log_duration_at_end.dtype
+        )
+        while tail.ndim < log_duration_at_end.ndim - 1:
+            tail = tail.unsqueeze(0)
+        score = log_duration_at_end[..., -1] + tail.log()
+        excess = duration - D
+        if excess > 0:
+            log_continue = torch.where(
+                tail < 1.0,
+                torch.log1p(-tail),
+                torch.full_like(tail, float("-inf")),
+            )
+            score = score + excess * log_continue
+        return score
+
+    @staticmethod
     def _expand_batch(tensor: torch.Tensor, batch_size: int, name: str) -> torch.Tensor:
         if tensor.shape[0] == batch_size:
             return tensor
@@ -515,11 +554,13 @@ class NHSMM(nn.Module):
             predicted[..., 0] = new_episode
 
             if tail_end_probability is not None:
-                tail_continuation = previous[..., -1] + log_continue[active, t - 1, :, -1]
+                tc = previous[..., -1] + log_continue[active, t - 1, :, -1]
                 if D == 1:
-                    predicted[..., 0] = torch.logaddexp(predicted[..., 0], tail_continuation)
+                    predicted = _safe_logaddexp(new_episode, tc).unsqueeze(-1)
                 else:
-                    predicted[..., -1] = torch.logaddexp(predicted[..., -1], tail_continuation)
+                    adv = previous[..., :-1] + log_continue[active, t - 1, :, :-1]
+                    last = _safe_logaddexp(adv[..., -1], tc).unsqueeze(-1)
+                    predicted = torch.cat((new_episode.unsqueeze(-1), adv[..., :-1], last), dim=-1)
 
             posterior_score = predicted + router.log_probs[active, t].unsqueeze(-1)
             step_log_z = torch.logsumexp(posterior_score.flatten(1), dim=1)
@@ -571,6 +612,71 @@ class NHSMM(nn.Module):
         initial_logits = self._expand_batch(initial_logits, B, "initial logits")
         duration_logits = self._expand_batch(duration_logits, B, "duration logits")
         transition_logits = self._expand_batch(transition_logits, B, "transition logits")
+
+        tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
+        tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None
+        if tail_end_probability is not None:
+            cumsum_emit = router.log_probs.new_zeros((B, T + 1, K))
+            cumsum_emit[:, 1:] = torch.cumsum(router.log_probs, dim=1)
+            duration_dependent_transition = self.dist.transition.max_duration is not None
+            alpha_steps: list[torch.Tensor] = []
+
+            for t in range(T):
+                valid = t < X.lengths
+                if not bool(valid.any()):
+                    alpha_steps.append(router.log_probs.new_full((B, K, Dmax), float("-inf")))
+                    continue
+                active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
+                bucket_candidates: list[list[torch.Tensor]] = [[] for _ in range(Dmax)]
+
+                for duration in range(1, t + 2):
+                    start = t - duration + 1
+                    bucket = min(duration, Dmax) - 1
+                    emit_sum = (cumsum_emit[active, t + 1] - cumsum_emit[active, start]).clamp(
+                        min=MIN_LOGITS, max=MAX_LOGITS
+                    )
+                    segment_score = (
+                        self._segment_duration_log_score(
+                            duration_logits[active, t], duration, tail_end_probability
+                        )
+                        + emit_sum
+                    )
+
+                    if start == 0:
+                        predecessor = initial_logits[active, 0]
+                    else:
+                        prev_t = start - 1
+                        prev_alpha = alpha_steps[prev_t].index_select(0, active)
+                        if duration_dependent_transition:
+                            predecessor = torch.logsumexp(
+                                prev_alpha.unsqueeze(-1) + transition_logits[active, prev_t],
+                                dim=(1, 2),
+                            )
+                        else:
+                            prev_state = torch.logsumexp(prev_alpha, dim=-1)
+                            predecessor = torch.logsumexp(
+                                prev_state.unsqueeze(-1) + transition_logits[active, prev_t],
+                                dim=1,
+                            )
+
+                    bucket_candidates[bucket].append(predecessor + segment_score)
+
+                empty_bucket = router.log_probs.new_full((active.numel(), K), float("-inf"))
+                bucket_values = [
+                    (
+                        torch.logsumexp(torch.stack(candidates, dim=0), dim=0)
+                        if candidates
+                        else empty_bucket
+                    )
+                    for candidates in bucket_candidates
+                ]
+                alpha_active = torch.stack(bucket_values, dim=-1)
+                alpha_t = router.log_probs.new_full((B, K, Dmax), float("-inf"))
+                alpha_steps.append(alpha_t.index_copy(0, active, alpha_active))
+
+            alpha = torch.stack(alpha_steps, dim=1)
+            length_mask = torch.arange(T, device=device).unsqueeze(0) < X.lengths.unsqueeze(1)
+            return alpha.masked_fill(~length_mask.unsqueeze(-1).unsqueeze(-1), NEG_INF)
 
         cumsum_emit = router.log_probs.new_zeros((B, T + 1, K))
         cumsum_emit[:, 1:] = torch.cumsum(router.log_probs, dim=1)
@@ -724,6 +830,188 @@ class NHSMM(nn.Module):
 
         return predicted
 
+    def _viterbi_noncausal_tail(
+        self,
+        X: SequenceSet,
+        router: ContextRouter,
+    ) -> List[torch.Tensor]:
+        K = self.config.n_states
+        Dmax = int(self.dist.duration.max_duration)
+        device = router.log_probs.device
+        predicted: List[torch.Tensor] = []
+        duration_dependent_transition = self.dist.transition.max_duration is not None
+        tail_end_probability = self.dist.duration.tail_probability()
+        if tail_end_probability is None:
+            raise RuntimeError("tail Viterbi requires an enabled duration tail")
+
+        for b in range(router.log_probs.shape[0]):
+            L = int(router.mask[b].sum())
+            if L == 0:
+                predicted.append(router.log_probs.new_empty(0, dtype=torch.long))
+                continue
+
+            initial_logits = self.dist.initial.log_matrix(
+                context=self._active_context(router.canonical[b : b + 1]), T=L
+            )[0, 0]
+            duration_logits = self.dist.duration.log_matrix(
+                context=self._active_context(router.context[b : b + 1, :L]),
+                T=L,
+                soft_dmax=self.duration_logits_bias,
+            )[0]
+            transition_logits = self.dist.transition.log_matrix(
+                context=self._active_context(router.context[b : b + 1, :L]),
+                T=L,
+                soft_dmax=self.duration_logits_bias,
+            )[0]
+
+            emit_log = router.log_probs[b, :L]
+            cumsum_emit = router.log_probs.new_zeros((L + 1, K))
+            cumsum_emit[1:] = torch.cumsum(emit_log, dim=0)
+
+            if duration_dependent_transition:
+                score = router.log_probs.new_full((L, K, Dmax), float("-inf"))
+                prev_state = torch.full((L, K, Dmax), -1, dtype=torch.long, device=device)
+                prev_bucket = torch.full((L, K, Dmax), -1, dtype=torch.long, device=device)
+                segment_length = torch.zeros((L, K, Dmax), dtype=torch.long, device=device)
+
+                for t in range(L):
+                    for duration in range(1, t + 2):
+                        start_t = t - duration + 1
+                        bucket = min(duration, Dmax) - 1
+                        emit_sum = cumsum_emit[t + 1] - cumsum_emit[start_t]
+                        segment_score = (
+                            self._segment_duration_log_score(
+                                duration_logits[t], duration, tail_end_probability
+                            )
+                            + emit_sum
+                        )
+
+                        if start_t == 0:
+                            candidate = initial_logits + segment_score
+                            candidate_prev_state = torch.full(
+                                (K,), -1, dtype=torch.long, device=device
+                            )
+                            candidate_prev_bucket = torch.full(
+                                (K,), -1, dtype=torch.long, device=device
+                            )
+                        else:
+                            predecessor_t = start_t - 1
+                            candidates = (
+                                score[predecessor_t].unsqueeze(-1)
+                                + transition_logits[predecessor_t]
+                            )
+                            flat = candidates.reshape(K * Dmax, K)
+                            predecessor_score, flat_index = flat.max(dim=0)
+                            candidate = predecessor_score + segment_score
+                            candidate_prev_state = flat_index // Dmax
+                            candidate_prev_bucket = flat_index % Dmax
+
+                        improve = candidate > score[t, :, bucket]
+                        score[t, :, bucket] = torch.where(improve, candidate, score[t, :, bucket])
+                        prev_state[t, :, bucket] = torch.where(
+                            improve, candidate_prev_state, prev_state[t, :, bucket]
+                        )
+                        prev_bucket[t, :, bucket] = torch.where(
+                            improve, candidate_prev_bucket, prev_bucket[t, :, bucket]
+                        )
+                        segment_length[t, :, bucket] = torch.where(
+                            improve,
+                            torch.full((K,), duration, dtype=torch.long, device=device),
+                            segment_length[t, :, bucket],
+                        )
+
+                flat_index = int(score[L - 1].reshape(-1).argmax().item())
+                state = flat_index // Dmax
+                bucket = flat_index % Dmax
+                segments = []
+                t = L - 1
+                while t >= 0:
+                    duration = int(segment_length[t, state, bucket].item())
+                    if duration < 1:
+                        raise RuntimeError("non-causal tail Viterbi segment length is missing")
+                    start_t = t - duration + 1
+                    segments.append((start_t, t, state))
+                    if start_t == 0:
+                        break
+                    state_next = int(prev_state[t, state, bucket].item())
+                    bucket_next = int(prev_bucket[t, state, bucket].item())
+                    if state_next < 0 or bucket_next < 0:
+                        raise RuntimeError("non-causal tail Viterbi backpointer is incomplete")
+                    state, bucket = state_next, bucket_next
+                    t = start_t - 1
+
+                segments.reverse()
+                predicted.append(
+                    torch.cat(
+                        [
+                            router.log_probs.new_full((end - start + 1,), st, dtype=torch.long)
+                            for start, end, st in segments
+                        ]
+                    )[:L]
+                )
+                continue
+
+            V = router.log_probs.new_full((L, K), float("-inf"))
+            back_ptr = torch.full((L, K), -1, dtype=torch.long, device=device)
+            best_dur = torch.zeros((L, K), dtype=torch.long, device=device)
+
+            for t in range(L):
+                for duration in range(1, t + 2):
+                    start_t = t - duration + 1
+                    emit_sum = cumsum_emit[t + 1] - cumsum_emit[start_t]
+                    segment_score = (
+                        self._segment_duration_log_score(
+                            duration_logits[t], duration, tail_end_probability
+                        )
+                        + emit_sum
+                    )
+                    if start_t == 0:
+                        candidate = initial_logits + segment_score
+                        candidate_prev = torch.full((K,), -1, dtype=torch.long, device=device)
+                    else:
+                        predecessor_t = start_t - 1
+                        predecessor_scores = (
+                            V[predecessor_t].unsqueeze(-1) + transition_logits[predecessor_t]
+                        )
+                        predecessor, predecessor_state = predecessor_scores.max(dim=0)
+                        candidate = predecessor + segment_score
+                        candidate_prev = predecessor_state
+
+                    improve = candidate > V[t]
+                    V[t] = torch.where(improve, candidate, V[t])
+                    back_ptr[t] = torch.where(improve, candidate_prev, back_ptr[t])
+                    best_dur[t] = torch.where(
+                        improve,
+                        torch.full((K,), duration, dtype=torch.long, device=device),
+                        best_dur[t],
+                    )
+
+            t = L - 1
+            state = int(V[t].argmax())
+            segments = []
+            while t >= 0:
+                duration = int(best_dur[t, state].item())
+                if duration < 1:
+                    raise RuntimeError("non-causal tail Viterbi segment length is missing")
+                start_t = t - duration + 1
+                segments.append((start_t, t, state))
+                prev = int(back_ptr[t, state].item())
+                t = start_t - 1
+                if prev >= 0:
+                    state = prev
+
+            segments.reverse()
+            predicted.append(
+                torch.cat(
+                    [
+                        router.log_probs.new_full((end - start + 1,), st, dtype=torch.long)
+                        for start, end, st in segments
+                    ]
+                )[:L]
+            )
+
+        return predicted
+
     def _viterbi(
         self, X: SequenceSet, context: Optional[Union[torch.Tensor, ContextRouter]] = None
     ) -> List[torch.Tensor]:
@@ -738,6 +1026,8 @@ class NHSMM(nn.Module):
         )
         if self.config.causal:
             return self._viterbi_causal_hazard(X, router)
+        if self.dist.duration.tail_probability() is not None:
+            return self._viterbi_noncausal_tail(X, router)
 
         B, T_max, _ = router.log_probs.shape
         device = router.log_probs.device

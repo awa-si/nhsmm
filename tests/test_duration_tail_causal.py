@@ -85,3 +85,19 @@ def test_tail_filter_stays_normalized_beyond_max_duration() -> None:
     mass = trace.log_posterior.exp().sum(dim=(2, 3))
     torch.testing.assert_close(mass, torch.ones_like(mass), atol=2e-6, rtol=2e-6)
     assert torch.isfinite(trace.log_posterior[:, -1]).any()
+
+
+def test_causal_tail_forward_backpropagates_to_tail_parameter() -> None:
+    model = _model(tail=True, tail_probability=0.4)
+    model.dist.duration.tail_end_probability.grad = None
+    torch.manual_seed(215)
+    x = torch.randn(1, 8, 2)
+
+    alpha = model.forward(model._build_sequence_set(x))
+    loss = -torch.logsumexp(alpha[0, -1].flatten(), dim=0)
+    loss.backward()
+
+    grad = model.dist.duration.tail_end_probability.grad
+    assert grad is not None
+    assert torch.isfinite(grad).all()
+    assert torch.count_nonzero(grad) > 0

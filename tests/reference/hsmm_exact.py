@@ -408,3 +408,69 @@ def duration_hazards_from_tail_mass(
                 log_continue[t, k, D - 1] = p_continue_tail.log()
 
     return log_end, log_continue
+
+
+def enumerate_segment_paths_with_tail(
+    log_initial: torch.Tensor,
+    log_duration_mass: torch.Tensor,
+    log_transition: torch.Tensor,
+    log_emission: torch.Tensor,
+    tail_end_probability: torch.Tensor,
+) -> list[SegmentPath]:
+    """Enumerate non-causal segmentations with the bounded geometric D+ tail."""
+    log_initial = _normalize_last_dim(log_initial, "log_initial")
+    log_duration_mass = _normalize_last_dim(log_duration_mass, "log_duration_mass")
+    log_transition = _normalize_last_dim(log_transition, "log_transition")
+    _require_log_prob_tensor("log_emission", log_emission)
+
+    T, K = log_emission.shape
+    D = log_duration_mass.shape[-1]
+    if log_initial.shape != (K,):
+        raise ValueError("initial/state shape mismatch")
+    if log_duration_mass.shape != (T, K, D):
+        raise ValueError("duration shape mismatch")
+    if log_transition.shape != (T, K, D, K):
+        raise ValueError("transition shape mismatch")
+    if tail_end_probability.shape != (K,):
+        raise ValueError("tail_end_probability must be [K]")
+    if not torch.isfinite(tail_end_probability).all():
+        raise ValueError("tail_end_probability must be finite")
+    if bool(((tail_end_probability <= 0) | (tail_end_probability > 1)).any()):
+        raise ValueError("tail_end_probability must satisfy 0 < h <= 1")
+
+    log_tail_end = tail_end_probability.log()
+    log_tail_continue = torch.where(
+        tail_end_probability < 1.0,
+        torch.log1p(-tail_end_probability),
+        torch.full_like(tail_end_probability, float("-inf")),
+    )
+
+    def duration_score(end: int, state: int, duration: int) -> torch.Tensor:
+        if duration < D:
+            return log_duration_mass[end, state, duration - 1]
+        score = log_duration_mass[end, state, D - 1] + log_tail_end[state]
+        excess = duration - D
+        if excess > 0:
+            score = score + excess * log_tail_continue[state]
+        return score
+
+    paths: list[SegmentPath] = []
+    for durations in _compositions(T, T):
+        for states in product(range(K), repeat=len(durations)):
+            end = -1
+            score = log_initial[states[0]]
+            valid = torch.isfinite(score)
+            for segment_index, (state, duration) in enumerate(zip(states, durations)):
+                start = end + 1
+                end = start + duration - 1
+                if segment_index > 0:
+                    prev_state = states[segment_index - 1]
+                    prev_duration = durations[segment_index - 1]
+                    prev_bucket = min(prev_duration, D) - 1
+                    score = score + log_transition[start - 1, prev_state, prev_bucket, state]
+                score = score + duration_score(end, state, duration)
+                score = score + log_emission[start : end + 1, state].sum()
+                valid = valid & torch.isfinite(score)
+            if bool(valid):
+                paths.append(SegmentPath(tuple(states), tuple(durations), score))
+    return paths

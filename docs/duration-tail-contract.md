@@ -124,6 +124,18 @@ q_tail * (1-h_tail)^(d-D) * h_tail
 
 A non-causal DP therefore cannot assume segment duration is bounded by `D`; for an observed sequence of length `T`, candidate completed segment durations are bounded by `T` instead. Production non-causal support is a later implementation step and must be independently checked against exhaustive enumeration before enablement.
 
+## Non-causal production implementation
+
+The opt-in non-causal forward and Viterbi paths now admit actual completed segment lengths up to the observed sequence length `T` while retaining only `D` duration buckets in dynamic-programming state. Actual durations `d >= D` use bucket `D+` for subsequent duration-dependent transitions.
+
+For a completed tail segment, both likelihood and MAP scoring use the contract mass
+
+```text
+q_tail * (1-h_tail)^(d-D) * h_tail
+```
+
+Viterbi retains the actual winning segment length in its backpointer even when multiple lengths collapse into the same `D+` DP bucket. This is required to reconstruct the state path correctly. The implementation is checked against independent exhaustive enumeration over all sequence compositions.
+
 ## Compatibility invariants
 
 Before production enablement, the extension must satisfy:
@@ -141,5 +153,5 @@ Before production enablement, the extension must satisfy:
 2. Add an opt-in configuration and duration/tail parameterization without changing default behavior.
 3. Extend causal forward/filter/runtime and prove `h_tail=1` equivalence to the current implementation.
 4. Extend survival/forecast semantics.
-5. Extend non-causal likelihood/Viterbi with exhaustive-reference equivalence.
+5. Extend non-causal likelihood/Viterbi with exhaustive-reference equivalence. **Complete.**
 6. Re-run canonical package acceptance before considering the extension production-ready.

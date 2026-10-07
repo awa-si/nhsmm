@@ -227,3 +227,18 @@ def test_d1_tail_combines_boundary_reset_and_tail_continuation() -> None:
             torch.tensor([[0.2]]),
         )
         torch.testing.assert_close(state.age_posterior, torch.ones(1, 1))
+
+
+def test_safe_logaddexp_has_finite_gradient_for_two_impossible_paths() -> None:
+    from nhsmm.filtering import _safe_logaddexp
+
+    left = torch.tensor([float("-inf"), -2.0], requires_grad=True)
+    right = torch.tensor([float("-inf"), -3.0], requires_grad=True)
+    result = _safe_logaddexp(left, right)
+
+    assert torch.isneginf(result[0])
+    result[1].backward()
+    assert left.grad is not None
+    assert right.grad is not None
+    assert torch.isfinite(left.grad).all()
+    assert torch.isfinite(right.grad).all()
