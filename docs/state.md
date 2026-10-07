@@ -143,3 +143,14 @@ Passing this milestone supports the precise claim: **the maintained HSMM recurre
 No unresolved package-core mathematical defect is currently known. Gate 10 closed on 2026-10-07 with Ruff, Black, diff-check, and the canonical CPU suite green (`668 passed, 3 skipped`).
 
 Downstream integration is a separate post-milestone scope and is not evidence for this core correctness claim.
+
+## Next milestone — real-market HSMM hypothesis tests
+
+The next research block is defined in [market-hypothesis-gates.md](market-hypothesis-gates.md) as Gates 11–14:
+
+- Gate 11: non-geometric regime duration structure;
+- Gate 12: predictive state separation;
+- Gate 13: incremental episode-age information beyond state alone;
+- Gate 14: replicated OOS utility against HMM/state-only/no-regime baselines.
+
+These gates are intentionally falsifiable and downstream-facing. They do not reopen Gates 0–10 and cannot weaken the accepted package-core correctness claim.

@@ -266,3 +266,7 @@ Anything stronger, such as proof for arbitrary floating-point executions or univ
 Execute Gates 0–4 first as one mathematical-reference workstream. Gates 5–8 then harden structural, differential, and numerical behavior. Gate 9 is empirical revalidation. Gate 10 is the final package gate.
 
 A gate does not pass because later gates are green. Any failure returns work to the earliest gate whose assumption or implementation is invalidated.
+
+## Post-core continuation
+
+Gates 0–10 end the package-core correctness milestone. Real-market mechanism and utility hypotheses continue separately as Gates 11–14 in [market-hypothesis-gates.md](market-hypothesis-gates.md). Results from those gates may accept or reject trading-usefulness hypotheses, but they do not retroactively serve as evidence for mathematical correctness.
