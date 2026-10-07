@@ -243,9 +243,7 @@ def _filter_step_normalized(
 
     prev = previous.log_posterior
     B, K, D = prev.shape
-    log_end, log_continue = _duration_log_hazard_from_log_p(
-        log_duration, tail_end_probability
-    )
+    log_end, log_continue = _duration_log_hazard_from_log_p(log_duration, tail_end_probability)
 
     predicted = prev.new_full((B, K, D), float("-inf"))
     if D > 1:
@@ -261,9 +259,7 @@ def _filter_step_normalized(
         if D == 1:
             predicted[..., 0] = torch.logaddexp(predicted[..., 0], tail_continuation)
         else:
-            predicted[..., -1] = torch.logaddexp(
-                predicted[..., -1], tail_continuation
-            )
+            predicted[..., -1] = torch.logaddexp(predicted[..., -1], tail_continuation)
 
     posterior = predicted + emission_log_prob.unsqueeze(-1)
     flat = posterior.flatten(1)
