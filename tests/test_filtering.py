@@ -171,3 +171,59 @@ def test_filter_trace_requires_long_lengths_on_same_device() -> None:
     meta_lengths = torch.tensor([2], dtype=torch.long, device="meta")
     with pytest.raises(ValueError, match="same device"):
         HSMMFilterTrace(trace, meta_lengths)
+
+
+def test_tail_hazard_one_is_exactly_equivalent_to_finite_filter_step() -> None:
+    torch.manual_seed(101)
+    B, K, D = 2, 3, 4
+    state = initialize_filter(torch.randn(B, K), torch.randn(B, K), max_duration=D)
+    emission = torch.randn(B, K)
+    duration = torch.log_softmax(torch.randn(B, K, D), dim=-1)
+    transition = torch.log_softmax(torch.randn(B, K, D, K), dim=-1)
+
+    finite = _filter_step_normalized(state, emission, duration, transition)
+    tailed = _filter_step_normalized(
+        state,
+        emission,
+        duration,
+        transition,
+        torch.ones(B, K),
+    )
+
+    torch.testing.assert_close(tailed.log_posterior, finite.log_posterior, atol=0.0, rtol=0.0)
+
+
+def test_tail_bucket_accepts_entry_and_self_continuation() -> None:
+    D = 2
+    duration_mass = torch.tensor([[[float("-inf"), 0.0]]])
+    transition = _identity_transition(K=1, D=D)
+    emission = torch.zeros(1, 1)
+    tail = torch.tensor([[0.25]])
+
+    state = initialize_filter(torch.zeros(1, 1), emission, max_duration=D)
+    state = filter_step(state, emission, duration_mass, transition, tail)
+    torch.testing.assert_close(state.age_posterior, torch.tensor([[0.0, 1.0]]))
+
+    state = filter_step(state, emission, duration_mass, transition, tail)
+    torch.testing.assert_close(
+        state.age_posterior,
+        torch.tensor([[0.25, 0.75]]),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+
+
+def test_d1_tail_combines_boundary_reset_and_tail_continuation() -> None:
+    state = initialize_filter(torch.zeros(1, 1), torch.zeros(1, 1), max_duration=1)
+    duration_mass = torch.zeros(1, 1, 1)
+    transition = torch.zeros(1, 1, 1, 1)
+
+    for _ in range(4):
+        state = filter_step(
+            state,
+            torch.zeros(1, 1),
+            duration_mass,
+            transition,
+            torch.tensor([[0.2]]),
+        )
+        torch.testing.assert_close(state.age_posterior, torch.ones(1, 1))

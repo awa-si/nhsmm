@@ -330,6 +330,7 @@ def filter_step(
 def next_episode_end_probability(
     state: HSMMFilterState,
     log_duration: torch.Tensor,
+    tail_end_probability: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Probability that the currently active episode ends before the next observation."""
 
@@ -342,7 +343,7 @@ def next_episode_end_probability(
     if log_duration.shape != (B, K, D):
         raise ValueError(f"log_duration must be {(B, K, D)}, got {log_duration.shape}")
 
-    log_end, _ = duration_log_hazard(log_duration)
+    log_end, _ = duration_log_hazard(log_duration, tail_end_probability)
     result = torch.logsumexp(prev + log_end, dim=(1, 2)).exp()
     if not torch.isfinite(result).all():
         raise ValueError("episode-end probability is non-finite")
@@ -403,6 +404,8 @@ def filter_model_sequence(
             T=T,
             soft_dmax=model.duration_logits_bias,
         )
+        tail_probability_fn = getattr(model.dist.duration, "tail_probability", None)
+        tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None
         if initial_logits.shape[0] == 1 and B > 1:
             initial_logits = initial_logits.expand(B, *initial_logits.shape[1:])
         if duration_logits.shape[0] == 1 and B > 1:
@@ -444,6 +447,7 @@ def filter_model_sequence(
                     sequence.log_probs[b : b + 1, t],
                     duration_logits[b : b + 1, t - 1],
                     transition_logits[b : b + 1, t - 1],
+                    tail_end_probability,
                 )
                 trace[b, t] = state.log_posterior[0]
 

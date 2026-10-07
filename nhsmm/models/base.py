@@ -453,8 +453,18 @@ class NHSMM(nn.Module):
                 f"transition logits must be {expected_transition}, got {transition_logits.shape}"
             )
 
+        tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
+        tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None
+        expanded_tail = None
+        if tail_end_probability is not None:
+            expanded_tail = (
+                tail_end_probability.to(device=duration_logits.device, dtype=duration_logits.dtype)
+                .view(1, 1, K)
+                .expand(B, T, K)
+                .reshape(B * T, K)
+            )
         log_end, log_continue = _duration_log_hazard_from_log_p(
-            duration_logits.reshape(B * T, K, D)
+            duration_logits.reshape(B * T, K, D), expanded_tail
         )
         log_end = log_end.reshape(B, T, K, D)
         log_continue = log_continue.reshape(B, T, K, D)
@@ -503,6 +513,13 @@ class NHSMM(nn.Module):
                     dim=(1, 2),
                 )
             predicted[..., 0] = new_episode
+
+            if tail_end_probability is not None:
+                tail_continuation = previous[..., -1] + log_continue[active, t - 1, :, -1]
+                if D == 1:
+                    predicted[..., 0] = torch.logaddexp(predicted[..., 0], tail_continuation)
+                else:
+                    predicted[..., -1] = torch.logaddexp(predicted[..., -1], tail_continuation)
 
             posterior_score = predicted + router.log_probs[active, t].unsqueeze(-1)
             step_log_z = torch.logsumexp(posterior_score.flatten(1), dim=1)
