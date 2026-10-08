@@ -37,28 +37,17 @@ def _windows(data: dict[str, np.ndarray], start: int, end: int, count: int):
     usable = end - start - WINDOW
     anchors = np.linspace(start, start + usable, count, dtype=int)
     x = np.stack(
-        [
-            np.column_stack([data[name][a : a + WINDOW] for name in FEATURES])
-            for a in anchors
-        ]
+        [np.column_stack([data[name][a : a + WINDOW] for name in FEATURES]) for a in anchors]
     ).astype(np.float32)
-    c = np.stack(
-        [data["macro_stress"][a : a + WINDOW, None] for a in anchors]
-    ).astype(np.float32)
-    y = np.stack(
-        [data["gt_regime_id"][a : a + WINDOW] for a in anchors]
-    ).astype(np.int64)
-    age = np.stack(
-        [data["gt_episode_age"][a : a + WINDOW] for a in anchors]
-    ).astype(np.int64)
-    rem = np.stack(
-        [data["gt_remaining_duration"][a : a + WINDOW] for a in anchors]
-    ).astype(np.int64)
+    c = np.stack([data["macro_stress"][a : a + WINDOW, None] for a in anchors]).astype(np.float32)
+    y = np.stack([data["gt_regime_id"][a : a + WINDOW] for a in anchors]).astype(np.int64)
+    age = np.stack([data["gt_episode_age"][a : a + WINDOW] for a in anchors]).astype(np.int64)
+    rem = np.stack([data["gt_remaining_duration"][a : a + WINDOW] for a in anchors]).astype(
+        np.int64
+    )
     gt_p = np.stack(
         [
-            np.column_stack(
-                [data[f"gt_p_next_{name}"][a : a + WINDOW] for name in REGIMES]
-            )
+            np.column_stack([data[f"gt_p_next_{name}"][a : a + WINDOW] for name in REGIMES])
             for a in anchors
         ]
     ).astype(np.float32)
@@ -209,7 +198,7 @@ def _gaussian_ll(train_x, test_x):
     return float(lp.sum(1).mean())
 
 
-def _aligned_transition_mae(model, context, true_state, gt_p, perm):
+def _aligned_transition_mae(model, context, true_state, true_age, gt_p, perm):
     inv = np.empty(K, dtype=np.int64)
     for learned, true in enumerate(perm):
         inv[true] = learned
@@ -218,6 +207,7 @@ def _aligned_transition_mae(model, context, true_state, gt_p, perm):
     mask[:, :-1] = true_state[:, 1:] != true_state[:, :-1]
     cc = context[mask]
     yy = true_state[mask]
+    aa = true_age[mask]
     pp = gt_p[mask]
     if len(cc) == 0:
         return math.nan
@@ -233,8 +223,10 @@ def _aligned_transition_mae(model, context, true_state, gt_p, perm):
         )
 
     errors = []
-    for mat, state, target in zip(mats, yy, pp):
-        learned_row = mat[inv[int(state)]]
+    for mat, state, age, target in zip(mats, yy, aa, pp):
+        learned_state = inv[int(state)]
+        age_index = min(max(int(age) - 1, 0), mat.shape[-2] - 1)
+        learned_row = mat[learned_state, age_index]
         aligned = np.empty(K, dtype=np.float64)
         for learned_target, true_target in enumerate(perm):
             aligned[true_target] = learned_row[learned_target]
@@ -261,9 +253,7 @@ def _one(seed, path):
     test = _windows(data, *test_range, EVAL_WINDOWS)
 
     train_x, val_x, test_x = _standardize(train[0], validation[0], test[0])
-    train_c, val_c, test_c = _standardize_context(
-        train[1], validation[1], test[1]
-    )
+    train_c, val_c, test_c = _standardize_context(train[1], validation[1], test[1])
 
     full = _fit(seed, train_x, train_c, context=True, hmm=False)
     no_context = _fit(seed + 100, train_x, train_c, context=False, hmm=False)
@@ -292,12 +282,11 @@ def _one(seed, path):
             and true_medians[state] > 0
         ):
             relative_errors.append(
-                abs(predicted_medians[state] - true_medians[state])
-                / true_medians[state]
+                abs(predicted_medians[state] - true_medians[state]) / true_medians[state]
             )
     duration_error = float(np.median(relative_errors))
 
-    transition_mae = _aligned_transition_mae(full, test_c, true, test[5], perm)
+    transition_mae = _aligned_transition_mae(full, test_c, true, test[3], test[5], perm)
 
     full_ll = _ll(full, test_x, test_c)
     no_context_ll = _ll(no_context, test_x)
@@ -321,9 +310,7 @@ def _one(seed, path):
         "full_minus_no_regime": full_ll - gaussian_ll,
         "occupancy": occupancy.tolist(),
         "true_run_medians": {REGIMES[i]: true_medians[i] for i in range(K)},
-        "predicted_run_medians": {
-            REGIMES[i]: predicted_medians[i] for i in range(K)
-        },
+        "predicted_run_medians": {REGIMES[i]: predicted_medians[i] for i in range(K)},
         "permutation_learned_to_true": list(perm),
     }
 
@@ -353,17 +340,14 @@ def _summary(rows):
     }
     checks = {
         "state_recovery": (
-            result["median_matched_accuracy"] >= 0.65
-            and result["median_ari"] >= 0.40
+            result["median_matched_accuracy"] >= 0.65 and result["median_ari"] >= 0.40
         ),
         "boundary_recovery": result["median_boundary_f1_tol5"] >= 0.45,
         "duration_recovery": result["median_duration_median_rel_error"] <= 0.50,
         "transition_recovery": result["median_transition_mae"] <= 0.20,
         "beats_no_regime": result["median_full_minus_no_regime"] >= 0.05,
         "not_worse_than_hmm": result["median_full_minus_hmm"] >= 0.0,
-        "not_worse_than_no_context_hsmm": (
-            result["median_full_minus_hsmm_no_context"] >= -0.001
-        ),
+        "not_worse_than_no_context_hsmm": (result["median_full_minus_hsmm_no_context"] >= -0.001),
     }
     checks["passed"] = all(checks.values())
     result["acceptance"] = checks
@@ -383,9 +367,7 @@ def main():
     if args.workers == 1:
         rows = [_worker(job) for job in jobs]
     else:
-        with concurrent.futures.ProcessPoolExecutor(
-            max_workers=args.workers
-        ) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=args.workers) as executor:
             rows = list(executor.map(_worker, jobs))
 
     summary = _summary(rows)

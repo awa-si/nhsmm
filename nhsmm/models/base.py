@@ -773,7 +773,10 @@ class NHSMM(nn.Module):
                 T=L,
                 soft_dmax=self.duration_logits_bias,
             )[0]
-            log_end, log_continue = duration_log_hazard(duration_logits)
+            tail_end_probability = self.dist.duration.tail_probability()
+            log_end, log_continue = duration_log_hazard(
+                duration_logits, tail_end_probability=tail_end_probability
+            )
 
             score = router.log_probs.new_full((L, K, D), float("-inf"))
             prev_state = torch.full((L, K, D), -1, dtype=torch.long, device=score.device)
@@ -790,6 +793,27 @@ class NHSMM(nn.Module):
                     score[t, :, 1:] = continuation + router.log_probs[b, t].unsqueeze(-1)
                     prev_state[t, :, 1:] = state_indices.expand(K, D - 1)
                     prev_age[t, :, 1:] = age_indices.expand(K, D - 1)
+
+                # The final age bucket represents D+ with an enabled tail.
+                # Compete with the incoming D-1 continuation for its MAP path.
+                if tail_end_probability is not None:
+                    tail_score = (
+                        score[t - 1, :, -1] + log_continue[t - 1, :, -1]
+                        + router.log_probs[b, t]
+                    )
+                    target_age = D - 1
+                    use_tail = tail_score > score[t, :, target_age]
+                    score[t, :, target_age] = torch.where(
+                        use_tail, tail_score, score[t, :, target_age]
+                    )
+                    prev_state[t, :, target_age] = torch.where(
+                        use_tail, torch.arange(K, device=score.device),
+                        prev_state[t, :, target_age],
+                    )
+                    prev_age[t, :, target_age] = torch.where(
+                        use_tail, torch.full((K,), target_age, device=score.device),
+                        prev_age[t, :, target_age],
+                    )
 
                 boundary = score[t - 1] + log_end[t - 1]
                 if duration_dependent_transition:

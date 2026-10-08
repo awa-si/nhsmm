@@ -101,3 +101,36 @@ def test_causal_tail_forward_backpropagates_to_tail_parameter() -> None:
     assert grad is not None
     assert torch.isfinite(grad).all()
     assert torch.count_nonzero(grad) > 0
+
+
+def test_tail_one_matches_finite_causal_viterbi() -> None:
+    finite = _model(tail=False)
+    tailed = _model(tail=True, tail_probability=1.0)
+    _copy_shared_state(finite, tailed)
+    with torch.no_grad():
+        tailed.dist.duration.tail_end_probability.fill_(1.0)
+    torch.manual_seed(216)
+    x = torch.randn(2, 15, 2)
+    finite_paths = finite.predict(x, verbose=False)
+    tail_paths = tailed.predict(x, verbose=False)
+    for expected, actual in zip(finite_paths, tail_paths):
+        torch.testing.assert_close(actual, expected, atol=0, rtol=0)
+
+
+def test_causal_viterbi_tail_changes_long_episode_decoding() -> None:
+    model = _model(tail=True, tail_probability=0.01)
+    with torch.no_grad():
+        model.dist.initial.logits.fill_(0.0)
+        model.dist.initial.logits[0] = 12.0
+        model.dist.emission.mu.zero_()
+        model.dist.emission.log_var.zero_()
+        model.dist.duration.logits.fill_(-15.0)
+        model.dist.duration.logits[:, -1] = 15.0
+        model.dist.duration.tail_end_probability.fill_(0.01)
+        model.dist.transition.logits.fill_(-12.0)
+        for k in range(3):
+            model.dist.transition.logits[k, :, (k + 1) % 3] = 12.0
+    x = torch.zeros(1, 18, 2)
+    path = model.predict(x, verbose=False)[0]
+    assert path.shape == (18,)
+    assert torch.all(path == 0), path.tolist()
