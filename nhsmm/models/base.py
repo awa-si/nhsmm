@@ -1409,13 +1409,25 @@ class NHSMM(nn.Module):
         return current
 
     @torch.no_grad()
-    def _initialize_emission_from_observations(self, observations: torch.Tensor) -> None:
+    def _initialize_emission_from_observations(
+        self, observations: torch.Tensor, *, cluster_variance: bool = False
+    ) -> None:
         emission = self.dist.emission
         observations = observations.to(device=self.device, dtype=DTYPE)
         centers = self._kmeans_centers(observations, self.config.n_states)
         if emission.emission_type == "gaussian":
             emission.mu.copy_(centers)
-            emission.log_var.zero_()
+            if cluster_variance:
+                labels = torch.cdist(observations, centers).argmin(dim=-1)
+                global_variance = observations.var(dim=0, unbiased=False)
+                variances = torch.stack([
+                    observations[labels == state].var(dim=0, unbiased=False)
+                    if int((labels == state).sum()) > 1 else global_variance
+                    for state in range(self.config.n_states)
+                ])
+                emission.log_var.copy_(variances.clamp(min=0.05, max=5.0).log())
+            else:
+                emission.log_var.zero_()
         else:
             emission.loc.copy_(centers)
             emission.scale_param.fill_(1.0)
@@ -1440,8 +1452,12 @@ class NHSMM(nn.Module):
 
         mode = emission_init_mode or self.config.emission_init_mode
         emission = self.dist.emission
-        if mode == "kmeans":
-            self._initialize_emission_from_observations(observations)
+        if mode in ("kmeans", "kmeans_cluster_variance"):
+            if mode == "kmeans_cluster_variance" and emission.emission_type != "gaussian":
+                raise ValueError("kmeans_cluster_variance requires gaussian emissions")
+            self._initialize_emission_from_observations(
+                observations, cluster_variance=(mode == "kmeans_cluster_variance")
+            )
         else:
             emission.initialize(mode=mode, context=None)
 

@@ -107,7 +107,7 @@ class ModelConfig:
     duration_tail: bool = False
     duration_tail_init_probability: float = 0.5
     min_covar: float = 1e-6
-    emission_init_mode: Literal["random", "spread", "kmeans"] = "spread"
+    emission_init_mode: Literal["random", "spread", "kmeans", "kmeans_cluster_variance"] = "spread"
     initial_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     duration_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     transition_init_mode: Literal["normal", "biased", "uniform"] = "normal"
@@ -204,7 +204,7 @@ class ModelConfig:
 
         choices = {
             "pool": {"mean", "last", "max", "attn", "mha"},
-            "emission_init_mode": {"random", "spread", "kmeans"},
+            "emission_init_mode": {"random", "spread", "kmeans", "kmeans_cluster_variance"},
             "initial_init_mode": {"normal", "biased", "uniform"},
             "duration_init_mode": {"normal", "biased", "uniform"},
             "transition_init_mode": {"normal", "biased", "uniform"},
