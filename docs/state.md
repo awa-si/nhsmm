@@ -27,6 +27,9 @@ Controlled package evidence currently supports these narrow claims:
 - **Multi-component identifiability:** package-core PASS across the frozen controlled gate.
 - **General-context robustness:** package-core PASS under split-fit direction replication.
 
+
+A separate labeled synthetic trading-regime testbed is defined in [trading-regime-dataset.md](trading-regime-dataset.md) for controlled state/duration/transition usefulness experiments. It is not real-market evidence and does not replace Gates 11–14.
+
 These claims are package/mechanism evidence only. They do not establish trading utility, market semantics, or downstream predictive value. See [validation.md](validation.md) for the maintained metrics, thresholds, and reproduction commands.
 
 ## Production hardening closed on 2026-10-05/06
