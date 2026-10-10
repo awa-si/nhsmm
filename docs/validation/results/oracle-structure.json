@@ -1,0 +1,132 @@
+{
+  "rows": 60000,
+  "episodes": 693,
+  "max_duration": 64,
+  "duration": [
+    {
+      "state": "bull",
+      "episodes": 142,
+      "complete_episodes": 141,
+      "mean_duration": 120.41843971631205,
+      "median_duration": 117.0,
+      "p90_duration": 176.0,
+      "mass_duration_gt64": 0.9361702127659575,
+      "mass_duration_ge64": 0.9432624113475178,
+      "empirical_hazard_at64": 0.007518796992481203
+    },
+    {
+      "state": "bear",
+      "episodes": 158,
+      "complete_episodes": 158,
+      "mean_duration": 96.27215189873418,
+      "median_duration": 89.5,
+      "p90_duration": 149.60000000000002,
+      "mass_duration_gt64": 0.7468354430379747,
+      "mass_duration_ge64": 0.759493670886076,
+      "empirical_hazard_at64": 0.016666666666666666
+    },
+    {
+      "state": "range",
+      "episodes": 212,
+      "complete_episodes": 212,
+      "mean_duration": 100.80188679245283,
+      "median_duration": 120.5,
+      "p90_duration": 169.8,
+      "mass_duration_gt64": 0.5707547169811321,
+      "mass_duration_ge64": 0.5707547169811321,
+      "empirical_hazard_at64": 0.0
+    },
+    {
+      "state": "chaotic",
+      "episodes": 181,
+      "complete_episodes": 181,
+      "mean_duration": 35.46408839779006,
+      "median_duration": 31.0,
+      "p90_duration": 58.0,
+      "mass_duration_gt64": 0.07734806629834254,
+      "mass_duration_ge64": 0.08287292817679558,
+      "empirical_hazard_at64": 0.06666666666666667
+    }
+  ],
+  "boundary_counts": [
+    [
+      0,
+      15,
+      81,
+      45
+    ],
+    [
+      17,
+      0,
+      79,
+      62
+    ],
+    [
+      75,
+      63,
+      0,
+      74
+    ],
+    [
+      50,
+      80,
+      51,
+      0
+    ]
+  ],
+  "boundary_probabilities": [
+    [
+      0.0,
+      0.10638297872340426,
+      0.574468085106383,
+      0.3191489361702128
+    ],
+    [
+      0.10759493670886076,
+      0.0,
+      0.5,
+      0.3924050632911392
+    ],
+    [
+      0.35377358490566035,
+      0.2971698113207547,
+      0.0,
+      0.3490566037735849
+    ],
+    [
+      0.27624309392265195,
+      0.4419889502762431,
+      0.281767955801105,
+      0.0
+    ]
+  ],
+  "base_transition": [
+    [
+      0.0,
+      0.12,
+      0.6,
+      0.28
+    ],
+    [
+      0.15,
+      0.0,
+      0.52,
+      0.33
+    ],
+    [
+      0.43,
+      0.3,
+      0.0,
+      0.27
+    ],
+    [
+      0.31,
+      0.39,
+      0.3,
+      0.0
+    ]
+  ],
+  "diagonal_transition_count": 0,
+  "macro_stress_min": -1.6673110268287217,
+  "macro_stress_max": 1.489686432490618
+}
