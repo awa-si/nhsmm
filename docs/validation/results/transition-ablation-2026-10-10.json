@@ -1,0 +1,44 @@
+{
+  "method": "Ground-truth boundary supervised transition ablation, fixed 60/40 chronological split",
+  "train_boundaries": 415,
+  "test_boundaries": 277,
+  "runs": [
+    {
+      "context": false,
+      "seed": 2311,
+      "train_nll_initial": 1.3862946033477783,
+      "train_nll": 0.7907401323318481,
+      "test_nll": 1.436220407485962,
+      "test_transition_mae": 0.12605146422129848
+    },
+    {
+      "context": false,
+      "seed": 2312,
+      "train_nll_initial": 1.3862946033477783,
+      "train_nll": 0.7907401323318481,
+      "test_nll": 1.436220407485962,
+      "test_transition_mae": 0.12605146422129848
+    },
+    {
+      "context": true,
+      "seed": 2311,
+      "train_nll_initial": 1.3859689235687256,
+      "train_nll": 0.6726070046424866,
+      "test_nll": 1.5086891651153564,
+      "test_transition_mae": 0.1387095733186778
+    },
+    {
+      "context": true,
+      "seed": 2312,
+      "train_nll_initial": 1.3858988285064697,
+      "train_nll": 0.6703456044197083,
+      "test_nll": 1.494968295097351,
+      "test_transition_mae": 0.13949611311725188
+    }
+  ],
+  "pooled": {
+    "method": "pooled empirical supervised transition matrix",
+    "test_transition_mae": 0.0377051774366886,
+    "test_nll": 1.0275143135539144
+  }
+}
