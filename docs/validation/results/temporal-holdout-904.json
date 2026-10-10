@@ -1,0 +1,67 @@
+{
+  "seed": 904,
+  "max_iter": 30,
+  "train_range": "0-60%",
+  "evaluation_ranges": [
+    "60-80%",
+    "80-100%"
+  ],
+  "results": [
+    {
+      "period": "middle_60_80",
+      "scale": 0.25,
+      "accuracy": 0.48984375,
+      "ari": 0.21059105848766962,
+      "boundary_f1_tol5": 0.14736842105263157,
+      "switches": 54,
+      "permutation": [
+        1,
+        0,
+        3,
+        2
+      ]
+    },
+    {
+      "period": "middle_60_80",
+      "scale": 1.0,
+      "accuracy": 0.4940104166666667,
+      "ari": 0.2247515927837517,
+      "boundary_f1_tol5": 0.20689655172413793,
+      "switches": 75,
+      "permutation": [
+        1,
+        0,
+        3,
+        2
+      ]
+    },
+    {
+      "period": "late_80_100",
+      "scale": 0.25,
+      "accuracy": 0.5,
+      "ari": 0.2312094383309661,
+      "boundary_f1_tol5": 0.17142857142857143,
+      "switches": 98,
+      "permutation": [
+        1,
+        2,
+        0,
+        3
+      ]
+    },
+    {
+      "period": "late_80_100",
+      "scale": 1.0,
+      "accuracy": 0.49244791666666665,
+      "ari": 0.20467845586634772,
+      "boundary_f1_tol5": 0.15217391304347827,
+      "switches": 142,
+      "permutation": [
+        1,
+        2,
+        0,
+        3
+      ]
+    }
+  ]
+}
