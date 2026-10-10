@@ -1,0 +1,22 @@
+{
+  "protocol": "Unsupervised NHSMM.optimize() pilot; train 12 windows x480 first60%; test4 windows x480 last20%; 12 iterations; no context; same seed; labels evaluation only",
+  "seed": 901,
+  "results": [
+    {
+      "age_tied": false,
+      "oos_loglikelihood_per_row": -10.248358154296875,
+      "oos_matched_accuracy": 0.49947916666666664,
+      "oos_ari": 0.1307559820450793,
+      "oos_boundary_f1_tol5": 0.1722488038277512,
+      "age_invariance_error": 0.0625685602426529
+    },
+    {
+      "age_tied": true,
+      "oos_loglikelihood_per_row": -10.249608357747396,
+      "oos_matched_accuracy": 0.49895833333333334,
+      "oos_ari": 0.13083600865052347,
+      "oos_boundary_f1_tol5": 0.17560975609756097,
+      "age_invariance_error": 0.0
+    }
+  ]
+}
