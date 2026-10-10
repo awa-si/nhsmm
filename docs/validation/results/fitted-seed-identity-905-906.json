@@ -1,0 +1,74 @@
+{
+  "stage": "fitted_seed_identity",
+  "max_iter": 30,
+  "models": [
+    {
+      "seed": 905,
+      "final_parameter_hashes": {
+        "duration_logits_bias": "a8427fc470a8c6e1f6e10b66e7dc513f858242fbae132a3ebe8e13d306233203",
+        "dist.initial.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.initial.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.initial.logits": "eb05b194027387cf0bb79a29e155079c6733ef3466e7a8fcff434d7ec60ea352",
+        "dist.duration.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.duration.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.duration.logits": "4c2af67c58ca63f97ce9c40dc707b49769f0b8b00573384fd60c1d62f9ba311b",
+        "dist.duration.tail_end_probability": "99c14e110931630f0ea52f52b38e350d116a5228ab1b05305ca71becafd9d171",
+        "dist.transition.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.transition.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.transition.logits": "1ec1f399a280db6deb18df300487df0e99ae3cad96fec254d3951f5844febe82",
+        "dist.emission.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.emission.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.emission.logits": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+        "dist.emission.mu": "12f855dd0377113e1c77c0a266d8b81cba132d0252266ce68b7792576e31f208",
+        "dist.emission.log_var": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8"
+      },
+      "decoded_path_sha256": "c6245a7a142e32f7ba87b4cdc47afd5f29bb8340d021fe1b8ede83338c40144e",
+      "posterior_sha256": "776f239c42e2a2e11b11fd498acb96bb324372052984c09b3fe321bafa3fa5b9",
+      "switches": 370
+    },
+    {
+      "seed": 906,
+      "final_parameter_hashes": {
+        "duration_logits_bias": "376bbe2537645a62ff8791d9a14ed99e7e84170eeff7caf92ce98e656576f632",
+        "dist.initial.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.initial.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.initial.logits": "39425410cb9459972c40e2df428e161651ef9bbb72021741b0875c6fb1a7a04b",
+        "dist.duration.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.duration.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.duration.logits": "aba61ef8b75119f0efca2023cad67b2134b53ed2b9dfc8b36c77323b1a0ecb90",
+        "dist.duration.tail_end_probability": "e88ecc8de6382b2aba00ea20141942c5eaa5303ebce5d3a390f41eeb8174d9a6",
+        "dist.transition.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.transition.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.transition.logits": "960b1ff918e63ac393e20a80a5fc27c07af2c8dbc30271606b1d90c79b281e60",
+        "dist.emission.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.emission.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.emission.logits": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+        "dist.emission.mu": "b28fa0e2e761d42e47611e45df4a0d1aaab16e3c29afdcbe8074d737409ca8c8",
+        "dist.emission.log_var": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8"
+      },
+      "decoded_path_sha256": "34fe75b2704ea3d048a1ffbb64d0e76e64ceaf6e945b29ce39c391aca2d8697a",
+      "posterior_sha256": "e7e18d3099c75fc463b9cdeabb4d186d87e67d938fe99faad88b432c329727bc",
+      "switches": 370
+    }
+  ],
+  "comparisons": [
+    {
+      "seeds": [
+        905,
+        906
+      ],
+      "raw_path_agreement": 0.6588541666666666,
+      "best_permuted_path_agreement": 1.0,
+      "permutation": [
+        0,
+        1,
+        3,
+        2
+      ],
+      "path_ari": 1.0,
+      "posterior_max_abs_difference": 1.0000004768371582,
+      "equal_final_parameter_hashes": 10,
+      "total_parameters": 16
+    }
+  ]
+}
