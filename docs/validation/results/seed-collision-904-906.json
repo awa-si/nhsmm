@@ -1,0 +1,161 @@
+{
+  "stage": "seed_collision_diagnostic",
+  "seeds": [
+    {
+      "seed": 904,
+      "initial_parameter_hashes": {
+        "duration_logits_bias": "893a106828fbdb9521e1d868c985aab7ad2ae2f606edc55329265a5e7676006c",
+        "dist.initial.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.initial.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.initial.logits": "d8a91c69649f9eb6e45adadb59cbe16f021beafe8a5a8707089a61e139033197",
+        "dist.duration.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.duration.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.duration.logits": "111541b9d208191495e1931fc5c62eaa066ade2cd93764aa9ed98cbc87416cab",
+        "dist.duration.tail_end_probability": "1dc5c8e021c663cd8f7ecf1fb0c6d4112bc8d7f3c9e0095cd26bd7af7b8d7f13",
+        "dist.transition.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.transition.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.transition.logits": "6a37e362027bbcaed4f1978492d854e6e6683d6463a1da3d3503206493ab8ae3",
+        "dist.emission.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.emission.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.emission.logits": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+        "dist.emission.mu": "e97e29f47db71de5c7b458a5658e28bb5539761bc67af00bd811bacebb53486e",
+        "dist.emission.log_var": "e1a1dcc1fd7066d8ef4c2b5674797e7784b8999fedf63de32a6ab2521a06d0f1"
+      },
+      "kmeans_centers_sha256": "3b82336569f89f4ceeca98832f20b375af84bd38b3878380ee010aeca6926c25",
+      "kmeans_centers": [
+        [
+          -1.5173335075378418,
+          -1.447864294052124,
+          1.4127676486968994,
+          1.3352186679840088,
+          0.42640894651412964
+        ],
+        [
+          -0.3678170442581177,
+          -0.5348914265632629,
+          -0.02810211479663849,
+          0.2716127932071686,
+          -0.5545090436935425
+        ],
+        [
+          0.18881841003894806,
+          0.24913667142391205,
+          -0.5442261695861816,
+          -0.6428044438362122,
+          0.09374142438173294
+        ],
+        [
+          1.4737273454666138,
+          1.4865299463272095,
+          1.447541356086731,
+          1.3251358270645142,
+          0.3962414562702179
+        ]
+      ]
+    },
+    {
+      "seed": 905,
+      "initial_parameter_hashes": {
+        "duration_logits_bias": "893a106828fbdb9521e1d868c985aab7ad2ae2f606edc55329265a5e7676006c",
+        "dist.initial.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.initial.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.initial.logits": "256222da6ed23b235eac6abcdd07d8eab52ee5226b8ca422189b512e100ab605",
+        "dist.duration.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.duration.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.duration.logits": "26c5ebc91d8f70e8fe0d1cc0ba52225ecbef1e317dcac831ac92d08b0e22683e",
+        "dist.duration.tail_end_probability": "1dc5c8e021c663cd8f7ecf1fb0c6d4112bc8d7f3c9e0095cd26bd7af7b8d7f13",
+        "dist.transition.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.transition.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.transition.logits": "f9cfcab9903375bd4ebd3968509d731a66be7757f3f0fa7094a39996d3f38454",
+        "dist.emission.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.emission.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.emission.logits": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+        "dist.emission.mu": "175297d7c270bd0351c43f06b6804cc2b5b2c952a16df87b056f1833e165b113",
+        "dist.emission.log_var": "565adc247d7dfa1448b984783e100f6581098bfad26f709ab712f886b4e10255"
+      },
+      "kmeans_centers_sha256": "8637adea9acf6f170d86d759f4bf00bb84fd146f2c1f41e848f7e89e9e4c1543",
+      "kmeans_centers": [
+        [
+          0.10795387625694275,
+          0.1313188523054123,
+          -0.5059882998466492,
+          -0.46666714549064636,
+          -0.5026220083236694
+        ],
+        [
+          -1.1713484525680542,
+          -1.253358006477356,
+          0.904945433139801,
+          1.0279914140701294,
+          -0.08494509011507034
+        ],
+        [
+          1.543627142906189,
+          1.5604385137557983,
+          1.5948944091796875,
+          1.4932361841201782,
+          0.24114935100078583
+        ],
+        [
+          0.12393764406442642,
+          0.13201837241649628,
+          -0.24161316454410553,
+          -0.4208614230155945,
+          1.3400028944015503
+        ]
+      ]
+    },
+    {
+      "seed": 906,
+      "initial_parameter_hashes": {
+        "duration_logits_bias": "893a106828fbdb9521e1d868c985aab7ad2ae2f606edc55329265a5e7676006c",
+        "dist.initial.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.initial.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.initial.logits": "4cb90caa4909ba29d27c13adb7d15c62229a28397f5b7012c2344cf7abf2b105",
+        "dist.duration.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.duration.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.duration.logits": "c5ff6f75bd647d57de78fade9bcf238c319c05c5348113d87829dfa652ba7db9",
+        "dist.duration.tail_end_probability": "1dc5c8e021c663cd8f7ecf1fb0c6d4112bc8d7f3c9e0095cd26bd7af7b8d7f13",
+        "dist.transition.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.transition.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.transition.logits": "ea121f613bad51c4cc329f13952788c853e1ad8b2859ea0dc83c7740d047d1ef",
+        "dist.emission.delta_scale": "fb360f7241a770dc32cade9a1d1273c92b13bd4959b1c130931312b7fe95e63f",
+        "dist.emission.log_temperature": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+        "dist.emission.logits": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+        "dist.emission.mu": "b8195be4f88cbcb25f3cc228b67360155d646dd21378ccca989a0eb5b4cf48cb",
+        "dist.emission.log_var": "d8f6a1567230fcdeebded23dbf8ddbc32ee972eb80f59f1e55df2865a5ab2fc9"
+      },
+      "kmeans_centers_sha256": "edd1e7a96c83fb6294cdafd11992b700025acc7719b510a33e66392d974653a0",
+      "kmeans_centers": [
+        [
+          0.17006346583366394,
+          0.18357466161251068,
+          -0.24021980166435242,
+          -0.4174579977989197,
+          1.2913905382156372
+        ],
+        [
+          0.09824138134717941,
+          0.11925791203975677,
+          -0.507326602935791,
+          -0.4642157554626465,
+          -0.51596599817276
+        ],
+        [
+          1.5535985231399536,
+          1.5686688423156738,
+          1.6433639526367188,
+          1.5410165786743164,
+          0.23520363867282867
+        ],
+        [
+          -1.1741214990615845,
+          -1.2540185451507568,
+          0.9082643985748291,
+          1.02617347240448,
+          -0.06200648844242096
+        ]
+      ]
+    }
+  ]
+}
