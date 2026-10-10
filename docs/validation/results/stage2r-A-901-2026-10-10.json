@@ -1,0 +1,159 @@
+{
+  "stage": "2R",
+  "seed": 901,
+  "max_iter": 30,
+  "variant": "A",
+  "scales": [
+    {
+      "scale": 0.25,
+      "matched_accuracy": 0.5002604166666667,
+      "ari": 0.23267943419914605,
+      "boundary_f1_tol5": 0.18181818181818182,
+      "predicted_run_medians": {
+        "bull": 12.0,
+        "bear": 19.0,
+        "range": 18.5,
+        "chaotic": 12.0
+      },
+      "occupancy": [
+        0.5828211903572083,
+        0.0877990871667862,
+        0.03665982931852341,
+        0.2927198112010956
+      ],
+      "permutation": [
+        2,
+        0,
+        3,
+        1
+      ],
+      "switches": 101
+    },
+    {
+      "scale": 0.5,
+      "matched_accuracy": 0.49713541666666666,
+      "ari": 0.2208197722854887,
+      "boundary_f1_tol5": 0.14906832298136646,
+      "predicted_run_medians": {
+        "bull": 10.5,
+        "bear": 16.0,
+        "range": 16.5,
+        "chaotic": 11.5
+      },
+      "occupancy": [
+        0.5786211490631104,
+        0.09259842336177826,
+        0.038226425647735596,
+        0.29055255651474
+      ],
+      "permutation": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "switches": 119
+    },
+    {
+      "scale": 0.75,
+      "matched_accuracy": 0.49453125,
+      "ari": 0.21010114742139446,
+      "boundary_f1_tol5": 0.14772727272727273,
+      "predicted_run_medians": {
+        "bull": 10.5,
+        "bear": 15.0,
+        "range": 16.5,
+        "chaotic": 9.0
+      },
+      "occupancy": [
+        0.5736052393913269,
+        0.09555745124816895,
+        0.038425981998443604,
+        0.292409747838974
+      ],
+      "permutation": [
+        2,
+        0,
+        3,
+        1
+      ],
+      "switches": 134
+    },
+    {
+      "scale": 1.0,
+      "matched_accuracy": 0.4953125,
+      "ari": 0.20596403195073354,
+      "boundary_f1_tol5": 0.15555555555555556,
+      "predicted_run_medians": {
+        "bull": 10.5,
+        "bear": 14.0,
+        "range": 18.0,
+        "chaotic": 10.0
+      },
+      "occupancy": [
+        0.5713691115379333,
+        0.09696469455957413,
+        0.038545284420251846,
+        0.29312005639076233
+      ],
+      "permutation": [
+        2,
+        0,
+        3,
+        1
+      ],
+      "switches": 138
+    },
+    {
+      "scale": 1.5,
+      "matched_accuracy": 0.49583333333333335,
+      "ari": 0.203053737110182,
+      "boundary_f1_tol5": 0.1507537688442211,
+      "predicted_run_medians": {
+        "bull": 9.0,
+        "bear": 15.0,
+        "range": 16.5,
+        "chaotic": 10.0
+      },
+      "occupancy": [
+        0.5700156092643738,
+        0.09795019775629044,
+        0.03914088383316994,
+        0.29289349913597107
+      ],
+      "permutation": [
+        2,
+        0,
+        3,
+        1
+      ],
+      "switches": 157
+    },
+    {
+      "scale": 2.0,
+      "matched_accuracy": 0.4953125,
+      "ari": 0.19793290064627417,
+      "boundary_f1_tol5": 0.14814814814814814,
+      "predicted_run_medians": {
+        "bull": 9.0,
+        "bear": 14.0,
+        "range": 15.0,
+        "chaotic": 7.0
+      },
+      "occupancy": [
+        0.5700332522392273,
+        0.09814414381980896,
+        0.039619479328393936,
+        0.29220420122146606
+      ],
+      "permutation": [
+        2,
+        0,
+        3,
+        1
+      ],
+      "switches": 174
+    }
+  ],
+  "note": "Scale modifies emission log-scores at inference only, after a single shared training run; all other parameters are fixed. This is a diagnostic intervention, not calibrated likelihood."
+}
