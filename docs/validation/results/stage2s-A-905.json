@@ -1,0 +1,169 @@
+{
+  "stage": "2S",
+  "seed": 905,
+  "max_iter": 30,
+  "variant": "A",
+  "results": [
+    {
+      "scale": 0.25,
+      "persistence_bonus": 0.0,
+      "matched_accuracy": 0.4869791666666667,
+      "ari": 0.1387112198673107,
+      "boundary_f1_tol5": 0.21,
+      "predicted_run_medians": {
+        "bull": 4.0,
+        "bear": 20.0,
+        "range": 19.5,
+        "chaotic": 11.0
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 158
+    },
+    {
+      "scale": 0.25,
+      "persistence_bonus": 0.5,
+      "matched_accuracy": 0.48515625,
+      "ari": 0.13728027557785683,
+      "boundary_f1_tol5": 0.20725388601036268,
+      "predicted_run_medians": {
+        "bull": 4.0,
+        "bear": 24.0,
+        "range": 16.0,
+        "chaotic": 11.5
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 151
+    },
+    {
+      "scale": 0.25,
+      "persistence_bonus": 1.0,
+      "matched_accuracy": 0.48151041666666666,
+      "ari": 0.13614002401846986,
+      "boundary_f1_tol5": 0.20540540540540542,
+      "predicted_run_medians": {
+        "bull": 5.0,
+        "bear": 23.0,
+        "range": 21.0,
+        "chaotic": 12.0
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 143
+    },
+    {
+      "scale": 0.25,
+      "persistence_bonus": 2.0,
+      "matched_accuracy": 0.47552083333333334,
+      "ari": 0.13419756903324945,
+      "boundary_f1_tol5": 0.16483516483516483,
+      "predicted_run_medians": {
+        "bull": 3.0,
+        "bear": 19.0,
+        "range": 17.5,
+        "chaotic": 11.5
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 140
+    },
+    {
+      "scale": 1.0,
+      "persistence_bonus": 0.0,
+      "matched_accuracy": 0.49322916666666666,
+      "ari": 0.14475315317095092,
+      "boundary_f1_tol5": 0.13592233009708737,
+      "predicted_run_medians": {
+        "bull": 2.0,
+        "bear": 11.0,
+        "range": 8.0,
+        "chaotic": 10.0
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 370
+    },
+    {
+      "scale": 1.0,
+      "persistence_bonus": 0.5,
+      "matched_accuracy": 0.4940104166666667,
+      "ari": 0.1472626261425617,
+      "boundary_f1_tol5": 0.13881748071979436,
+      "predicted_run_medians": {
+        "bull": 2.0,
+        "bear": 12.0,
+        "range": 8.0,
+        "chaotic": 10.0
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 347
+    },
+    {
+      "scale": 1.0,
+      "persistence_bonus": 1.0,
+      "matched_accuracy": 0.49635416666666665,
+      "ari": 0.14808039965972467,
+      "boundary_f1_tol5": 0.14285714285714285,
+      "predicted_run_medians": {
+        "bull": 2.0,
+        "bear": 12.0,
+        "range": 8.0,
+        "chaotic": 10.0
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 336
+    },
+    {
+      "scale": 1.0,
+      "persistence_bonus": 2.0,
+      "matched_accuracy": 0.49635416666666665,
+      "ari": 0.14635173368632032,
+      "boundary_f1_tol5": 0.14367816091954022,
+      "predicted_run_medians": {
+        "bull": 2.5,
+        "bear": 11.0,
+        "range": 12.0,
+        "chaotic": 10.0
+      },
+      "permutation": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "switches": 306
+    }
+  ],
+  "note": "Inference-only intervention: emission log-score multiplier and diagonal log-bonus to normalized episode-boundary transition matrix. Self-transition at a boundary starts a new episode; this does not directly change duration hazard. One common model fit per seed."
+}
