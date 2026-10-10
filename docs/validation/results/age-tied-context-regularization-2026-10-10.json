@@ -1,0 +1,70 @@
+{
+  "method": "Native age-tied contextual transition regularization, ground-truth supervised, 60/40 chronological split",
+  "train_boundaries": 415,
+  "test_boundaries": 277,
+  "runs": [
+    {
+      "seed": 2311,
+      "context": false,
+      "context_weight_decay": 0.0,
+      "train_nll": 1.0484516620635986,
+      "test_nll": 1.0550916194915771,
+      "test_mae": 0.04446029204163214,
+      "age_invariance_max_error": 0.0
+    },
+    {
+      "seed": 2311,
+      "context": true,
+      "context_weight_decay": 0.0,
+      "train_nll": 1.0071630477905273,
+      "test_nll": 1.0901424884796143,
+      "test_mae": 0.05614561763219428,
+      "age_invariance_max_error": 0.0
+    },
+    {
+      "seed": 2312,
+      "context": true,
+      "context_weight_decay": 0.0,
+      "train_nll": 1.0063896179199219,
+      "test_nll": 1.0912480354309082,
+      "test_mae": 0.05636870267186691,
+      "age_invariance_max_error": 0.0
+    },
+    {
+      "seed": 2311,
+      "context": true,
+      "context_weight_decay": 0.01,
+      "train_nll": 1.0133447647094727,
+      "test_nll": 1.084808588027954,
+      "test_mae": 0.05695803809234155,
+      "age_invariance_max_error": 0.0
+    },
+    {
+      "seed": 2312,
+      "context": true,
+      "context_weight_decay": 0.01,
+      "train_nll": 1.0137745141983032,
+      "test_nll": 1.0856424570083618,
+      "test_mae": 0.05676232317717998,
+      "age_invariance_max_error": 0.0
+    },
+    {
+      "seed": 2311,
+      "context": true,
+      "context_weight_decay": 0.1,
+      "train_nll": 1.0469863414764404,
+      "test_nll": 1.0534037351608276,
+      "test_mae": 0.04400119248871888,
+      "age_invariance_max_error": 0.0
+    },
+    {
+      "seed": 2312,
+      "context": true,
+      "context_weight_decay": 0.1,
+      "train_nll": 1.0469820499420166,
+      "test_nll": 1.0534052848815918,
+      "test_mae": 0.04400834265726633,
+      "age_invariance_max_error": 0.0
+    }
+  ]
+}
