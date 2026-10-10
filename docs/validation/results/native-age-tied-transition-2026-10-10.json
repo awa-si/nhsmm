@@ -1,0 +1,48 @@
+{
+  "dataset": "data/reference/trading-regimes-v1/trading_regimes.npz",
+  "protocol": "true episode boundaries, chronological 60/40 split, native NHSMM transition, 220 Adam steps, no context",
+  "train_boundaries": 415,
+  "test_boundaries": 277,
+  "runs": [
+    {
+      "seed": 2311,
+      "age_tied": true,
+      "initial_train_nll": 1.3862946033477783,
+      "final_train_nll": 1.0484516620635986,
+      "test_nll": 1.0550916194915771,
+      "test_transition_mae": 0.04446029204163214,
+      "max_age_probability_difference": 0.0
+    },
+    {
+      "seed": 2312,
+      "age_tied": true,
+      "initial_train_nll": 1.3862946033477783,
+      "final_train_nll": 1.0484516620635986,
+      "test_nll": 1.0550916194915771,
+      "test_transition_mae": 0.04446029204163214,
+      "max_age_probability_difference": 0.0
+    },
+    {
+      "seed": 2311,
+      "age_tied": false,
+      "initial_train_nll": 1.3862946033477783,
+      "final_train_nll": 0.7907401323318481,
+      "test_nll": 1.436220407485962,
+      "test_transition_mae": 0.12605146422129848,
+      "max_age_probability_difference": 0.6463335156440735
+    },
+    {
+      "seed": 2312,
+      "age_tied": false,
+      "initial_train_nll": 1.3862946033477783,
+      "final_train_nll": 0.7907401323318481,
+      "test_nll": 1.436220407485962,
+      "test_transition_mae": 0.12605146422129848,
+      "max_age_probability_difference": 0.6463335156440735
+    }
+  ],
+  "empirical_pooled_baseline": {
+    "test_nll": 1.0275143135539144,
+    "test_transition_mae": 0.0377051774366886
+  }
+}
