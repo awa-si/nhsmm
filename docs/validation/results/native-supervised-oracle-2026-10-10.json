@@ -1,0 +1,57 @@
+{
+  "method": "NHSMM native distributions supervised with true episode boundaries; no NHSMM.optimize",
+  "train_rows": 36000,
+  "test_rows": 24000,
+  "duration": {
+    "initial_train_nll": 28.372268676757812,
+    "final_train_nll": 4.7801337242126465,
+    "final_test_nll": 5.281253814697266,
+    "median_relative_error": 0.15873460246360582,
+    "tail_gt64_mae": 0.03418379300183487,
+    "states": {
+      "bull": {
+        "train_median": 112.5,
+        "test_median": 120.0,
+        "predicted_median": 100.0,
+        "train_gt64": 0.9358974358974359,
+        "test_gt64": 0.9354838709677419,
+        "predicted_gt64": 0.9271100163459778,
+        "tail_end_probability": 0.017280133441090584
+      },
+      "bear": {
+        "train_median": 90.5,
+        "test_median": 89.0,
+        "predicted_median": 83.0,
+        "train_gt64": 0.7708333333333334,
+        "test_gt64": 0.7096774193548387,
+        "predicted_gt64": 0.760362982749939,
+        "tail_end_probability": 0.021821342408657074
+      },
+      "range": {
+        "train_median": 126.5,
+        "test_median": 94.0,
+        "predicted_median": 79.0,
+        "train_gt64": 0.6015625,
+        "test_gt64": 0.5238095238095238,
+        "predicted_gt64": 0.5922355055809021,
+        "tail_end_probability": 0.011631418019533157
+      },
+      "chaotic": {
+        "train_median": 33.0,
+        "test_median": 28.5,
+        "predicted_median": 33.0,
+        "train_gt64": 0.07964601769911504,
+        "test_gt64": 0.07352941176470588,
+        "predicted_gt64": 0.0827791839838028,
+        "tail_end_probability": 0.06172838434576988
+      }
+    }
+  },
+  "transition": {
+    "initial_train_nll": 1.3870347738265991,
+    "final_train_nll": 0.6747649908065796,
+    "test_nll": 1.5070548057556152,
+    "test_transition_mae": 0.14007332558876678,
+    "finite_nonzero_parameter_gradients": true
+  }
+}
