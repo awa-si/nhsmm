@@ -26,6 +26,7 @@ from scripts.validate_trading_regime_usefulness import (
     _boundary_f1,
     _duration_error,
     _fit,
+    _ll,
     _run_medians,
     _standardize,
     _standardize_context,
@@ -84,8 +85,7 @@ def complete_episode_medians(states, ages):
     }
 
 
-def run(job):
-    seed, path, budget = job
+def diagnose(seed, path, budget, *, fit=_fit):
     torch.set_num_threads(1)
     with np.load(path) as z:
         data = {k: z[k] for k in z.files}
@@ -94,7 +94,7 @@ def run(job):
     test = _windows(data, int(0.8 * n), n, budget.eval_windows, window=budget.window)
     train_x, test_x = _standardize(train[0], test[0])
     train_c, test_c = _standardize_context(train[1], test[1])
-    model = _fit(
+    model = fit(
         seed,
         train_x,
         train_c,
@@ -124,6 +124,8 @@ def run(job):
         }
     return {
         "seed": seed,
+        "train_ll_per_row": _ll(model, train_x, train_c),
+        "test_ll_per_row": _ll(model, test_x, test_c),
         "filter": filter_score,
         "viterbi": score(test[2], viterbi),
         "decoder_agreement": float(np.mean(filtered == viterbi)),
@@ -132,6 +134,10 @@ def run(job):
         "true_complete_episode_durations": complete_episode_medians(test[2], test[3]),
         "learned_episode_durations_at_zero_context": duration,
     }
+
+
+def run(job):
+    return diagnose(*job)
 
 
 def main():

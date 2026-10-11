@@ -703,13 +703,20 @@ class Duration(Neural):
             raise ValueError("duration mask must have shape [D] or [K,D]")
         return logits.masked_fill(~mask.expand_as(logits), NEG_INF)
 
+    @torch.no_grad()
+    def _project_tail_parameter(self) -> None:
+        """Keep the trainable tail hazard inside its feasible probability domain."""
+        if self.tail_end_probability is not None:
+            self.tail_end_probability.clamp_(min=EPS, max=1.0)
+
     def tail_probability(self) -> Optional[torch.Tensor]:
         """Return the bounded-tail end probability per state when enabled.
 
         The parameter is represented directly in probability space so the
         compatibility boundary ``h_tail=1`` is exactly representable. Values
-        are constrained to ``(0,1]`` at use time; forward/filter integration
-        is intentionally deferred to the next implementation step.
+        are constrained to ``(0,1]`` at use time. Joint optimization also
+        projects the parameter after each update to avoid zero clamp gradients
+        outside the feasible domain.
         """
         if self.tail_end_probability is None:
             return None

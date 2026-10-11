@@ -53,6 +53,10 @@ model.initialize_distributions()
 
 A model intended for streaming use must be causal.
 
+## Duration-tail training
+
+The optional D+ tail stores its per-state end hazard directly as a probability. Joint optimization projects this parameter into [EPS, 1] after each optimizer update, before restart scoring and snapshots. This prevents an update beyond the feasible domain from entering the zero-gradient region of the inference clamp. The exact h_tail=1 finite-support boundary and artifact parameter representation are preserved. The inference clamp remains a guard for externally supplied parameters.
+
 ## Public runtime API
 
 The supported streaming types are exported from the package root:

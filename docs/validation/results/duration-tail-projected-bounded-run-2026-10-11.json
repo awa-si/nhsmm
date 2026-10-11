@@ -1,0 +1,12 @@
+{
+  "schema": "nhsmm-duration-tail-bounded-run-v1",
+  "command": "scripts/validate_duration_tail.py --workers 3 --output /data/workspace/stage2/duration-tail-projected-2026-10-11.json",
+  "runner_timeout_seconds": 300,
+  "runner_elapsed_seconds": 301.677,
+  "status": "timeout",
+  "exit_code": null,
+  "acceptance": null,
+  "stdout": "",
+  "stderr": "execution timed out",
+  "reason": "No completed acceptance payload; hard timeout enforced."
+}

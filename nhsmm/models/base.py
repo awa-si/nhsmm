@@ -798,8 +798,7 @@ class NHSMM(nn.Module):
                 # Compete with the incoming D-1 continuation for its MAP path.
                 if tail_end_probability is not None:
                     tail_score = (
-                        score[t - 1, :, -1] + log_continue[t - 1, :, -1]
-                        + router.log_probs[b, t]
+                        score[t - 1, :, -1] + log_continue[t - 1, :, -1] + router.log_probs[b, t]
                     )
                     target_age = D - 1
                     use_tail = tail_score > score[t, :, target_age]
@@ -807,11 +806,13 @@ class NHSMM(nn.Module):
                         use_tail, tail_score, score[t, :, target_age]
                     )
                     prev_state[t, :, target_age] = torch.where(
-                        use_tail, torch.arange(K, device=score.device),
+                        use_tail,
+                        torch.arange(K, device=score.device),
                         prev_state[t, :, target_age],
                     )
                     prev_age[t, :, target_age] = torch.where(
-                        use_tail, torch.full((K,), target_age, device=score.device),
+                        use_tail,
+                        torch.full((K,), target_age, device=score.device),
                         prev_age[t, :, target_age],
                     )
 
@@ -1420,11 +1421,16 @@ class NHSMM(nn.Module):
             if cluster_variance:
                 labels = torch.cdist(observations, centers).argmin(dim=-1)
                 global_variance = observations.var(dim=0, unbiased=False)
-                variances = torch.stack([
-                    observations[labels == state].var(dim=0, unbiased=False)
-                    if int((labels == state).sum()) > 1 else global_variance
-                    for state in range(self.config.n_states)
-                ])
+                variances = torch.stack(
+                    [
+                        (
+                            observations[labels == state].var(dim=0, unbiased=False)
+                            if int((labels == state).sum()) > 1
+                            else global_variance
+                        )
+                        for state in range(self.config.n_states)
+                    ]
+                )
                 emission.log_var.copy_(variances.clamp(min=0.05, max=5.0).log())
             else:
                 emission.log_var.zero_()
@@ -1682,6 +1688,9 @@ class NHSMM(nn.Module):
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(params, 5.0)
                     self._optimizer.step()
+                    project_tail = getattr(self.dist.duration, "_project_tail_parameter", None)
+                    if callable(project_tail):
+                        project_tail()
 
                     ll_val = float(ll.item())
                     converged = self._convergence.update(ll_val, it, run_idx)

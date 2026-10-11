@@ -50,6 +50,8 @@ pytest -q
 - transition-specific context capacity without changing Initial/Duration/Emission bounds;
 - caller train/eval mode restoration when optimization fails during input validation.
 
+`tests/test_duration_prior_training.py` covers geometric D+ prior normalization, injection after independent restart initialization, and recovery of the optimized tail hazard after an update crosses either probability boundary.
+
 `tests/test_context_hardening.py` owns external-context shape, finiteness, variable-length, and width contracts. `tests/test_context_optin.py` owns internal-encoder opt-in and model-construction contracts. `tests/test_default_distributions.py` verifies fail-closed categorical labels/temperature controls plus frozen context-free neural-control parameters.
 
 ## HSMM research/correctness milestone gate
