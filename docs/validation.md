@@ -552,3 +552,87 @@ PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
 Per-event state/age evidence, per-seed groups and execution provenance:
 [boundary-evidence-v2-2026-10-11.json](validation/results/boundary-evidence-v2-2026-10-11.json).
+
+
+## Trading causal decision-rule pilot — 2026-10-11
+
+This matched exploratory batch follows the causal boundary-evidence diagnostic.
+Source base: `47919056d4ef4707ef3207ab4f8a337de2e0acb2`. Corrected
+episode-end dataset SHA256:
+`16cab157954b32f11af274bd617d6811a3776e81eb926a3f1dae80c954d7a1f8`.
+Seeds 901/902/903, 4/30 joint iterations, two transition-refinement steps,
+eight training and four OOS windows of 240 rows, eight features, training-only
+scaling and variance-aware K-Means starts are unchanged. Every fitted model is
+evaluated with all four rules. No label enters fitting or rule selection.
+
+Rules are fixed before the run:
+- Marginal argmax: mode of the causal state posterior.
+- Prefix MAP endpoint: current endpoint of the highest-probability joint
+  state/age/episode path through the current row. Uses max-product with the same
+  explicit-duration hazards, previous-row context, self-transitions and D+ tail.
+  Successive emitted endpoints need not constitute one joint MAP path: a later
+  observation can revise the best history.
+- Committed state: sum-product filtering conditional on every previously
+  emitted state, then greedy current-state marginal selection and conditioning
+  on that selection, while retaining the selected state's age distribution.
+  This gives a supported emitted state history but can lock in erroneous
+  earlier decisions; it is neither full-path MAP nor the unconditional filter.
+  If the committed history loses all support, the diagnostic raises explicitly.
+- Full-window Viterbi: retrospective control; not available at live decision time.
+
+All three causal rules use zero delay and no future row. No probability gate,
+confidence threshold, score weight or acceptance threshold is tuned. Ties use
+the first flattened index. Window starts retain the preceding pilot's age-one
+initialization. Run-duration error describes hard state runs, not directly the
+learned episode-duration law.
+
+Medians across three seeds; there are eight true state changes in these OOS
+windows:
+
+| Iterations | Rule | Accuracy | ARI | Boundary F1 ±5 | Run-duration error | Switches |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 4 | Marginal argmax | 79.69% | 0.5650 | 0.1449 | 90.97% | 61 |
+| 4 | Prefix MAP endpoint | 79.27% | 0.5573 | 0.1449 | 90.34% | 61 |
+| 4 | Committed state | 78.12% | 0.5336 | 0.1404 | 86.73% | 49 |
+| 4 | Full-window Viterbi | 81.25% | 0.5936 | 0.3182 | 82.38% | 36 |
+| 30 | Marginal argmax | 79.17% | 0.5644 | 0.1562 | 90.34% | 56 |
+| 30 | Prefix MAP endpoint | 78.65% | 0.5555 | 0.1515 | 90.34% | 58 |
+| 30 | Committed state | 77.08% | 0.5121 | 0.1509 | 87.66% | 45 |
+| 30 | Full-window Viterbi | 80.62% | 0.5953 | 0.2400 | 84.32% | 42 |
+
+Prefix MAP endpoints do not reduce fragmentation. Committing past decisions
+reduces switch counts by about 20% but lowers accuracy and does not improve
+boundary F1. Even the retrospective control remains below boundary F1 >=0.45
+and run-duration error <=0.50. This batch provides no basis to promote either
+zero-lag causal rule. A supported history alone is insufficient for recovery.
+The earlier revision diagnosis remains valid, but removing that freedom with
+greedy commitment does not solve the underlying model/observation problem.
+
+Likelihood belongs to the unchanged model and is not separately redefined for
+these rules. Marginal-filter results reproduce the preceding matched pilot.
+The same small OOS windows have been inspected repeatedly; this is exploratory
+evidence, not independent confirmatory validation or statistical significance.
+Core, public decoder, training policy and defaults are unchanged. Full corrected
+dataset recovery acceptance and post-tail-fix statistical revalidation remain open.
+
+Verification: nine new tests compare against independent exhaustive
+probability-space path enumeration (including D=1, K=1, self-transitions,
+finite/tail support), plus prefix invariance, batch equivalence, supported-history
+behavior and explicit impossible-support failure. All 14 focused decision-rule
+and boundary-evidence tests passed. Syntax and CLI checks passed; the one-seed,
+one-iteration end-to-end smoke completed in 34.891 seconds. The complete batch
+was AWA job `8f4c4e037a104e44ab46f99c0ed69b79`, exit 0, 117.825 seconds under
+a hard 300-second timeout. Full package tests are not rerun for this script/test/
+documentation-only change.
+
+Reproduction:
+
+```bash
+PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+  /work/env/nhsmm/bin/python scripts/diagnose_trading_causal_decisions.py \
+  --dataset /data/workspace/nhsmm-trading-regimes-v2/trading_regimes.npz \
+  --output /data/workspace/stage2/causal-decisions-v2-2026-10-11.json
+```
+
+Per-seed scores, emitted paths, prefix endpoint ages and execution provenance:
+[causal-decisions-v2-2026-10-11.json](validation/results/causal-decisions-v2-2026-10-11.json).

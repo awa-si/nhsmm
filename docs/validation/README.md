@@ -32,3 +32,7 @@ This directory retains machine-readable historical evidence only. Narrative poin
 ## Trading causal boundary-evidence
 
 - [results/boundary-evidence-v2-2026-10-11.json](results/boundary-evidence-v2-2026-10-11.json) — causal edge decomposition; interpretation is maintained in [../validation.md](../validation.md#trading-causal-boundary-evidence-pilot--2026-10-11).
+
+## Trading causal decision rules
+
+- [results/causal-decisions-v2-2026-10-11.json](results/causal-decisions-v2-2026-10-11.json) — matched zero-lag rule comparison; interpretation is maintained in [../validation.md](../validation.md#trading-causal-decision-rule-pilot--2026-10-11).

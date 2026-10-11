@@ -60,6 +60,8 @@ pytest -q
 
 `tests/test_trading_boundary_evidence.py` verifies the script-local causal edge update against independent probability-space enumeration, marginal argmax revision without a latent transition, observation-supported low-prior boundaries, episode self-transitions, and one-to-one boundary event matching.
 
+`tests/test_trading_causal_decisions.py` checks the script-local prefix MAP endpoint and committed-state rules against independent exhaustive probability-space paths, finite and D+ support, prefix invariance, batch equivalence and impossible-support failure.
+
 ## HSMM research/correctness milestone gate
 
 The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.
