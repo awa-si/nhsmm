@@ -1,0 +1,313 @@
+{
+  "schema": "nhsmm-trading-decoder-duration-diagnostic-v1",
+  "dataset": "/data/workspace/nhsmm-trading-regimes-v2/trading_regimes.npz",
+  "dataset_schema": "nhsmm-synthetic-trading-regimes-v2",
+  "dataset_sha256": "16cab157954b32f11af274bd617d6811a3776e81eb926a3f1dae80c954d7a1f8",
+  "budget": {
+    "window": 240,
+    "train_windows": 8,
+    "eval_windows": 4,
+    "max_iter": 4,
+    "transition_refine_steps": 2
+  },
+  "full_protocol": false,
+  "runs": [
+    {
+      "seed": 901,
+      "filter": {
+        "accuracy": 0.7916666666666666,
+        "ari": 0.5543453487128246,
+        "boundary_f1_tol5": 0.18421052631578946,
+        "run_duration_rel_error": 0.9225000000000001,
+        "missing_states": [],
+        "run_medians": {
+          "bull": 4.0,
+          "bear": 3.0,
+          "range": 9.0,
+          "chaotic": 6.0
+        },
+        "switches": 68,
+        "permutation": [
+          0,
+          3,
+          1,
+          2
+        ]
+      },
+      "viterbi": {
+        "accuracy": 0.8208333333333333,
+        "ari": 0.6134941303727082,
+        "boundary_f1_tol5": 0.2978723404255319,
+        "run_duration_rel_error": 0.8350179211469534,
+        "missing_states": [],
+        "run_medians": {
+          "bull": 7.0,
+          "bear": 4.0,
+          "range": 26.5,
+          "chaotic": 5.5
+        },
+        "switches": 39,
+        "permutation": [
+          0,
+          3,
+          1,
+          2
+        ]
+      },
+      "decoder_agreement": 0.9520833333333333,
+      "true_switches": 8,
+      "true_run_medians": {
+        "bull": 50.0,
+        "bear": 40.0,
+        "range": 139.5,
+        "chaotic": 25.5
+      },
+      "true_complete_episode_durations": {
+        "bull": {
+          "count": 0,
+          "median": null
+        },
+        "bear": {
+          "count": 1,
+          "median": 40.0
+        },
+        "range": {
+          "count": 2,
+          "median": 139.5
+        },
+        "chaotic": {
+          "count": 1,
+          "median": 24.0
+        }
+      },
+      "learned_episode_durations_at_zero_context": {
+        "bull": {
+          "episode_median": 31,
+          "d_plus_mass": 0.015128188766539097,
+          "tail_end_hazard": 0.49863508343696594
+        },
+        "chaotic": {
+          "episode_median": 32,
+          "d_plus_mass": 0.015644069761037827,
+          "tail_end_hazard": 0.5
+        },
+        "bear": {
+          "episode_median": 31,
+          "d_plus_mass": 0.015332907438278198,
+          "tail_end_hazard": 0.5
+        },
+        "range": {
+          "episode_median": 32,
+          "d_plus_mass": 0.015532766468822956,
+          "tail_end_hazard": 0.46854937076568604
+        }
+      }
+    },
+    {
+      "seed": 902,
+      "filter": {
+        "accuracy": 0.7989583333333333,
+        "ari": 0.5729915496351432,
+        "boundary_f1_tol5": 0.1891891891891892,
+        "run_duration_rel_error": 0.920573476702509,
+        "missing_states": [],
+        "run_medians": {
+          "bull": 4.0,
+          "bear": 3.0,
+          "range": 11.0,
+          "chaotic": 5.5
+        },
+        "switches": 66,
+        "permutation": [
+          3,
+          1,
+          2,
+          0
+        ]
+      },
+      "viterbi": {
+        "accuracy": 0.80625,
+        "ari": 0.5916894148624644,
+        "boundary_f1_tol5": 0.2916666666666667,
+        "run_duration_rel_error": 0.8411469534050179,
+        "missing_states": [],
+        "run_medians": {
+          "bull": 8.0,
+          "bear": 4.0,
+          "range": 22.0,
+          "chaotic": 5.5
+        },
+        "switches": 40,
+        "permutation": [
+          3,
+          1,
+          2,
+          0
+        ]
+      },
+      "decoder_agreement": 0.9541666666666667,
+      "true_switches": 8,
+      "true_run_medians": {
+        "bull": 50.0,
+        "bear": 40.0,
+        "range": 139.5,
+        "chaotic": 25.5
+      },
+      "true_complete_episode_durations": {
+        "bull": {
+          "count": 0,
+          "median": null
+        },
+        "bear": {
+          "count": 1,
+          "median": 40.0
+        },
+        "range": {
+          "count": 2,
+          "median": 139.5
+        },
+        "chaotic": {
+          "count": 1,
+          "median": 24.0
+        }
+      },
+      "learned_episode_durations_at_zero_context": {
+        "chaotic": {
+          "episode_median": 32,
+          "d_plus_mass": 0.014635849744081497,
+          "tail_end_hazard": 0.5
+        },
+        "bear": {
+          "episode_median": 31,
+          "d_plus_mass": 0.015120940282940865,
+          "tail_end_hazard": 0.5
+        },
+        "range": {
+          "episode_median": 32,
+          "d_plus_mass": 0.014415381476283073,
+          "tail_end_hazard": 0.46808043122291565
+        },
+        "bull": {
+          "episode_median": 31,
+          "d_plus_mass": 0.015690546482801437,
+          "tail_end_hazard": 0.4997914433479309
+        }
+      }
+    },
+    {
+      "seed": 903,
+      "filter": {
+        "accuracy": 0.7927083333333333,
+        "ari": 0.5599707988583124,
+        "boundary_f1_tol5": 0.15584415584415584,
+        "run_duration_rel_error": 0.9225000000000001,
+        "missing_states": [],
+        "run_medians": {
+          "bull": 4.0,
+          "bear": 3.0,
+          "range": 9.0,
+          "chaotic": 6.0
+        },
+        "switches": 69,
+        "permutation": [
+          3,
+          1,
+          2,
+          0
+        ]
+      },
+      "viterbi": {
+        "accuracy": 0.8177083333333334,
+        "ari": 0.6142147169154369,
+        "boundary_f1_tol5": 0.2857142857142857,
+        "run_duration_rel_error": 0.8511469534050179,
+        "missing_states": [],
+        "run_medians": {
+          "bull": 7.0,
+          "bear": 4.0,
+          "range": 22.0,
+          "chaotic": 5.5
+        },
+        "switches": 41,
+        "permutation": [
+          3,
+          1,
+          2,
+          0
+        ]
+      },
+      "decoder_agreement": 0.9489583333333333,
+      "true_switches": 8,
+      "true_run_medians": {
+        "bull": 50.0,
+        "bear": 40.0,
+        "range": 139.5,
+        "chaotic": 25.5
+      },
+      "true_complete_episode_durations": {
+        "bull": {
+          "count": 0,
+          "median": null
+        },
+        "bear": {
+          "count": 1,
+          "median": 40.0
+        },
+        "range": {
+          "count": 2,
+          "median": 139.5
+        },
+        "chaotic": {
+          "count": 1,
+          "median": 24.0
+        }
+      },
+      "learned_episode_durations_at_zero_context": {
+        "chaotic": {
+          "episode_median": 32,
+          "d_plus_mass": 0.01540832594037056,
+          "tail_end_hazard": 0.5
+        },
+        "bear": {
+          "episode_median": 31,
+          "d_plus_mass": 0.014826898463070393,
+          "tail_end_hazard": 0.5
+        },
+        "range": {
+          "episode_median": 32,
+          "d_plus_mass": 0.0151116494089365,
+          "tail_end_hazard": 0.4682385325431824
+        },
+        "bull": {
+          "episode_median": 31,
+          "d_plus_mass": 0.015326730906963348,
+          "tail_end_hazard": 0.49852457642555237
+        }
+      }
+    }
+  ],
+  "summary": {
+    "filter": {
+      "accuracy": 0.7927083333333333,
+      "ari": 0.5599707988583124,
+      "boundary_f1_tol5": 0.18421052631578946,
+      "run_duration_rel_error": 0.9225000000000001,
+      "switches": 68.0
+    },
+    "viterbi": {
+      "accuracy": 0.8177083333333334,
+      "ari": 0.6134941303727082,
+      "boundary_f1_tol5": 0.2916666666666667,
+      "run_duration_rel_error": 0.8411469534050179,
+      "switches": 40.0
+    }
+  },
+  "interpretation": {
+    "filter": "causal marginal argmax",
+    "viterbi": "retrospective full-window MAP, unavailable for live decisions",
+    "duration": "learned episode PMF differs from observable state runs with self-transitions",
+    "labels": "scoring only; no model selection or supervised training"
+  },
+  "runner_timeout_seconds": 300,
+  "runner_elapsed_seconds": 40.487
+}
