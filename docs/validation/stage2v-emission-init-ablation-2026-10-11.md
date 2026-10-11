@@ -22,3 +22,11 @@ The variance-aware initializer improves OOS log-likelihood, accuracy and ARI con
 `PYTHONPATH=/workspace /work/env/nhsmm/bin/python scripts/diagnose_trading_emission_init_ablation.py`
 
 Machine-readable per-seed results, including initial and fitted emission variances: `docs/validation/results/emission-init-ablation-2026-10-11.json`.
+
+## Full-recovery follow-up interface
+
+The existing `scripts/validate_trading_regime_usefulness.py` now accepts the optional `--emission-init-mode` (`kmeans` or `kmeans_cluster_variance`), propagates it through all model baselines, and records the selected mode in the JSON report. The default remains `kmeans`, so the canonical baseline is unchanged. A complete comparison under identical acceptance gates can be run with:
+
+`PYTHONPATH=/workspace /work/env/nhsmm/bin/python scripts/validate_trading_regime_usefulness.py --dataset data/reference/trading-regimes-v1/trading_regimes.npz --workers 3 --emission-init-mode kmeans_cluster_variance --output /data/workspace/stage2/full-recovery-variance-init.json`
+
+That full-sized run is **not** part of this bounded ablation and must not be claimed as validated until executed.

@@ -138,7 +138,7 @@ def _run_medians(states):
     return {i: (float(np.median(v)) if v else math.nan) for i, v in out.items()}
 
 
-def _config(seed, *, context, hmm):
+def _config(seed, *, context, hmm, emission_init_mode="kmeans"):
     return ModelConfig(
         n_states=K,
         n_features=len(FEATURES),
@@ -156,7 +156,7 @@ def _config(seed, *, context, hmm):
         use_scheduler=False,
         convergence_stop=False,
         verbose=False,
-        emission_init_mode="kmeans",
+        emission_init_mode=emission_init_mode,
         duration_init_mode="uniform",
         transition_init_mode="uniform",
         initial_init_mode="uniform",
@@ -166,11 +166,11 @@ def _config(seed, *, context, hmm):
     )
 
 
-def _fit(seed, x, c, *, context, hmm):
+def _fit(seed, x, c, *, context, hmm, emission_init_mode="kmeans"):
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)
-    model = NHSMM(_config(seed, context=context, hmm=hmm), device="cpu")
+    model = NHSMM(_config(seed, context=context, hmm=hmm, emission_init_mode=emission_init_mode), device="cpu")
     model.initialize_distributions()
     tx = torch.tensor(x)
     tc = torch.tensor(c) if context else None
@@ -234,7 +234,7 @@ def _aligned_transition_mae(model, context, true_state, true_age, gt_p, perm):
     return float(np.mean(errors))
 
 
-def _one(seed, path):
+def _one(seed, path, emission_init_mode="kmeans"):
     torch.set_num_threads(1)
     try:
         torch.set_num_interop_threads(1)
@@ -255,9 +255,9 @@ def _one(seed, path):
     train_x, val_x, test_x = _standardize(train[0], validation[0], test[0])
     train_c, val_c, test_c = _standardize_context(train[1], validation[1], test[1])
 
-    full = _fit(seed, train_x, train_c, context=True, hmm=False)
-    no_context = _fit(seed + 100, train_x, train_c, context=False, hmm=False)
-    hmm = _fit(seed + 200, train_x, train_c, context=False, hmm=True)
+    full = _fit(seed, train_x, train_c, context=True, hmm=False, emission_init_mode=emission_init_mode)
+    no_context = _fit(seed + 100, train_x, train_c, context=False, hmm=False, emission_init_mode=emission_init_mode)
+    hmm = _fit(seed + 200, train_x, train_c, context=False, hmm=True, emission_init_mode=emission_init_mode)
 
     test_tensor = torch.tensor(test_x)
     context_tensor = torch.tensor(test_c)
@@ -361,9 +361,15 @@ def main():
     parser.add_argument("--dataset", type=Path, required=True)
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--emission-init-mode",
+        choices=("kmeans", "kmeans_cluster_variance"),
+        default="kmeans",
+        help="Gaussian emission initializer (default: existing kmeans baseline).",
+    )
     args = parser.parse_args()
 
-    jobs = [(seed, args.dataset) for seed in SEEDS]
+    jobs = [(seed, args.dataset, args.emission_init_mode) for seed in SEEDS]
     if args.workers == 1:
         rows = [_worker(job) for job in jobs]
     else:
@@ -375,6 +381,7 @@ def main():
         "schema": "nhsmm-synthetic-trading-usefulness-v1",
         "dataset": str(args.dataset),
         "features": list(FEATURES),
+        "emission_init_mode": args.emission_init_mode,
         "context": "macro_stress",
         "k": K,
         "max_duration": D,
