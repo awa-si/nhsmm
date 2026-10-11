@@ -56,6 +56,8 @@ pytest -q
 
 `tests/test_context_hardening.py` owns external-context shape, finiteness, variable-length, and width contracts. `tests/test_context_optin.py` owns internal-encoder opt-in and model-construction contracts. `tests/test_default_distributions.py` verifies fail-closed categorical labels/temperature controls plus frozen context-free neural-control parameters.
 
+`tests/test_trading_feature_redundancy.py` checks training-only ZCA covariance normalization, pointwise prefix invariance, the Gaussian likelihood Jacobian identity against an independent density, and singular-covariance regularization for the script-local feature diagnostic.
+
 ## HSMM research/correctness milestone gate
 
 The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.

@@ -32,6 +32,10 @@ A separate labeled synthetic trading-regime testbed is defined in [trading-regim
 
 These claims are package/mechanism evidence only. They do not establish trading utility, market semantics, or downstream predictive value. See [validation.md](validation.md) for the maintained metrics, thresholds, and reproduction commands.
 
+## Trading synthetic recovery — latest diagnostic
+
+The 2026-10-11 bounded three-seed feature-redundancy pilot did not resolve fragmentation: full8 median accuracy 79.69% with 61 switches, reduced4 66.35% with 137 switches, and whiten8 63.85% with 138 switches, against eight true switches. Whitening improved normalized comparable OOS likelihood while worsening state recovery. Core code and defaults are unchanged by this diagnostic. Full corrected-dataset recovery acceptance and post-tail-fix statistical revalidation remain open. See [validation.md](validation.md#trading-feature-redundancy-pilot--2026-10-11) for scope and evidence.
+
 ## Production hardening closed on 2026-10-05/06
 
 ### Distribution and runtime

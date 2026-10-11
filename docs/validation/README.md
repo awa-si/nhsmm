@@ -20,3 +20,7 @@ This directory retains machine-readable historical evidence only. Narrative poin
 - [multicomponent-component-matched-package-core-2026-09-27.json](multicomponent-component-matched-package-core-2026-09-27.json)
 - [multicomponent-package-core-confirmation-2026-09-27.json](multicomponent-package-core-confirmation-2026-09-27.json)
 - [multicomponent-reference-deep-dive-2026-09-27.json](multicomponent-reference-deep-dive-2026-09-27.json)
+
+## Trading feature-redundancy evidence
+
+- [results/feature-redundancy-v2-2026-10-11.json](results/feature-redundancy-v2-2026-10-11.json) — bounded exploratory pilot; interpretation is maintained in [../validation.md](../validation.md#trading-feature-redundancy-pilot--2026-10-11).

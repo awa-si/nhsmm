@@ -287,3 +287,88 @@ python scripts/validate_state_recovery.py --scenario all --workers 1 --output /t
 python scripts/validate_learning_prediction.py --scenario all --seeds 401,402,403,404,405 --max-iter 40 --workers 4 --output /tmp/nhsmm-learning-prediction.json
 python scripts/validate_transition_context.py --scenario all --workers 1 --output /tmp/nhsmm-transition-context.json
 ```
+
+## Trading feature-redundancy pilot — 2026-10-11
+
+This is a short diagnostic on the corrected synthetic episode-end-context dataset,
+not a full recovery acceptance run or real-market evidence. It uses core commit
+`392af2b2032f1fd1d7c1f561216ce72bf9dcb405`, the corrected variance-aware
+initializer, causal filtering, seeds `901,902,903`, eight training windows and
+four OOS windows of 240 rows, four joint iterations and two transition-refinement
+steps. Dataset SHA256:
+`16cab157954b32f11af274bd617d6811a3776e81eb926a3f1dae80c954d7a1f8`.
+
+Three arms were fixed before scoring: the original eight features; four features
+(`log_return_1`, `trend_48`, `ewma_vol_12`, `volume_z_48`); and all eight
+features transformed with training-only ZCA whitening. Standardization, context
+scaling, whitening mean and covariance use chronological training windows only.
+The whitening eigenvalue floor is `0.001`; the observed smallest eigenvalue was
+`0.058777`, so this floor was inactive. The frozen transform acts pointwise on
+OOS observations. Labels are used only for permutation-invariant scoring.
+Dimensions and initial clustering differ across arms despite matched seeds and
+iteration budgets.
+
+All entries below are medians across the three fits, evaluated on the same four
+OOS windows. Those windows contain eight true state switches; this small boundary
+sample limits the conclusions.
+
+| Arm | Accuracy | ARI | Boundary F1 ±5 | Run-duration relative error | Predicted switches | Comparable 8D LL / row |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Full eight features | 79.69% | 0.5650 | 0.1449 | 90.97% | 61 | -8.0721 |
+| Four fixed features | 66.35% | 0.3982 | 0.0828 | 93.10% | 137 | n/a |
+| ZCA eight features | 63.85% | 0.3974 | 0.1096 | 89.09% | 138 | -7.3775 |
+
+All arms predict all four states in every seed. The duration metric measures
+state-run lengths, not latent episode durations, and remains far from the
+recovery target. The full-eight control reproduces the preceding corrected
+initializer pilot exactly.
+
+Each model uses a normalized Gaussian likelihood. For ZCA, the reported
+eight-dimensional likelihood adds `log|det(W)| = 2.671696584689829` per row
+to the transformed-space likelihood. This compares full8 and whiten8 in the same
+original standardized observation space. The four-dimensional density is not
+comparable and is explicitly recorded as null in that comparison. Neither
+eight-dimensional value includes the common initial standardization Jacobian
+back to raw feature units.
+
+Whitening reduces maximum absolute pooled training correlation from `0.867558`
+to `3.08e-9`; the reduced subset reaches `0.252714`. Despite this reduction,
+both alternatives decrease median recovery and increase predicted switching.
+Whitening improves normalized OOS density fit by about `0.695` per row while
+reducing state accuracy by about 15.8 percentage points. Pooled decorrelation
+alone therefore does not solve this pilot's regime identification or
+fragmentation problem. It does not establish conditional independence within
+states or remove temporal dependence. These short fits do not prove the same
+ordering after longer training.
+
+No arm is selected for deployment, no package default changes, and no core code
+changes. Repeated exploratory evaluation on these OOS windows is not a fresh
+confirmatory holdout. Full corrected-dataset recovery acceptance remains open;
+post-tail-fix statistical revalidation also remains open after the separately
+documented 300-second timeout. Historical package acceptance is distinct from
+these pending revalidations.
+
+Execution: AWA job `66796aa0b7cf40b594250b24041fd0e2` completed successfully
+in `65.506` seconds, including runner overhead, under a hard 300-second timeout.
+The preceding two-arm training/filtering smoke passed in `24.219` seconds.
+An initial smoke invocation supplied two context coordinates where the benchmark
+requires one; it failed validation and was corrected before the pilot.
+The new regression tests cover training covariance normalization, pointwise
+prefix invariance, an independent Gaussian change-of-variables density identity,
+and finite invertible regularization of singular covariance.
+
+Verification: all 11 focused tests in the new feature diagnostic and the existing
+variance-initialization suites passed; Ruff, Black and diff-check passed. The full
+package suite was not rerun for this script-only change.
+
+Reproduction, with the same bounded AWA environment and single-threaded workers:
+
+```bash
+PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+  /work/env/nhsmm/bin/python scripts/diagnose_trading_feature_redundancy.py \
+  --dataset /data/workspace/nhsmm-trading-regimes-v2/trading_regimes.npz \
+  --output /data/workspace/stage2/feature-redundancy-v2-2026-10-11.json
+```
+
+Machine-readable per-seed scores, fitted whitening transform and execution
+provenance: [results/feature-redundancy-v2-2026-10-11.json](validation/results/feature-redundancy-v2-2026-10-11.json).
