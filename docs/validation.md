@@ -372,3 +372,78 @@ PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
 Machine-readable per-seed scores, fitted whitening transform and execution
 provenance: [results/feature-redundancy-v2-2026-10-11.json](validation/results/feature-redundancy-v2-2026-10-11.json).
+
+## Trading training-budget pilot — 2026-10-11
+
+The predeclared comparison changes joint training `max_iter` only: 4, 12 and 30.
+Every arm is fitted independently with the same seed reset; transition-only
+refinement stays at two steps. Features, training-only scaling, corrected
+`kmeans_cluster_variance` initialization, context, learning rate and optimizer
+policy are fixed. All arms use eight training windows and four OOS windows of
+240 rows on the corrected episode-end-context synthetic dataset. Seeds are
+`901,902,903`; the source base is
+`da9682522dd9213917753df7b5581d0c1fccaea4`. Dataset SHA256 remains
+`16cab157954b32f11af274bd617d6811a3776e81eb926a3f1dae80c954d7a1f8`.
+Labels enter scoring only, never training, stopping or budget selection.
+
+Causal filter results below are medians across the three seeds:
+
+| Joint iterations | Accuracy | ARI | Boundary F1 ±5 | Run-duration error | Switches | Train LL / row | OOS LL / row |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 | 79.69% | 0.5650 | 0.1449 | 90.97% | 61 | -8.1461 | -8.0721 |
+| 12 | 78.85% | 0.5567 | 0.1471 | 90.00% | 60 | -8.0423 | -8.0887 |
+| 30 | 79.17% | 0.5644 | 0.1563 | 90.34% | 56 | -7.8637 | -8.1520 |
+
+The same evaluation windows contain eight true state switches. All nine fits
+cover all four states and match exactly five of the eight true boundaries within
+±5 rows. The modest F1 increase comes from fewer false switches, without an
+increase in matched boundaries. The four-iteration control reproduces the
+preceding corrected-initializer and full-feature pilots exactly.
+
+From 4 to 30 iterations, training likelihood improves in all three paired seeds,
+while OOS likelihood and state accuracy worsen in all three. Median switching
+decreases only from 61 to 56 and run-length error remains about 90%. On this
+limited data coverage, simply adding training iterations does not recover the
+regime structure; the training/OOS divergence is consistent with overfitting.
+It does not prove what would happen with more training windows or independent
+data. No stopping rule or deployment budget is chosen from these held-out scores.
+
+At zero standardized context, learned episode medians move from 31–32 rows at
+four iterations to 20–27 at thirty. Duration parameters therefore do move;
+extra optimization does not freeze them at the initializer. These episode-PMF
+medians at one reference context must not be equated with dynamic observed
+same-state run lengths, which can combine self-transition episodes.
+
+Retrospective Viterbi remains a separate diagnostic. Across budgets 4/12/30 its
+median accuracy is 81.25%/80.73%/80.62%, boundary F1 is
+0.3182/0.2667/0.2400, and switches are 36/37/42. Longer training does not resolve
+its boundary problem either. Full-window MAP uses future rows and cannot
+substitute for the live causal filter.
+
+This changes a script and evidence/documentation only. Package core, generic
+API and defaults are unchanged. Even the 30-iteration arm is not a full recovery
+protocol: data coverage and transition refinement remain reduced, no
+no-context/HMM/no-regime comparison is run, and transition recovery is not
+scored here. Full corrected-dataset recovery acceptance and post-tail-fix
+statistical revalidation remain open. Repeated exploratory use of these windows
+is not independent confirmatory evidence.
+
+Execution: AWA job `2d6b2d6879b74d318b0cbf3c6dadeefd` completed in
+`143.213` seconds under a hard 300-second timeout. Syntax, CLI and a one-seed,
+one-iteration training/inference smoke passed first in `34.017` seconds.
+The existing benchmark-metric and decoder/duration regression suites passed
+`16/16`; their read-only pytest-cache warning did not affect execution.
+Ruff, Black and diff-check passed. The full package suite was not rerun because
+package training/runtime code did not change.
+
+Reproduction with the same bounded AWA environment:
+
+```bash
+PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+  /work/env/nhsmm/bin/python scripts/diagnose_trading_training_budget.py \
+  --dataset /data/workspace/nhsmm-trading-regimes-v2/trading_regimes.npz \
+  --output /data/workspace/stage2/training-budget-v2-2026-10-11.json
+```
+
+Per-seed results, episode diagnostics and execution provenance:
+[training-budget-v2-2026-10-11.json](validation/results/training-budget-v2-2026-10-11.json).

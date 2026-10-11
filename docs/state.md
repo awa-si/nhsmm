@@ -34,7 +34,7 @@ These claims are package/mechanism evidence only. They do not establish trading 
 
 ## Trading synthetic recovery — latest diagnostic
 
-The 2026-10-11 bounded three-seed feature-redundancy pilot did not resolve fragmentation: full8 median accuracy 79.69% with 61 switches, reduced4 66.35% with 137 switches, and whiten8 63.85% with 138 switches, against eight true switches. Whitening improved normalized comparable OOS likelihood while worsening state recovery. Core code and defaults are unchanged by this diagnostic. Full corrected-dataset recovery acceptance and post-tail-fix statistical revalidation remain open. See [validation.md](validation.md#trading-feature-redundancy-pilot--2026-10-11) for scope and evidence.
+The 2026-10-11 matched training-budget pilot compared 4/12/30 joint iterations with fixed eight-feature observations, three seeds and two transition-refinement steps. From 4 to 30, median causal switches fell only from 61 to 56 against eight true switches, run-duration error stayed near 90%, and OOS likelihood worsened in all three seeds while training likelihood improved. More iterations alone did not recover the regime structure on this reduced data coverage. The preceding feature-redundancy pilot also failed to reduce fragmentation. Core code and defaults are unchanged by these diagnostics. Full corrected-dataset recovery acceptance and post-tail-fix statistical revalidation remain open. See [validation.md](validation.md#trading-training-budget-pilot--2026-10-11) for current evidence.
 
 ## Production hardening closed on 2026-10-05/06
 

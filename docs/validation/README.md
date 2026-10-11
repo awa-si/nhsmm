@@ -24,3 +24,7 @@ This directory retains machine-readable historical evidence only. Narrative poin
 ## Trading feature-redundancy evidence
 
 - [results/feature-redundancy-v2-2026-10-11.json](results/feature-redundancy-v2-2026-10-11.json) — bounded exploratory pilot; interpretation is maintained in [../validation.md](../validation.md#trading-feature-redundancy-pilot--2026-10-11).
+
+## Trading training-budget evidence
+
+- [results/training-budget-v2-2026-10-11.json](results/training-budget-v2-2026-10-11.json) — matched-budget diagnostic; interpretation is maintained in [../validation.md](../validation.md#trading-training-budget-pilot--2026-10-11).
