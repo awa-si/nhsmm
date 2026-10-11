@@ -447,3 +447,108 @@ PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
 Per-seed results, episode diagnostics and execution provenance:
 [training-budget-v2-2026-10-11.json](validation/results/training-budget-v2-2026-10-11.json).
+
+## Trading causal boundary-evidence pilot — 2026-10-11
+
+This diagnostic separates marginal argmax switching from model probability of
+a latent transition. It fits the same eight-feature corrected synthetic data,
+variance-aware initializer and training-only scaling as the preceding budget
+pilot. Seeds `901,902,903`, joint budgets `4,30`, two transition-refinement
+steps, eight training and four OOS windows of 240 rows are fixed. Source base:
+`0b8e942c6b57c59b1a462442327574b2258944ef`. Dataset SHA256:
+`16cab157954b32f11af274bd617d6811a3776e81eb926a3f1dae80c954d7a1f8`.
+Both arms reproduce the preceding accuracy, boundary F1 and switch counts.
+Labels enter scoring/event grouping only; they do not enter model fitting or
+decoder/threshold selection.
+
+For edge `t-1 -> t`, the prior uses the state/age posterior and context at
+`t-1`. Boundary mass is then Bayes-updated with the emission likelihood at
+`t`, without any later row. Self-transition episode resets count as episode
+ends but not state changes. The same decomposition also recovers
+`P(z_(t-1) | observations through t)`: the new observation may revise belief
+about the previous state instead of supporting a transition to the new state.
+
+The Float64 edge decomposition using the public transition forecast matches
+production Float32 state
+posteriors with maximum absolute error `1.90735e-6` and age-one episode-reset
+mass with maximum error `8.74025e-7`, across every evaluated edge in all six
+fits. The declared comparison tolerance is `5e-5`. Age-one identifies a reset
+here because `D=64>1`; the D+ bucket caps reported age means at 64 and is not
+an exact age measurement beyond that.
+
+Primary causal-filter results, with medians across seeds:
+
+| Joint iterations | Argmax switches | Unmatched switches | Median prior state-change probability at unmatched switches | Median updated state-change probability | Median current-state confidence |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 4 | 61 | 56 | 1.41% | 6.21% | 91.25% |
+| 30 | 56 | 51 | 2.68% | 15.67% | 94.32% |
+
+The evaluation windows have eight true state boundaries and eight true episode
+boundaries; there are no same-state episode resets in this particular OOS
+sample. Each fit matches five state boundaries under maximum-cardinality
+one-to-one ±5 matching. Unmatched means unmatched under that scoring contract,
+not necessarily a fully independent or instantaneous ground-truth event.
+
+Pooling predictions across seeds, while retaining the same evaluation windows:
+
+| Joint iterations | Unmatched events | Updated change probability <50% | Previous-state posterior revised toward current selected state |
+| --- | ---: | ---: | ---: |
+| 4 | 170 | 118 (69.4%) | 102 (60.0%) |
+| 30 | 153 | 99 (64.7%) | 87 (56.9%) |
+
+These two subsets overlap and must not be added. The 50% split is descriptive,
+not a decoder rule or an acceptance threshold. The repeated seed predictions
+are not independent new data or evidence for statistical significance.
+
+The high confidence in the current state does not imply high confidence that
+a latent switch just occurred. Most unmatched hard switches have less than
+50% updated transition evidence, and many involve revision of the previous
+state posterior. Marginal argmax labels taken at successive information sets
+thus reveal many decision flips with weak transition evidence; successive
+marginal labels are not guaranteed to be a jointly supported or MAP latent
+path. Independent tests construct an explicit argmax flip with zero
+possible episode-end/state-change probability.
+
+This does not explain every error. The remaining 52/170 and 54/153 unmatched
+events have updated change probability at least 50%; model/feature
+identification and timing errors remain. At the exact eight ground-truth
+boundary rows, all fits have updated change probability below 50%, even though
+five boundaries match within ±5. Exact timing and tolerant matching are
+different claims. A low pre-observation forecast alone is not evidence against
+a genuine transition: the tests also show an unlikely forecast becoming
+strong transition evidence after the new observation.
+
+The online probability sums are stored for inspection, but each edge uses a
+different information set. They are not a common full-window posterior expected
+path count and cannot be treated as a replacement boundary decoder. Window
+starts force initial age one; row zero is excluded from edge analysis. Of pooled
+unmatched events, 71/170 (41.8%) at four iterations and 63/153 (41.2%) at thirty
+occur at row 64 or later. The errors are not confined to the first 64 rows,
+but this post-hoc position check does not eliminate window-initialization effects.
+
+No production decoder, core recursion, training policy or package default is
+changed. This pilot supports investigating a coherent causal decoding contract
+before interpreting raw marginal switches as recovered durations. It does not
+establish that a probability gate or confidence threshold would improve
+recovery. Full corrected-dataset recovery acceptance and post-tail-fix
+statistical revalidation remain open.
+
+Execution: AWA job `bfd20c7220bd4115af449b92c77a8f81` completed successfully
+in `107.009` seconds under a hard 300-second timeout. Syntax, CLI and the
+one-seed/one-iteration smoke passed before the pilot; the successful smoke
+and unit-test job took `33.994` seconds. All `28` focused tests passed in
+the new diagnostic plus maintained filtering/transition suites. Ruff, Black
+and diff-check passed. The full package suite was not rerun because the change
+is confined to a script, tests and evidence/documentation.
+
+Reproduction with the same bounded single-threaded AWA environment:
+
+```bash
+PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+  /work/env/nhsmm/bin/python scripts/diagnose_trading_boundary_evidence.py \
+  --dataset /data/workspace/nhsmm-trading-regimes-v2/trading_regimes.npz \
+  --output /data/workspace/stage2/boundary-evidence-v2-2026-10-11.json
+```
+
+Per-event state/age evidence, per-seed groups and execution provenance:
+[boundary-evidence-v2-2026-10-11.json](validation/results/boundary-evidence-v2-2026-10-11.json).

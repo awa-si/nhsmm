@@ -58,6 +58,8 @@ pytest -q
 
 `tests/test_trading_feature_redundancy.py` checks training-only ZCA covariance normalization, pointwise prefix invariance, the Gaussian likelihood Jacobian identity against an independent density, and singular-covariance regularization for the script-local feature diagnostic.
 
+`tests/test_trading_boundary_evidence.py` verifies the script-local causal edge update against independent probability-space enumeration, marginal argmax revision without a latent transition, observation-supported low-prior boundaries, episode self-transitions, and one-to-one boundary event matching.
+
 ## HSMM research/correctness milestone gate
 
 The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.

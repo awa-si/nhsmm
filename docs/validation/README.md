@@ -28,3 +28,7 @@ This directory retains machine-readable historical evidence only. Narrative poin
 ## Trading training-budget evidence
 
 - [results/training-budget-v2-2026-10-11.json](results/training-budget-v2-2026-10-11.json) — matched-budget diagnostic; interpretation is maintained in [../validation.md](../validation.md#trading-training-budget-pilot--2026-10-11).
+
+## Trading causal boundary-evidence
+
+- [results/boundary-evidence-v2-2026-10-11.json](results/boundary-evidence-v2-2026-10-11.json) — causal edge decomposition; interpretation is maintained in [../validation.md](../validation.md#trading-causal-boundary-evidence-pilot--2026-10-11).
