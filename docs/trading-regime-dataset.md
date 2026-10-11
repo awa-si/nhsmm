@@ -1,6 +1,6 @@
 # Synthetic trading-regime dataset
 
-`wenerate_trading_regime_dataset.py` creates a fully labeled, chronological OHLCV dataset for mechanism-level NHSMM evaluation. It is deliberately separate from real-market Gates 11-14.
+`scripts/generate_trading_regime_dataset.py` creates a fully labeled, chronological OHLCV dataset for mechanism-level NHSMM evaluation. It is deliberately separate from real-market Gates 11-14.
 
 ## Ground-truth regimes
 
@@ -13,7 +13,7 @@ Episode durations are explicit and non-geometric. A state never transitions dire
 
 ## Context-conditioned transitions
 
-A causal observable `macro_stress` follows a persistent stochastic process. At each episode boundary it tilts the known base transition law:
+A causal observable `macro_stress` follows a persistent stochastic process. Corrected v2 uses the last observed macro_stress at the episode end, before generating the next bar. At each episode boundary it tilts the known base transition law:
 
 - higher stress increases `bear` / `chaotic` probability;
 - lower stress increases `bull` / `range` probability.
@@ -26,7 +26,7 @@ Default generation creates 60,000 five-minute bars, about 208 days, beginning at
 
 ```bash
 python scripts/generate_trading_regime_dataset.py \
-  --output-dir /data/workspace/nhsmm-trading-regimes-v1
+  --output-dir /data/workspace/nhsmm-trading-regimes-v2
 ```
 
 Outputs:
@@ -52,7 +52,9 @@ This dataset can support four distinct controlled claims without using PnL to tu
 
 Passing these synthetic tests demonstrates that the model can exploit known trading-like state, duration, and transition structure. It does not establish that the same structure exists in real markets.
 
-## Frozen reference instance
+## Frozen legacy v1 reference instance
+
+The committed v1 data remains unchanged. It selected the next state using episode-start context. Use --transition-context-mode episode_start to reproduce that legacy numerical data. The corrected generator defaults to episode_end and emits schema v2; the current usefulness benchmark rejects legacy start-context manifests. The v1 statistics below are historical and do not describe v2.
 
 The maintained reference generation uses seed `424242`, 60,000 rows, and start price `50000`.
 

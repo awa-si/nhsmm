@@ -45,7 +45,7 @@ SPECS = {
 }
 
 
-def _duration(rng: np.RGEnerator, regime: str) -> int:
+def _duration(rng: np.random.Generator, regime: str) -> int:
     if regime == "bull":
         value = 36 + rng.gamma(shape=4.8, scale=18.0)
         return int(np.clip(round(value), 42, 260))
@@ -63,10 +63,10 @@ def _duration(rng: np.RGEnerator, regime: str) -> int:
 
 
 def _next_state(
-    rng: np.RGenerator,
+    rng: np.random.Generator,
     current: int,
     macro_stress: float,
-) -> tuple[int, np.array]:
+) -> tuple[int, np.ndarray]:
     p = BASE_TRANSITION[current].copy()
     stress = float(np.clip(macro_stress, -2.5, 2.5))
     tilt = np.asarray(
@@ -115,9 +115,13 @@ def _rolling_features(
     return out
 
 
-def generate(*, rows: int, seed: int, start_price: float) -> tuple[dict[str, np.ndarray], dict]:
+def generate(
+    *, rows: int, seed: int, start_price: float, transition_context_mode: str = "episode_end"
+) -> tuple[dict[str, np.ndarray], dict]:
     if rows < 1000:
         raise ValueError("rows must be >= 1000")
+    if transition_context_mode not in ("episode_start", "episode_end"):
+        raise ValueError("transition_context_mode must be episode_start or episode_end")
     rng = np.random.default_rng(seed)
 
     open_ = np.empty(rows)
@@ -149,22 +153,9 @@ def generate(*, rows: int, seed: int, start_price: float) -> tuple[dict[str, np.
         realized_duration = end - t
         anchor = price
 
-        next_state, probs = _next_state(rng, state_id, macro_value)
-        episodes.append(
-            {
-                "episode_id": episode_id,
-                "start_row": t,
-                "end_row_exclusive": end,
-                "regime_id": state_id,
-                "regime": regime,
-                "planned_duration": duration,
-                "realized_duration": realized_duration,
-                "macro_stress_at_start": macro_value,
-                "next_state_probabilities": {
-                    REGIMES[i]: float(probs[i]) for i in range(len(REGIMES))
-                },
-            }
-        )
+        macro_at_start = macro_value
+        if transition_context_mode == "episode_start":
+            next_state, probs = _next_state(rng, state_id, macro_value)
 
         spec = SPECS[regime]
         for local, row in enumerate(range(t, end)):
@@ -207,10 +198,29 @@ def generate(*, rows: int, seed: int, start_price: float) -> tuple[dict[str, np.
             age[row] = local + 1
             planned_duration[row] = duration
             remaining[row] = realized_duration - local - 1
-            transition_prob[row] = probs
 
             previous_return = r
             price = next_price
+
+        if transition_context_mode == "episode_end":
+            next_state, probs = _next_state(rng, state_id, macro_value)
+        transition_prob[t:end] = probs
+        episodes.append(
+            {
+                "episode_id": episode_id,
+                "start_row": t,
+                "end_row_exclusive": end,
+                "regime_id": state_id,
+                "regime": regime,
+                "planned_duration": duration,
+                "realized_duration": realized_duration,
+                "macro_stress_at_start": macro_at_start,
+                "macro_stress_at_boundary": macro_value,
+                "next_state_probabilities": {
+                    REGIMES[i]: float(probs[i]) for i in range(len(REGIMES))
+                },
+            }
+        )
 
         t = end
         state_id = next_state
@@ -237,7 +247,11 @@ def generate(*, rows: int, seed: int, start_price: float) -> tuple[dict[str, np.
         data[f"gt_p_next_{name}"] = transition_prob[:, i]
 
     metadata = {
-        "schema": "nhsmm-synthetic-trading-regimes-v1",
+        "schema": (
+            "nhsmm-synthetic-trading-regimes-v2"
+            if transition_context_mode == "episode_end"
+            else "nhsmm-synthetic-trading-regimes-v1"
+        ),
         "seed": seed,
         "rows": rows,
         "bar_interval_minutes": 5,
@@ -247,6 +261,7 @@ def generate(*, rows: int, seed: int, start_price: float) -> tuple[dict[str, np.
         "base_transition_matrix": BASE_TRANSITION.tolist(),
         "transition_context": {
             "feature": "macro_stress",
+            "conditioning_time": transition_context_mode,
             "description": (
                 "high stress tilts next-episode probability toward bear/chaotic; "
                 "low stress toward bull/range"
@@ -318,9 +333,20 @@ def main() -> int:
     parser.add_argument("--rows", type=int, default=60_000)
     parser.add_argument("--seed", type=int, default=424242)
     parser.add_argument("--start-price", type=float, default=50_000.0)
+    parser.add_argument(
+        "--transition-context-mode",
+        choices=("episode_start", "episode_end"),
+        default="episode_end",
+        help="episode_start reproduces legacy v1; episode_end is corrected v2.",
+    )
     args = parser.parse_args()
 
-    data, metadata = generate(rows=args.rows, seed=args.seed, start_price=args.start_price)
+    data, metadata = generate(
+        rows=args.rows,
+        seed=args.seed,
+        start_price=args.start_price,
+        transition_context_mode=args.transition_context_mode,
+    )
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     npz_path = args.output_dir / "trading_regimes.npz"

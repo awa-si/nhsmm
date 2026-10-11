@@ -7,6 +7,7 @@ import json
 import math
 import random
 from pathlib import Path
+from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -33,21 +34,41 @@ EVAL_WINDOWS = 8
 SEEDS = (901, 902, 903)
 
 
-def _windows(data: dict[str, np.ndarray], start: int, end: int, count: int):
-    usable = end - start - WINDOW
+@dataclass(frozen=True)
+class RunBudget:
+    window: int = WINDOW
+    train_windows: int = TRAIN_WINDOWS
+    eval_windows: int = EVAL_WINDOWS
+    max_iter: int = 30
+    transition_refine_steps: int = 12
+
+    def __post_init__(self):
+        if min(self.window, self.train_windows, self.eval_windows, self.max_iter) < 1:
+            raise ValueError("window, window counts, and max_iter must be positive")
+        if self.transition_refine_steps < 0:
+            raise ValueError("transition_refine_steps must be nonnegative")
+
+
+def _windows(
+    data: dict[str, np.ndarray], start: int, end: int, count: int, *, window: int | None = None
+):
+    window = WINDOW if window is None else window
+    if count < 1 or window < 1 or end - start < window:
+        raise ValueError("window sampling requires a positive count and a complete window")
+    usable = end - start - window
     anchors = np.linspace(start, start + usable, count, dtype=int)
     x = np.stack(
-        [np.column_stack([data[name][a : a + WINDOW] for name in FEATURES]) for a in anchors]
+        [np.column_stack([data[name][a : a + window] for name in FEATURES]) for a in anchors]
     ).astype(np.float32)
-    c = np.stack([data["macro_stress"][a : a + WINDOW, None] for a in anchors]).astype(np.float32)
-    y = np.stack([data["gt_regime_id"][a : a + WINDOW] for a in anchors]).astype(np.int64)
-    age = np.stack([data["gt_episode_age"][a : a + WINDOW] for a in anchors]).astype(np.int64)
-    rem = np.stack([data["gt_remaining_duration"][a : a + WINDOW] for a in anchors]).astype(
+    c = np.stack([data["macro_stress"][a : a + window, None] for a in anchors]).astype(np.float32)
+    y = np.stack([data["gt_regime_id"][a : a + window] for a in anchors]).astype(np.int64)
+    age = np.stack([data["gt_episode_age"][a : a + window] for a in anchors]).astype(np.int64)
+    rem = np.stack([data["gt_remaining_duration"][a : a + window] for a in anchors]).astype(
         np.int64
     )
     gt_p = np.stack(
         [
-            np.column_stack([data[f"gt_p_next_{name}"][a : a + WINDOW] for name in REGIMES])
+            np.column_stack([data[f"gt_p_next_{name}"][a : a + window] for name in REGIMES])
             for a in anchors
         ]
     ).astype(np.float32)
@@ -102,25 +123,27 @@ def _ari(true, pred):
 
 
 def _boundary_f1(true, pred, tol=5):
+    if tol < 0:
+        raise ValueError("tol must be nonnegative")
     tp = fp = fn = 0
     for expected, actual in zip(true, pred):
         true_bounds = list(np.flatnonzero(expected[1:] != expected[:-1]) + 1)
         pred_bounds = list(np.flatnonzero(actual[1:] != actual[:-1]) + 1)
-        used_true: set[int] = set()
-        used_pred: set[int] = set()
-        pairs = sorted(
-            (abs(int(p) - int(t)), pi, ti)
-            for pi, p in enumerate(pred_bounds)
-            for ti, t in enumerate(true_bounds)
-            if abs(int(p) - int(t)) <= tol
-        )
-        for _, pi, ti in pairs:
-            if pi not in used_pred and ti not in used_true:
-                used_pred.add(pi)
-                used_true.add(ti)
-        tp += len(used_true)
-        fp += len(pred_bounds) - len(used_pred)
-        fn += len(true_bounds) - len(used_true)
+        # Earliest feasible pairs maximize cardinality for sorted time points.
+        ti = pi = matched = 0
+        while ti < len(true_bounds) and pi < len(pred_bounds):
+            t, p = int(true_bounds[ti]), int(pred_bounds[pi])
+            if p < t - tol:
+                pi += 1
+            elif t < p - tol:
+                ti += 1
+            else:
+                matched += 1
+                ti += 1
+                pi += 1
+        tp += matched
+        fp += len(pred_bounds) - matched
+        fn += len(true_bounds) - matched
     den = 2 * tp + fp + fn
     return 1.0 if den == 0 else float(2 * tp / den)
 
@@ -138,7 +161,18 @@ def _run_medians(states):
     return {i: (float(np.median(v)) if v else math.nan) for i, v in out.items()}
 
 
-def _config(seed, *, context, hmm, emission_init_mode="kmeans"):
+def _duration_error(true_medians, predicted_medians):
+    required = [k for k in range(K) if np.isfinite(true_medians[k]) and true_medians[k] > 0]
+    missing = [k for k in required if not np.isfinite(predicted_medians[k])]
+    if not required or missing:
+        # Explicit 100% missing-state penalty plus a coverage acceptance gate.
+        return 1.0, missing
+    errors = [abs(predicted_medians[k] - true_medians[k]) / true_medians[k] for k in required]
+    return float(np.median(errors)), missing
+
+
+def _config(seed, *, context, hmm, emission_init_mode="kmeans", budget=None):
+    budget = budget or RunBudget()
     return ModelConfig(
         n_states=K,
         n_features=len(FEATURES),
@@ -151,7 +185,7 @@ def _config(seed, *, context, hmm, emission_init_mode="kmeans"):
         dropout=0.0,
         seed=seed,
         n_init=1,
-        max_iter=30,
+        max_iter=budget.max_iter,
         lr=8e-3,
         use_scheduler=False,
         convergence_stop=False,
@@ -161,16 +195,21 @@ def _config(seed, *, context, hmm, emission_init_mode="kmeans"):
         transition_init_mode="uniform",
         initial_init_mode="uniform",
         transition_context_max_delta=1.5,
-        transition_refine_steps=12 if context else 0,
+        transition_refine_steps=budget.transition_refine_steps if context else 0,
         transition_refine_lr=3e-2,
     )
 
 
-def _fit(seed, x, c, *, context, hmm, emission_init_mode="kmeans"):
+def _fit(seed, x, c, *, context, hmm, emission_init_mode="kmeans", budget=None):
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)
-    model = NHSMM(_config(seed, context=context, hmm=hmm, emission_init_mode=emission_init_mode), device="cpu")
+    model = NHSMM(
+        _config(
+            seed, context=context, hmm=hmm, emission_init_mode=emission_init_mode, budget=budget
+        ),
+        device="cpu",
+    )
     model.initialize_distributions()
     tx = torch.tensor(x)
     tc = torch.tensor(c) if context else None
@@ -234,30 +273,55 @@ def _aligned_transition_mae(model, context, true_state, true_age, gt_p, perm):
     return float(np.mean(errors))
 
 
-def _one(seed, path, emission_init_mode="kmeans"):
+def _one(seed, path, emission_init_mode="kmeans", budget=None):
+    budget = budget or RunBudget()
     torch.set_num_threads(1)
     try:
         torch.set_num_interop_threads(1)
     except RuntimeError:
         pass
 
-    loaded = np.load(path)
-    data = {name: loaded[name] for name in loaded.files}
+    with np.load(path) as loaded:
+        data = {name: loaded[name] for name in loaded.files}
     n = len(data["close"])
     train_range = (0, int(0.60 * n))
     val_range = (int(0.60 * n), int(0.80 * n))
     test_range = (int(0.80 * n), n)
 
-    train = _windows(data, *train_range, TRAIN_WINDOWS)
-    validation = _windows(data, *val_range, EVAL_WINDOWS)
-    test = _windows(data, *test_range, EVAL_WINDOWS)
+    train = _windows(data, *train_range, budget.train_windows, window=budget.window)
+    validation = _windows(data, *val_range, budget.eval_windows, window=budget.window)
+    test = _windows(data, *test_range, budget.eval_windows, window=budget.window)
 
     train_x, val_x, test_x = _standardize(train[0], validation[0], test[0])
     train_c, val_c, test_c = _standardize_context(train[1], validation[1], test[1])
 
-    full = _fit(seed, train_x, train_c, context=True, hmm=False, emission_init_mode=emission_init_mode)
-    no_context = _fit(seed + 100, train_x, train_c, context=False, hmm=False, emission_init_mode=emission_init_mode)
-    hmm = _fit(seed + 200, train_x, train_c, context=False, hmm=True, emission_init_mode=emission_init_mode)
+    full = _fit(
+        seed,
+        train_x,
+        train_c,
+        context=True,
+        hmm=False,
+        emission_init_mode=emission_init_mode,
+        budget=budget,
+    )
+    no_context = _fit(
+        seed + 100,
+        train_x,
+        train_c,
+        context=False,
+        hmm=False,
+        emission_init_mode=emission_init_mode,
+        budget=budget,
+    )
+    hmm = _fit(
+        seed + 200,
+        train_x,
+        train_c,
+        context=False,
+        hmm=True,
+        emission_init_mode=emission_init_mode,
+        budget=budget,
+    )
 
     test_tensor = torch.tensor(test_x)
     context_tensor = torch.tensor(test_c)
@@ -274,17 +338,7 @@ def _one(seed, path, emission_init_mode="kmeans"):
 
     true_medians = _run_medians(true)
     predicted_medians = _run_medians(mapped)
-    relative_errors = []
-    for state in range(K):
-        if (
-            np.isfinite(true_medians[state])
-            and np.isfinite(predicted_medians[state])
-            and true_medians[state] > 0
-        ):
-            relative_errors.append(
-                abs(predicted_medians[state] - true_medians[state]) / true_medians[state]
-            )
-    duration_error = float(np.median(relative_errors))
+    duration_error, missing_states = _duration_error(true_medians, predicted_medians)
 
     transition_mae = _aligned_transition_mae(full, test_c, true, test[3], test[5], perm)
 
@@ -300,6 +354,8 @@ def _one(seed, path, emission_init_mode="kmeans"):
         "ari": ari,
         "boundary_f1_tol5": boundary_f1,
         "duration_median_rel_error": duration_error,
+        "duration_state_coverage": not missing_states,
+        "missing_predicted_states": missing_states,
         "transition_mae": transition_mae,
         "full_ll_per_row": full_ll,
         "hsmm_no_context_ll_per_row": no_context_ll,
@@ -343,7 +399,10 @@ def _summary(rows):
             result["median_matched_accuracy"] >= 0.65 and result["median_ari"] >= 0.40
         ),
         "boundary_recovery": result["median_boundary_f1_tol5"] >= 0.45,
-        "duration_recovery": result["median_duration_median_rel_error"] <= 0.50,
+        "duration_recovery": (
+            result["median_duration_median_rel_error"] <= 0.50
+            and all(row.get("duration_state_coverage", True) for row in rows)
+        ),
         "transition_recovery": result["median_transition_mae"] <= 0.20,
         "beats_no_regime": result["median_full_minus_no_regime"] >= 0.05,
         "not_worse_than_hmm": result["median_full_minus_hmm"] >= 0.0,
@@ -367,9 +426,33 @@ def main():
         default="kmeans",
         help="Gaussian emission initializer (default: existing kmeans baseline).",
     )
+    parser.add_argument("--seeds", default="901,902,903")
+    parser.add_argument("--max-iter", type=int, default=30)
+    parser.add_argument("--transition-refine-steps", type=int, default=12)
+    parser.add_argument("--window", type=int, default=WINDOW)
+    parser.add_argument("--train-windows", type=int, default=TRAIN_WINDOWS)
+    parser.add_argument("--eval-windows", type=int, default=EVAL_WINDOWS)
     args = parser.parse_args()
+    try:
+        seeds = tuple(int(x) for x in args.seeds.split(","))
+        if not seeds or args.workers < 1:
+            raise ValueError("seeds and workers must be nonempty/positive")
+        budget = RunBudget(
+            args.window,
+            args.train_windows,
+            args.eval_windows,
+            args.max_iter,
+            args.transition_refine_steps,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
+    manifest = json.loads(args.dataset.with_name("manifest.json").read_text())
+    if manifest.get("transition_context", {}).get("conditioning_time") != "episode_end":
+        parser.error(
+            "This benchmark requires corrected episode_end v2 data; legacy v1 conditions transitions on episode start."
+        )
 
-    jobs = [(seed, args.dataset, args.emission_init_mode) for seed in SEEDS]
+    jobs = [(seed, args.dataset, args.emission_init_mode, budget) for seed in seeds]
     if args.workers == 1:
         rows = [_worker(job) for job in jobs]
     else:
@@ -378,17 +461,25 @@ def main():
 
     summary = _summary(rows)
     payload = {
-        "schema": "nhsmm-synthetic-trading-usefulness-v1",
+        "schema": "nhsmm-synthetic-trading-usefulness-v2",
+        "dataset_schema": manifest["schema"],
+        "max_iter": budget.max_iter,
+        "transition_refine_steps": budget.transition_refine_steps,
+        "metric_contract": {
+            "boundary_matching": "maximum_cardinality",
+            "duration": "filtered_argmax_run_median_with_coverage_gate",
+        },
+        "full_protocol": budget == RunBudget() and seeds == SEEDS,
         "dataset": str(args.dataset),
         "features": list(FEATURES),
         "emission_init_mode": args.emission_init_mode,
         "context": "macro_stress",
         "k": K,
         "max_duration": D,
-        "window": WINDOW,
-        "train_windows": TRAIN_WINDOWS,
-        "eval_windows": EVAL_WINDOWS,
-        "seeds": list(SEEDS),
+        "window": budget.window,
+        "train_windows": budget.train_windows,
+        "eval_windows": budget.eval_windows,
+        "seeds": list(seeds),
         "runs": rows,
         "summary": summary,
     }

@@ -1,0 +1,187 @@
+{
+  "context": "macro_stress",
+  "dataset": "/data/workspace/nhsmm-trading-regimes-v2/trading_regimes.npz",
+  "dataset_schema": "nhsmm-synthetic-trading-regimes-v2",
+  "dataset_sha256": "16cab157954b32f11af274bd617d6811a3776e81eb926a3f1dae80c954d7a1f8",
+  "emission_init_mode": "kmeans_cluster_variance",
+  "eval_windows": 4,
+  "features": [
+    "log_return_1",
+    "log_return_3",
+    "log_return_12",
+    "trend_12",
+    "trend_48",
+    "ewma_vol_12",
+    "ewma_vol_48",
+    "volume_z_48"
+  ],
+  "full_protocol": false,
+  "k": 4,
+  "max_duration": 64,
+  "max_iter": 4,
+  "metric_contract": {
+    "boundary_matching": "maximum_cardinality",
+    "duration": "filtered_argmax_run_median_with_coverage_gate"
+  },
+  "runner_elapsed_seconds": 46.205,
+  "runner_timeout_seconds": 300,
+  "runs": [
+    {
+      "ari": 0.5543453487128246,
+      "boundary_f1_tol5": 0.18421052631578946,
+      "duration_median_rel_error": 0.9225000000000001,
+      "duration_state_coverage": true,
+      "full_ll_per_row": -8.310267639160156,
+      "full_minus_hmm": 0.866852315266927,
+      "full_minus_hsmm_no_context": -0.18662719726562393,
+      "full_minus_no_regime": 3.7638050101884772,
+      "hmm_state_only_ll_per_row": -9.177119954427083,
+      "hsmm_no_context_ll_per_row": -8.123640441894532,
+      "matched_accuracy": 0.7916666666666666,
+      "missing_predicted_states": [],
+      "no_regime_gaussian_ll_per_row": -12.074072649348633,
+      "occupancy": [
+        0.12453662604093552,
+        0.05636890232563019,
+        0.23573552072048187,
+        0.5833593606948853
+      ],
+      "permutation_learned_to_true": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "predicted_run_medians": {
+        "bear": 3.0,
+        "bull": 4.0,
+        "chaotic": 6.0,
+        "range": 9.0
+      },
+      "seed": 901,
+      "transition_mae": 0.15529873501509428,
+      "true_run_medians": {
+        "bear": 40.0,
+        "bull": 50.0,
+        "chaotic": 25.5,
+        "range": 139.5
+      }
+    },
+    {
+      "ari": 0.5729915496351432,
+      "boundary_f1_tol5": 0.1891891891891892,
+      "duration_median_rel_error": 0.920573476702509,
+      "duration_state_coverage": true,
+      "full_ll_per_row": -8.257782491048177,
+      "full_minus_hmm": 0.7033157348632812,
+      "full_minus_hsmm_no_context": 0.6658716837565102,
+      "full_minus_no_regime": 3.816290158300456,
+      "hmm_state_only_ll_per_row": -8.961098225911458,
+      "hsmm_no_context_ll_per_row": -8.923654174804687,
+      "matched_accuracy": 0.7989583333333333,
+      "missing_predicted_states": [],
+      "no_regime_gaussian_ll_per_row": -12.074072649348633,
+      "occupancy": [
+        0.05801333114504814,
+        0.2424669861793518,
+        0.582843542098999,
+        0.1166767030954361
+      ],
+      "permutation_learned_to_true": [
+        3,
+        1,
+        2,
+        0
+      ],
+      "predicted_run_medians": {
+        "bear": 3.0,
+        "bull": 4.0,
+        "chaotic": 5.5,
+        "range": 11.0
+      },
+      "seed": 902,
+      "transition_mae": 0.14959576865658164,
+      "true_run_medians": {
+        "bear": 40.0,
+        "bull": 50.0,
+        "chaotic": 25.5,
+        "range": 139.5
+      }
+    },
+    {
+      "ari": 0.5599707988583124,
+      "boundary_f1_tol5": 0.15584415584415584,
+      "duration_median_rel_error": 0.9225000000000001,
+      "duration_state_coverage": true,
+      "full_ll_per_row": -8.298315938313802,
+      "full_minus_hmm": 0.9106023152669263,
+      "full_minus_hsmm_no_context": -0.14537404378255303,
+      "full_minus_no_regime": 3.7757567110348305,
+      "hmm_state_only_ll_per_row": -9.208918253580729,
+      "hsmm_no_context_ll_per_row": -8.15294189453125,
+      "matched_accuracy": 0.7927083333333333,
+      "missing_predicted_states": [],
+      "no_regime_gaussian_ll_per_row": -12.074072649348633,
+      "occupancy": [
+        0.058757126331329346,
+        0.24252812564373016,
+        0.5798551440238953,
+        0.11885995417833328
+      ],
+      "permutation_learned_to_true": [
+        3,
+        1,
+        2,
+        0
+      ],
+      "predicted_run_medians": {
+        "bear": 3.0,
+        "bull": 4.0,
+        "chaotic": 6.0,
+        "range": 9.0
+      },
+      "seed": 903,
+      "transition_mae": 0.14844578597694635,
+      "true_run_medians": {
+        "bear": 40.0,
+        "bull": 50.0,
+        "chaotic": 25.5,
+        "range": 139.5
+      }
+    }
+  ],
+  "schema": "nhsmm-synthetic-trading-usefulness-v2",
+  "seeds": [
+    901,
+    902,
+    903
+  ],
+  "summary": {
+    "acceptance": {
+      "beats_no_regime": true,
+      "boundary_recovery": false,
+      "duration_recovery": false,
+      "not_worse_than_hmm": true,
+      "not_worse_than_no_context_hsmm": false,
+      "passed": false,
+      "state_recovery": true,
+      "transition_recovery": true
+    },
+    "median_ari": 0.5599707988583124,
+    "median_boundary_f1_tol5": 0.18421052631578946,
+    "median_duration_median_rel_error": 0.9225000000000001,
+    "median_full_ll_per_row": -8.298315938313802,
+    "median_full_minus_hmm": 0.866852315266927,
+    "median_full_minus_hsmm_no_context": -0.14537404378255303,
+    "median_full_minus_no_regime": 3.7757567110348305,
+    "median_hmm_state_only_ll_per_row": -9.177119954427083,
+    "median_hsmm_no_context_ll_per_row": -8.15294189453125,
+    "median_matched_accuracy": 0.7927083333333333,
+    "median_no_regime_gaussian_ll_per_row": -12.074072649348633,
+    "median_transition_mae": 0.14959576865658164,
+    "n": 3
+  },
+  "train_windows": 8,
+  "transition_refine_steps": 2,
+  "window": 240
+}

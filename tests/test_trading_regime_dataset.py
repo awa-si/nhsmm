@@ -9,7 +9,7 @@ def test_trading_regime_dataset_is_deterministic_and_well_formed() -> None:
     data_a, meta_a = generate(rows=3000, seed=777, start_price=10_000.0)
     data_b, meta_b = generate(rows=3000, seed=777, start_price=10_000.0)
 
-    assert meta_a["schema"] == "nhsmm-synthetic-trading-regimes-v1"
+    assert meta_a["schema"] == "nhsmm-synthetic-trading-regimes-v2"
     assert meta_a["regime_row_counts"] == meta_b["regime_row_counts"]
     assert set(meta_a["regime_row_counts"]) == set(REGIMES)
     assert sum(meta_a["regime_row_counts"].values()) == 3000
