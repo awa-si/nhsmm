@@ -1431,7 +1431,10 @@ class NHSMM(nn.Module):
                         for state in range(self.config.n_states)
                     ]
                 )
-                emission.log_var.copy_(variances.clamp(min=0.05, max=5.0).log())
+                target_variance = variances.clamp(min=0.05, max=5.0)
+                # Gaussian variance is softplus(log_var), not exp(log_var).
+                inverse_softplus = target_variance + torch.log(-torch.expm1(-target_variance))
+                emission.log_var.copy_(inverse_softplus)
             else:
                 emission.log_var.zero_()
         else:

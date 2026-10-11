@@ -35,6 +35,10 @@ Unknown keys are rejected. Overrides return a newly validated config and never s
 
 `use_context_encoder=False` is the default. In that mode `NHSMM` does not construct a `ContextEncoder`. Set `use_context_encoder=True` to opt into learned observation-derived context. External context is independent of this switch: configure `context_dim` and pass context explicitly when needed.
 
+### Gaussian emission initialization
+
+`emission_init_mode="kmeans_cluster_variance"` initializes Gaussian means from training-observation kmeans and actual variances from within-cluster population variances. Targets are clipped to [0.05, 5] in training-observation units; clusters with fewer than two members use the global population variance. Gaussian variance is `softplus(log_var)`, so this initializer stores the stable inverse-softplus of each target. It requires Gaussian emissions. The package default remains `spread`; the existing means-only `kmeans` mode retains its scale initialization.
+
 ## ValidationConfig
 
 `ValidationConfig` is a separate public contract for controlled learning/prediction validation. Validation policy is intentionally not stored in `ModelConfig`.
