@@ -1,0 +1,40 @@
+{
+  "transition_target": {
+    "test_boundary_rows": 42,
+    "start_context_target_mae": 0.0,
+    "end_context_target_mae": 0.022810575752340568,
+    "macro_start_end_mean_abs_difference": 0.37577276988003716
+  },
+  "boundary_counterexample": {
+    "true_boundaries": [
+      6,
+      10
+    ],
+    "predicted_boundaries": [
+      1,
+      6
+    ],
+    "tol": 5,
+    "implemented_f1": 0.5,
+    "maximum_cardinality_f1": 1.0
+  },
+  "missing_state_duration": {
+    "run_medians": {
+      "0": 4.0,
+      "1": null,
+      "2": null,
+      "3": null
+    },
+    "implementation": "nonfinite state medians excluded from duration_error"
+  },
+  "annotation_failures": [
+    {
+      "function": "_duration",
+      "error": "module 'numpy' has no attribute 'RGEnerator'"
+    },
+    {
+      "function": "_next_state",
+      "error": "module 'numpy' has no attribute 'RGenerator'"
+    }
+  ]
+}
