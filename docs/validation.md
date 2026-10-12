@@ -1678,3 +1678,117 @@ The historical frozen-NPZ check remains open; no new full canonical-suite claim.
 Next: direct-feature/context baselines with the same information, independent
 dataset or chronological-window replication, and raw log-posterior scoring.
 Those checks precede any production feature/family/default decision.
+
+## Direct observable baselines and data replication — 2026-10-12
+
+Step 8 base: c2528258a66c5f65399030b711ff5ffab1ba3c96.
+Owner: scripts/diagnose_trading_information_baselines.py. Three predeclared
+synthetic v2 generator seeds (424242/424243/424244) reproduce Step 6's frozen
+feature hashes. Each uses the same Step 7 chronological ranges, eight training
+and four test windows of 240 rows and fixed 64-row warmup. Fit seed 901 is held
+constant across datasets to isolate data replication from restart variation.
+Full8 Gaussian and Full8 Student-t retain the matched Step 7 initialization,
+external macro context, K4/D64-plus-tail and fixed 40-update budget. No validation
+or test observations select lags, penalties, families or stopping points.
+
+Direct forecast controls receive all eight training-standardized features plus
+the training-standardized macro context. Instantaneous designs use the current
+row; lagged designs concatenate rows t, t-1, t-3, t-12 and t-48 within each
+window. All score the identical 700 raw next-return targets. Both designs have
+a homoscedastic and a heteroscedastic Gaussian head. Means use ridge 1e-3 with
+an unpenalized intercept. Heteroscedastic heads fit log squared training
+residuals with the same ridge and train-only multiplicative smearing. Log
+variance predictions are clipped to [-12,12] before exponentiation; normalized
+residual variance has a 1e-6 floor. These floors concern the forecast head,
+not the state-log metric. Every coefficient and smearing factor is frozen
+before test evaluation. Residual calibration is in-sample, not cross-fitted.
+
+To measure incremental representation value, the lagged heteroscedastic design
+is augmented with four frozen current HSMM posterior columns, retaining its
+observable columns and the identical head rules. State labels do not enter
+model training or forecast calibration. Training labels only freeze the state
+permutation for evaluation. The old Step 7 posterior/current-return head and
+current-return-only control are rerun for continuity.
+
+Observable feature/context access is matched; history representation is not
+identical. The fixed lag baseline reaches 48 rows back, whereas the HSMM uses
+the entire current window prefix. This is a restricted direct baseline and a
+bounded representation comparison, not a universal same-history predictor
+benchmark. Extra posterior columns also increase fitted head capacity. Neither
+fixed ridge nor 40 model updates establishes convergence or an optimal baseline.
+
+State log scores gather the true class directly from logsumexp over state-age
+log posteriors, before exponentiation. No state-log metric floor is applied.
+The minimum true-class log probability and number of zeros that Float32
+exponentiation would produce are reported separately. This removes the Step 7
+scoring-floor ambiguity, while preserving the model's Float32 inference
+arithmetic. Accuracy/Brier remain separate objectives from extreme log loss.
+
+This is synthetic data replication over sparse benchmark windows with one fit
+seed. It does not establish real-market performance, significance, walk-forward
+robustness, duration recovery or trading utility. Production code and defaults
+are unchanged; the historical frozen-NPZ verification remains open.
+
+### Measured Step 8 results
+
+All **six fits completed exactly 40 updates**. Each dataset has 704 test state
+rows and 700 next-return pairs for every head. All three frozen dataset feature
+hashes and recorded source hashes were verified. Focused code gate: **40 passed**;
+AST/Ruff/Black passed before execution.
+
+Held-out next-return log scores in raw return units (higher is better):
+
+| Generator seed | Instant hetero | Lagged hetero | Step 7 Gaussian head | Step 7 Student-t head | Lagged + Gaussian posterior | Lagged + Student-t posterior |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 424242 | 4.56062 | 4.59632 | 4.64262 | 4.64064 | 4.59475 | 4.59398 |
+| 424243 | 4.69261 | 4.63994 | 4.71519 | 4.71654 | 4.65845 | 4.65818 |
+| 424244 | 4.54383 | 4.42515 | 4.49507 | 4.48757 | 4.37525 | 4.38667 |
+
+Adding Gaussian posteriors to the otherwise identical lagged heteroscedastic
+head changes log score by -0.00157/+0.01850/-0.04990 across datasets.
+Student-t changes it by -0.00234/+0.01824/-0.03848. Both additions worsen
+point RMSE on all three datasets. Thus this fixed augmentation does not supply
+a stable forecast improvement. Longer fixed lags themselves also fail to
+dominate the instantaneous baseline; extra predictors can overfit at this
+sample size and fixed penalty.
+
+The simpler Step 7 posterior-weighted variance heads outperform both direct
+heteroscedastic designs on datasets 424242/424243, but lose to the instantaneous
+direct head on 424244. They use a different mean/variance function class.
+Their successes and the failed identical-head augmentation must both be
+retained: the experiment neither proves general HSMM value nor proves that
+posterior representations are useless. Forecast-head specification and
+calibration materially affect the outcome. Full raw scores, point errors and
+coefficients are retained in the reports.
+
+Raw held-out state scores with the training-frozen permutation:
+
+| Generator seed | Gaussian accuracy | Student-t accuracy | Gaussian Brier | Student-t Brier | Gaussian state log score | Student-t state log score |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 424242 | 88.78% | 87.50% | 0.2062 | 0.2234 | -1.53671 | -1.22326 |
+| 424243 | 71.59% | 73.15% | 0.5439 | 0.5196 | -3.18327 | -2.69047 |
+| 424244 | 55.26% | 55.11% | 0.8399 | 0.8340 | -4.70676 | -4.12150 |
+
+Named-state recovery is strongly data-dependent at this budget. The stable
+fit-seed results on dataset 424242 do not transfer to the other two synthetic
+realizations. Student-t improves raw state log score on all three, while
+accuracy and forecast density show no uniform family dominance. This is
+bounded calibration evidence, not a Student-t default recommendation or proof
+of an additional production defect.
+
+On dataset 424242 the Gaussian minimum true-state log probability is
+-153.98352. Float32 exponentiation produces one zero, while the raw log score
+remains finite. The old clipped Step 7 seed-901 state score was -2.29920;
+the corresponding raw score is -1.53671. The difference is the old metric's
+1e-300 floor after Float32 exponentiation, not a model improvement. The other
+two Gaussian datasets and all three Student-t fits have no such Float32
+true-state zeros. Step 7 reports remain historical evidence with their stated
+clipped-score contract.
+
+[Dataset 424242 report](validation/results/information-baselines-step8-data424242-native-20261012.json),
+[424243](validation/results/information-baselines-step8-data424243-native-20261012.json),
+[424244](validation/results/information-baselines-step8-data424244-native-20261012.json)
+record frozen head parameters, mappings, actual update counts, provenance and
+unfloored state scores. No production change or full canonical-suite claim.
+Next: training-only calibration/regularization controls and longer optimization
+budgets on predeclared independent windows before any default decision.

@@ -554,3 +554,41 @@ reports 122 unchanged files. All 18 accepted models recorded exactly 40 updates,
 with identical 704 state rows and 700 next-return targets. Source/frozen dataset
 provenance was verified. No production change or new full canonical-suite
 claim; the historical frozen-NPZ verification remains unresolved.
+
+## Step 8 — direct observable baselines and data replication, 2026-10-12
+
+tests/test_trading_information_baselines.py checks fixed causal lag columns,
+prefix invariance under future mutations, exclusion of each final future target
+from the design, rejection of negative lags, frozen mean/variance coefficients
+under test-target mutation, raw-unit density agreement with an independent
+Normal distribution, constant-posterior equivalence to the direct forecast,
+and direct raw-log scoring under exponentiation underflow and state permutation.
+
+Before model execution, the focused gate passed **40 tests** across the new
+baseline tests, Step 7 family/optimizer tests, feature redundancy, observation
+controls, model-conform duration and code-audit regressions. AST/Ruff/Black
+passed; Black reported 124 unchanged materialized Python files. The recycled
+runtime required restoration of declared dependencies and the editable package;
+execution uses Python 3.12.14, Torch 2.14.1+cpu, NumPy 2.3.5, pytest 9.1.1,
+Black 26.10.1 and Ruff 0.17.0. No packaging/lock/default changes were made.
+
+Each generator-seed run has a 300-second bound, one worker and OMP/MKL/OPENBLAS
+threads 1. Runs are sequential. Each Gaussian/Student-t fit must record exactly
+40 production updates. Source SHA256 hashes and the corresponding committed
+Step 6 feature hash are checked or recorded; remote input identities were
+verified against the immutable Step 7 head.
+
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 timeout 300 python -m scripts.diagnose_trading_information_baselines --generator-seed 424242 --base-commit c2528258a66c5f65399030b711ff5ffab1ba3c96 --output docs/validation/results/information-baselines-step8-data424242-native-20261012.json
+
+Repeat for generator seeds 424243/424244 with matching output filenames.
+Methods, numerical limits and measured results belong to
+[validation.md](validation.md#direct-observable-baselines-and-data-replication--2026-10-12).
+The full canonical suite is not rerun; the unavailable historical v1 NPZ check
+remains unresolved. These are separate native v2 generations, not replacements
+for that fixture.
+
+Final Step 8 evidence: all three bounded sequential runs completed; six fits
+record exactly 40 updates, each with 704 state rows and identical 700 forecast
+pairs across heads. All source and frozen feature hashes were verified. The
+initial 40-test gate remains the applicable code verification; no source changed
+after execution. No new full canonical-suite or historical-NPZ acceptance claim.
