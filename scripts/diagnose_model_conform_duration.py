@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import json
+import hashlib
 import math
+import platform
 import random
 from pathlib import Path
 
@@ -219,6 +221,7 @@ def oracle_duration_fit(seed, tail, x, iterations):
     frozen = {n: p.detach().clone() for n, p in model.named_parameters() if not p.requires_grad}
     optimizer = torch.optim.Adam(params, lr=0.008)
     tx = torch.tensor(x)
+    completed_iterations = 0
     for _ in range(iterations):
         optimizer.zero_grad()
         _, loss = model._compute_loss(tx, loss_bias=0.0)
@@ -226,11 +229,26 @@ def oracle_duration_fit(seed, tail, x, iterations):
         torch.nn.utils.clip_grad_norm_(params, 5.0)
         optimizer.step()
         model.dist.duration._project_tail_parameter()
+        completed_iterations += 1
     for name, p in model.named_parameters():
         if name in frozen and not torch.equal(p.detach(), frozen[name]):
             raise AssertionError("oracle nuisance parameters changed")
     model.eval()
+    model._diagnostic_completed_iterations = completed_iterations
     return model
+
+
+def optimization_evidence(model, requested):
+    """Count recorded optimizer iterations, excluding final restart scoring."""
+    counts = torch.isfinite(model._convergence.scores).sum(dim=0).tolist()
+    if model.config.convergence_stop or counts != [requested] * model.config.n_init:
+        raise AssertionError(f"fixed iteration budget not completed: {counts} != {requested}")
+    return {
+        "requested_iterations_per_restart": requested,
+        "completed_iterations_per_restart": counts,
+        "convergence_stop": model.config.convergence_stop,
+        "count_source": "finite entries in production Convergence.scores; restart scoring excluded",
+    }
 
 
 def ledger_coverage(ledger):
@@ -271,9 +289,15 @@ def run(job):
             model = make_model(seed, tail, it, fixed=fixed)
             model.optimize(torch.tensor(train))
             arms[name] = evaluate(model, test, truth, ledger, tail)
+            arms[name]["optimization"] = optimization_evidence(model, it)
             print(f"seed={seed} scenario={scenario} arm={name} complete", flush=True)
         model = oracle_duration_fit(seed, tail, train, oracle_iters)
         arms["oracle_duration_only"] = evaluate(model, test, truth, ledger, tail, align=False)
+        arms["oracle_duration_only"]["optimization"] = {
+            "requested_iterations": oracle_iters,
+            "completed_iterations": model._diagnostic_completed_iterations,
+            "count_source": "completed optimizer steps in script-local duration-only loop",
+        }
         print(f"seed={seed} scenario={scenario} arm=oracle_duration_only complete", flush=True)
         rows.append(
             {
@@ -294,6 +318,8 @@ def main():
     parser.add_argument("--joint-iters", type=int, default=40)
     parser.add_argument("--oracle-iters", type=int, default=80)
     parser.add_argument("--workers", type=int, default=3)
+    parser.add_argument("--base-commit", default=None)
+    parser.add_argument("--runtime-label", default="unspecified")
     args = parser.parse_args()
     seeds = tuple(int(v) for v in args.seeds.split(","))
     scenarios = tuple(args.scenarios.split(","))
@@ -350,7 +376,16 @@ def main():
         for scenario in scenarios
     }
     payload = {
-        "schema": "nhsmm-model-conform-duration-diagnostic-v1",
+        "schema": "nhsmm-model-conform-duration-diagnostic-v2",
+        "execution": {
+            "runtime": args.runtime_label,
+            "base_commit": args.base_commit,
+            "diagnostic_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "python": platform.python_version(),
+            "torch": torch.__version__,
+            "numpy": np.__version__,
+            "workers": args.workers,
+        },
         "seeds": list(seeds),
         "joint_iters": args.joint_iters,
         "oracle_iters": args.oracle_iters,

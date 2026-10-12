@@ -64,7 +64,7 @@ pytest -q
 
 `tests/test_trading_observation_controls.py` verifies training-only diagnostic generator moments, Gaussian marginal statistics and AR(1) autocorrelation, prefix reproducibility, held-out feature mutation isolation and strict JSON missing-state reporting.
 
-`tests/test_model_conform_duration.py` independently checks geometric-tail masses, duration means and survival sums, terminal right censoring, generator episode boundaries, frozen oracle Gaussian parameters, duration movement and tail-information coverage.
+`tests/test_model_conform_duration.py` independently checks geometric-tail masses, duration means and survival sums, terminal right censoring, generator episode boundaries, frozen oracle Gaussian parameters, duration movement and tail-information coverage. It also verifies observed optimizer-step reporting, exclusion of final restart scoring, and rejection of incomplete fixed budgets.
 
 ## Complete-code audit — 2026-10-12
 

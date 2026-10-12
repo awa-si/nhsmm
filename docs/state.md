@@ -6,7 +6,7 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 The repository-wide code audit is complete: 787 CPU tests passed, three CUDA-only tests skipped, and AST/Ruff/Black/diff checks passed. Ten production defects were corrected and protected by eleven new regression tests. Legacy emission initializer behavior remains unchanged. Detailed scope, findings, diagnostic corrections and evidence are owned by [testing.md](testing.md#complete-code-audit--2026-10-12).
 
-Earlier 30/40-iteration diagnostic descriptions refer to maximum budgets: the audit found that convergence_stop=False was ignored. Actual fixed-length comparisons and full post-fix statistical acceptance require renewed evidence. The code verification gate is green; no new experiment batch has been run.
+Earlier 30/40-iteration diagnostic descriptions refer to maximum budgets: the audit found that convergence_stop=False was ignored. Actual fixed-length comparisons and full post-fix statistical acceptance require renewed evidence. The code verification gate is green. The subsequent native OpenAI-workspace pilot below records actual completed optimizer budgets.
 
 ## Current status
 
@@ -37,6 +37,10 @@ Controlled package evidence currently supports these narrow claims:
 A separate labeled synthetic trading-regime testbed is defined in [trading-regime-dataset.md](trading-regime-dataset.md) for controlled state/duration/transition usefulness experiments. It is not real-market evidence and does not replace Gates 11–14.
 
 These claims are package/mechanism evidence only. They do not establish trading utility, market semantics, or downstream predictive value. See [validation.md](validation.md) for the maintained metrics, thresholds, and reproduction commands.
+
+## Native continuation after audit — 2026-10-12
+
+Seed 901 completed finite/tail diagnostics in the native OpenAI workspace, with observed 4/40 joint and 80 duration-only steps. Longer joint training reduces duration TV to 0.200/0.227 (finite/tail), while state accuracy remains 100%. Fixed temperature again worsens tail episode NLL. This one-seed diagnostic does not change defaults or close statistical acceptance. Evidence is owned by [validation.md](validation.md#model-conform-duration-pilot-after-audit-native-workspace--2026-10-12).
 
 ## Trading synthetic recovery — latest diagnostic
 

@@ -739,6 +739,8 @@ Per-seed scores, learned durations, observation hashes and generator parameters:
 
 ## Model-conform duration-law pilot — 2026-10-12
 
+Audit qualification: the iteration counts below describe requested maximum budgets. The subsequent code audit found that convergence_stop=False was ignored. These historical observations are retained; the native continuation below records actual completed updates.
+
 Source base: `3ec822186eda91a174b5e15bdce72d7e60c02bf1`. This package
 mechanism diagnostic removes the Trading features and window-slicing mismatch.
 It is not a Trading recovery or full duration-tail acceptance run.
@@ -842,3 +844,61 @@ PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
 [model-conform-duration-2026-10-12.json](validation/results/model-conform-duration-2026-10-12.json)
 retains the exact generative law, per-seed measurements and execution provenance.
+
+
+## Model-conform duration pilot after audit, native workspace — 2026-10-12
+
+This bounded continuation uses the audited production base
+`e52a3f58d1ea0b6bbce49295fd5f030dee17ea0a` in the native OpenAI workspace.
+The diagnostic now records observed optimizer iteration counts and fails if a
+joint arm does not complete its requested fixed budget. Counts come from finite
+entries in production Convergence.scores, excluding final restart scoring;
+the oracle loop separately counts completed optimizer steps. Report schema v2
+also records the base commit, diagnostic SHA-256 and runtime versions.
+
+Seed 901 was rerun for both finite and D+ scenarios with exactly the generative
+law, train/test seed offsets, independent episode starts, terminal censoring,
+optimizer settings and four arms of the preceding model-conform pilot.
+All joint fits demonstrably completed 4 or 40 updates; both oracle fits completed
+80. Runtime: Python 3.12.14, PyTorch 2.14.1+cpu, NumPy 2.3.5; one worker and one
+Torch/BLAS thread. The materialized package and diagnostic inputs were retrieved
+through the GitHub connector at the immutable audited base. Package source is
+unchanged; only diagnostic iteration/provenance reporting and its tests changed.
+
+| Training arm | Observed steps | Finite duration TV | Tail duration TV | Finite OOS LL/row | Tail OOS LL/row |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Scheduled joint | 4 | 0.3124 | 0.3276 | -1.3129 | -1.2418 |
+| Scheduled joint | 40 | 0.1997 | 0.2266 | -1.2451 | -1.1986 |
+| Fixed-temperature joint | 40 | 0.1924 | 0.2132 | -1.2420 | -1.1884 |
+| Duration-only oracle | 80 | 0.1182 | 0.1112 | -1.1678 | -1.1627 |
+
+Every arm reaches 100% causal state accuracy and exactly matches OOS hard
+state-change counts: 106 finite, 86 tail. Joint duration laws improve with the
+larger budget but remain imperfect. For tail data, fixed-temperature training
+lowers TV slightly while worsening the labeled episode NLL from 259.3013
+(scheduled 40) to 315.4378 (fixed 40); duration-only oracle NLL is 199.5003.
+A temperature/default change is therefore still unsupported. The oracle uses
+twice the joint budget and known frozen nuisance parameters.
+
+This is one data/fitting seed, not replicated acceptance or evidence of trading
+utility. The native runtime differs from the earlier AWA runtime, and earlier
+reported iteration counts were maximum budgets. Differences cannot be attributed
+solely to the stopping correction. Full post-fix statistical acceptance, the
+three-seed continuation and controlled transition/duration identifiability remain
+open.
+
+Before the run, syntax/static checks and a native focused suite passed:
+**18 passed** (seven duration-diagnostic tests and eleven audit regressions).
+The iteration-evidence test checks a real three-step fit, excludes restart
+rescoring and rejects a missing recorded update. No full-package rerun was
+performed for this diagnostic/test/evidence-only change; the audited base's
+787-test CPU gate remains historical AWA evidence.
+
+Reproduction from the repository root:
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1   python scripts/diagnose_model_conform_duration.py   --output /tmp/model-conform-duration-post-audit-native.json   --seeds 901 --scenarios finite,tail --joint-iters 40 --oracle-iters 80   --workers 1 --base-commit e52a3f58d1ea0b6bbce49295fd5f030dee17ea0a   --runtime-label openai-native-workspace
+```
+
+[Raw schema-v2 results](validation/results/model-conform-duration-post-audit-native-20261012.json)
+retain all per-arm measurements, iteration evidence and execution provenance.

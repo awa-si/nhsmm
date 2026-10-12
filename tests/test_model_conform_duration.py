@@ -16,6 +16,8 @@ from scripts.diagnose_model_conform_duration import (
     generate,
     law,
     oracle_duration_fit,
+    make_model,
+    optimization_evidence,
     survival,
 )
 
@@ -83,6 +85,19 @@ def test_oracle_fit_preserves_known_emission_law_and_moves_duration():
     assert np.all((h > 0) & (h <= 1))
     assert not model.duration_logits_bias.requires_grad
     assert model.dist.duration.logits.requires_grad
+    assert model._diagnostic_completed_iterations == 2
+
+
+def test_joint_fixed_budget_evidence_excludes_final_restart_score_and_rejects_missing_step():
+    x, _, _ = generate(55, tail=False, count=1, steps=12)
+    model = make_model(73, False, 3)
+    model.optimize(torch.tensor(x))
+    result = optimization_evidence(model, 3)
+    assert result["completed_iterations_per_restart"] == [3]
+    assert not result["convergence_stop"]
+    model._convergence.scores[1, 0] = float("nan")
+    with pytest.raises(AssertionError, match="fixed iteration budget"):
+        optimization_evidence(model, 3)
 
 
 def test_ledger_coverage_separates_completed_tail_and_censoring():
