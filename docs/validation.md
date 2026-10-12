@@ -2266,3 +2266,109 @@ Next: remove episode labels from duration optimization while keeping the same
 known nuisance parameters and matched finite-support/start contract. Only
 after that separate marginal-learning gate should Trading observations,
 macro/context learning and joint nuisance estimation be reintroduced.
+
+## Observation-only marginal duration learning — 2026-10-12
+
+Step 13 base: 43e6789c378e2d559839112d25a67340d9800f0d.
+Owner: scripts/verify_unlabelled_trading_hsmm.py. This removes episode labels
+from the training loss, while preserving Step 12's matched finite D260 laws,
+known support, zero same-state resets, known stationary transitions and fresh
+age1 starts. Known IID Gaussian emissions have means -6/-2/2/6 and sigma2.0,
+so state uncertainty is present during training, not just in an inference control.
+No production defaults, model implementation or public API are changed.
+
+The fixed design uses seeds901/902/903, 128 independently generated training
+sequences and24 held-out sequences per seed, each300 rows. Duration logits
+start uniform within the known support. Adam lr0.08 runs exactly80 updates,
+with shuffled batch2 observations and no replacement within each pass.
+The loss is negative public NHSMM.log_likelihood(reduce=True) divided by
+minibatch rows, at fixed model temperature. All nuisance parameters are frozen
+and checked bitwise unchanged. The fit API accepts observations, update count
+and shuffle seed only: no states, episode boundaries, ages, planned durations,
+or labelled counts enter the loss or gradient. Labels are used after fitting
+for descriptive exposure and held-out state accuracy only. This is duration-only
+marginal optimization, not a run of stock joint NHSMM.optimize.
+
+Independent validation uses central differences of the NumPy completed-segment
+reference, including terminal survival, at12 duration-logit coordinates (first,
+middle and last supported length/state). Production autograd must agree within
+1e-5 absolute error; masked-out gradients must be exactly zero and every training
+gradient finite. Held-out public likelihood and every-prefix state probabilities
+must agree with the segment reference within1e-7 and1e-8 respectively.
+
+The learning-progress criterion requires improved full-training and independent
+held-out likelihood, plus reduced duration-mean RMSE against the exact DGP.
+The stricter Step 12 criterion, every PMF TV<=0.12, is reported separately.
+Likelihood or mean improvement is not substituted for fine-bin PMF recovery;
+this bounded sample/update budget is much smaller than Step 12's labelled
+32768 records and1200 updates per seed. No held-out hyperparameter tuning,
+best-iterate selection or post-result threshold adjustment is performed.
+
+A preliminary600-row execution was explicitly interrupted after its last
+reported40/80 updates for seed901 because measured backward-pass cost exceeded
+the intended bounded three-seed budget. Its final parameters, held-out fitted
+scores and partial updates are not used as evidence. The revised300-row design
+retains D260,80 updates and both acceptance criteria; it reduces episode and
+complete-duration exposure and increases terminal censoring. This resource-based
+revision precedes final fitted/held-out result inspection, not a result-driven
+threshold or model-selection change.
+
+### Measured results
+
+The revised execution completes all240 updates. Each run uses38400 unique
+training rows and7200 independent held-out rows; all128 training sequences are
+visited. Full training likelihood increases in all runs. Mean recovery improves
+substantially, but held-out generalization and fine PMF recovery are not accepted.
+
+| Seed | Train LL gain nats/row | Held-out LL gain nats/row | Duration-mean RMSE rows | TV bull | TV bear | TV range | TV chaotic | Progress gate |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 901 | 0.008349 | 0.000949 | 4.696 | 0.48042 | 0.40849 | 0.37287 | 0.28220 | PASS |
+| 902 | 0.009145 | -0.001315 | 5.741 | 0.49779 | 0.36913 | 0.36012 | 0.28793 | FAIL |
+| 903 | 0.008601 | 0.001164 | 8.112 | 0.45897 | 0.31957 | 0.37109 | 0.28711 | PASS |
+
+Uniform-support initial mean RMSE is30.872 rows in every run; initial PMF TV
+is0.37524/0.31179/0.41660/0.41355. Bull and bear PMF TV become worse in all
+three runs despite improved means. None of the12 fitted state/seed PMFs reaches
+TV<=0.12. Thus even the2/3 learning-progress passes do not establish fine-bin
+duration recovery; training likelihood is not an adequate acceptance substitute.
+
+Maximum independent central-difference gradient error is1.91e-9 over36 checked
+coordinates; masked-out gradients are exactly zero and all training gradients
+remain finite. Maximum held-out total likelihood error is1.05e-11 and maximum
+state-probability error is6.33e-14. The compared600 rows per seed have98/110/110
+uncertain prefixes (maximum probability<0.99), with descriptive state accuracy
+97.50%/97.50%/98.83%. This agreement therefore includes ambiguous state paths,
+not only effectively observed labels. Frozen nuisance parameters remain bitwise
+unchanged. Report/source hashes and completed update counts are verified.
+
+Evaluation-only complete-episode exposure is sparse relative to the unrestricted
+per-bin duration parameterization:
+
+| Seed | Complete bull/bear/range/chaotic | Terminal-censored bull/bear/range/chaotic | Supported bins without a complete observation |
+| --- | --- | --- | --- |
+| 901 | 75 / 86 / 116 / 106 | 36 / 28 / 54 / 10 | 162 / 144 / 168 / 50 |
+| 902 | 83 / 86 / 125 / 108 | 46 / 40 / 36 / 6 | 159 / 146 / 168 / 50 |
+| 903 | 75 / 104 / 122 / 98 | 45 / 30 / 44 / 9 | 164 / 138 / 165 / 54 |
+
+These counts are descriptive ground-truth diagnostics computed after fitting,
+not training inputs. Zero complete-bin exposure does not imply zero information:
+terminal survival and neighbouring state ambiguity also enter the marginal loss.
+Nevertheless, each state's75–125 completed episodes is far less coverage than
+Step 12's8192 labelled records/state. Sparse coverage and an unrestricted noisy
+PMF are plausible overfitting mechanisms, consistent with seed902's divergence
+between training and held-out likelihood. This experiment alone does not prove
+whether sampling error, stochastic optimizer budget or the sample MLE dominates.
+It does not show that more updates would fix generalization.
+
+Conclusion: genuine label-free gradients and duration-mean learning work under
+the matched oracle contract; numerical likelihood/gradient tests pass. Robust
+held-out generalization and exact duration-PMF recovery remain open. No inherent
+HSMM recursion failure is demonstrated by this control. The next focused step
+is an independent observation-only EM/MLE comparison and a predeclared sample-size
+control to separate optimizer error from statistical exposure, before joint
+Trading features, macro/context and nuisance learning are reintroduced.
+
+Final focused tests:8 passed; AST/Ruff/Black pass over35 verified materialized/new
+Python files. No new full canonical-suite, historical-NPZ, runtime/artifact-mask
+or real-market utility acceptance claim.
+[Raw Step 13 evidence](validation/results/unlabelled-hsmm-step13-native-20261012.json).

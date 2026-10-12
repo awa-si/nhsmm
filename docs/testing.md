@@ -711,3 +711,38 @@ Research support masks are not verified as a runtime/artifact contract.
 Methods and scope:
 [validation.md](validation.md#isolated-finite-support-hsmm-verification--2026-10-12).
 No new full canonical-suite or historical-NPZ acceptance claim.
+
+## Step 13 — observation-only marginal duration learning, 2026-10-12
+
+tests/test_unlabelled_trading_hsmm.py checks public marginal likelihood against
+an independent segment reference, production duration autograd against central
+differences under ambiguous observations, actual observation-only parameter
+updates and frozen nuisance equality, label/observation storage isolation, and
+evaluation-only terminal right censoring. Together with Step 12 tests:8 passed.
+AST/Ruff/Black pass over35 verified materialized/new Python files.
+
+One worker, OMP/MKL/OPENBLAS threads1 and a900-second execution bound:
+
+    python -m scripts.verify_unlabelled_trading_hsmm --base-commit 43e6789c378e2d559839112d25a67340d9800f0d --output docs/validation/results/unlabelled-hsmm-step13-native-20261012.json
+
+The design fixes three seeds, observations-only Adam80/batch2 and known nuisance
+parameters before held-out scoring. Learning progress and fine PMF TV recovery
+are separate report gates. This focused execution does not rerun the full
+canonical suite, historical NPZ gate, Trading features or joint optimize.
+
+Final execution:240 updates completed,128 unique training sequences visited
+per seed, nuisance parameters unchanged. Independent numerical gates pass:
+gradient discrepancy<=1.91e-9, likelihood discrepancy<=1.05e-11 and state-probability
+discrepancy<=6.33e-14. Report source hashes and update counts verified. Learning
+progress passes seeds901/903 and fails seed902 (negative held-out improvement);
+the stricter each-PMF-TV<=0.12 criterion fails all three seeds. These failures
+remain in the report and are not converted into a green statistical gate.
+
+The native runtime was restored from39 connector-verified immutable blobs;
+declared dependencies and an editable package were installed successfully.
+Execution versions: Python3.12.14, Torch2.14.1+cpu, NumPy2.5.4. Materialization
+is sparse; unrelated retained scratch files were not part of this verification.
+The preliminary600-row run was interrupted after its last reported40 updates
+for seed901 due backward-pass cost; only the subsequent300-row execution is
+accepted as completed run evidence. Methods, limits and measured results:
+[validation.md](validation.md#observation-only-marginal-duration-learning--2026-10-12).
