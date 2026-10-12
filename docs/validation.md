@@ -735,3 +735,110 @@ PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
 Per-seed scores, learned durations, observation hashes and generator parameters:
 [observation-controls-v2-2026-10-12.json](validation/results/observation-controls-v2-2026-10-12.json).
+
+
+## Model-conform duration-law pilot — 2026-10-12
+
+Source base: `3ec822186eda91a174b5e15bdce72d7e60c02bf1`. This package
+mechanism diagnostic removes the Trading features and window-slicing mismatch.
+It is not a Trading recovery or full duration-tail acceptance run.
+
+Each of seeds 901/902/903 has independently generated training/test data using
+seed offsets +20000/+30000. Six training and four OOS sequences each have 128
+rows, start at an episode boundary, and have initial probabilities [0.5,0.5].
+Emissions are independent two-dimensional Gaussian observations with means
+[-3,0]/[3,0] and noise standard deviation 0.35. The known episode transition
+matrix has self probability 0.02 and off-diagonal probability 0.98.
+
+The stationary duration PMFs for buckets 1..8 are:
+- State 0: [0.01,0.02,0.04,0.08,0.15,0.20,0.25,0.25].
+- State 1: [0.15,0.25,0.25,0.15,0.08,0.05,0.04,0.03].
+
+The finite scenario ends at age 8. In the tail scenario, bucket 8 denotes
+P(L>=8), with geometric end hazards 0.12/0.35 and
+L=7+Geometric(h). Thus these stationary laws are exactly representable in
+the tested causal finite/D+ model. Same-state episode resets are retained.
+Every final episode is right-censored in the diagnostic score, even when the
+generator's sampled endpoint coincides with the sequence endpoint:
+P(L>=observed_length) is used instead of completed-duration mass.
+
+Four fixed arms:
+- Production scheduled joint optimize, four iterations.
+- Production scheduled joint optimize, 40 iterations.
+- Same joint optimizer/initialization/data/lr, 40 iterations, with script-local
+  _compute_loss override fixing categorical temperature at 1.
+- Duration-only control with 80 iterations at temperature 1, known initial,
+  transition and Gaussian-emission parameters frozen, and the soft duration
+  gate frozen. Only duration logits and tail hazards learn. No episode labels
+  enter marginal-likelihood optimization. Gaussian variance uses inverse
+  Softplus so the injected noise law is correct.
+
+All arms use lr=0.008, one K-Means-variance restart and no early stopping or
+scheduler. The duration-only arm has twice the iteration budget of the joint
+arms; its advantage cannot be assigned solely to frozen nuisance parameters.
+
+Direct distribution distance is total variation (0 is exact, 1 maximal), averaged
+over aligned states. The finite masses and geometric tail through length 1024
+plus its residual bucket are included. Default inference temperature is 1.
+Medians across seeds:
+
+| Training arm | Finite duration TV | Tail duration TV | Finite OOS LL/row | Tail OOS LL/row |
+| --- | ---: | ---: | ---: | ---: |
+| Scheduled joint, 4 | 0.3101 | 0.3270 | -1.3188 | -1.2418 |
+| Scheduled joint, 40 | 0.1924 | 0.2260 | -1.2548 | -1.1986 |
+| Fixed-temperature joint, 40 | 0.1794 | 0.2067 | -1.2525 | -1.1884 |
+| Duration-only oracle, 80 | 0.1182 | 0.1112 | -1.1749 | -1.1627 |
+
+Every fitted model has 100% causal state accuracy and exactly matches the true
+hard state-change count in its OOS sequences. Perfect state/run recovery again
+does not establish recovered latent episode-duration parameters.
+
+Duration parameters do learn on these model-conform data. Longer joint training
+reduces TV. Fixed temperature gives a modest further TV/likelihood improvement,
+but does not uniformly improve all episode diagnostics. In the tail scenario,
+median labeled episode-duration NLL changes from 254.6074 under scheduled joint
+to 272.6315 under fixed-temperature joint (lower is better); the duration-only
+control gives 199.5003. No schedule/default change is justified by this pilot.
+
+Joint models retain high self-transition probabilities: the unweighted mean over
+state/age rows after 40 iterations is approximately 0.363–0.375 for finite and
+0.413–0.441 for tail, versus known 0.02. This is not a posterior-weighted average.
+Duration laws and same-state resets remain coupled in joint learning, while
+known transition/emission parameters permit a closer duration-only fit.
+This is evidence for further isolation, not proof of a recursion or gradient bug.
+
+For the tail state's better-covered state 0, duration-only learned hazards are
+0.1057/0.1107/0.1170, versus true 0.12. State 1 learned hazards are
+0.5203/0.1768/0.5000, versus true 0.35. Its complete training D+ episode counts
+are only 2/3/0, compared with 18/19/14 for state 0. Counts include lengths >=8;
+censored episodes are reported separately. Scarce tail information limits any
+state-1 recovery claim. The JSON includes observed episode coverage, means,
+hazards, full PMFs, self probabilities by age, true and learned labeled episode
+scores, and the counterfactual PMF at the scheduled terminal temperature.
+
+No new mathematical defect is established. The next useful isolation is a
+matched-budget duration/transition experiment with adequate tail coverage and
+controlled self-transition capacity. Core, public decoder and defaults remain
+unchanged; full post-tail-fix statistical acceptance and Trading recovery remain
+open.
+
+Execution: AWA job `c74d13fe0508473f89f91c7edde5b272`, exit 0, 111.765 seconds
+under a hard 300-second timeout. Syntax, CLI and eight-arm finite/tail smoke
+passed first (smoke 34.327 seconds). Twelve focused tests passed after adding
+episode-coverage reporting; this includes six independent diagnostic tests and
+the maintained duration-prior/tail-projection tests. Ruff, Black and diff-check
+passed. Reporting initially used the base interpreter without NumPy after tests
+passed; the episode coverage was then regenerated using the existing NHSMM
+interpreter. This reporting-only retry did not rerun or change fits/scores.
+No full package rerun is required for this script/test/evidence-only change.
+
+Reproduction:
+
+```bash
+PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+  /work/env/nhsmm/bin/python scripts/diagnose_model_conform_duration.py \
+  --output /data/workspace/stage2/model-conform-duration-2026-10-12.json
+```
+
+[model-conform-duration-2026-10-12.json](validation/results/model-conform-duration-2026-10-12.json)
+retains the exact generative law, per-seed measurements and execution provenance.

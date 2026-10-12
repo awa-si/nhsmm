@@ -64,6 +64,8 @@ pytest -q
 
 `tests/test_trading_observation_controls.py` verifies training-only diagnostic generator moments, Gaussian marginal statistics and AR(1) autocorrelation, prefix reproducibility, held-out feature mutation isolation and strict JSON missing-state reporting.
 
+`tests/test_model_conform_duration.py` independently checks geometric-tail masses, duration means and survival sums, terminal right censoring, generator episode boundaries, frozen oracle Gaussian parameters, duration movement and tail-information coverage.
+
 ## HSMM research/correctness milestone gate
 
 The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.

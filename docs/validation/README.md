@@ -40,3 +40,7 @@ This directory retains machine-readable historical evidence only. Narrative poin
 ## Trading observation controls
 
 - [results/observation-controls-v2-2026-10-12.json](results/observation-controls-v2-2026-10-12.json) — labeled generative controls with matched latent/context trajectories; interpretation is maintained in [../validation.md](../validation.md#trading-observation-control-pilot--2026-10-12).
+
+## Model-conform duration laws
+
+- [results/model-conform-duration-2026-10-12.json](results/model-conform-duration-2026-10-12.json) — direct finite/D+ law recovery; interpretation is maintained in [../validation.md](../validation.md#model-conform-duration-law-pilot--2026-10-12).
