@@ -2409,6 +2409,91 @@ MLE; last-update objective increments and residual scores must be retained.
 A128-sequence resource smoke and chunk16/32/128 comparison took approximately
 one second per full expectation pass and gave identical likelihoods. The final
 experiment uses one worker, native CPU dependencies and an1800-second bound.
-Numerical mechanics are accepted at Step14a; statistical comparison remains
-pending. This is not joint Trading-feature, macro-context, runtime/artifact-mask
-or real-market acceptance.
+Numerical mechanics were accepted at Step14a commit
+ba81eb1997c3ccdf409ba1fc95f16beeaaae3def. Step14b executes the predeclared
+comparison from that immutable base. This is not joint Trading-feature,
+macro-context, runtime/artifact-mask or real-market acceptance.
+
+### Step 14b measured comparison
+
+All six EM arms complete30 updates,180 M-steps total. The larger arms contain
+921600 unique training rows across three seeds, including the115200 rows in the
+small paired arms. The unchanged held-out set contains21600 rows total.
+Replay hashes, first128 equality, all source/report hashes, prior Adam training
+scores and uniform held-out scores are verified. Labels enter neither EM nor
+the prior Adam training loss; exposure and accuracy remain evaluation only.
+
+| Seed | Small EM minus Adam train LL nats/row | Small EM held-out gain versus uniform | Large EM held-out gain versus uniform | Small EM mean RMSE rows | Large EM mean RMSE rows |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 901 | 0.002729 | -0.016264 | 0.000855 | 2.242 | 1.269 |
+| 902 | 0.002771 | -0.020558 | 0.003265 | 7.345 | 1.416 |
+| 903 | 0.002807 | -0.023328 | 0.002115 | 7.147 | 0.831 |
+
+Small-data EM also performs worse held-out than Step13 Adam in every seed;
+Adam's held-out gains were0.000949/-0.001315/0.001164 nats/row. Adam therefore
+has a measured optimization gap to this bounded reference, but closing that
+gap on the same small sample does not fix generalization. These are observed
+comparisons on24 held-out sequences/seed, not confidence bounds or a guarantee
+for another sample or the Trading feature model.
+
+| Seed | Arm | TV bull | TV bear | TV range | TV chaotic | Each-PMF-TV<=0.12 |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| 901 | EM128 | 0.60746 | 0.59810 | 0.57730 | 0.41011 | FAIL |
+| 901 | EM1024 | 0.22715 | 0.26387 | 0.25675 | 0.13183 | FAIL |
+| 902 | EM128 | 0.59856 | 0.65973 | 0.58668 | 0.35194 | FAIL |
+| 902 | EM1024 | 0.23335 | 0.28524 | 0.25726 | 0.12296 | FAIL |
+| 903 | EM128 | 0.60883 | 0.61120 | 0.58827 | 0.39333 | FAIL |
+| 903 | EM1024 | 0.23044 | 0.28744 | 0.23938 | 0.16762 | FAIL |
+
+Every state/seed TV improves with the paired larger sample. None of the12
+large-arm PMFs passes the unchanged0.12 criterion, including the near-threshold
+chaotic state in seed902. Accurate means are not substituted for full-law recovery.
+
+| Seed | Large complete episodes bull/bear/range/chaotic | Large terminal-censored episodes | Supported bins without complete observations |
+| --- | --- | --- | --- |
+| 901 | 640 / 721 / 894 / 855 | 296 / 241 / 383 / 104 | 77 / 53 / 80 / 14 |
+| 902 | 620 / 737 / 936 / 834 | 332 / 258 / 342 / 92 | 74 / 52 / 79 / 17 |
+| 903 | 632 / 682 / 919 / 842 | 363 / 244 / 339 / 78 | 64 / 59 / 74 / 21 |
+
+The larger sample substantially increases episode/bin exposure, although many
+rare complete-duration bins remain unobserved. Terminal survival and uncertain
+boundary posteriors still provide information beyond these descriptive counts.
+Even the larger control supplies far fewer records/state than Step12's8192
+labelled records/state and also must infer boundaries. The controlled size
+effect, with fixed nuisance parameters, algorithm, initialization and budget,
+supports finite-sample sensitivity of the unrestricted PMF. It does not prove
+that sample size alone explains all remaining duration error or joint Trading
+failures, nor that a larger sample automatically closes the fine-law gate.
+
+### Numerical and bounded-reference evidence
+
+All3120 production duration-score coordinates across the three seeds agree with
+independent posterior-count scores within2.27e-14. Maximum public-vs-forward
+likelihood discrepancy at the gradient check is9.10e-13 and segment-vs-forward
+discrepancy is5.23e-12. Each large learned law also passes the public causal
+likelihood/filter comparison against independent completed-segment recursion:
+maximum LL discrepancy1.12e-11 and state-probability error1.10e-13. The compared
+600 rows/seed have113/103/105 uncertain prefixes and state accuracies
+97.67%/97.67%/98.83%. Every E-step checks backward/evidence consistency and
+terminal/count identities; all six full-data marginal objectives are monotonic.
+
+| Seed | Last small EM LL increment nats/row | Last large EM LL increment nats/row | Small max score/sequence | Large max score/sequence |
+| --- | ---: | ---: | ---: | ---: |
+| 901 | 3.171e-7 | 1.585e-7 | 2.878e-4 | 7.900e-5 |
+| 902 | 5.405e-7 | 8.826e-8 | 5.285e-4 | 5.016e-5 |
+| 903 | 9.527e-7 | 1.083e-7 | 8.566e-4 | 3.702e-5 |
+
+Residuals are small but nonzero;30 EM updates are not a certificate of global
+MLE or exact convergence. The gap to Adam is a gap to this attained reference
+objective. The normalized probability forward is Float64 and checked against
+log-domain backward evidence and the independent/public recursions; these
+bounded controls do not claim universal underflow immunity for other inputs.
+
+Conclusion: inference/gradient mechanics pass. Both an optimizer-objective gap
+and a substantial sample/flexibility problem are present in this oracle control.
+Stronger small-sample fitting produces worse duration-law and held-out metrics;
+larger sample exposure reverses much of that degradation. The next step is a
+compact or smoothed/regularized duration law, with a predeclared design and any
+selection confined to training data. Joint Trading observations/context remain
+deferred. No production default or public artifact/runtime contract is changed.
+[Raw Step14 evidence](validation/results/unlabelled-em-step14-native-20261012.json).

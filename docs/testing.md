@@ -761,7 +761,24 @@ NumPy2.5.4. The long paired-size comparison follows this completed code gate.
 
 One worker, OMP/MKL/OPENBLAS threads1,1800-second bound:
 
-    python -m scripts.compare_unlabelled_duration_em --base-commit <Step14a-commit> --output docs/validation/results/unlabelled-em-step14-native-20261012.json
+    python -m scripts.compare_unlabelled_duration_em --base-commit ba81eb1997c3ccdf409ba1fc95f16beeaaae3def --output docs/validation/results/unlabelled-em-step14-native-20261012.json
 
 No new full canonical-suite or historical-NPZ acceptance claim. Methods:
 [validation.md](validation.md#independent-unlabelled-em-and-episode-exposure--2026-10-12).
+
+Step14b completes all six arms:30 EM updates/arm,180 updates total. All six
+marginal likelihood histories are monotonic within the declared tolerance.
+Step13 train/held-out observation hashes, full prior source/report hashes,
+Adam training likelihood and uniform held-out likelihood are replay-verified;
+paired first128 observations are exactly identical. The final report contains
+all three seeds, both learned PMFs, objective histories and nonzero residual
+scores. Numerical gates pass: all3120 duration-score coordinates<=2.27e-14,
+public/segment learned-law LL error<=1.12e-11, state-probability error<=1.10e-13.
+Code is unchanged since the12-test/AST/Ruff/Black gate at Step14a.
+
+Statistical result: small EM beats Adam training likelihood but worsens held-out
+likelihood in every seed.8x sample exposure improves every state/seed PMF TV and
+held-out likelihood is positive versus uniform in all seeds. The unchanged
+each-PMF-TV<=0.12 gate still fails all three seeds; no statistical threshold
+is relaxed and no global-MLE convergence claim is made. Source hashes and all
+run/numerical gates are verified separately from these retained failures.
