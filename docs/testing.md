@@ -796,10 +796,28 @@ The unchanged native environment uses Python3.12.14,Torch2.14.1+cpu,NumPy2.5.4.
 
 One worker,OMP/MKL/OPENBLAS threads1,1800-second bound:
 
-    python -m scripts.compare_compact_duration_em --base-commit <Step15a-commit> --output docs/validation/results/compact-duration-step15-native-20261013.json
+    python -m scripts.compare_compact_duration_em --base-commit d3e6e9ad983ac4f1558f21333c68b49c304819fd --output docs/validation/results/compact-duration-step15-native-20261013.json
 
 Widths4/8/16 and inner20/outer30 updates are fixed before outer evaluation.
 Selection is confined to the small training dataset's96/32 split; endpoints
 remain separately learned atoms and known support remains an oracle condition.
 No new full canonical-suite or historical-NPZ acceptance claim. Methods:
 [validation.md](validation.md#compact-duration-family-with-training-only-selection--2026-10-13).
+
+Step15b completes9 inner fits and6 outer refits,360 EM updates total. All15
+histories are monotonic within tolerance. Replay/source/input-report hashes,
+disjoint96/32 indices, both inner subset hashes, exact argmax selection,
+paired128/1024 observations, support and constant block density are verified.
+Code is unchanged since the18-test/AST/Ruff/Black gate at Step15a. Learned-law
+numerical checks pass:3120 raw duration-logit gradients<=3.01e-14, six public/reference
+LL errors<=1.14e-11 and prefix state-probability errors<=8.66e-14.
+
+All three selections choose width16(53 free parameters versus757). The1024-arm
+passes positive held-out gain and each-PMF-TV<=0.12 in3/3 seeds; observed
+TV0.05292–0.11169. The128-arm remains0/3 full passes and seed903 remains
+held-out-negative. All six compact arms improve held-out likelihood over the
+unrestricted Step14 EM while reducing training likelihood. These are separate
+statistical findings, not waived thresholds or production-default changes.
+Known per-state support remains an oracle condition; unknown-support/public
+optimizer, joint Trading and runtime/artifact acceptance remain open. No new
+full canonical-suite or historical-NPZ claim.

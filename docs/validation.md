@@ -2558,7 +2558,92 @@ materialized/new Python files.45 immutable inputs were connector-verified;
 the existing native Python/Torch environment remains available.
 
 One worker and a1800-second bound. Step15a accepts the constrained mechanics and
-freezes selection/acceptance before outer result inspection. Step15b statistical
-results are pending. Approximation bias, small inner-validation samples and bounded
-EM remain limitations; no joint Trading-feature/context, runtime/artifact-mask,
-production-default or real-market acceptance follows from this code gate.
+freezes selection/acceptance before outer result inspection. Its verified commit
+is d3e6e9ad983ac4f1558f21333c68b49c304819fd; Step15b executes from that base.
+Approximation bias, small inner-validation samples and bounded EM remain
+limitations; no joint Trading-feature/context, runtime/artifact-mask,
+production-default or real-market acceptance follows from this control.
+
+### Step15b measured selection and recovery
+
+All9 inner fits complete20 updates and all6 outer refits complete30 updates:
+360 M-steps total. All15 marginal-likelihood histories are monotonic. Replayed
+source/input-report and observation hashes, disjoint96/32 inner indices, both
+inner data hashes, selected argmax, support and constant block densities are
+verified. The45 immutable inputs were connector-verified before work; baseline
+Step13/14 reports are reused exactly, not regenerated or replaced.
+
+| Seed | Validation NLL/row width4 | Width8 | Width16 | Chosen width | Free parameters |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 901 | 2.177901 | 2.169805 | 2.166724 | 16 | 53 |
+| 902 | 2.184859 | 2.179685 | 2.177868 | 16 | 53 |
+| 903 | 2.165044 | 2.159637 | 2.158585 | 16 | 53 |
+
+Every inner-validation argmax chooses width16 without labels or outer test
+access. These compare attained20-step fits, not certified family-global optima.
+Width is selected once per seed on small training data and reused unchanged
+for the paired larger sample; it is not optimized for true PMF TV.
+
+| Seed | Arm | TV bull | TV bear | TV range | TV chaotic | Held-out gain versus uniform nats/row | Mean RMSE rows | Full gate |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 901 | Compact128 | 0.16294 | 0.18744 | 0.16340 | 0.11202 | 0.000384 | 2.470 | FAIL |
+| 901 | Compact1024 | 0.06082 | 0.08049 | 0.11169 | 0.10946 | 0.003287 | 1.356 | PASS |
+| 902 | Compact128 | 0.15943 | 0.23274 | 0.19397 | 0.12237 | 0.001114 | 7.232 | FAIL |
+| 902 | Compact1024 | 0.07918 | 0.05823 | 0.10529 | 0.10550 | 0.003794 | 1.470 | PASS |
+| 903 | Compact128 | 0.15319 | 0.10986 | 0.24327 | 0.10726 | -0.003483 | 7.130 | FAIL |
+| 903 | Compact1024 | 0.05292 | 0.05593 | 0.10059 | 0.10853 | 0.003229 | 0.836 | PASS |
+
+The1024-sequence arm passes all12 state/seed TVs and positive held-out gain
+in all three seeds at the unchanged threshold. Small arms remain0/3 full
+passes; seed903 is held-out-negative even after reducing flexibility. Thus
+compactness does not substitute for adequate sample exposure, and accurate
+means alone do not close the small-sample full-law gate.
+
+### Same-data cost and benefit versus unrestricted EM
+
+| Seed | Compact128 held-out gain over free EM nats/row | Compact1024 gain over free EM | Compact128 minus free train LL nats | Compact1024 minus free train LL nats |
+| --- | ---: | ---: | ---: | ---: |
+| 901 | 0.016648 | 0.002432 | -247.446 | -389.872 |
+| 902 | 0.021672 | 0.000528 | -248.966 | -411.136 |
+| 903 | 0.019845 | 0.001113 | -236.646 | -377.265 |
+
+Every compact state/seed TV and every held-out likelihood is better than its
+unrestricted Step14 counterpart; training likelihood is lower in all six arms.
+This records the bias/flexibility tradeoff instead of treating better training
+fit as recovery. The controls support unrestricted-PMF overfitting and limited
+episode exposure as important mechanisms in this matched oracle problem; they
+do not identify every joint Trading failure or justify a width16 production
+default for other duration laws. Exposure is identical to Step14's paired data.
+Group sharing reduces independent-bin evidence requirements; endpoint atoms
+retain clipped masses. Known support/nuisance parameters remain oracle assumptions.
+
+### Numerical verification and residuals
+
+All3120 checked production raw duration-logit gradients at the three learned
+small laws agree with independent posterior scores within3.01e-14. Maximum
+public-vs-forward LL discrepancy is9.10e-13 and segment-vs-forward discrepancy
+is4.89e-12. Six learned-law public likelihood/filter comparisons pass with
+maximum LL error1.14e-11 and prefix state-probability error8.66e-14. Compared
+600 rows/arm/seed include108/112/109 uncertain prefixes for small fits and
+110/106/103 for large fits. Descriptive state accuracies are97.67%/97.50%/98.83%
+in both arms, so these checks include ambiguous state paths.
+
+| Seed | Last small LL increment nats/row | Last large LL increment nats/row | Small max group score/sequence | Large max group score/sequence |
+| --- | ---: | ---: | ---: | ---: |
+| 901 | 1.110e-11 | 2.500e-9 | 1.057e-6 | 1.582e-6 |
+| 902 | 3.001e-13 | 1.239e-9 | 3.771e-10 | 1.338e-5 |
+| 903 | 6.852e-9 | 1.760e-8 | 2.188e-5 | 5.517e-5 |
+
+Residuals are nonzero; no global-MLE/convergence proof is claimed. Code remains
+unchanged from the18-test/AST/Ruff/Black gate at Step15a. All360 updates,15
+monotonic histories, source hashes and numerical gates are verified separately
+from statistical outcomes. The report retains inner histories/scores/indices,
+both outer PMFs, baseline differences, small failures and large passes.
+
+Conclusion: observation-only compact duration learning closes the predeclared
+large-sample gate across all three seeds under the known-support/nuisance/start
+contract. Small-sample recovery, unknown support, stock joint optimize, Trading
+observations/context and market usefulness remain open. Next: remove oracle
+per-state support while keeping nuisance parameters known, before public-optimizer
+integration or joint Trading learning.
+[Raw Step15 evidence](validation/results/compact-duration-step15-native-20261013.json).
