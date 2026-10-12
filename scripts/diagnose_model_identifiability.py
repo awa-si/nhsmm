@@ -105,7 +105,7 @@ def neural_normalization():
             fixed = em.log_prob(x, context=torch.zeros_like(x)).exp().mean(-1).reshape(-1)
             area = float(torch.trapezoid(density, grid))
             control = float(torch.trapezoid(fixed, grid))
-            assert area > 1.05 and abs(control - 1) < 2e-6
+            assert abs(area - 1) < 2e-5 and abs(control - 1) < 2e-6
             measurements.append(
                 {"points": count, "score_integral": area, "fixed_context_integral": control}
             )
@@ -114,8 +114,8 @@ def neural_normalization():
         "interval": [-12, 16],
         "measurements": measurements,
         "scope": "supported injected causal identity encoder, two-state one-row model, Float32",
-        "interpretation": "current-observation-conditioned emission scores need not form a normalized density over observations",
-        "limitations": "counterexample to general generative-likelihood claim; not a measured defect in encoderless pilot fits",
+        "interpretation": "predictive past-context emissions normalize on the formerly failing neural fixture",
+        "limitations": "numerical regression for this fixture; historical failing results are retained separately",
     }
 
 

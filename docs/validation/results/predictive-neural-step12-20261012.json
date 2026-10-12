@@ -1,0 +1,226 @@
+{
+  "schema": "nhsmm-structural-diagnostics-v1",
+  "source_commit": "56c485aaa69fc766596798bd42b737894fa79a55",
+  "pilot_sha256": "a92d6ac47671c5933450ae9b26a504b087eb570dec076d1207043a7168643e45",
+  "torch": "2.14.1+cpu",
+  "numpy": "2.3.5",
+  "nonidentifiability": {
+    "hazards": [
+      0.2,
+      0.125
+    ],
+    "self_reset_probabilities": [
+      0.5,
+      0.2
+    ],
+    "episode_means": [
+      5.0,
+      8.0
+    ],
+    "observable_switch_hazards": [
+      0.1,
+      0.1
+    ],
+    "observable_run_means": [
+      10.0,
+      10.0
+    ],
+    "log_likelihoods": [
+      -102.89941355147715,
+      -102.89941355147715
+    ],
+    "likelihood_absolute_difference": 0.0,
+    "posterior_max_absolute_difference": 3.3306690738754696e-16,
+    "scope": "exact equivalence in allowed D=1 geometric-tail subfamily; not proof for every finite law"
+  },
+  "neural_normalization": {
+    "interval": [
+      -12,
+      16
+    ],
+    "measurements": [
+      {
+        "points": 28001,
+        "score_integral": 1.0,
+        "fixed_context_integral": 1.0
+      },
+      {
+        "points": 56001,
+        "score_integral": 1.0,
+        "fixed_context_integral": 1.0
+      }
+    ],
+    "scope": "supported injected causal identity encoder, two-state one-row model, Float32",
+    "interpretation": "predictive past-context emissions normalize on the formerly failing neural fixture",
+    "limitations": "numerical regression for this fixture; historical failing results are retained separately"
+  },
+  "observable_run_laws": {
+    "finite": {
+      "scheduled_short": {
+        "episode_duration_tv_mean": 0.3124224346131086,
+        "observable_run_tv_by_state": [
+          0.4753033399784941,
+          0.4969712173280517
+        ],
+        "observable_run_mean_by_state": [
+          8.92712437232787,
+          8.578708535355798
+        ],
+        "true_observable_run_mean_by_state": [
+          6.316326530612245,
+          3.285714285714285
+        ]
+      },
+      "scheduled_joint": {
+        "episode_duration_tv_mean": 0.1996864601969719,
+        "observable_run_tv_by_state": [
+          0.3577312053773687,
+          0.3223064053773081
+        ],
+        "observable_run_mean_by_state": [
+          8.2170341196669,
+          5.830780620702019
+        ],
+        "true_observable_run_mean_by_state": [
+          6.316326530612245,
+          3.285714285714285
+        ]
+      },
+      "fixed_temperature_joint": {
+        "episode_duration_tv_mean": 0.192369494587183,
+        "observable_run_tv_by_state": [
+          0.3509511108960823,
+          0.3037181821525251
+        ],
+        "observable_run_mean_by_state": [
+          8.43231816088846,
+          5.645567209604304
+        ],
+        "true_observable_run_mean_by_state": [
+          6.316326530612245,
+          3.285714285714285
+        ]
+      },
+      "oracle_duration_only": {
+        "episode_duration_tv_mean": 0.11815167363733053,
+        "observable_run_tv_by_state": [
+          0.13630726586117292,
+          0.09759593735169572
+        ],
+        "observable_run_mean_by_state": [
+          5.740481917955786,
+          3.5529580384335864
+        ],
+        "true_observable_run_mean_by_state": [
+          6.316326530612245,
+          3.285714285714285
+        ]
+      }
+    },
+    "tail": {
+      "scheduled_short": {
+        "episode_duration_tv_mean": 0.3275762174551518,
+        "observable_run_tv_by_state": [
+          0.3287705465655095,
+          0.4959155336927239
+        ],
+        "observable_run_mean_by_state": [
+          9.351360306222965,
+          8.787882312908957
+        ],
+        "true_observable_run_mean_by_state": [
+          8.187074829931975,
+          3.3425655976676376
+        ]
+      },
+      "scheduled_joint": {
+        "episode_duration_tv_mean": 0.22657840273711752,
+        "observable_run_tv_by_state": [
+          0.24902948831719085,
+          0.3236017594933421
+        ],
+        "observable_run_mean_by_state": [
+          9.465414567767905,
+          5.9253360800421015
+        ],
+        "true_observable_run_mean_by_state": [
+          8.187074829931975,
+          3.3425655976676376
+        ]
+      },
+      "fixed_temperature_joint": {
+        "episode_duration_tv_mean": 0.2131951027745202,
+        "observable_run_tv_by_state": [
+          0.19407738199245897,
+          0.29348380583918704
+        ],
+        "observable_run_mean_by_state": [
+          8.952330309268037,
+          5.689197197470646
+        ],
+        "true_observable_run_mean_by_state": [
+          8.187074829931975,
+          3.3425655976676376
+        ]
+      },
+      "oracle_duration_only": {
+        "episode_duration_tv_mean": 0.11124687923086295,
+        "observable_run_tv_by_state": [
+          0.09517689702995459,
+          0.122100848771044
+        ],
+        "observable_run_mean_by_state": [
+          7.848172012453513,
+          3.6006508860165782
+        ],
+        "true_observable_run_mean_by_state": [
+          8.187074829931975,
+          3.3425655976676376
+        ]
+      }
+    }
+  },
+  "tail_information": {
+    "rows": [
+      {
+        "state": 0,
+        "completed_tail_lengths": [
+          23,
+          8,
+          13,
+          27,
+          12,
+          16,
+          15,
+          9,
+          17,
+          23,
+          23,
+          12,
+          20,
+          8,
+          13,
+          27,
+          8,
+          11
+        ],
+        "tail_end_count": 18,
+        "tail_exposure": 159,
+        "completed_episode_hazard_mle": 0.11320754716981132,
+        "generator_hazard": 0.12
+      },
+      {
+        "state": 1,
+        "completed_tail_lengths": [
+          10,
+          8
+        ],
+        "tail_end_count": 2,
+        "tail_exposure": 4,
+        "completed_episode_hazard_mle": 0.5,
+        "generator_hazard": 0.35
+      }
+    ],
+    "scope": "known labeled training episodes; completed-tail MLE excludes censored contributions"
+  }
+}

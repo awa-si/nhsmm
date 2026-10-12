@@ -13,7 +13,7 @@ from nhsmm.inference import validate_finite_state_tensors, load_inference_model
 from nhsmm.models import NHSMM
 
 ARTIFACT_TYPE = "nhsmm"
-ARTIFACT_VERSION = 1
+ARTIFACT_VERSION = 2
 _ARTIFACT_KEYS = {
     "artifact_type",
     "artifact_version",
@@ -29,7 +29,7 @@ def _raw_default_encoder(model: NHSMM) -> Optional[DefaultEncoder]:
         return None
     encoder = model.encoder.encoder if isinstance(model.encoder, ContextEncoder) else model.encoder
     if not isinstance(encoder, DefaultEncoder):
-        raise ValueError("artifact v1 supports only the canonical DefaultEncoder")
+        raise ValueError("artifacts support only the canonical DefaultEncoder")
     return encoder
 
 
@@ -57,6 +57,11 @@ def _schema(config: ModelConfig) -> dict[str, Any]:
         "causal": bool(config.causal),
         "emission_type": str(config.emission_type),
         "transition_type": str(config.transition_type),
+        "internal_context_timing": (
+            ("predictive_past" if config.causal else "retrospective_scores")
+            if config.use_context_encoder
+            else "none"
+        ),
     }
 
 
@@ -83,7 +88,7 @@ def build_artifact(model: NHSMM) -> dict[str, Any]:
 
 
 def save_artifact(model: NHSMM, path: Union[str, Path]) -> Path:
-    """Persist a trusted NHSMM artifact using the versioned v1 payload."""
+    """Persist a trusted NHSMM artifact using the versioned v2 payload."""
 
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -106,10 +111,22 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
         raise ValueError(f"artifact keys mismatch: missing={missing}, extra={extra}")
     if payload["artifact_type"] != ARTIFACT_TYPE:
         raise ValueError(f"unsupported artifact type: {payload['artifact_type']!r}")
-    if payload["artifact_version"] != ARTIFACT_VERSION:
+    version = payload["artifact_version"]
+    if (
+        isinstance(version, bool)
+        or not isinstance(version, int)
+        or version not in (1, ARTIFACT_VERSION)
+    ):
         raise ValueError(f"unsupported artifact version: {payload['artifact_version']!r}")
-
     config_data = dict(_require_mapping(payload["model_config"], "model_config"))
+    if version == 1 and (
+        payload["encoder_config"] is not None or config_data.get("use_context_encoder", False)
+    ):
+        raise ValueError(
+            "legacy v1 encoder artifact uses observation-row timing; retrain and save "
+            "a v2 artifact rather than silently applying the predictive timing migration"
+        )
+
     if "use_context_encoder" not in config_data:
         config_data["use_context_encoder"] = payload["encoder_config"] is not None
     try:
@@ -119,6 +136,8 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
 
     schema = _require_mapping(payload["schema"], "schema")
     expected_schema = _schema(config)
+    if version == 1:
+        expected_schema.pop("internal_context_timing")
     if dict(schema) != expected_schema:
         raise ValueError(
             f"artifact schema metadata does not match ModelConfig: "
@@ -145,7 +164,7 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
             "causal",
         }
         if set(encoder_meta) != expected_encoder_keys:
-            raise ValueError("encoder_config keys do not match DefaultEncoder artifact v1 schema")
+            raise ValueError("encoder_config keys do not match DefaultEncoder artifact schema")
         if encoder_meta["type"] != "DefaultEncoder":
             raise ValueError("artifact v1 supports only DefaultEncoder")
         if int(encoder_meta["n_features"]) != config.n_features:

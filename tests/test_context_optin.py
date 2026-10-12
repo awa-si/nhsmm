@@ -170,13 +170,13 @@ def test_encoderless_artifact_round_trip(tmp_path) -> None:
     torch.testing.assert_close(actual, expected, atol=1e-6, rtol=1e-6)
 
 
-def test_artifact_loader_preserves_legacy_encoder_payload_semantics(tmp_path) -> None:
+def test_v2_artifact_can_resolve_encoder_optin_from_metadata(tmp_path) -> None:
     model = NHSMM(_config(use_context_encoder=True), device="cpu")
     model.initialize_distributions()
     payload = build_artifact(model)
     payload["model_config"].pop("use_context_encoder")
 
-    path = tmp_path / "legacy-encoder-v1.nhsmm.pt"
+    path = tmp_path / "encoder-v2.nhsmm.pt"
     torch.save(payload, path)
     loaded = load_artifact(path, device="cpu", require_causal=True)
 
@@ -280,4 +280,4 @@ def test_causal_internal_context_uses_raw_sequence_features() -> None:
         sequence = model._build_sequence_set(observations)
 
     torch.testing.assert_close(sequence.contexts, raw)
-    torch.testing.assert_close(sequence.canonical, raw[:, :1])
+    torch.testing.assert_close(sequence.canonical, torch.zeros_like(raw[:, :1]))

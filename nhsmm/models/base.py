@@ -247,6 +247,13 @@ class NHSMM(nn.Module):
             )
         return self.dist
 
+    def _require_generative_context(self, context) -> None:
+        if context is None and self.encoder is not None and not self.config.causal:
+            raise ValueError(
+                "generative likelihood/training with an internal encoder requires causal=True; "
+                "noncausal observation-derived context defines retrospective scores only"
+            )
+
     def _validate_optimization_config(self, cfg: ModelConfig) -> None:
         structural_fields = (
             "n_states",
@@ -359,13 +366,17 @@ class NHSMM(nn.Module):
             else:
                 context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
                 if self.config.causal:
-                    canonical = context_tensor[:, :1]
+                    canonical = context_tensor.new_zeros((B, 1, context_tensor.shape[-1]))
         else:
             context_tensor = context
             canonical = context_tensor[:, :1]
 
         K = self.config.n_states
         emission_context = context_tensor if context_tensor.shape[-1] > 0 else None
+        if context is None and self.encoder is not None and self.config.causal and T > 0:
+            # Predict x_t from context available before observing x_t. Boundary
+            # distributions retain unshifted contexts and use their previous row.
+            emission_context = torch.cat((canonical, context_tensor[:, :-1]), dim=1)
         if T == 0:
             log_probs = X.new_empty(B, 0, K)
         else:
@@ -1231,6 +1242,7 @@ class NHSMM(nn.Module):
         reduce: bool = False,
     ) -> torch.Tensor:
         self._require_distributions()
+        self._require_generative_context(context)
         X_tensor, mask = self._ensure_tensor(X, return_mask=True)
         B = X_tensor.shape[0]
         if X_tensor.shape[1] == 0:
@@ -1528,6 +1540,7 @@ class NHSMM(nn.Module):
         t_max: float = 1.0,
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
+        self._require_generative_context(context)
         seq_set = self._build_sequence_set(X, context=context)
         temperature = t_min + (t_max - t_min) / (
             1 + math.exp((10 / max_iter) * (it - max_iter / 2))
@@ -1635,6 +1648,7 @@ class NHSMM(nn.Module):
         self._require_distributions()
 
         cfg = cfg or self.config
+        self._require_generative_context(context)
         self._validate_optimization_config(cfg)
         original_training = self.training
         self.train()

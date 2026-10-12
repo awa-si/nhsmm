@@ -182,13 +182,19 @@ With no external context:
 state = runtime.step(observation)
 ```
 
-the causal model derives context through its configured encoder/runtime path. Per-timestep causal encoder features are passed directly to initial/duration/transition/emission modulation, and batched causal inference and incremental streaming use the same features.
+the causal model derives context through its configured encoder/runtime path. The initial prior uses zero context; emissions use the previous encoder row. Boundary duration/transition propagation preserves its existing previous-row timing. Batch and incremental streaming use the same information contract.
 
 When the configured encoder exposes incremental streaming state, the runtime keeps bounded encoder state. Custom causal encoders without that contract may use the correctness-first retained-prefix fallback.
 
-## Neural likelihood interpretation — open normalization issue
+## Predictive neural likelihood
 
-When the internal encoder consumes the current observation and its output parameterizes that same observation's emission, the resulting score is not guaranteed to be a normalized generative density over observations. A supported causal-encoder counterexample integrates to 1.059 rather than 1. Prefix causality and correct HSMM recursion do not resolve this issue. The default encoderless path and emissions conditional on appropriately held-fixed exogenous context have a different contract. See the [structural diagnosis](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12) for the scope and reproducer.
+For causal internal context, c_t summarizes observations through t. The initial-state prior uses c_-1 = 0, independent of the first observation. Emission parameters for x_t use c_(t-1), excluding x_t. Boundary propagation from t-1 to t also uses c_(t-1); duration/transition contexts are not shifted again. Runtime stores c_t after accepting x_t for the next step. Custom causal encoder prefix fallback follows the same batch timing.
+
+This removes emission self-conditioning. The former normalization counterexample now integrates to 1.0 on both maintained quadrature grids. This is bounded regression evidence, not proof for arbitrary custom distributions. External context is conditional on covariates held fixed while observations vary; their information content is the caller's responsibility.
+
+Noncausal internal encoders retain retrospective forward/decode scores. Public generative log_likelihood and optimize reject them when no external context is supplied: lagging a bidirectional encoder does not remove future dependence. Encoderless noncausal models remain supported.
+
+Artifacts use version 2 and declare internal_context_timing as predictive_past, retrospective_scores, or none. Version 1 encoder artifacts are rejected with retraining guidance because old observation-row timing cannot be silently reinterpreted. Version 1 encoderless artifacts remain loadable. Raw state_dict files carry no timing version: callers must establish provenance and retrain old encoder weights before predictive use. See [repair evidence](validation.md#predictive-neural-repair--2026-10-12).
 
 ## External context
 

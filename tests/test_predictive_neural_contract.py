@@ -1,8 +1,4 @@
-"""Acceptance contract for migrating neural scores to predictive likelihoods.
-
-Strict expected failures identify the current production gaps. Remove each mark
-only with the corresponding verified production migration.
-"""
+"""Acceptance contract for predictive neural likelihoods and artifact timing."""
 
 import math
 import types
@@ -12,10 +8,6 @@ import torch
 from torch import nn
 
 from nhsmm import HSMMFilterRuntime, ModelConfig, NHSMM, build_artifact, load_artifact
-
-PENDING = pytest.mark.xfail(
-    strict=True, reason="Step 1.1: predictive neural likelihood production migration pending"
-)
 
 
 class IdentityEncoder(nn.Module):
@@ -57,7 +49,6 @@ def capture_emission_context(model):
     return seen
 
 
-@PENDING
 def test_internal_emission_context_is_strictly_past_with_zero_start():
     model = identity_model()
     seen = capture_emission_context(model)
@@ -66,7 +57,6 @@ def test_internal_emission_context_is_strictly_past_with_zero_start():
     torch.testing.assert_close(seen[-1], torch.tensor([[[0.0], [0.2], [0.4]]]))
 
 
-@PENDING
 def test_internal_initial_context_does_not_depend_on_first_observation():
     model = identity_model()
     positive = model._build_sequence_set(torch.tensor([[[0.7]]])).canonical
@@ -75,7 +65,6 @@ def test_internal_initial_context_does_not_depend_on_first_observation():
     torch.testing.assert_close(positive, torch.zeros_like(positive))
 
 
-@PENDING
 def test_incremental_runtime_first_emission_uses_zero_context():
     model = NHSMM(
         ModelConfig(
@@ -116,7 +105,6 @@ def density_fixture():
     return model
 
 
-@PENDING
 def test_one_row_neural_likelihood_integrates_to_one():
     model = density_fixture()
     grid = torch.linspace(-12, 16, 28001)
@@ -134,7 +122,6 @@ def test_exogenous_fixed_context_density_is_normalized_control():
     assert float(torch.trapezoid(scores.exp(), grid)) == pytest.approx(1.0, abs=2e-5)
 
 
-@PENDING
 def test_neural_predictive_density_integrates_to_one_after_fixed_prefix():
     model = density_fixture()
     grid = torch.linspace(-12, 16, 28001)
@@ -145,7 +132,6 @@ def test_neural_predictive_density_integrates_to_one_after_fixed_prefix():
     assert float(torch.trapezoid(conditional.exp(), grid)) == pytest.approx(1.0, abs=2e-5)
 
 
-@PENDING
 def test_legacy_encoder_artifact_requires_explicit_migration(tmp_path):
     model = NHSMM(
         ModelConfig(
@@ -170,7 +156,6 @@ def test_legacy_encoder_artifact_requires_explicit_migration(tmp_path):
         load_artifact(path)
 
 
-@PENDING
 def test_noncausal_internal_encoder_cannot_claim_generative_likelihood():
     model = NHSMM(
         ModelConfig(
@@ -190,3 +175,49 @@ def test_noncausal_internal_encoder_cannot_claim_generative_likelihood():
     model.eval()
     with pytest.raises(ValueError, match="predictive|causal|generative"):
         model.log_likelihood(torch.tensor([[[0.2], [0.7]]]))
+
+
+def test_noncausal_internal_training_rejects_before_mutating_model():
+    model = NHSMM(
+        ModelConfig(n_states=2, n_features=1, max_duration=2, use_context_encoder=True),
+        device="cpu",
+    )
+    model.initialize_distributions()
+    model.eval()
+    before = {key: value.clone() for key, value in model.state_dict().items()}
+    with pytest.raises(ValueError, match="generative"):
+        model.optimize(torch.ones(1, 3, 1))
+    assert not model.training
+    for key, value in model.state_dict().items():
+        torch.testing.assert_close(value, before[key])
+
+
+def test_legacy_encoderless_artifact_remains_compatible(tmp_path):
+    model = NHSMM(ModelConfig(n_states=2, n_features=1, causal=True), device="cpu")
+    model.initialize_distributions()
+    model.eval()
+    payload = build_artifact(model)
+    assert payload["artifact_version"] == 2
+    payload["artifact_version"] = 1
+    payload["schema"].pop("internal_context_timing")
+    path = tmp_path / "legacy-encoderless.pt"
+    torch.save(payload, path)
+    loaded = load_artifact(path)
+    x = torch.tensor([[[0.2], [0.7]]])
+    torch.testing.assert_close(loaded.log_likelihood(x), model.log_likelihood(x))
+
+
+def test_internal_emission_context_has_no_current_row_gradient():
+    model = identity_model()
+    x = torch.tensor([[[0.2], [0.4], [0.8]]], requires_grad=True)
+    seen = []
+    original = model.dist.emission.log_prob
+
+    def capture(self, observations, context=None, **kwargs):
+        seen.append(context)
+        return original(observations, context=context, **kwargs)
+
+    model.dist.emission.log_prob = types.MethodType(capture, model.dist.emission)
+    model._build_sequence_set(x)
+    gradient = torch.autograd.grad(seen[-1][0, 2, 0], x)[0]
+    torch.testing.assert_close(gradient, torch.tensor([[[0.0], [1.0], [0.0]]]))

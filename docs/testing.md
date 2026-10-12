@@ -262,7 +262,7 @@ The maintained current state-count evidence is recorded in [`validation/README.m
 The first implementation step is split at its semantic boundary. This stage
 freezes executable acceptance requirements before changing model/runtime
 behavior or interpreting stored encoder artifacts under new timing semantics.
-Production migration is pending; none of the strict expected failures below is
+At this historical checkpoint production migration was pending; none of the strict expected failures below was
 a claim that normalization has been fixed.
 
 For causal internal observation-derived context, let c_t encode observations
@@ -303,7 +303,7 @@ failures reproduce current gaps; strict XPASS forces removal of a pending mark
 when its production repair is integrated. Ruff and Black passed. No full-suite
 or statistical-acceptance claim is made for this preparatory contract stage.
 
-Next step 1.2: implement batch emission/prior timing, bounded runtime context
+Planned at the Step 1.1 checkpoint: implement batch emission/prior timing, bounded runtime context
 retention and artifact migration together; convert acceptance failures to passing
 regressions, run affected and full canonical suites, update documentation and
 push that completed production stage before advancing to self-reset/duration
@@ -313,3 +313,46 @@ identifiability work.
 ## Native Torch tail-boundary compatibility — 2026-10-12
 
 Native PyTorch 2.14.1+cpu returns a zero clamp derivative at the exact feasible tail bounds EPS and 1. Existing projected-tail recovery tests therefore failed after moving from the earlier AWA runtime. Duration.tail_probability now uses explicit strict outside-domain branches: values and exact h=1 support remain unchanged, the derivative is one inside the feasible domain including its endpoints, and zero outside. Four new Float32/Float64 endpoint-gradient regressions and the maintained tail suites passed: **30 passed**. Ruff and Black passed. This is an isolated numerical prerequisite for the predictive-neural migration, not statistical recovery acceptance or completion of Step 1.2.
+
+
+## Step 1.2 — predictive neural production migration, 2026-10-12
+
+Batch emissions use the previous causal encoder row; the initial prior uses a
+zero start context. Streaming caches the accepted current context for the next
+emission and preserves boundary timing. Public likelihood/training rejects
+noncausal internal observation-derived context. Artifact v2 declares timing;
+v1 encoder artifacts are rejected, while v1 encoderless loading remains covered.
+Retrospective forward scores remain available.
+
+The predictive acceptance module now has **11 passing tests**, with no pending
+xfails. Additional regressions cover training rejection before mutation,
+encoderless legacy loading, and emission-context observation gradients.
+Affected artifact/context/runtime/training suites: **80 passed**.
+Broader native CPU verification: **802 passed, 3 CUDA skips, 1 deselected**.
+Ruff passed; Black reported **110 files unchanged** in the materialized
+package, test and script closure. Native runtime: Python 3.12.14,
+PyTorch 2.14.1+cpu, NumPy 2.3.5.
+
+The excluded test is
+tests/test_trading_benchmark_metrics.py::test_legacy_generation_preserves_frozen_numerical_reference.
+Its exact historical data/reference/trading-regimes-v1/trading_regimes.npz
+could not be retrieved through the GitHub connector (empty Contents response;
+binary Blob decoding unsupported). Required Git blob:
+1f13d48fde153f7a6aa81cd2883d50f8b2960b41; manifest SHA256:
+370e6e9e87e52d779ea208111eeb2e03b0bf21f8b7e88859fcc8c19ac2739fb4.
+Reconstructions had different hashes and were not substituted. The test remains
+unchanged. This is not a fully green canonical-suite claim.
+
+The broader gate used single-thread OMP/MKL/OPENBLAS and
+python -m pytest -q -p no:cacheprovider -k
+'not legacy_generation_preserves_frozen_numerical_reference'.
+
+The corrected structural diagnostic integrates the former neural counterexample
+to **1.0** on 28,001 and 56,001 points; its held-fixed control is also 1.0.
+Self-reset nonidentifiability remains unchanged. See
+[results](validation/results/predictive-neural-step12-20261012.json).
+The tail-boundary prerequisite is commit
+56c485aaa69fc766596798bd42b737894fa79a55.
+No new statistical fit acceptance or trading-performance claim is made.
+Next: controlled encoderless duration/self-reset baseline as its own documented,
+pushed stage.

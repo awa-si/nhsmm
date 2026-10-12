@@ -80,6 +80,7 @@ class HSMMRuntimeState:
     encoder_state: Optional[Any] = None
     last_timestamp: Optional[Any] = None
     uses_timestamps: bool = False
+    last_encoder_context: Optional[torch.Tensor] = None  # [B,1,H], for the next emission
 
     def __post_init__(self) -> None:
         if not isinstance(self.filter_state, HSMMFilterState):
@@ -100,6 +101,13 @@ class HSMMRuntimeState:
         if self.observations.shape[0] != B:
             raise ValueError("observation batch does not match filter state")
         _require_compatible(posterior, self.observations, "observations")
+        if self.last_encoder_context is not None:
+            value = self.last_encoder_context
+            if value.ndim != 3 or value.shape[:2] != (B, 1):
+                raise ValueError("last_encoder_context must be [B,1,H]")
+            _require_compatible(posterior, value, "last_encoder_context")
+            if not torch.isfinite(value).all():
+                raise ValueError("last_encoder_context must be finite")
 
         for name, tensor, shape in (
             ("duration_log_prob", self.duration_log_prob, (B, K, D)),
@@ -444,16 +452,17 @@ class HSMMFilterRuntime:
                     dtype=obs.dtype,
                 )
                 context, encoder_state = encoder.stream_step(obs, encoder_state)
+                start_context = torch.zeros_like(context)
                 emission = _emission_log_prob(
                     self.model,
                     obs,
-                    context,
+                    start_context,
                     self._score_cache,
                 )
                 B = context.shape[0]
                 K = int(self.model.config.n_states)
                 initial = self.model.dist.initial.log_matrix(
-                    context=context,
+                    context=start_context,
                     temperature=self.temperature,
                     T=1,
                 )
@@ -479,6 +488,7 @@ class HSMMFilterRuntime:
                         self.model, filter_state.log_posterior.shape[0], filter_state.log_posterior
                     ),
                     encoder_state=encoder_state,
+                    last_encoder_context=context.clone(),
                     last_timestamp=timestamp,
                     uses_timestamps=timestamp is not None,
                 )
@@ -626,10 +636,12 @@ class HSMMFilterRuntime:
             if encoder is None:
                 raise RuntimeError("runtime encoder lost its incremental state contract")
             context, encoder_state = encoder.stream_step(obs, previous.encoder_state)
+            if previous.last_encoder_context is None:
+                raise RuntimeError("incremental runtime state lacks predictive emission context")
             emission = _emission_log_prob(
                 self.model,
                 obs,
-                context,
+                previous.last_encoder_context,
                 self._score_cache,
             )
             filter_state = _filter_step_normalized(
@@ -654,6 +666,7 @@ class HSMMFilterRuntime:
                     self.model, filter_state.log_posterior.shape[0], filter_state.log_posterior
                 ),
                 encoder_state=encoder_state,
+                last_encoder_context=context.clone(),
                 last_timestamp=timestamp if previous.uses_timestamps else None,
                 uses_timestamps=previous.uses_timestamps,
             )

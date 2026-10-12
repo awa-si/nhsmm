@@ -911,9 +911,9 @@ workspace. The diagnosis combines current source inspection, fixed-parameter
 counterexamples and analysis of the existing seed-901 fit; it does not change
 production parameters, defaults or estimator behavior.
 
-### Neural emission scores need not define a generative likelihood
+### Historical neural emission normalization defect
 
-`NHSMM._build_sequence_set` feeds the current observation into its encoder and
+`NHSMM._build_sequence_set` at the research base feeds the current observation into its encoder and
 then uses the resulting current-row context to parameterize that same
 observation's emission. Thus the score has the form
 Normal(x; mu(encoder(x)), variance), rather than a density whose conditioning
@@ -1053,3 +1053,29 @@ Primary references:
 - McFarland et al. (2011), [Explicit-Duration Hidden Markov Model Inference of UP-DOWN States from Continuous Signals](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0021606), conditional IID emissions and no self-transitions.
 - Rojas-Salazar et al. (2021), [HSMMs for high-frequency environmental data](https://arxiv.org/abs/2109.09949), conditional-independence violations.
 - Papamakarios et al. (2021), [Normalizing Flows for Probabilistic Modeling and Inference](https://www.jmlr.org/papers/v22/19-1028.html), normalized transformation-based densities.
+
+
+## Predictive neural repair — 2026-10-12
+
+Step 1.2 replaces causal internal emission self-conditioning with past-only
+context and a zero initial-prior context, updates streaming, and versions
+artifact timing. Noncausal internal generative likelihood/training is rejected;
+retrospective scores retain their separate interpretation.
+
+The identity-encoder counterexample that previously integrated to 1.0590187
+now integrates to **1.0** on both 28,001 and 56,001 point grids.
+The held-fixed control remains 1.0. Fixed-prefix predictive density and gradient
+timing are covered by passing contract tests. Historical measurements above
+remain evidence of the original defect.
+
+[Raw repair diagnostic](validation/results/predictive-neural-step12-20261012.json)
+records prerequisite base 56c485aaa69fc766596798bd42b737894fa79a55 and runs with
+this stage's updated diagnostic and production code. The exact self-reset
+counterexample remains: episode means 5 versus 8 produce the same observable
+run mean 10 and equal likelihoods. Predictive timing does not resolve this.
+
+Verification: 80 focused passes; broader native verification had 802 passes,
+three CUDA skips and one excluded historical frozen-NPZ test whose exact bytes
+were unavailable through the connector. See
+[scope](testing.md#step-12--predictive-neural-production-migration-2026-10-12).
+There is no new statistical fitting or trading acceptance claim.

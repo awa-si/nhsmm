@@ -4,11 +4,11 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
-Step 1.1 freezes the predictive neural likelihood acceptance contract; native focused verification reports 19 passes and seven strict expected failures reproducing current production gaps. The repair is **not yet implemented**. Step 1.2 will migrate batch, streaming and encoder artifact timing together, then run the full canonical suite before the next research step. Details are owned by [testing.md](testing.md#step-11--predictive-neural-acceptance-contract-2026-10-12).
+Step 1.2 implements past-only internal emission context, an observation-independent initial prior, matching streaming state, and artifact v2 timing metadata. All 11 predictive contract tests pass. Native verification reports 80 focused passes and 802 broader passes, three CUDA skips, and one unavailable frozen-data test excluded. The full canonical gate remains incomplete until that exact binary fixture can be verified. Details: [testing.md](testing.md#step-12--predictive-neural-production-migration-2026-10-12).
 
 ## Structural research findings — 2026-10-12
 
-General neural generative-likelihood normalization is **open**: current-observation-conditioned emissions admit a supported counterexample whose score integrates above one. Fixed-score HSMM inference verification remains separate. An exact allowed self-reset/tail counterexample also disproves unrestricted episode-duration identifiability. The native fit has imperfect observable run laws despite perfect hard-state recovery. Findings and prioritized controlled comparisons are owned by [validation.md](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12). No production behavior or defaults changed in this research stage.
+The causal emission self-conditioning defect is repaired; the former counterexample now integrates to 1.0. Noncausal internal generative likelihood/training is explicitly rejected. An exact self-reset/tail counterexample still disproves unrestricted episode-duration identifiability. The native fit has imperfect observable run laws despite perfect hard-state recovery. Historical findings: [validation.md](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12). Next is a controlled encoderless duration/self-reset comparison.
 
 ## Latest code audit — 2026-10-12
 
@@ -104,7 +104,7 @@ The internal learned observation-derived context path is optional:
 - use_context_encoder=True enables the canonical internal encoder;
 - passing an explicit encoder is also an opt-in;
 - runtime, filtering, diagnostics, artifacts, and tests support both paths;
-- artifact v1 accepts encoder_config=None and remains compatible with older encoder-bearing artifacts.
+- artifact v2 records context timing; v1 encoderless artifacts remain compatible, while v1 encoder artifacts require retraining and are rejected.
 
 ### Neural semantics
 
@@ -189,7 +189,7 @@ The milestone is complete only when all of the following are observed:
 
 Passing this milestone supports the precise claim: **the maintained HSMM recurrence and outputs are independently verified against exhaustive small-model reference calculations**. It does not imply formal proof for arbitrary floating-point executions, statistical identifiability on every dataset, or downstream trading utility.
 
-Fixed-score core verification does not settle the open neural emission normalization issue documented above. Gate 10 closed on 2026-10-07 with Ruff, Black, diff-check, and the canonical CPU suite green (`668 passed, 3 skipped`).
+Fixed-score core verification is separate from the predictive neural repair evidence documented above. Gate 10 closed on 2026-10-07 with Ruff, Black, diff-check, and the canonical CPU suite green (`668 passed, 3 skipped`).
 
 Downstream integration is a separate post-milestone scope and is not evidence for this core correctness claim.
 

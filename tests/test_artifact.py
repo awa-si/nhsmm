@@ -114,11 +114,13 @@ def test_noncausal_artifact_round_trip_preserves_explicit_context_dim(tmp_path) 
     source.initialize_distributions()
     source.eval()
     x = torch.randn(1, 4, config.n_features)
-    expected = source.log_likelihood(x)
+    # Noncausal internal encoders retain retrospective scores, not a
+    # normalized generative observation likelihood.
+    expected = source.forward(source._build_sequence_set(x))
 
     path = save_artifact(source, tmp_path / "noncausal-context-model.nhsmm.pt")
     loaded = load_artifact(path, device="cpu")
-    actual = loaded.log_likelihood(x)
+    actual = loaded.forward(loaded._build_sequence_set(x))
 
     assert loaded.encoder.encoder.hidden_dim == 1
     assert loaded.encoder.encoder.out_dim == 2
