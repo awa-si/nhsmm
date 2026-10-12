@@ -421,3 +421,41 @@ preserved six-sequence prefixes against immutable Step 2 evidence, and all
 update counts were checked. The largest independent NumPy/model likelihood
 difference was 4.219e-15 per row. This verifies the recorded bounded experiment,
 not full canonical-suite or statistical acceptance.
+
+## Step 4 — independent marginal duration EM, 2026-10-12
+
+`tests/test_duration_em_diagnostic.py` compares NumPy forward/backward sufficient
+statistics to complete generative path enumeration at bucket widths 1, 2 and 3.
+It covers parallel geometric-survival/self-reset edges, initial bucket draws,
+right-censored terminal episodes and the single-row no-trial case. It also
+checks normalized PMFs, feasible hazards, monotone EM likelihood and exact
+agreement with the public model likelihood after importing fitted parameters.
+
+Initial native gate: **5 new tests passed**. AST and repository-closure Ruff
+passed; Black reported **116 files unchanged**. This adds a research diagnostic
+and tests only; production training and defaults are unchanged.
+
+Sequential per-seed runs have 300-second bounds, one worker and OMP/MKL/OPENBLAS
+threads 1:
+
+```bash
+python -m scripts.diagnose_duration_em --seed 901 --base-commit a93b6c0ccf7d8df2ae456ef05fdaa9ff4963c918 --output docs/validation/results/duration-em-step4-seed901-native-20261012.json
+```
+
+Repeat for seeds 902 and 903 with distinct output filenames. Each run verifies
+frozen Step 3 dataset hashes, equal initialization likelihood, and reproduction
+of the prior Adam-80 held-out score. It records an 81-entry EM likelihood history,
+80/80/400 completed updates and fit timings. Known emissions, initial law and
+transition matrix remain privileged controls; no labels enter either fit.
+Methods and measured results are owned by
+[validation.md](validation.md#independent-duration-em-versus-gradient-fitting--2026-10-12).
+
+
+Final Step 4 focused gate, including preceding duration diagnostics and audit
+regressions: **34 passed**. AST/Ruff pass; Black reports 116 unchanged files in
+the materialized closure. All three seed batches completed 80/80/400 updates
+within their per-seed bounds. Initial likelihood matching, prior Adam-80
+reproduction, 81-entry monotone EM histories and every source/data/report hash
+were verified. Maximum independent held-out likelihood discrepancy:
+4.219e-15 per row. No production change or new full canonical-suite claim;
+the historical frozen-NPZ verification remains open.

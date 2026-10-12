@@ -1282,3 +1282,106 @@ unavailable and the broad suite was not rerun for these script-only controls.
 Next: independent unsupervised EM versus matched gradient fits on this frozen
 dataset; observation-model experiments remain pending. No trading or general
 statistical acceptance claim.
+
+## Independent duration EM versus gradient fitting — 2026-10-12
+
+Step 4 uses the immutable Step 3 D+ train/test datasets, including their
+128/32 independent sequences, 128 rows, known Gaussian emissions and initial
+law, fixed true 0.02 reset matrix, temperature 1 and duration gate 1. Array hashes
+are required to match the preceding committed reports before fitting. No new
+data or selection by held-out results. Script owner:
+`scripts/diagnose_duration_em.py`.
+
+The independent marginal EM implementation uses NumPy only during fitting.
+Its hidden state stores regime, drawn duration bucket and elapsed bucket age.
+Finite buckets progress deterministically; the D+ bucket survives geometrically
+after age D. Boundary destinations use the known transition matrix, and new
+buckets are drawn from the learned PMF. Scaled forward/backward recursion
+computes posterior expected bucket draws, tail ends and tail survival steps.
+The PMF and hazard have closed-form M-steps. Terminal backward weights are 1:
+the final episode is right-censored, with no forced terminal end. Initial bucket
+draws and censored final bucket draws contribute to PMF counts. Tail trials count
+only transitions between observed rows. EM sees no labels or episode ledger.
+
+The three predeclared arms start from uniform PMFs and tail hazards 0.5:
+
+| Arm | Update budget | Update rule |
+| --- | ---: | --- |
+| NumPy EM | 80 | Posterior expected counts and closed-form M-step |
+| Adam | 80 | Existing diagnostic helper, Float64, lr 0.008, gradient clip 5 |
+| Adam longer-budget control | 400 | Fresh fit with the same initialization, larger fixed budget |
+
+Identical initial marginal likelihoods are asserted. The 80-update Adam arm must
+reproduce the immutable Step 3 held-out likelihood exactly within 1e-12 per row.
+EM records every pre-update likelihood and the final likelihood, asserting
+monotonicity. The fitted EM law is loaded into a model only for evaluation;
+its training likelihood must agree within 1e-7 in total. Held-out density and
+filtered posteriors use the existing public inference path and independent
+probability-space likelihood check. Equal update counts do not mean equal
+compute; fit timings are recorded and are environment-specific observations.
+
+Five new tests verify expected counts against complete generative path
+enumeration for duration widths 1/2/3, including overlapping survival and
+self-reset edges, single-row censoring with no tail trial, EM monotonicity,
+normalization, and public-model likelihood agreement. This is independent
+unlabeled duration fitting with known nuisance parameters, not full unsupervised
+recovery of emissions/transitions or evidence that EM is universally preferable.
+Production optimizer/defaults remain unchanged.
+
+
+### Measured Step 4 optimizer results
+
+All nine fits completed their predeclared budgets (80 EM, 80 Adam, 400 Adam
+updates per seed). Source/provenance hashes, frozen train/test hashes and the
+preceding Adam-80 scores were verified. Every EM history contains 81 likelihoods
+and is monotone within 1e-7 total. Independent held-out likelihood agreement:
+maximum **4.219e-15 per row**. All arms attain 100% hard-state filtering accuracy.
+
+Medians across seeds 901/902/903:
+
+| Arm | Episode-duration TV | Observable-run TV | Test log likelihood/row | Fit seconds |
+| --- | ---: | ---: | ---: | ---: |
+| Adam 80 | 0.0723 | 0.0711 | -1.136506 | 16.70 |
+| Independent EM 80 | 0.0290 | 0.0284 | -1.133808 | 9.67 |
+| Adam 400 | 0.0293 | 0.0287 | -1.133809 | 78.30 |
+
+| Seed | Adam-80 train LL below EM | Adam-400 train LL below EM | EM run TV | Adam-400 run TV |
+| --- | ---: | ---: | ---: | ---: |
+| 901 | 58.2290 | 0.07163 | 0.02842 | 0.02873 |
+| 902 | 71.2599 | 0.03384 | 0.02073 | 0.02072 |
+| 903 | 74.7452 | 0.00070 | 0.03244 | 0.03250 |
+
+The larger gradient budget closes nearly all of the training-objective gap and
+approaches the independent EM law in every seed. The earlier 80-update
+duration-PMF gap therefore has a demonstrated optimization-budget component
+in this fixed-nuisance setup. For a concrete example, seed 901's state-0
+one-row duration probability is 0.04875 with Adam-80, versus 0.013942 with EM
+and 0.013943 with Adam-400 (generator truth 0.01). Perfect hard-state labels
+alone never diagnosed that incomplete duration fit.
+
+The EM training likelihood reaches within 1e-7 of its final value by six
+updates for seeds 901 and 902; all 80 updates are still executed and recorded.
+This favorable speed is specific to strongly separated emissions and known
+nuisance parameters. It is not a general comparison of EM and neural fitting
+complexity, convergence basins, compute budgets or package defaults.
+
+Residual duration/run error around 0.03 is not eliminated by matching the
+optimizer objective. Rare-tail estimates remain sample-sensitive: seed 901's
+EM state-1 hazard is 0.4418 versus generator 0.35, while Adam-400 is 0.4418 too.
+This separates the closed optimization gap from remaining estimation and
+latent-reset uncertainty; it does not prove a general identifiability result.
+Known true PMF controls from Step 3 are privileged and should not be treated as
+unlabeled achievable recovery guarantees.
+
+[Seed 901 raw results](validation/results/duration-em-step4-seed901-native-20261012.json),
+[902](validation/results/duration-em-step4-seed902-native-20261012.json),
+[903](validation/results/duration-em-step4-seed903-native-20261012.json)
+retain every fitted PMF/hazard, observed update count, EM likelihood history,
+fit timing, held-out score and preceding-report hash.
+
+Final native focused gate: **34 passed**; AST/Ruff/Black green. These diagnostic
+and test changes leave production optimizer/defaults unchanged. No new full
+canonical-suite claim; the unavailable historical NPZ verification remains open.
+Next: controlled observation-model/autocorrelation and covariance diagnostics.
+Any production budget or initializer change requires a separate matched
+full-model study rather than applying this fixed-nuisance result universally.

@@ -4,9 +4,9 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
-Step 3 completed fixed-exposure and run-support controls: three seeds, 128 training/32 test sequences each, and 12 marginal fits with 80 actual updates. All states meet the specified 30-completed-tail/60-trial exposure minimums; state 1 now has 48/45/43 completed tails. Reset-free D+ improves test likelihood over reset-free finite D=8 in every seed, while run-TV is slightly worse at this budget. Tail-PMF learning still has median run-TV 0.0711 versus 0.0029 when the true PMF is fixed. These are bounded controls with known nuisance parameters; no production default changes. Details: [validation.md](validation.md#fixed-tail-exposure-and-run-duration-support--2026-10-12).
+Step 4 completed independent unlabeled duration EM and matched gradient controls on the frozen Step 3 data. Across three seeds, median run-TV is 0.0711 for Adam-80, 0.0284 for EM-80, and 0.0287 for Adam-400. The larger gradient budget nearly closes the EM training-likelihood gap in every seed. This establishes an incomplete short-fit component in the fixed-nuisance duration diagnostic; it does not justify a universal package-default change. Remaining estimation/reset uncertainty and observation-model issues are separate. Details: [validation.md](validation.md#independent-duration-em-versus-gradient-fitting--2026-10-12).
 
-Predictive context/artifact repair and the prior reset-capacity evidence remain recorded. Current focused diagnostic/audit gate: 29 passes; AST/Ruff/Black pass. The preceding broader native gate had 802 passes, three CUDA skips and one unavailable frozen-NPZ test excluded. That limit remains open. Next: independent unsupervised EM versus gradient fitting on the frozen adequate-exposure data; observation-model experiments remain pending.
+Predictive context/artifact repair, reset-capacity and fixed-exposure evidence remain recorded. Current focused diagnostic/audit gate: 34 passes; AST/Ruff/Black pass. The preceding broader native gate had 802 passes, three CUDA skips and one unavailable frozen-NPZ test excluded. That limit remains open. Next: observation autocorrelation and covariance controls; any full-model budget/initialization change needs its own matched study.
 
 ## Structural research findings — 2026-10-12
 
