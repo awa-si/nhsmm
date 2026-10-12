@@ -675,7 +675,7 @@ unchanged Python files. A 3000-row pre-change legacy control confirms identical
 array and metadata hashes after the v2-only addition. It does not resolve the
 historical frozen NPZ limitation.
 
-The audit uses one worker, OMP/MKL/OPENBLAS threads1 and a 180-second bound,
+The audit uses one worker, OMP/MKL/OPENBLAS threads 1 and a 180-second bound,
 three native 60000-row datasets and 20000 independent duration draws/state.
 The initial diagnostic was superseded by a complete rerun after the v2-only
 label extension; only the final source-hash-matched report is committed.
@@ -685,3 +685,29 @@ label extension; only the final source-hash-matched report is committed.
 Methods, measured compatibility gaps and the revised isolated-HSMM gate:
 [validation.md](validation.md#trading-ground-truth-and-hsmm-contract-audit--2026-10-12).
 No new full canonical-suite or frozen-NPZ acceptance claim.
+
+## Step 12 — isolated finite-support HSMM verification, 2026-10-12
+
+tests/test_isolated_trading_hsmm.py covers a hand-solvable censored duration
+MLE, survival rather than completed-mass scoring, independent segment recursion
+against enumerated state-age paths, exact duration support and zero renewal
+diagonal, public NHSMM likelihood/filter agreement, real duration-gradient
+updates with frozen nuisance parameters, and overlapping Gaussian observations
+with nontrivial causal posteriors. Final focused gate: 70 passed across this
+file plus ground-truth, dataset, boundary, causal-decision, HMM, calibration,
+information, feature-contract, duration and audit controls. AST/Ruff/Black pass;
+Black reports 132 unchanged materialized Python files.
+
+One worker, OMP/MKL/OPENBLAS threads 1 and a 300-second execution bound:
+
+    python -m scripts.verify_isolated_trading_hsmm --base-commit 1028ec240c53ec797f7216f5d7e32e3cab0ef841 --output docs/validation/results/isolated-hsmm-step12-native-20261012.json
+
+The final three-seed run follows the expanded ambiguity-control code gate.
+All three seeds complete 1200 duration-only updates, and all nine public
+likelihood/filter comparisons pass independent references. Source hashes
+and all predeclared result gates are verified. The labelled learning stage
+does not call production optimize or establish end-to-end unsupervised recovery.
+Research support masks are not verified as a runtime/artifact contract.
+Methods and scope:
+[validation.md](validation.md#isolated-finite-support-hsmm-verification--2026-10-12).
+No new full canonical-suite or historical-NPZ acceptance claim.

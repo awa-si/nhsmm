@@ -2165,3 +2165,104 @@ AST/Ruff/Black pass. The final audit was rerun after the additive v2 label
 repair; source/prior-report/frozen feature hashes were verified.
 [Raw Step 11 report](validation/results/ground-truth-step11-native-20261012.json)
 contains exact PMFs, hazards, projections, window counts and ground-truth checks.
+
+## Isolated finite-support HSMM verification — 2026-10-12
+
+Step 12 base: 1028ec240c53ec797f7216f5d7e32e3cab0ef841.
+Owner: scripts/verify_isolated_trading_hsmm.py. This executes the isolated
+mechanism gate defined by Step 11. The production model defaults are unchanged.
+
+### Controlled contract and independent references
+
+The duration PMFs are the exact clipped/rounded Trading generator laws,
+embedded in finite D260 with known per-state support masks and no geometric
+tail. Transition probabilities are the known stationary BASE_TRANSITION,
+with exact zero same-state renewal probability at every age. This deliberately
+removes macro-conditioned transition learning from the mechanism control.
+Initial states are uniform and every generated observation sequence starts
+at a new episode with age1.
+
+Emission parameters are known IID Gaussian means -6/-2/2/6, sigma 0.35,
+one feature. The production NHSMM model is Float64; generated/public input
+observations use the same Float32 values. Script-only masks apply through the
+Duration constraint hook and Transition structural buffer. They are research
+constraints, not a new supported config/runtime/artifact contract.
+
+Stage 1 trains only production Duration logits, using 8192 labelled
+administrative-censor records per state. Independent cutoff C is uniform over
+integers 80..300. A completed event is observed if L<C; otherwise the contribution
+is survival P(L>=C). Adam runs exactly 1200 steps at lr0.05, with all emission,
+initial-prior, transition and other parameters frozen and checked unchanged.
+An independent NumPy labelled EM runs 200 iterations, allocating censored
+duration counts conditionally over surviving lengths. It supplies a separate
+likelihood/MLE reference. This stage explicitly uses episode labels; it is
+not the production optimize method or latent marginal-likelihood training.
+
+Stage 2 evaluates the public NHSMM marginal likelihood and causal filter on
+eight independently generated 600-row sequences per seed, using both true and
+learned duration laws. The independent NumPy reference sums completed segments
+using exact duration mass and terminal unfinished segments using survival.
+It computes state probabilities at every prefix, not future-smoothed labels.
+Unit tests also compare it against enumerated state-age paths in a small
+ambiguous example.
+
+A third control uses sigma 2.0, two 300-row sequences per seed and the true
+duration law. It ensures the public recursion check has multiple plausible
+state paths rather than only nearly deterministic state labels.
+State accuracy is descriptive in this overlapping control; its gate concerns
+likelihood/probability agreement and nonzero uncertain-row exposure.
+
+Predeclared gates: each learned duration PMF TV<=0.12, labelled objective gap
+to independent EM<=0.01 nats/record, state accuracy>=0.99 for the well-separated
+control, independent sequence-LL discrepancy<=1e-7 and state-probability
+discrepancy<=1e-8. Seeds 901/902/903, sampling sizes and budgets are fixed before
+test evaluation. The final report supersedes the first separated-only run.
+
+### Measured gate results
+
+All three seeds pass every applicable gate:
+
+| Seed | TV bull | TV bear | TV range | TV chaotic | Objective gap nats/record | Separated-state accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 901 | 0.07238 | 0.06661 | 0.06503 | 0.03346 | 0.00004886 | 100% |
+| 902 | 0.06420 | 0.05487 | 0.06787 | 0.03685 | 0.00004664 | 100% |
+| 903 | 0.06594 | 0.07319 | 0.06301 | 0.03952 | 0.00007232 | 100% |
+
+All 3600 duration updates were completed; each seed uses 32768 labelled records.
+The learned means remain close to the exact true means, with maximum absolute
+error approximately 1.08 rows across the twelve state/seed cells.
+
+Across the nine public-model/reference comparisons, maximum total sequence
+likelihood discrepancy is 4.18e-10 and maximum prefix state-probability error
+is 8.03e-14. Known and learned laws both yield 100% state accuracy on the
+14400 unique separated-emission held-out rows. The overlapping controls have
+91/66/139 rows with maximum state probability below0.99, and accuracies
+98.50%/99.17%/99.00% over 600 rows per seed. Their independent likelihood errors
+are at most 7.96e-12. Nontrivial uncertainty therefore does not reveal a recursion
+disagreement.
+
+Final focused gate: **70 tests passed**, AST/Ruff/Black pass, with 132 unchanged
+formatted materialized Python files. Source hashes and all report gates were
+verified. Every frozen nuisance parameter remains unchanged during training.
+[Raw Step 12 evidence](validation/results/isolated-hsmm-step12-native-20261012.json)
+includes learned PMFs, means, censor counts, EM objectives, actual optimizer
+checkpoints and independent probability/likelihood errors.
+
+### Accepted claim and remaining boundary
+
+This accepts the finite-support duration module's labelled learning and the
+public causal HSMM marginal likelihood/filter under this matched oracle
+contract, including terminal survival and ambiguous observations. It gives
+no new evidence for an inherent HSMM recursion failure.
+
+It does not establish unsupervised joint training on the Trading features.
+Known support, emission/transition parameters, zero self-renewals, correct
+starts and many labelled duration records are substantial controls. Script
+constraints have not been verified as a production runtime/artifact feature.
+The historical frozen-NPZ check and full post-change canonical suite remain
+outside this focused gate.
+
+Next: remove episode labels from duration optimization while keeping the same
+known nuisance parameters and matched finite-support/start contract. Only
+after that separate marginal-learning gate should Trading observations,
+macro/context learning and joint nuisance estimation be reintroduced.
