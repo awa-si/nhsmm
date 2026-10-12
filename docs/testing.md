@@ -386,3 +386,38 @@ censored EM has privileged episode boundaries. Neither is an independent
 unsupervised training baseline. Full statistical acceptance and adequate tail
 exposure remain separate requirements. Results and interpretation belong to
 [validation.md](validation.md#controlled-duration-and-self-reset-baseline--2026-10-12).
+
+## Step 3 — fixed tail exposure and run support, 2026-10-12
+
+`tests/test_tail_coverage_diagnostic.py` checks tail ends versus censored survival
+exposure, fail-closed coverage requirements, absence of a hazard estimate when
+there is no exposure, preservation of the true PMF during hazard-only marginal
+training, and positive D+ support above the finite duration bound with exact zero
+self-reset support. The three fixed 128-sequence datasets are independently
+generated in tests and must all meet the 30-end/60-trial per-state requirements.
+
+Initial focused native gate: **18 passed** across tail-coverage, reset-capacity
+and model-conform diagnostic tests. AST/Ruff pass and Black reports **114 files
+unchanged** in the materialized package/test/script closure. No production
+model/default changes; the optional known-PMF fit control is script-only.
+The historical missing frozen NPZ verification remains unresolved.
+
+Each seed is executed sequentially with a 300-second bound, one worker and
+OMP/MKL/OPENBLAS threads 1:
+
+```bash
+python -m scripts.diagnose_tail_coverage --seed 901 --iterations 80 --base-commit fbbff77e177453bed120a4fa6947c5787db23f45 --output docs/validation/results/tail-coverage-step3-seed901-native-20261012.json
+```
+
+Repeat for seeds 902 and 903 with distinct result filenames. Source SHA256s,
+array hashes, completed updates and independent likelihood errors are recorded.
+Methods, results and limits are owned by
+[validation.md](validation.md#fixed-tail-exposure-and-run-duration-support--2026-10-12).
+
+
+Final Step 3 gate including code-audit regressions: **29 passed**. Every seed
+finished its four arms at 80 updates within the per-seed bound. Source hashes,
+preserved six-sequence prefixes against immutable Step 2 evidence, and all
+update counts were checked. The largest independent NumPy/model likelihood
+difference was 4.219e-15 per row. This verifies the recorded bounded experiment,
+not full canonical-suite or statistical acceptance.

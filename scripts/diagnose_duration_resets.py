@@ -86,7 +86,7 @@ def independent_log_likelihood(x, pmf, hazards, transition):
     return total
 
 
-def fit(seed, tail, x, transition, arm, iterations):
+def fit(seed, tail, x, transition, arm, iterations, *, known_duration_pmf=False):
     if arm not in ARMS or iterations < 1:
         raise ValueError("supported arm and positive budget required")
     model = make_model(seed, tail, iterations, fixed=True).double()
@@ -96,6 +96,8 @@ def fit(seed, tail, x, transition, arm, iterations):
         model.dist.emission.log_var.fill_(math.log(math.expm1(SIGMA**2)))
         model.duration_logits_bias.fill_(1)
         model.dist.duration.initialize(mode="uniform", jitter=0)
+        if known_duration_pmf:
+            model.dist.duration.logits.copy_(torch.tensor(np.log(PMF)))
         model.dist.transition.logits.fill_(0)
         if arm == "known_transition":
             model.dist.transition.logits.copy_(
@@ -105,11 +107,13 @@ def fit(seed, tail, x, transition, arm, iterations):
             model.dist.transition._structural_constraint &= ~torch.eye(2, dtype=torch.bool)[:, None]
     for p in model.parameters():
         p.requires_grad_(False)
-    params = [model.dist.duration.logits]
+    params = [] if known_duration_pmf else [model.dist.duration.logits]
     if tail:
         params.append(model.dist.duration.tail_end_probability)
     if arm in ("age_specific_resets", "tied_resets"):
         params.append(model.dist.transition.logits)
+    if not params:
+        raise ValueError("fit requires at least one trainable parameter")
     for p in params:
         p.requires_grad_(True)
     if arm == "tied_resets":

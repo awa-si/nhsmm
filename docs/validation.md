@@ -1181,3 +1181,104 @@ count, independent likelihood error, labeled EM history and coverage count.
 The completed checks are owned by
 [testing.md](testing.md#step-2--controlled-durationself-reset-diagnostic-2026-10-12).
 No trading-utility, general recovery, or new full canonical-suite claim is made.
+
+## Fixed tail exposure and run-duration support — 2026-10-12
+
+Research base: fbbff77e177453bed120a4fa6947c5787db23f45. The Step 3 diagnostic
+(`scripts/diagnose_tail_coverage.py`) fixes 128 training and 32 independent test
+sequences of 128 rows for each of seeds 901/902/903. It preserves each prior
+six-sequence training prefix exactly and records its array hash. There is no
+adaptive dataset expansion or fit/test-driven sample selection. The true PMF,
+emissions, initial law and 0.02 boundary reset probability remain unchanged.
+Terminal episodes are always right-censored.
+
+Before any fitting, each tail dataset must contain at least 30 completed D+
+episodes and 60 tail trials per state. A trial is a completed tail end or an
+observed survival step beyond age D; a censored episode contributes survival
+without an end. A failed gate stops the seed. These are exploratory exposure
+requirements, not general precision or statistical-acceptance guarantees.
+
+Two comparisons separate the remaining mechanisms:
+
+| Generator | Arms | Comparison |
+| --- | --- | --- |
+| D+ episodes, real resets | Known transitions with PMF/hazard learned; known transitions and true PMF with only hazard learned | Sampling uncertainty versus duration-PMF optimization |
+| Finite episodes, real resets | Reset-free finite D=8; reset-free D=8 plus geometric tail | Observable-run support on identical train/test data |
+
+Each arm fixes the true Gaussian emission and initial laws, uses temperature 1,
+duration gate 1, Float64, Adam lr 0.008, gradient clip 5 and 80 actual updates.
+Episode labels never enter marginal fitting. True PMF and transition parameters
+are privileged nuisance controls; the labeled censored EM remains separate.
+This is not independent unsupervised EM or a production default change.
+
+Reset-free models interpret duration as observable state-run length. Their
+episode-TV and complete-episode scores against generator episode labels are
+therefore omitted from the report. They are evaluated by the independent
+absorbing-chain run law and held-out marginal density. D+ gives unbounded
+support, but a single geometric tail need not exactly represent the run law
+obtained by composing arbitrary reset episodes. Adequate support and accurate
+law recovery are separate questions.
+
+
+### Exposure and measured Step 3 results
+
+All **12 marginal fits completed 80 updates**. All source hashes, prior
+six-sequence prefix hashes, and observed update counts were verified. Maximum
+NumPy/model held-out likelihood difference: **4.219e-15 per row**.
+
+| Seed | State 0 completed tails / trials | State 1 completed tails / trials | State 1 labeled hazard | State 1 hazard-only marginal fit |
+| --- | ---: | ---: | ---: | ---: |
+| 901 | 327 / 2712 | 48 / 113 | 0.4248 | 0.4362 |
+| 902 | 345 / 3075 | 45 / 130 | 0.3462 | 0.3226 |
+| 903 | 328 / 2856 | 43 / 105 | 0.4095 | 0.4106 |
+
+The true state-1 hazard is 0.35. Exposure now meets the specified minimums for
+every seed/state, replacing the earlier 2/3/0 completed state-1 tails. It still
+does not guarantee precise parameter recovery: the rare tail yields substantial
+sampling variation. State-0 labeled hazards are 0.1206/0.1122/0.1148 versus truth
+0.12. Known-PMF marginal hazards are 0.1233/0.1088/0.1191. Episode resets remain
+unobserved even when Gaussian state labels are effectively certain.
+
+Medians across the three seeds:
+
+| Comparison | Arm | Observable-run TV | Test log likelihood/row |
+| --- | --- | ---: | ---: |
+| True D+ episodes | PMF + hazard learned, transition known | 0.0711 | -1.1365 |
+| True D+ episodes | Only hazard learned, PMF + transition known | 0.0029 | -1.1334 |
+| Finite episodes with resets | Reset-free finite D=8 | 0.0883 | -1.4961 |
+| Finite episodes with resets | Reset-free D=8 plus geometric tail | 0.1010 | -1.1490 |
+
+The labeled censored estimator's observable-run TVs are 0.0264/0.0184/0.0310
+(median 0.0264). That privileged reference is not an unsupervised acceptance
+result. More data reduce the earlier coverage deficit, but the 80-update
+PMF-learning arm still differs from the true law. The known-PMF and labeled
+controls motivate a matched optimizer/independent-EM comparison; they do not
+prove a production optimizer bug or establish that every remaining discrepancy
+is optimization rather than latent-reset uncertainty or estimation error.
+Low aggregate TV with a known PMF also does not imply accurate rare-tail hazard:
+the state-1 tail bucket has only 0.03 probability.
+
+On finite-episode data with real resets, all test sets contain observed state
+runs above D=8 (14/11/6 runs, maximum length 16). D+ improves held-out likelihood
+for every seed: -1.5705 to -1.1490, -1.4961 to -1.1555, and -1.3224 to -1.1449.
+Run-TV is slightly worse at this fixed budget in every seed, illustrating why
+small mass discrepancies can hide severe density penalties from unsupported
+latent paths. Gaussian emissions give alternative paths nonzero density, so
+the finite model's observation likelihood remains finite. D+ is a support fix,
+not evidence that its fitted geometric run tail is the true composed law.
+The finite model's median hard-state accuracy is 99.9756%; D+ is 100%.
+
+Per-seed raw results:
+[901](validation/results/tail-coverage-step3-seed901-native-20261012.json),
+[902](validation/results/tail-coverage-step3-seed902-native-20261012.json),
+[903](validation/results/tail-coverage-step3-seed903-native-20261012.json).
+They preserve each fitted law, independent likelihood check, exposure, run
+length summary and labeled history. Source provenance refers to this stage's
+diagnostic/helper changes atop the recorded base commit.
+
+Final focused verification: **29 passed**, with AST/Ruff/Black green.
+Production defaults are unchanged. The historical frozen-NPZ check remains
+unavailable and the broad suite was not rerun for these script-only controls.
+Next: independent unsupervised EM versus matched gradient fits on this frozen
+dataset; observation-model experiments remain pending. No trading or general
+statistical acceptance claim.
