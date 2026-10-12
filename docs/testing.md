@@ -66,6 +66,44 @@ pytest -q
 
 `tests/test_model_conform_duration.py` independently checks geometric-tail masses, duration means and survival sums, terminal right censoring, generator episode boundaries, frozen oracle Gaussian parameters, duration movement and tail-information coverage.
 
+## Complete-code audit — 2026-10-12
+
+The audit started from `regime-v2` commit `b17a69a497d7391f0fc3025ded9b04c18dc5ef6c`. It covered the complete tracked Python inventory (130 files before the new regression module; 131 afterward) with AST parsing, repository-wide Ruff/Black checks and the canonical CPU pytest suite. Manual review focused on distribution parameterization, causal/non-causal inference, duration support, gradients, context/padding, initialization/restarts, streaming state and caches, artifacts, tuning, validation and diagnostic data/evaluation paths. This is bounded verification, not an exhaustive line-by-line proof of every script or a new statistical acceptance run.
+
+The following production defects were reproduced with targeted counterexamples and corrected. Their regression owner is `tests/test_code_audit_regressions.py` (11 tests; padding and empty-row pooling are separate cases).
+
+| Owner | Reproduced defect | Resulting behavior |
+| --- | --- | --- |
+| Artifact | CPU snapshots shared model tensor storage | Built artifacts own cloned CPU tensors |
+| Context pooling | MHA pooled padded queries and produced NaN for all-masked rows | Only valid queries contribute; empty rows return finite zero context |
+| Runtime | A rejected first step fixed the context mode | Context mode locks only after a successful step |
+| Causal Viterbi | With D=1 and a tail, boundary scores overwrote continuation scores | Both paths compete, with matching predecessor pointers |
+| Non-causal duration | Tail hazard 1 evaluated a singular continuation derivative in an inactive branch | Exact impossible continuation support remains; tested likelihood gradients are finite |
+| Categorical | Zero probability had a finite log probability | Zero mass maps to negative infinity; entropy handles zero terms |
+| Streaming encoder | Replaced LSTM parameters could reuse version counters and stale fused weights | Cache keys track parameter identity and mutation version; dtype-moved buffers retain the existing no-rebuild contract |
+| Optimization | convergence_stop=False still stopped on a plateau | A successful run consumes its configured max_iter budget when stopping is disabled |
+| Optimization config | duration_tail could change without rebuilding structural distributions | Incompatible override is rejected before optimization |
+| Tuning | trials limited grid output only after full Cartesian materialization | Candidate enumeration stops at the requested limit |
+
+Two suspected initializer defects were rejected during the full-suite contract check: legacy spread initialization deliberately preserves Gaussian effective variance softplus(0) and Student-t effective scale softplus(1). Those parameters and their established tests remain unchanged. They must not be interpreted as unit variance/scale. The optional variance-aware initializer has its own explicit effective-variance contract.
+
+Historical diagnostic scripts were formatted and their static import/dead-variable/name violations corrected. Emission identifiability and initialization-ablation reports now read actual Gaussian variance as softplus(raw).clamp_min(min_covar), rather than exp(raw). Historical JSON results were not rewritten or rerun; older v1 diagnostics remain historical evidence.
+
+### Observed verification
+
+- AST parsing: all 131 Python files passed.
+- Ruff: repository-wide check passed.
+- Black: canonical package/tests/scripts check passed, 131 files unchanged.
+- `git diff --check`: passed.
+- Focused post-contract-correction gate: 24 passed.
+- Canonical CPU suite: **787 passed, 3 skipped**, 98.90 seconds pytest time; the skips require CUDA.
+
+The final suite includes the existing independent exhaustive-reference, gradient, padding, runtime-equivalence and training contracts. No benchmark/training experiment batch was started as part of this audit, beyond the small fixtures required by tests. CUDA execution, performance benchmarking and full post-fix statistical recovery acceptance remain unverified.
+
+### Effect on earlier experiment interpretation
+
+Before this audit, convergence_stop=False did not guarantee the requested iteration count. Earlier 30/40-iteration descriptions therefore identify maximum budgets unless actual completed iterations are separately recorded. Their stored metrics remain observations of the historical code, but they are not evidence for an exact fixed-length comparison. Follow-up training comparisons must use the corrected stopping behavior and record actual completed iterations. No package default or trading-usefulness claim is changed by this audit.
+
 ## HSMM research/correctness milestone gate
 
 The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.

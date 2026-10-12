@@ -280,10 +280,9 @@ class ConfigTuner:
         paths = tuple(self.space)
         if strategy == "grid":
             values = [self.space[path].grid_values() for path in paths]
-            combinations = tuple(
-                dict(zip(paths, combination)) for combination in itertools.product(*values)
-            )
-            return combinations if trials is None else combinations[:trials]
+            product = itertools.product(*values)
+            bounded = product if trials is None else itertools.islice(product, trials)
+            return tuple(dict(zip(paths, combination)) for combination in bounded)
 
         if trials is None:
             raise ValueError("random strategy requires trials")

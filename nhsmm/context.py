@@ -596,9 +596,26 @@ class ContextEncoder(nn.Module):
             ).to(device=context.device, dtype=context.dtype)
         elif self._mha.embed_dim != H:
             raise ValueError(f"mha pooling dimension changed from {self._mha.embed_dim} to {H}")
+        if context.shape[1] == 0:
+            pooled = context.new_zeros((context.shape[0], H))
+            attn = context.new_zeros((context.shape[0], 0, 0)) if ret_attn else None
+            return pooled, attn
         key_padding_mask = ~mask if mask is not None else None
+        if key_padding_mask is not None:
+            # MHA softmax cannot consume an all-masked key row. Temporarily
+            # admit its zero placeholder, then remove every masked query below.
+            key_padding_mask = key_padding_mask.clone()
+            empty = mask.sum(dim=1) == 0
+            key_padding_mask[empty, 0] = False
         out, attn = self._mha(context, context, context, key_padding_mask=key_padding_mask)
-        pooled = out.mean(dim=1)
+        if mask is None:
+            pooled = out.mean(dim=1)
+        else:
+            out = out.masked_fill(~mask.unsqueeze(-1), 0.0)
+            pooled = out.sum(dim=1) / mask.sum(dim=1).clamp_min(1).unsqueeze(-1)
+            if attn is not None:
+                valid_pairs = mask.unsqueeze(-1) & mask.unsqueeze(-2)
+                attn = attn.masked_fill(~valid_pairs, 0.0)
         return pooled, attn if ret_attn else None
 
     def reset(self):

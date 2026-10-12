@@ -35,6 +35,12 @@ Unknown keys are rejected. Overrides return a newly validated config and never s
 
 `use_context_encoder=False` is the default. In that mode `NHSMM` does not construct a `ContextEncoder`. Set `use_context_encoder=True` to opt into learned observation-derived context. External context is independent of this switch: configure `context_dim` and pass context explicitly when needed.
 
+### Optimization budgets and structural overrides
+
+`max_iter` is the maximum number of updates per restart. With `convergence_stop=True`, a detected plateau can end a run early; with `convergence_stop=False`, a successful run performs the full configured budget. Convergence monitoring remains active independently of stopping.
+
+An `optimize(..., cfg=...)` override must remain structurally compatible with the constructed model, including `duration_tail`. Changing finite support to D+ or back requires constructing the corresponding model.
+
 ### Gaussian emission initialization
 
 `emission_init_mode="kmeans_cluster_variance"` initializes Gaussian means from training-observation kmeans and actual variances from within-cluster population variances. Targets are clipped to [0.05, 5] in training-observation units; clusters with fewer than two members use the global population variance. Gaussian variance is `softplus(log_var)`, so this initializer stores the stable inverse-softplus of each target. It requires Gaussian emissions. The package default remains `spread`; the existing means-only `kmeans` mode retains its scale initialization.

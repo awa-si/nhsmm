@@ -3,6 +3,7 @@
 Both arms use the same NHSMM distribution, optimizer and train/test episodes.
 Age tying is implemented by a gradient-sharing hook, without changes to NHSMM.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -88,9 +89,7 @@ def run(dataset: Path, *, steps: int = 220) -> dict:
             train_nll = float((-logprob().mean()).detach())
             test_nll = float(-predicted[torch.arange(len(te_target)), te_target].log().mean())
             mae = float(np.abs(predicted.numpy() - te_gt).mean())
-            max_age_difference = float(
-                (probabilities - probabilities[:, :1, :]).abs().max()
-            )
+            max_age_difference = float((probabilities - probabilities[:, :1, :]).abs().max())
         if handle is not None:
             handle.remove()
         return {
@@ -103,11 +102,7 @@ def run(dataset: Path, *, steps: int = 220) -> dict:
             "max_age_probability_difference": max_age_difference,
         }
 
-    outcomes = [
-        experiment(seed, tied)
-        for tied in (True, False)
-        for seed in (2311, 2312)
-    ]
+    outcomes = [experiment(seed, tied) for tied in (True, False) for seed in (2311, 2312)]
     counts = np.zeros((K, K), dtype=float)
     np.add.at(counts, (source[train], target[train]), 1)
     empirical = counts / counts.sum(axis=1, keepdims=True)
@@ -130,8 +125,16 @@ def run(dataset: Path, *, steps: int = 220) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=Path, default=Path("data/reference/trading-regimes-v1/trading_regimes.npz"))
-    parser.add_argument("--output", type=Path, default=Path("/data/workspace/stage2/native-age-tied-transition.json"))
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("data/reference/trading-regimes-v1/trading_regimes.npz"),
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("/data/workspace/stage2/native-age-tied-transition.json"),
+    )
     args = parser.parse_args()
     result = run(args.dataset)
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -2,6 +2,12 @@
 
 Current package readiness and next package-level boundary. Detailed model semantics are in [model.md](model.md), configuration and tuning in [configuration.md](configuration.md), validation semantics and accepted package evidence in [validation.md](validation.md), verification policy in [testing.md](testing.md), and release procedure in [release.md](release.md).
 
+## Latest code audit — 2026-10-12
+
+The repository-wide code audit is complete: 787 CPU tests passed, three CUDA-only tests skipped, and AST/Ruff/Black/diff checks passed. Ten production defects were corrected and protected by eleven new regression tests. Legacy emission initializer behavior remains unchanged. Detailed scope, findings, diagnostic corrections and evidence are owned by [testing.md](testing.md#complete-code-audit--2026-10-12).
+
+Earlier 30/40-iteration diagnostic descriptions refer to maximum budgets: the audit found that convergence_stop=False was ignored. Actual fixed-length comparisons and full post-fix statistical acceptance require renewed evidence. The code verification gate is green; no new experiment batch has been run.
+
 ## Current status
 
 **Phase:** independent HSMM correctness milestone complete; package core is accepted for the next integration/research gate. The current model core has been audited for distribution semantics, HSMM recursion, variable-length handling, runtime state, context routing, and Neural context modulation.
@@ -34,7 +40,7 @@ These claims are package/mechanism evidence only. They do not establish trading 
 
 ## Trading synthetic recovery — latest diagnostic
 
-The 2026-10-12 model-conform duration-law pilot finds that all fits recover hard states exactly while their latent duration laws remain imperfect. Moving production joint training from 4 to 40 iterations reduces median duration total variation from 0.310/0.327 to 0.192/0.226 (finite/tail). Fixed temperature improves TV slightly but worsens median labeled tail episode NLL; no default change is justified. Duration-only learning with known frozen nuisance parameters at 80 iterations reaches TV 0.118/0.111, with a different budget. Joint self-transition probabilities remain high; one state's complete tail coverage is only 2/3/0 episodes across seeds. No new mathematical defect is established. Core and defaults are unchanged; Trading recovery and full post-tail-fix statistical acceptance remain open. See [validation.md](validation.md#model-conform-duration-law-pilot--2026-10-12).
+The 2026-10-12 model-conform duration-law pilot finds that all fits recover hard states exactly while their latent duration laws remain imperfect. Increasing the production joint-training maximum budget from 4 to 40 iterations reduces median duration total variation from 0.310/0.327 to 0.192/0.226 (finite/tail). Fixed temperature improves TV slightly but worsens median labeled tail episode NLL; no default change is justified. Duration-only learning with known frozen nuisance parameters at 80 iterations reaches TV 0.118/0.111, with a different budget. Joint self-transition probabilities remain high; one state's complete tail coverage is only 2/3/0 episodes across seeds. That pilot did not establish a mathematical defect. Its metrics predate the subsequent code audit above; Trading recovery and full post-fix statistical acceptance remain open. See [validation.md](validation.md#model-conform-duration-law-pilot--2026-10-12).
 
 ## Production hardening closed on 2026-10-05/06
 

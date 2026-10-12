@@ -78,7 +78,7 @@ def build_artifact(model: NHSMM) -> dict[str, Any]:
         "model_config": config,
         "encoder_config": _encoder_config(encoder),
         "schema": _schema(model.config),
-        "state_dict": {name: tensor.detach().cpu() for name, tensor in state_dict.items()},
+        "state_dict": {name: tensor.detach().cpu().clone() for name, tensor in state_dict.items()},
     }
 
 

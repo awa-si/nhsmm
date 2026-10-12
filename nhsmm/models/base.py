@@ -252,6 +252,7 @@ class NHSMM(nn.Module):
             "n_states",
             "n_features",
             "max_duration",
+            "duration_tail",
             "causal",
             "context_dim",
             "hidden_dim",
@@ -417,7 +418,7 @@ class NHSMM(nn.Module):
         if excess > 0:
             log_continue = torch.where(
                 tail < 1.0,
-                torch.log1p(-tail),
+                (1.0 - tail).clamp_min(torch.finfo(tail.dtype).tiny).log(),
                 torch.full_like(tail, float("-inf")),
             )
             score = score + excess * log_continue
@@ -829,9 +830,20 @@ class NHSMM(nn.Module):
                     boundary_score, boundary_prev_state = candidates.max(dim=0)
                     boundary_prev_age = boundary_age[boundary_prev_state]
 
-                score[t, :, 0] = boundary_score + router.log_probs[b, t]
-                prev_state[t, :, 0] = boundary_prev_state
-                prev_age[t, :, 0] = boundary_prev_age
+                boundary_score = boundary_score + router.log_probs[b, t]
+                if D == 1 and tail_end_probability is not None:
+                    use_boundary = boundary_score > score[t, :, 0]
+                    score[t, :, 0] = torch.maximum(score[t, :, 0], boundary_score)
+                    prev_state[t, :, 0] = torch.where(
+                        use_boundary, boundary_prev_state, prev_state[t, :, 0]
+                    )
+                    prev_age[t, :, 0] = torch.where(
+                        use_boundary, boundary_prev_age, prev_age[t, :, 0]
+                    )
+                else:
+                    score[t, :, 0] = boundary_score
+                    prev_state[t, :, 0] = boundary_prev_state
+                    prev_age[t, :, 0] = boundary_prev_age
 
             flat_index = int(score[L - 1].reshape(-1).argmax().item())
             state = flat_index // D
@@ -1702,7 +1714,7 @@ class NHSMM(nn.Module):
                         delta = ll_val - prev_ll if prev_ll is not None else float("nan")
                         logger.info(f"[Iter {it:03d}] LL={ll_val:.6f} Δ={delta:.3e}")
 
-                    if converged:
+                    if converged and cfg.convergence_stop:
                         if cfg.verbose:
                             logger.info(f"[Run {run_idx + 1}] Converged at iteration {it}.")
                         break

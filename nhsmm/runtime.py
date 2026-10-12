@@ -370,9 +370,10 @@ class HSMMFilterRuntime:
         )
         encoder = _stream_encoder(self.model)
         uses_external_context = context is not None
-        if self._uses_external_context is None:
-            self._uses_external_context = uses_external_context
-        elif uses_external_context != self._uses_external_context:
+        if (
+            self._uses_external_context is not None
+            and uses_external_context != self._uses_external_context
+        ):
             raise ValueError(
                 "context mode is fixed at initialization; reset before changing "
                 "between internal and external context"
@@ -433,6 +434,7 @@ class HSMMFilterRuntime:
                     last_timestamp=timestamp,
                     uses_timestamps=timestamp is not None,
                 )
+                self._uses_external_context = uses_external_context
                 return filter_state
 
             if encoder is not None:
@@ -480,6 +482,7 @@ class HSMMFilterRuntime:
                     last_timestamp=timestamp,
                     uses_timestamps=timestamp is not None,
                 )
+                self._uses_external_context = uses_external_context
                 return filter_state
 
             if getattr(self.model, "encoder", None) is None:
@@ -524,6 +527,7 @@ class HSMMFilterRuntime:
                     last_timestamp=timestamp,
                     uses_timestamps=timestamp is not None,
                 )
+                self._uses_external_context = uses_external_context
                 return filter_state
 
             sequence = self.model._build_sequence_set(obs)
@@ -562,6 +566,7 @@ class HSMMFilterRuntime:
                 last_timestamp=timestamp,
                 uses_timestamps=timestamp is not None,
             )
+            self._uses_external_context = uses_external_context
             return filter_state
 
         previous = self.state
@@ -614,6 +619,7 @@ class HSMMFilterRuntime:
                 last_timestamp=timestamp if previous.uses_timestamps else None,
                 uses_timestamps=previous.uses_timestamps,
             )
+            self._uses_external_context = uses_external_context
             return filter_state
 
         if previous.encoder_state is not None:
@@ -651,6 +657,7 @@ class HSMMFilterRuntime:
                 last_timestamp=timestamp if previous.uses_timestamps else None,
                 uses_timestamps=previous.uses_timestamps,
             )
+            self._uses_external_context = uses_external_context
             return filter_state
 
         if getattr(self.model, "encoder", None) is None:
@@ -686,6 +693,7 @@ class HSMMFilterRuntime:
                 last_timestamp=timestamp if previous.uses_timestamps else None,
                 uses_timestamps=previous.uses_timestamps,
             )
+            self._uses_external_context = uses_external_context
             return filter_state
 
         observations = torch.cat((previous.observations, obs), dim=1)
@@ -719,4 +727,5 @@ class HSMMFilterRuntime:
             last_timestamp=timestamp if previous.uses_timestamps else None,
             uses_timestamps=previous.uses_timestamps,
         )
+        self._uses_external_context = uses_external_context
         return filter_state

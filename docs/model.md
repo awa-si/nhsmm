@@ -162,7 +162,7 @@ A runtime session uses either:
 - the model's no-external-context path, which may be encoderless or use an opted-in internal encoder; or
 - external caller-provided context.
 
-The external-vs-non-external mode is fixed on the first step and cannot change until `runtime.reset()`.
+The external-vs-non-external mode is fixed on the first successful step and cannot change until `runtime.reset()`. A rejected initialization step leaves the mode unset.
 
 ## Causal Float32 recursion
 
@@ -262,6 +262,8 @@ from nhsmm import (
 ```
 
 A loaded model intended for streaming must satisfy the same causal/runtime invariants.
+
+`build_artifact()` returns an independent CPU tensor snapshot. Subsequent model parameter updates do not mutate the built artifact.
 
 ## Integration boundary
 

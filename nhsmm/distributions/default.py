@@ -53,7 +53,7 @@ class Categorical(Distribution):
             if (total <= 0).any():
                 raise ValueError("probs must have positive mass on every batch row")
             self._probs = probs / total
-            self._log_probs = self._probs.clamp_min(EPS).log()
+            self._log_probs = self._probs.log()
             self._logits = self._log_probs
 
     @property
@@ -112,7 +112,8 @@ class Categorical(Distribution):
         return log_probs.gather(-1, value.unsqueeze(-1)).squeeze(-1)
 
     def entropy(self):
-        return -(self._probs * self._log_probs).sum(dim=-1)
+        safe_probs = torch.where(self._probs > 0, self._probs, torch.ones_like(self._probs))
+        return -(self._probs * safe_probs.log()).sum(dim=-1)
 
     def mode(self):
         return self._logits.argmax(dim=self.dim)
