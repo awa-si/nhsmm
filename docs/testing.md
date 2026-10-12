@@ -629,3 +629,32 @@ snapshots retain 704 state rows and 700 common future-return pairs. Every
 and dataset hashes were verified. No source changed after the initial
 45-test/AST/Ruff/Black gate. Production defaults and canonical-suite/NPZ
 verification limits are unchanged.
+
+## Step 10 — age-free HMM decision control, 2026-10-12
+
+tests/test_trading_hmm_control.py verifies the independent NumPy HMM recursion
+against complete prefix state-path enumeration, exact reconstruction of HSMM
+emission/initial restart parameters, their exact transfer to the D1 HMM restart,
+real three-update Gaussian/Student-t optimize paths, D1 duration normalization,
+and production filtering/public likelihood agreement with independent recursion.
+The focused gate passed **48 tests** across this file and the Step 9/8/7,
+redundancy, observation, duration and audit controls. AST/Ruff/Black passed
+before execution; Black reported 128 unchanged materialized Python files.
+
+Three dataset batches execute sequentially, one worker, with OMP/MKL/OPENBLAS
+threads 1 and a 300-second subprocess bound per dataset. Six HMM fits must
+record 120 updates; twelve 40/120 snapshots have 704 state rows and 700 common
+forecast targets. Existing Step 9 HSMM reports supply frozen comparisons.
+Current source/report Git identities were verified through the connector.
+
+    python -m scripts.diagnose_trading_hmm_control --generator-seed 424242 --base-commit 64e48f648bfd3a87b500330d3b99806258885d89 --output docs/validation/results/hmm-control-step10-data424242-native-20261012.json
+
+Repeat for 424243/424244 with matching filenames and the single-thread
+environment. All three bounded runs completed. Source, prior-report and
+dataset hashes, completed update counts and shared target counts were verified.
+All 24 train/test snapshot checks against independent NumPy recursion passed:
+maximum log-posterior discrepancy 5.84e-5, maximum likelihood discrepancy per
+row 1.96e-6, within fixed Float32 tolerances 1e-4/2e-5. No source changed after
+the initial verification gate. No full canonical-suite or frozen-NPZ claim.
+Methods and decision:
+[validation.md](validation.md#age-free-hmm-decision-control--2026-10-12).

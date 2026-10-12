@@ -4,9 +4,9 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
-Step 9 completed six uninterrupted 120-update fits on the three frozen Trading v2 data seeds, evaluating matching 40-update checkpoints. Every checkpoint reproduces Step 8. Training likelihood improves in all fits, but named-state accuracy falls in five of six. All 18 nested training head selections choose the strongest tested ridge (0.1); combined regularization/cross-fitted mean-residual calibration improves all 12 augmented head scores versus fixed heads. No stable dominance over the direct instantaneous observable head emerges. Details: [validation.md](validation.md#trading-calibration-and-optimization-budget-controls--2026-10-12).
+Step 10 completed an age-free D1 HMM control on the three frozen Trading v2 datasets, with six 120-update fits and twelve 40/120 snapshots. Emission/initial restart parameters match the HSMM exactly; all 24 independent NumPy recursion checks pass. HMM–HSMM common-return log-score differences are small and mixed (-0.01797 to +0.02004), while poor named-state recovery persists in both. HSMM accuracy is higher in eight of twelve comparisons, so the result does not justify discarding duration structure. Details: [validation.md](validation.md#age-free-hmm-decision-control--2026-10-12).
 
-Current focused gate: 45 passes; AST/Ruff/Black pass. All source/report/dataset hashes, six 120-update trajectories and twelve common-target snapshots are verified. Head CV shares the all-training representation and is not end-to-end or walk-forward validation. Production defaults and the historical NPZ limit are unchanged. Next: age-free HMM controls and a wider training-only ridge grid, retaining external tests for evaluation.
+Current focused gate: 48 passes; AST/Ruff/Black pass. Source/report/dataset provenance and shared targets are verified. Transition capacity, initial effective persistence, shared training representation and one fit seed remain comparison limits. Production defaults and the historical NPZ limit are unchanged. Decision: stop general duration/budget sweeps; next consolidate one normalized causal observation-contract candidate and its falsifiable control.
 
 ## Structural research findings — 2026-10-12
 

@@ -1921,3 +1921,109 @@ Next: an age-free HMM control on the same targets to separate explicit-duration
 structure from emission/head effects, and a wider training-only penalty grid
 motivated by the internal CV boundary result. External test scores must remain
 evaluation evidence rather than hyperparameter-selection input.
+
+## Age-free HMM decision control — 2026-10-12
+
+Step 10 base: 64e48f648bfd3a87b500330d3b99806258885d89.
+Owner: scripts/diagnose_trading_hmm_control.py. This deliberately narrows the
+next research step to a decision about explicit state-age machinery; the
+proposed wider ridge sweep is deferred. All three Step 9 datasets, feature
+hashes, ranges, window anchors, fit seed 901 and 40/120-update targets are frozen.
+The existing Step 9 HSMM reports are immutable comparison evidence, not refitted
+or replaced. Their source and Git identities were verified.
+
+The maintained production D1 configuration, with duration tail disabled,
+implements an age-free state Markov model. Self-transitions remain allowed;
+observable same-state runs can exceed one row even though the model's episode
+duration is one. Macro-conditioned transitions remain supported. The control
+removes both explicit duration memory and multiple age-specific transition rows.
+Its transition probabilities can vary with macro context; this is not a claim
+of an unconditional stationary geometric run law.
+
+A script-only initializer reconstructs the Step 9 HSMM restart without training
+a prototype, then copies its complete emission and initial-prior parameters to
+the HMM restart. This matches centers, family marginal-variance initialization
+and emission/initial context networks exactly. Both families use the same
+features, macro inputs, optimizer, learning rate, fixed temperature and budget.
+Intermediate weights are captured before update 41. HMM transition capacity and
+context-network draws differ; its initial effective state persistence is not
+matched to the HSMM's duration-induced persistence. The experiment compares
+these bounded configurations, not fully identical parameters or a proof that
+age structure is necessary/unnecessary in general.
+
+Forecast heads hold ridge 0.1 fixed because all Step 9 internal training
+selections chose it. The same training-only out-of-fold mean-residual variance
+calibration is used for HMM and HSMM. No new hyperparameter grid, external-test
+selection or production-default change is performed. The shared training
+representation and non-walk-forward head-fold limitations remain.
+
+An independent NumPy state-only forward/filter recurrence uses the learned
+initial, transition and emission scores, including transition row t-1 for the
+boundary into t. Production D1 duration log mass must be exactly zero. Every
+train/test posterior and public sequence likelihood is compared at both budgets.
+Unit tests additionally compare NumPy recursion against complete prefix path
+enumeration and verify that the reconstructed initializer equals the real
+production optimizer's pre-update checkpoint for Gaussian and Student-t.
+
+### Measured Step 10 results and decision
+
+All six HMM fits completed 120 updates. Twelve 40/120 snapshots retain identical
+704 state-score rows and 700 return targets. All 24 independent train/test
+recursion checks passed; maximum log-posterior discrepancy is 5.84e-5 and
+maximum public likelihood error is 1.96e-6 per row. Source, prior-report and
+dataset provenance was verified. Focused gate: **48 tests passed**.
+
+| Dataset | Family | HMM accuracy40 | HMM accuracy120 | HSMM accuracy120 | HMM return log120 | HSMM return log120 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 424242 | gaussian | 87.07% | 84.66% | 86.08% | 4.61177 | 4.60933 |
+| 424242 | studentt | 85.65% | 70.03% | 80.40% | 4.61108 | 4.61125 |
+| 424243 | gaussian | 70.88% | 71.88% | 71.73% | 4.69482 | 4.69073 |
+| 424243 | studentt | 71.16% | 70.74% | 72.02% | 4.69212 | 4.68808 |
+| 424244 | gaussian | 55.54% | 54.12% | 53.55% | 4.51648 | 4.49645 |
+| 424244 | studentt | 55.82% | 50.57% | 52.98% | 4.50187 | 4.51983 |
+
+
+HMM minus HSMM return log-score differences over all twelve comparisons range
+from -0.01797 to +0.02004 nats per target, with six positive and six negative.
+There is no consistent duration-model forecast advantage at these budgets.
+Named-state accuracy favors the HSMM in eight of twelve comparisons. The
+largest gap is Student-t on dataset 424242 after 120 updates: HMM 70.03%
+versus HSMM 80.40%, despite nearly equal forecast density. State naming and
+next-return prediction are separate objectives.
+
+Both models remain weak on dataset 424244: HMM state accuracy after 120
+updates is 54.12%/50.57% for Gaussian/Student-t versus HSMM 53.55%/52.98%.
+The instantaneous observable head beats all compared augmented HMM/HSMM
+forecast heads on datasets 424243/424244. Removing explicit duration memory
+therefore does not remove the central observed failure. HMM state accuracy
+also falls from 40 to 120 updates in five of six fits. Longer likelihood
+optimization is not a reliable named-regime repair for either model here.
+
+At 40 updates the HMM raw true-state log score is better in all six comparisons,
+even though HSMM hard-state accuracy is usually higher. At 120 updates that
+log-score advantage is mixed. More confident state labels, calibrated
+probabilities and forecast value must not be collapsed into one acceptance
+claim. The reports retain accuracy, Brier, raw log score and return metrics.
+
+**Decision:** retain production families/defaults and stop treating extra
+duration optimization or an HMM default switch as the immediate remedy.
+The control is useful because the recovery/forecast limitations persist in
+both architectures; it does not prove that duration structure has no value.
+The working diagnosis remains the observation/feature contract and its
+alignment with named regimes, informed by Step 6's overlapping-window memory
+and strongly correlated residuals, plus the demonstrated sensitivity to the
+forecast head. Transition capacity, initial persistence, one fit seed and
+incomplete convergence limit causal attribution.
+
+The next work should consolidate this evidence into one explicit observation
+contract candidate with normalized causal scores and a falsifiable control,
+rather than continue general budget/penalty sweeps. This is a research direction,
+not approval of a new production emission family or evidence of live utility.
+
+[Dataset 424242 report](validation/results/hmm-control-step10-data424242-native-20261012.json),
+[424243](validation/results/hmm-control-step10-data424243-native-20261012.json),
+[424244](validation/results/hmm-control-step10-data424244-native-20261012.json)
+record head coefficients, mappings, independent errors and frozen reference
+metrics. Production defaults and the historical NPZ verification limit remain
+unchanged. No full canonical-suite, statistical-significance or trading-utility
+claim.
