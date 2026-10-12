@@ -1385,3 +1385,91 @@ canonical-suite claim; the unavailable historical NPZ verification remains open.
 Next: controlled observation-model/autocorrelation and covariance diagnostics.
 Any production budget or initializer change requires a separate matched
 full-model study rather than applying this fixed-nuisance result universally.
+
+
+## Controlled emission autocorrelation and covariance — 2026-10-12
+
+Step 5 base: 22bb15e3abfe994d6acf354bd117f833e98007f1.
+Owner: scripts/diagnose_emission_dependence.py. Seeds 901/902/903 each share the
+same latent sequences across four observation cases: IID or stationary AR(1)
+residuals (rho 0/0.8), with feature correlation 0/0.75. Training uses 128
+independent 128-row sequences; testing uses 32 independent sequences.
+The known PMF, D+ hazard, initial and 0.02 reset law stay fixed. Observation
+means [-0.75,-0.75]/[0.75,0.75] create overlap. Residuals retain unit per-feature
+population variance and Gaussian marginals. AR residuals continue across
+latent boundaries. Base Gaussian draws and labels are paired across cases;
+train/test noise seeds are independent.
+
+Train-only labeled residuals estimate regime means, shared marginal covariance
+and pooled scalar rho. Eigenvalues have a fixed 1e-6 floor and rho is clipped
+to [-0.95,0.95]. This is privileged supervised nuisance fitting, not unsupervised
+training of new emission families. Test labels enter metrics only. Four
+likelihood arms combine diagonal/full covariance and IID/AR dependence.
+No production or supported-family/default changes.
+
+For the generated AR law, the next mean is
+mu_j + rho * (x_(t-1) - mu_i), conditional on previous state i and current state
+j. Covariance is (1-rho^2) * Sigma; the first row uses stationary Sigma.
+The causal reference propagates (state, age) probabilities with state-pair
+emission densities. It sums over unknown previous states, rather than using
+their true labels or a hard prediction. Each Gaussian branch is normalized
+conditional on the past; normalized transition mixtures preserve normalized
+predictive density. A current-state emission row cannot exactly express this
+particular switched-mean residual law. Past-conditioned neural context may
+approximate dependence but is not automatically equivalent to this edge model.
+
+Seven new tests check stationary variance/covariance/autocorrelation, all-sequence
+prefix reproducibility, density against an independent Torch multivariate normal,
+exact IID collapse, exhaustive state-path likelihood/posterior agreement,
+causal future-mutation/prefix invariance, train-only nuisance fitting and
+nonuniform finite/D+ IID agreement with public NHSMM inference. Public NHSMM
+canonicalizes observations to Float32: that comparison uses identical rounded
+values while retaining the strict 1e-12 Float64 recurrence tolerance.
+
+### Measured Step 5 results
+
+All **48 fixed-parameter filtering comparisons** completed; source hashes were
+verified. No iterative dynamics fit or fit-budget change enters the comparison.
+Train estimates identify AR cases around 0.794–0.806 and IID cases around
+-0.011–0.013. Medians across the three seeds:
+
+| Data | Likelihood arm | Accuracy | Brier, lower better | Log likelihood/row |
+| --- | --- | ---: | ---: | ---: |
+| IID, diagonal | Diagonal IID | 90.16% | 0.1411 | -3.0875 |
+| IID, diagonal | Full AR | 90.14% | 0.1411 | -3.0875 |
+| IID, correlated | Diagonal IID | 85.08% | 0.2211 | -2.9970 |
+| IID, correlated | Full IID | 85.08% | 0.2054 | -2.6079 |
+| AR, diagonal | Diagonal IID | 86.08% | 0.2005 | -3.0174 |
+| AR, diagonal | Diagonal AR | 93.24% | 0.1004 | -2.1862 |
+| AR, correlated | Diagonal IID | 80.27% | 0.3047 | -2.8636 |
+| AR, correlated | Full IID | 80.15% | 0.2797 | -2.5248 |
+| AR, correlated | Diagonal AR | 86.57% | 0.2070 | -2.0978 |
+| AR, correlated | Full AR | 87.70% | 0.1780 | -1.7078 |
+
+Covariance improves density and probability scores on correlated IID data while
+median hard-state accuracy stays unchanged. AR likelihood improves state
+accuracy and probability quality when serial dependence is present. On the
+combined case, full AR improves held-out likelihood over diagonal IID by
+1.1196–1.1798 per row across all seeds, with lower Brier in every seed.
+The IID-diagonal null shows essentially no gain. Brier is mean summed squared
+error against the true-state one-hot vector; state log score is mean log posterior
+probability of the true state. These proper scores assess probability quality,
+not a complete reliability/calibration proof.
+
+These controls demonstrate how conditionally IID diagonal emissions can fail
+despite correct dynamics. They do not establish actual Trading residual
+rho/covariance, prove AR(1) sufficient for markets, or justify a production
+family change. The prototype has known dynamics and privileged train-label
+nuisance estimates. Marginal Student-t tails alone do not represent the Gaussian
+dependence isolated here.
+
+[Raw results](validation/results/emission-dependence-step5-native-20261012.json)
+retain source provenance, observation/label hashes, fitted train statistics,
+per-seed metrics and medians. Final focused gate: **24 passed**; AST/Ruff/Black
+green, 118 materialized Python files unchanged by Black. No new full-suite
+claim; the historical frozen-NPZ check remains open.
+
+The research sequence separates repaired causal self-conditioning, episode/run
+reset ambiguity, sparse tail exposure, short PMF optimization and controlled
+emission-dependence mismatch. Next: diagnose residual dependence on the
+maintained Trading feature path before selecting production changes.

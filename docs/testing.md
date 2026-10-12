@@ -459,3 +459,29 @@ reproduction, 81-entry monotone EM histories and every source/data/report hash
 were verified. Maximum independent held-out likelihood discrepancy:
 4.219e-15 per row. No production change or new full canonical-suite claim;
 the historical frozen-NPZ verification remains open.
+
+
+## Step 5 — controlled emission dependence, 2026-10-12
+
+tests/test_emission_dependence_diagnostic.py checks stationary residual
+marginals/correlation, all-sequence prefix reproducibility, independent Gaussian
+density, IID collapse, exhaustive state-path likelihood/posterior agreement,
+causal prefix/future mutation invariance, train-only nuisance fitting and
+nonuniform finite/D+ agreement with public filtering. The public-input comparison
+uses identical Float32-rounded observations because NHSMM canonicalizes inputs;
+recurrence assertions retain 1e-12 tolerance.
+
+Final native focused gate: **24 passed** (seven new checks, six maintained
+observation controls, eleven audit regressions). AST/Ruff pass; Black reports
+118 unchanged files in the materialized closure. Three seeds and 48 comparisons
+completed within a 180-second bound, one worker and OMP/MKL/OPENBLAS threads 1.
+Source provenance was verified. Reproduction:
+
+    python -m scripts.diagnose_emission_dependence --base-commit 22bb15e3abfe994d6acf354bd117f833e98007f1 --output docs/validation/results/emission-dependence-step5-native-20261012.json
+
+The initial public-input fixtures compared different Float64 versus canonical
+Float32 values and failed by about 1e-8. They were corrected without loosening
+tolerance. The diagnostic was rerun after all focused checks passed.
+No production/default change or new full canonical-suite claim; the historical
+frozen-NPZ check remains open. Methods, results and limits:
+[validation.md](validation.md#controlled-emission-autocorrelation-and-covariance--2026-10-12).
