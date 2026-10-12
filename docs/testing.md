@@ -592,3 +592,40 @@ record exactly 40 updates, each with 704 state rows and identical 700 forecast
 pairs across heads. All source and frozen feature hashes were verified. The
 initial 40-test gate remains the applicable code verification; no source changed
 after execution. No new full canonical-suite or historical-NPZ acceptance claim.
+
+## Step 9 — calibration and optimization budget controls, 2026-10-12
+
+tests/test_trading_calibration_budget.py verifies disjoint and complete
+window folds, invariance of held-out mean predictions to their own block's
+target mutations, deterministic nested ridge selection and refit, frozen
+parameters under external target mutations, raw-unit score agreement with
+an independent Normal distribution, and exact intermediate-weight equivalence
+to separately stopped production fits for both Gaussian and Student-t.
+The initial focused gate passed **45 tests** across this file, Step 8/7,
+redundancy, observation, duration and audit-regression controls. AST/Ruff/Black
+passed before execution; Black reported 126 unchanged materialized Python files.
+
+Three native generator-seed batches run sequentially, one worker, with
+OMP/MKL/OPENBLAS threads 1 and a 600-second subprocess bound per dataset.
+Every family must record 120 production updates. The script captures the
+40-update weights on the same trajectory, verifies them against the immutable
+Step 8 state/fixed-head metrics, and records all pre-update training likelihoods.
+Current dependency/report Git identities were verified through the connector;
+source SHA256 and prior report/dataset hashes accompany each result.
+
+    python -m scripts.diagnose_trading_calibration_budget --generator-seed 424242 --base-commit d98678d2b9b3446181ba89e9e91a096a9c072435 --output docs/validation/results/calibration-budget-step9-data424242-native-20261012.json
+
+Repeat for 424243/424244 with distinct filenames and the same single-thread
+environment. No external test or validation segment is used for ridge selection.
+Head-fold representation sharing, non-walk-forward folds and remaining
+in-sample variance smearing are explicitly disclosed in
+[validation.md](validation.md#trading-calibration-and-optimization-budget-controls--2026-10-12).
+No full canonical-suite or historical-NPZ acceptance claim.
+
+Final Step 9 evidence: all three sequential bounded batches completed;
+six trajectories have exactly 120 production updates. All twelve 40/120
+snapshots retain 704 state rows and 700 common future-return pairs. Every
+40-update checkpoint matched immutable Step 8 scores. Source, prior-report
+and dataset hashes were verified. No source changed after the initial
+45-test/AST/Ruff/Black gate. Production defaults and canonical-suite/NPZ
+verification limits are unchanged.

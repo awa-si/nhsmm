@@ -1792,3 +1792,132 @@ record frozen head parameters, mappings, actual update counts, provenance and
 unfloored state scores. No production change or full canonical-suite claim.
 Next: training-only calibration/regularization controls and longer optimization
 budgets on predeclared independent windows before any default decision.
+
+## Trading calibration and optimization budget controls — 2026-10-12
+
+Step 9 base: d98678d2b9b3446181ba89e9e91a096a9c072435.
+Owner: scripts/diagnose_trading_calibration_budget.py. Generator seeds,
+feature hashes, split ranges, window anchors, fit seed 901, feature/context
+normalization and all model settings inherit Step 8. Gaussian and Student-t
+each execute one uninterrupted 120-update fit per dataset. A script-only hook
+captures weights before update 41, after exactly 40 completed updates.
+Checkpoint state scores and fixed forecast-head scores must match the committed
+Step 8 reports within fixed numerical tolerances before a run is accepted.
+Checkpoint and final weights use the same initialization and optimizer trajectory;
+production optimizer and initialization code are unchanged.
+
+Three fixed ridge candidates (0.001/0.01/0.1) are chosen only inside the eight
+training windows. Four outer folds hold out contiguous pairs of windows.
+Within each outer training set, the mean predictor is cross-fitted by window
+blocks; each window's residual excludes its own block's return targets from
+the mean fit. A ridge regression of log squared out-of-fold mean residuals
+fits the variance predictor. Multiplicative smearing is still fitted in-sample
+for that variance regression; log-variance clip [-12,12] and normalized
+variance floor 1e-6 remain fixed. The candidate maximizing mean outer-fold
+raw-unit next-return log score wins, with deterministic grid order for ties.
+It is then refitted on all training windows, including new out-of-fold mean
+residuals, and frozen before external test evaluation. Ridge selection and
+out-of-fold residual calibration change jointly; the experiment does not
+isolate their individual contributions.
+
+The nested selection compares direct instantaneous and lagged observable heads,
+and the lagged head augmented with each budget's frozen HSMM posteriors.
+Each receives all eight features and macro context; lags remain 0/1/3/12/48.
+Fixed Step 8 heads and the simpler Step 7 posterior-weighted-variance head are
+also evaluated at both checkpoints. All external evaluations use the same
+700 next-return targets and 704 state rows.
+
+Cross-fitting applies to the supervised forecast head, not the representation:
+HSMM parameters and observable standardization use all training windows.
+Held-out head-fold observations can therefore influence the unsupervised
+representation. The outer folds estimate conditional head selection only,
+not end-to-end out-of-sample representation quality. Training folds can include
+later windows than the held-out block and are not walk-forward folds. Neither
+the external validation nor test segment participates in this selection.
+State labels only determine a training-frozen evaluation permutation.
+
+The recorded training likelihood trajectory is the production monitor's
+pre-update likelihood, with a separate likelihood after update 120. More
+updates do not establish convergence; likelihood gain need not improve state
+semantics or next-return forecasts. This bounded synthetic pilot has one
+fit seed, sparse windows and different baseline/HSMM memory representations.
+It cannot establish statistical significance, live-market or trading utility.
+Production defaults and the historical frozen-NPZ verification are unchanged.
+
+### Measured Step 9 results
+
+All six uninterrupted fits completed **120 updates**; all twelve evaluated
+40/120 snapshots have the same 704 state rows and 700 forecast targets.
+Every 40-update checkpoint reproduced Step 8's state and fixed-head scores
+within the predeclared tolerances. Source, prior report and frozen dataset
+hashes were verified. The initial focused gate passed **45 tests**, with
+AST/Ruff/Black green before execution.
+
+| Dataset | Family | Accuracy40 | Accuracy120 | State log40 | State log120 | Training LL gain40→120 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 424242 | gaussian | 88.78% | 86.08% | -1.53671 | -2.03524 | 482.29 |
+| 424242 | studentt | 87.50% | 80.40% | -1.22326 | -1.86174 | 479.52 |
+| 424243 | gaussian | 71.59% | 71.73% | -3.18327 | -2.93544 | 467.02 |
+| 424243 | studentt | 73.15% | 72.02% | -2.69047 | -2.61231 | 475.27 |
+| 424244 | gaussian | 55.26% | 53.55% | -4.70676 | -5.42184 | 570.83 |
+| 424244 | studentt | 55.11% | 52.98% | -4.12150 | -4.61444 | 559.54 |
+
+
+Training likelihood rises by 467–571 nats from updates 40 to 120 across
+the six fits, but state accuracy falls in five of six. The sole gain is
+0.14 percentage points for Gaussian on dataset 424243. State log score
+improves on that dataset for both families and worsens on the other two.
+The last 20 updates still gain 43–84 training nats; convergence is not
+established. Increased observation likelihood does not reliably recover the
+four named regimes under this feature contract. This supports objective and
+representation mismatch as a working hypothesis, not proof of a new
+mathematical implementation defect.
+
+All **18 head selections choose ridge 0.1**, the largest predeclared candidate
+and 100 times the old fixed penalty. The combined tuned/cross-fitted head
+improves predictive log score over the corresponding fixed head in all
+12 family/budget snapshots. This identifies sensitivity to forecast-head
+regularization/calibration, while not isolating their separate contributions
+or establishing a globally optimal penalty. Selection at the grid boundary
+is training evidence for a wider future grid, not permission to select a new
+penalty from these external test outcomes.
+
+Tuned common next-return log scores in raw units (higher is better):
+
+| Dataset | Instant tuned | Lagged tuned | Gaussian40 | Gaussian120 | Student-t40 | Student-t120 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 424242 | 4.60477 | 4.58847 | 4.60949 | 4.60933 | 4.60900 | 4.61125 |
+| 424243 | 4.69552 | 4.67553 | 4.69159 | 4.69073 | 4.69531 | 4.68808 |
+| 424244 | 4.55166 | 4.50654 | 4.50222 | 4.49645 | 4.50404 | 4.51983 |
+
+
+The instantaneous observable baseline has a higher log score than the lagged
+baseline on all three datasets. Posterior augmentation beats the tuned lagged
+baseline on datasets 424242/424243 at both budgets; it loses on 424244 except
+for Student-t at 120 updates. Against the instantaneous baseline, augmented
+heads win only on 424242. Point RMSE is worse than the instantaneous baseline
+for every augmented family/budget snapshot. Thus the added representation
+does not show stable dominance over direct observables, even after head
+calibration and a longer training budget.
+
+Increasing model updates improves the tuned forecast log score in only two
+of six family/dataset comparisons, both Student-t. The remaining four decline.
+The simpler Step 7 posterior-weighted variance head still gives higher log
+scores than the tuned augmented head on datasets 424242/424243 at both budgets.
+On 424244 the instantaneous direct head wins over every tested HSMM head.
+Forecast-head function class, model training objective and named-state recovery
+remain distinct parts of the diagnosis; none supports a production-default
+change by itself.
+
+[Dataset 424242 report](validation/results/calibration-budget-step9-data424242-native-20261012.json),
+[424243](validation/results/calibration-budget-step9-data424243-native-20261012.json),
+[424244](validation/results/calibration-budget-step9-data424244-native-20261012.json)
+record all training likelihoods, selected penalties, nested fold scores,
+head coefficients, permutations, raw state scores and common return metrics.
+Production code/defaults remain unchanged. No full canonical-suite, historical
+frozen-NPZ or trading-utility acceptance claim.
+
+Next: an age-free HMM control on the same targets to separate explicit-duration
+structure from emission/head effects, and a wider training-only penalty grid
+motivated by the internal CV boundary result. External test scores must remain
+evaluation evidence rather than hyperparameter-selection input.
