@@ -1473,3 +1473,95 @@ The research sequence separates repaired causal self-conditioning, episode/run
 reset ambiguity, sparse tail exposure, short PMF optimization and controlled
 emission-dependence mismatch. Next: diagnose residual dependence on the
 maintained Trading feature path before selecting production changes.
+
+
+## Maintained Trading feature residuals — 2026-10-12
+
+Step 6 base: 800a6e6098f443bc4af946584ecb52bd51764fe3.
+Owner: scripts/diagnose_trading_residuals.py. Current v2 generation is repeated
+natively at fixed seeds 424242/424243/424244, each with 60,000 rows, start price
+50,000 and episode-end transition context. This is the maintained synthetic
+Trading generator/feature path, not real-market data or a reconstruction of
+the unavailable legacy v1 NPZ. All runs report schema
+nhsmm-synthetic-trading-regimes-v2 and feature/label/episode hashes.
+
+The eight canonical benchmark features are used directly. Contiguous ranges
+are train [0,36000), validation [36000,48000), test [48000,60000); this residual
+study does not use the benchmark's sampled-window training protocol. Means and
+scales use training rows only. Training state labels define oracle state means.
+Within-episode training pairs fit each feature's own-lag AR(1) and a full VAR(1),
+both with intercepts and fixed slope ridge 1e-4. Intercepts are unpenalized.
+All fitted parameters are frozen before validation/test residuals are computed.
+
+The variants are state-mean-centered features, diagonal AR(1) innovations and
+VAR(1) innovations. Lag pairs at 1/3/12/48 stay inside both split and ground-truth
+episode; first episode/split rows have no AR/VAR innovation. Monotone episode IDs
+prevent joining recurring regimes across a boundary. Test labels condition
+diagnostic summaries only; these oracle controls are not live predictors,
+actual fitted NHSMM innovations, or normalized observation likelihoods.
+No test/validation-driven parameter or feature selection is performed.
+
+### Measured Step 6 residual evidence
+
+The table reports median absolute test ACF per feature over the twelve
+seed/regime cells, giving each cell equal weight:
+
+| Feature | State-centered lag 1 | Own-lag AR innovation lag 1 | VAR innovation lag 1 |
+| --- | ---: | ---: | ---: |
+| log_return_1 | 0.1505 | 0.0192 | 0.0155 |
+| log_return_3 | 0.6737 | 0.1315 | 0.1839 |
+| log_return_12 | 0.9168 | 0.1485 | 0.0522 |
+| trend_12 | 0.8721 | 0.1570 | 0.0164 |
+| trend_48 | 0.9717 | 0.1646 | 0.0226 |
+| ewma_vol_12 | 0.8913 | 0.0200 | 0.0165 |
+| ewma_vol_48 | 0.9875 | 0.0161 | 0.0132 |
+| volume_z_48 | 0.1156 | 0.0195 | 0.0186 |
+
+VAR does not uniformly dominate own-lag AR. More importantly, low lag-1 ACF
+does not establish whiteness: after VAR, log_return_3 retains median signed
+lag-3 ACF **-0.3193** (all cells -0.3992 to -0.2606); log_return_12 retains
+lag-12 ACF **-0.3760** (all cells -0.4815 to -0.3248).
+Finite overlapping return windows therefore leave moving-window memory
+that a one-lag AR/VAR control does not remove.
+
+| Test statistic, median over twelve cells | State centered | Own-lag AR | VAR |
+| --- | ---: | ---: | ---: |
+| Maximum absolute cross-feature correlation | 0.8528 | 0.9836 | 0.9972 |
+
+The smallest innovation correlation eigenvalue has median **1.403e-5** after
+VAR, versus 0.06972 before AR removal. VAR innovations most strongly correlate
+log_return_1 with trend_12 or trend_48. Removing predictable memory exposes
+nearly duplicated contemporaneous shocks, so diagonal innovation covariance
+is still a poor assumption for this full feature vector. This is conditional
+oracle evidence; fitted context/age dependence in a full NHSMM could change
+the residual law.
+
+Gaussian residual shape is also incomplete: maximum held-out VAR innovation
+excess kurtosis is **304.67**, in seed 424244 bull ewma_vol_48 (3,654 rows).
+The state-centered maximum is 21.90. Maxima are descriptive tail-sensitive
+sample statistics, not distributional hypothesis tests or universal population
+kurtosis estimates. The generator has jumps and nonlinear volatility features.
+
+Source inspection supports the mechanisms: log_return_3/12 use overlapping
+price windows, trend_12/48 reuse overlapping price means, and ewma_vol_12/48
+filter the same squared returns. A single AR(1) addition does not solve remaining
+window memory, innovation redundancy and heavy tails together. Student-t
+marginals can address some tails but do not supply cross-feature covariance or
+moving-window dependence. Earlier synthetic AR/full-covariance controls
+identified those mechanisms separately; this study confirms them on the
+maintained synthetic feature path, not on live market residuals.
+
+[Raw results](validation/results/trading-residual-step6-native-20261012.json)
+preserve train parameters, all split/state/variant statistics, signed ACFs,
+pair counts, covariance spectra and kurtosis. Source hashes were verified.
+Final focused gate: **32 passed** across residual, observation, redundancy,
+edge-emission and audit tests; AST/Ruff/Black green. Production implementation
+and defaults are unchanged; no new canonical full-suite or trading acceptance
+claim. The historical frozen-NPZ test remains unresolved.
+
+Next: a matched feature/observation-contract comparison targeting window memory
+and duplicated shocks, evaluated on common held-out state/predictive outcomes.
+Raw densities across different feature dimensions must not be compared as if
+they described the same observation target. Any production emission change
+requires an explicit supported model contract and separate inference/runtime
+verification.

@@ -485,3 +485,37 @@ tolerance. The diagnostic was rerun after all focused checks passed.
 No production/default change or new full canonical-suite claim; the historical
 frozen-NPZ check remains open. Methods, results and limits:
 [validation.md](validation.md#controlled-emission-autocorrelation-and-covariance--2026-10-12).
+
+## Step 6 — maintained Trading feature residuals, 2026-10-12
+
+tests/test_trading_residual_diagnostic.py checks episode-safe lag pairing even
+when regimes recur, train-only fitting under held-out mutations, omission of
+the first split/episode row from AR/VAR innovations, independent IID and AR
+controls, and explicit null statistics for constant features in strict JSON.
+Initial focused gate: five tests passed. AST/Ruff pass; Black reports 120
+unchanged materialized Python files. Production code/defaults are unchanged.
+
+The bounded diagnostic uses current native v2 generation at seeds
+424242/424243/424244, 60,000 rows each, start price 50,000 and episode-end
+transition context. It uses contiguous 60/20/20 chronological splits, not
+the benchmark's sampled windows. Training state labels define oracle residual
+means and one-step AR/VAR controls; test labels are diagnostic conditioning only.
+No likelihood, state-recovery or live predictor acceptance claim is made.
+This generated v2 data does not replace the unavailable historical v1 NPZ.
+
+Reproduction with one worker and OMP/MKL/OPENBLAS threads 1:
+
+    python -m scripts.diagnose_trading_residuals --base-commit 800a6e6098f443bc4af946584ecb52bd51764fe3 --output docs/validation/results/trading-residual-step6-native-20261012.json
+
+The execution bound is 180 seconds. Source hashes and feature/label/episode
+hashes are recorded. Methods and measured evidence belong to
+[validation.md](validation.md#maintained-trading-feature-residuals--2026-10-12).
+
+
+Final Step 6 native gate: **32 passed** across the new residual tests,
+maintained observation/redundancy controls, edge-emission checks and audit
+regressions. AST/Ruff pass; Black reports 120 unchanged files in the materialized
+closure. All three native v2 generations and train/validation/test summaries
+completed within the run bound. Source provenance was verified. This adds
+research diagnostics/evidence only; the full canonical suite was not rerun and
+the unavailable legacy NPZ check remains open.

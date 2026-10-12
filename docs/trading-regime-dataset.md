@@ -80,3 +80,17 @@ Reference artifacts generated under `/data/workspace/nhsmm-trading-regimes-v1`:
 - `trading_regimes.npz`: SHA-256 `370e6e9e87e52d779ea208111eeb2e03b0bf21f8b7e88859fcc8c19ac2739fb4`
 - `trading_regimes.csv.gz`: SHA-256 `fd9732c7723622987098fa497da79286034bb04b62c5657c2f75b1393e35ebf2`
 - `manifest.json`: episode ledger and full generator contract; 693 episodes total.
+
+
+## Current feature residual research
+
+scripts/diagnose_trading_residuals.py evaluates the maintained eight-feature
+Trading path with fresh native v2 generation (episode_end), fixed generator
+seeds 424242/424243/424244 and the full chronological 60/20/20 split.
+Training labels define oracle state-centered residuals and fixed AR/VAR
+controls; held-out labels condition diagnostics only. This is not live predictor
+or trading-utility acceptance and does not replace the frozen v1 binary reference.
+It records source/array hashes and episode-safe ACF/covariance/tail statistics.
+
+The measured feature-window dependence and nearly duplicated innovations are
+owned by [validation.md](validation.md#maintained-trading-feature-residuals--2026-10-12).
