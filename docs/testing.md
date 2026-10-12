@@ -62,6 +62,8 @@ pytest -q
 
 `tests/test_trading_causal_decisions.py` checks the script-local prefix MAP endpoint and committed-state rules against independent exhaustive probability-space paths, finite and D+ support, prefix invariance, batch equivalence and impossible-support failure.
 
+`tests/test_trading_observation_controls.py` verifies training-only diagnostic generator moments, Gaussian marginal statistics and AR(1) autocorrelation, prefix reproducibility, held-out feature mutation isolation and strict JSON missing-state reporting.
+
 ## HSMM research/correctness milestone gate
 
 The independent HSMM correctness milestone is owned by this testing contract. Its acceptance harness should live under `tests/reference/` and remain deliberately independent from optimized production recursion.

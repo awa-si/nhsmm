@@ -36,3 +36,7 @@ This directory retains machine-readable historical evidence only. Narrative poin
 ## Trading causal decision rules
 
 - [results/causal-decisions-v2-2026-10-11.json](results/causal-decisions-v2-2026-10-11.json) — matched zero-lag rule comparison; interpretation is maintained in [../validation.md](../validation.md#trading-causal-decision-rule-pilot--2026-10-11).
+
+## Trading observation controls
+
+- [results/observation-controls-v2-2026-10-12.json](results/observation-controls-v2-2026-10-12.json) — labeled generative controls with matched latent/context trajectories; interpretation is maintained in [../validation.md](../validation.md#trading-observation-control-pilot--2026-10-12).

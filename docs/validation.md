@@ -636,3 +636,102 @@ PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
 Per-seed scores, emitted paths, prefix endpoint ages and execution provenance:
 [causal-decisions-v2-2026-10-11.json](validation/results/causal-decisions-v2-2026-10-11.json).
+
+
+## Trading observation-control pilot — 2026-10-12
+
+Source base: `ce41788846b72e7740ffbde134462d7d6007edef`.
+Original corrected dataset SHA256:
+`16cab157954b32f11af274bd617d6811a3776e81eb926a3f1dae80c954d7a1f8`.
+Same frozen latent states, episode ages and macro context, chronological windows,
+eight features, training-only scaling and variance-aware K-Means setup as the
+preceding pilot: eight training/four OOS windows of 240 rows, optimization seeds
+901/902/903, four joint iterations and two transition-refinement steps.
+
+Four arms were fixed before execution:
+- Trading: unchanged original observations; exactly reproduces the prior
+  marginal-filter summary.
+- Matched IID: diagonal-Gaussian observations generated using per-regime means
+  and variances estimated from labeled training windows only; variances have a
+  1e-8 floor.
+- Matched AR(1): same population Gaussian marginals, with standardized residual
+  correlation rho=0.9. Both matched arms use the same base Gaussian innovations.
+  Residuals begin stationary. Finite-sample moments and separately fitted
+  training scalers may differ.
+- Separated IID: fixed four-state one-hot codebook with amplitude 4 in the first
+  four of eight features, independent Gaussian noise standard deviation 0.35.
+
+Labels explicitly define the synthetic generating laws and are used for scoring;
+they are never passed into optimize or used to choose a decoder. Matched moments
+are a supervised diagnostic construction, not an unsupervised learned
+transformation or a deployable trading feature pipeline. The synthetic controls
+therefore are not new trading-recovery acceptance evidence.
+
+Medians across optimization seeds; every arm has eight true state changes:
+
+| Observation arm | Decoder | Accuracy | ARI | Boundary F1 ±5 | Run-duration error | Switches |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Trading | Causal filter | 79.69% | 0.5650 | 0.1449 | 90.97% | 61 |
+| Matched IID | Causal filter | 96.46% | 0.9189 | 0.3721 | 81.25% | 35 |
+| Matched AR(1) | Causal filter | 78.44% | 0.6147 | 0.2400 | 82.31% | 42 |
+| Separated IID | Causal filter | 100.00% | 1.0000 | 1.0000 | 0.00% | 8 |
+| Trading | Retrospective Viterbi | 81.25% | 0.5936 | 0.3182 | 82.38% | 36 |
+| Matched IID | Retrospective Viterbi | 99.27% | 0.9817 | 0.9412 | 2.14% | 9 |
+| Matched AR(1) | Retrospective Viterbi | 80.42% | 0.6492 | 0.4000 | 55.31% | 27 |
+| Separated IID | Retrospective Viterbi | 100.00% | 1.0000 | 1.0000 | 0.00% | 8 |
+
+All three separated-IID fits recover the state sequence and its hard run lengths
+exactly. This demonstrates that fragmentation is not unavoidable in the current
+filter/training path under very strong independent state evidence.
+
+The paired matched-IID/AR(1) contrast supports investigating observation temporal
+dependence: introducing rho=0.9 lowers median causal accuracy from 96.46% to
+78.44%, and retrospective boundary F1 from 0.9412 to 0.4000. It is not a universal
+per-seed effect. Matched-IID causal accuracy is 98.96%, 75.52%, 96.46% for seeds
+901/902/903; the corresponding AR(1) values are 78.44%, 78.12%, 82.29%.
+Thus initialization/local-fit sensitivity remains important even for IID Gaussian
+observations. Causal matched-IID recovery still has many extra switches and fails
+median boundary/duration thresholds.
+
+Replacing Trading with matched IID simultaneously changes non-Gaussian tails,
+within-row feature dependence and temporal dependence. That comparison alone
+does not isolate rolling-feature correlation, and this batch does not prove that
+rho=0.9 describes actual Trading residuals.
+
+Perfect hard state runs do not establish recovered episode-duration parameters.
+Separated-IID learned episode medians at zero standardized context remain 32–34
+bars in every fit, near the initial duration law. They are reported in learned
+state order in JSON. The original duration families are non-geometric and their
+tail is not exactly the model's geometric D+ law; unchanged window initialization
+also starts age one inside sampled episodes. This is not an exactly model-conform
+duration-learning test. Duration learning and transition-law recovery require
+their own controlled parameter tests rather than inference from high accuracy.
+
+All optimization seeds share one observation-generation seed (56001) and the same
+latent/context trajectory. They measure fitting sensitivity, not independent
+dataset replication or statistical significance. Likelihoods are retained only
+as within-arm train/OOS density measurements; cross-arm observations differ.
+Core, public decoder, training policy and defaults are unchanged. Full corrected
+Trading recovery acceptance and post-tail-fix statistical revalidation remain open.
+
+Execution: AWA job `bb8845343a6849df8d08625c745199a1`, exit 0, 103.560 seconds,
+hard timeout 300 seconds. Syntax/static and CLI checks passed before the
+one-seed/one-iteration four-arm smoke. Smoke plus the six generator/report tests
+completed in 76.505 seconds. The combined observation-control, causal-decision
+and boundary-evidence suites passed all 20 tests. Tests cover known moment
+statistics, training-only moment fitting, population Gaussian marginals and AR(1)
+autocorrelation, reproducibility, prefix invariance, invalid support and explicit
+missing-state penalties with strict JSON encoding. Ruff, Black and diff-check
+passed. No full package rerun is required for this script/test/evidence-only change.
+
+Reproduction:
+
+```bash
+PYTHONPATH=/workspace OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+  /work/env/nhsmm/bin/python scripts/diagnose_trading_observation_controls.py \
+  --dataset /data/workspace/nhsmm-trading-regimes-v2/trading_regimes.npz \
+  --output /data/workspace/stage2/observation-controls-v2-2026-10-12.json
+```
+
+Per-seed scores, learned durations, observation hashes and generator parameters:
+[observation-controls-v2-2026-10-12.json](validation/results/observation-controls-v2-2026-10-12.json).
