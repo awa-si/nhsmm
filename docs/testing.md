@@ -308,3 +308,8 @@ retention and artifact migration together; convert acceptance failures to passin
 regressions, run affected and full canonical suites, update documentation and
 push that completed production stage before advancing to self-reset/duration
 identifiability work.
+
+
+## Native Torch tail-boundary compatibility — 2026-10-12
+
+Native PyTorch 2.14.1+cpu returns a zero clamp derivative at the exact feasible tail bounds EPS and 1. Existing projected-tail recovery tests therefore failed after moving from the earlier AWA runtime. Duration.tail_probability now uses explicit strict outside-domain branches: values and exact h=1 support remain unchanged, the derivative is one inside the feasible domain including its endpoints, and zero outside. Four new Float32/Float64 endpoint-gradient regressions and the maintained tail suites passed: **30 passed**. Ruff and Black passed. This is an isolated numerical prerequisite for the predictive-neural migration, not statistical recovery acceptance or completion of Step 1.2.

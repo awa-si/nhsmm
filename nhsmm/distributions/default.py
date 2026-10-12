@@ -721,7 +721,14 @@ class Duration(Neural):
         """
         if self.tail_end_probability is None:
             return None
-        return self.tail_end_probability.clamp(min=EPS, max=1.0)
+        tail = self.tail_end_probability
+        # Preserve a feasible-domain derivative at the exact compatibility
+        # boundaries. clamp's endpoint derivative varies across Torch versions.
+        return torch.where(
+            tail < EPS,
+            torch.full_like(tail, EPS),
+            torch.where(tail > 1.0, torch.ones_like(tail), tail),
+        )
 
     def log_matrix(
         self,
