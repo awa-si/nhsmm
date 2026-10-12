@@ -255,3 +255,56 @@ data = nautilus
 AWA mounts the dataset read-only at `/data/nautilus`; do not copy the dataset into the repository or workspace.
 
 The maintained current state-count evidence is recorded in [`validation/README.md`](validation/README.md). Re-run that comparison after material model/training/decoder changes or changes to the Nautilus 18-D observation mapping.
+
+
+## Step 1.1 — predictive neural acceptance contract, 2026-10-12
+
+The first implementation step is split at its semantic boundary. This stage
+freezes executable acceptance requirements before changing model/runtime
+behavior or interpreting stored encoder artifacts under new timing semantics.
+Production migration is pending; none of the strict expected failures below is
+a claim that normalization has been fixed.
+
+For causal internal observation-derived context, let c_t encode observations
+through t and let c_-1 be a fixed zero start context:
+
+| Quantity | Allowed internal information |
+| --- | --- |
+| Initial-state prior | c_-1, independent of the first observation |
+| Emission for x_t | c_(t-1), excluding x_t |
+| Boundary propagation from t-1 to t | c_(t-1), preserving existing boundary timing |
+| Context cached after accepting x_t | c_t, for the following observation |
+
+The implementation must separate emission context from the context retained for
+duration/transition forecasts. Shifting every distribution's context would delay
+the existing boundary semantics by an extra row and is not the intended repair.
+
+Acceptance owner: `tests/test_predictive_neural_contract.py`.
+It checks strict past-only emission context, observation-independent initial
+context, zero-start incremental runtime emission, normalization of a one-row
+density, normalization of a predictive density after a fixed prefix, and a
+normalized held-fixed external-context control. Quadrature uses 28,001 points
+over [-12,16] with absolute normalization tolerance 2e-5.
+
+Two additional boundaries are explicit:
+- Legacy v1 encoder artifacts must not be silently reinterpreted under changed
+  emission/prior timing. A versioned predictive artifact contract and explicit
+  rejection/retraining guidance are required. Encoderless legacy compatibility
+  is to be preserved.
+- Bidirectional/noncausal observation-derived encoder scores must not be exposed
+  as a normalized generative likelihood merely by lagging an emission row.
+  Generative likelihood/training must reject that unresolved interpretation;
+  any retained retrospective conditional-score API needs explicit semantics.
+  Encoderless noncausal HSMMs are a separate supported model class.
+
+Observed native gate: **19 passed, 7 strict expected failures** in the combined
+new-contract, code-audit and duration-diagnostic suite. The seven expected
+failures reproduce current gaps; strict XPASS forces removal of a pending mark
+when its production repair is integrated. Ruff and Black passed. No full-suite
+or statistical-acceptance claim is made for this preparatory contract stage.
+
+Next step 1.2: implement batch emission/prior timing, bounded runtime context
+retention and artifact migration together; convert acceptance failures to passing
+regressions, run affected and full canonical suites, update documentation and
+push that completed production stage before advancing to self-reset/duration
+identifiability work.

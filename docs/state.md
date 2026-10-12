@@ -2,6 +2,10 @@
 
 Current package readiness and next package-level boundary. Detailed model semantics are in [model.md](model.md), configuration and tuning in [configuration.md](configuration.md), validation semantics and accepted package evidence in [validation.md](validation.md), verification policy in [testing.md](testing.md), and release procedure in [release.md](release.md).
 
+## Stepwise repair — current checkpoint
+
+Step 1.1 freezes the predictive neural likelihood acceptance contract; native focused verification reports 19 passes and seven strict expected failures reproducing current production gaps. The repair is **not yet implemented**. Step 1.2 will migrate batch, streaming and encoder artifact timing together, then run the full canonical suite before the next research step. Details are owned by [testing.md](testing.md#step-11--predictive-neural-acceptance-contract-2026-10-12).
+
 ## Structural research findings — 2026-10-12
 
 General neural generative-likelihood normalization is **open**: current-observation-conditioned emissions admit a supported counterexample whose score integrates above one. Fixed-score HSMM inference verification remains separate. An exact allowed self-reset/tail counterexample also disproves unrestricted episode-duration identifiability. The native fit has imperfect observable run laws despite perfect hard-state recovery. Findings and prioritized controlled comparisons are owned by [validation.md](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12). No production behavior or defaults changed in this research stage.
