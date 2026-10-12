@@ -246,6 +246,17 @@ def generate(
     for i, name in enumerate(REGIMES):
         data[f"gt_p_next_{name}"] = transition_prob[:, i]
 
+    if transition_context_mode == "episode_end":
+        # Preserve the existing observed-file residual label. The simulator
+        # also knows the latent residual life when the final episode is cut.
+        data["gt_latent_remaining_duration"] = planned_duration - age
+        censoring = np.zeros(rows, dtype=np.int64)
+        for item in episodes:
+            item["right_censored"] = item["realized_duration"] < item["planned_duration"]
+            if item["right_censored"]:
+                censoring[item["start_row"] : item["end_row_exclusive"]] = 1
+        data["gt_episode_right_censored"] = censoring
+
     metadata = {
         "schema": (
             "nhsmm-synthetic-trading-regimes-v2"
@@ -285,6 +296,13 @@ def generate(
             "gt_* columns are evaluation labels and must never be model inputs"
         ),
     }
+    if transition_context_mode == "episode_end":
+        metadata["ground_truth_semantics"] = {
+            "gt_remaining_duration": "future rows observed in this file within the episode, excluding current row; may be zero at a censored file end",
+            "gt_latent_remaining_duration": "planned_duration minus episode_age; simulator-known future episode rows, excluding current row",
+            "gt_episode_right_censored": "1 for rows of an episode truncated by the file end; evaluation-only future label",
+            "gt_p_next": "episode-boundary transition probabilities copied onto all episode rows; only boundary rows use contemporaneous macro context",
+        }
     return data, metadata
 
 

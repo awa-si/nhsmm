@@ -658,3 +658,30 @@ row 1.96e-6, within fixed Float32 tolerances 1e-4/2e-5. No source changed after
 the initial verification gate. No full canonical-suite or frozen-NPZ claim.
 Methods and decision:
 [validation.md](validation.md#age-free-hmm-decision-control--2026-10-12).
+
+## Step 11 — Trading ground-truth and HSMM contract audit, 2026-10-12
+
+New tests cover closed-form gamma2/Weibull CDF checks, clipped PMF support and
+normalization, exact finite-D core hazard agreement, geometric-projection
+normalization/mean/overflow, ledger corruption detection, latent/observed
+remaining-life distinction, additive v2 censor labels, unchanged v1 schema
+and exclusion of partial first episodes from complete-window counts.
+
+65 focused tests passed across the new audit, dataset, boundary, causal
+decisions, HMM, calibration, information, feature-contract, duration and audit
+regressions. Six benchmark-metric tests also passed; the unavailable historical
+legacy NPZ check was deselected. AST/Ruff/Black passed; Black reported 130
+unchanged Python files. A 3000-row pre-change legacy control confirms identical
+array and metadata hashes after the v2-only addition. It does not resolve the
+historical frozen NPZ limitation.
+
+The audit uses one worker, OMP/MKL/OPENBLAS threads1 and a 180-second bound,
+three native 60000-row datasets and 20000 independent duration draws/state.
+The initial diagnostic was superseded by a complete rerun after the v2-only
+label extension; only the final source-hash-matched report is committed.
+
+    python -m scripts.diagnose_trading_ground_truth --base-commit d1686859e2fc4efb0eb58f2441d23bba56238760 --output docs/validation/results/ground-truth-step11-native-20261012.json
+
+Methods, measured compatibility gaps and the revised isolated-HSMM gate:
+[validation.md](validation.md#trading-ground-truth-and-hsmm-contract-audit--2026-10-12).
+No new full canonical-suite or frozen-NPZ acceptance claim.

@@ -2027,3 +2027,141 @@ record head coefficients, mappings, independent errors and frozen reference
 metrics. Production defaults and the historical NPZ verification limit remain
 unchanged. No full canonical-suite, statistical-significance or trading-utility
 claim.
+
+## Trading ground-truth and HSMM contract audit — 2026-10-12
+
+Step 11 base: d1686859e2fc4efb0eb58f2441d23bba56238760.
+Owner: scripts/diagnose_trading_ground_truth.py. This rechecks the generator
+and the HSMM-specific interpretation directly, rather than treating the
+HMM/HSMM forecast comparison as duration recovery evidence.
+
+### Ground-truth correctness and label repair
+
+All three frozen v2 generations pass ledger-to-row checks for episode IDs,
+regime IDs, ages, planned and observed lengths, nonself episode transitions,
+macro-conditioned boundary probabilities, OHLCV consistency and rolling return
+identities. Generation at 1100 rows reproduces the first 1100 rows of all 16
+non-GT columns of the 60000-row generation exactly. Code inspection confirms
+causal feature construction; this prefix check is bounded evidence, not an
+exhaustive test of every possible prefix. Regime truth means the generating
+specification, not the sign of every realized return.
+
+The final episodes are right-censored: realized/planned lengths are
+27/37, 112/168 and 20/103 for seeds 424242/424243/424244. The old
+gt_remaining_duration is zero at the final row in all three despite latent
+residual lives 10/56/83. The field counts remaining rows observed in the file,
+not always the complete latent episode. Treating it as latent remaining life
+would therefore mislabel the terminal episode.
+
+Corrected v2 now adds gt_latent_remaining_duration = planned_duration-age,
+gt_episode_right_censored, explicit ledger right_censored flags and metadata
+definitions. The old observed-file residual field is preserved. Neither
+observations nor pre-existing label arrays change. The legacy episode_start/v1
+path receives no new fields or metadata: every array and metadata hash in a
+3000-row pre-change control matches afterward. This is separate from the
+still-unavailable historical frozen v1 NPZ verification.
+
+The gt_p_next_* fields are boundary-conditioned probabilities copied onto
+every episode row. In v2 their context can be future information for an
+interior episode row. They are evaluation labels, not model inputs or a
+contemporaneous forecast target away from a true boundary. The maintained
+transition MAE uses actual boundaries, which is consistent with this contract.
+
+### The duration class does not match the current Trading generator
+
+Exact discrete PMFs are derived from the generator's continuous CDFs, rounding
+and clipping, including probability atoms at clipped endpoints. Independent
+duration samples (20000/state, fixed fresh seeds) pass a predeclared CDF error
+bound 0.02. Core finite-duration hazards agree with these exact PMFs to 1e-12.
+
+| Regime | Maximum true duration | Probability duration >=64 | KL-optimal geometric-tail hazard | Projection TV | KL nats/episode |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bull | 260 | 97.409% | 0.016391 | 0.22212 | 0.15942 |
+| bear | 240 | 74.439% | 0.019316 | 0.07984 | 0.05665 |
+| range | 250 | 56.425% | 0.011577 | 0.30024 | 0.42639 |
+| chaotic | 105 | 7.373% | 0.066606 | 0.00626 | 0.01381 |
+
+The previous D64-plus-tail configuration distinguishes ages 1–63 and collapses
+age >=64 into one bucket with a constant per-state end hazard. In particular,
+most bull duration mass and the longer mode of range fall into that bucket.
+Their clipped, nonconstant tail hazards cannot equal one static geometric
+tail. Even its KL-optimal moment-matched projection assigns 3.76%/2.36%/6.39%/
+0.41% probability beyond each regime's true maximum.
+
+These are exact static no-self-reset duration projections, not minimum-TV
+bounds and not lower bounds on every context-modulated, compound-reset or
+state-splitting model. They identify a specific latent-duration contract
+mismatch, not a mathematical error in the geometric-tail implementation.
+The core finite-D hazard conversion passes the independent exact-law check.
+
+### Reset semantics, observation windows and the old metric
+
+The generator forbids same-state episode renewals. NHSMM permits an episode
+to end and restart in the same state, resetting latent age without changing
+the visible regime. Thus a learned episode PMF is not necessarily the
+ground-truth same-state run PMF. A long visible run may be composed of multiple
+short latent episodes. This is the identifiability issue already established
+by the earlier exact self-reset counterexample, not a newly proven recursion bug.
+
+All twelve pilot test windows start and end inside true episodes. In six of
+them, the initial left-censored episode still continues after the 64-row
+warmup. initialize_filter starts mass at age1, which is correct for a fresh
+episode but not the joint state-age prior of an arbitrary mid-episode window.
+Warmup does not prove that the missing true initial age has been recovered.
+
+Complete episodes fully contained in the pilot windows:
+
+| Dataset | Training complete episodes | Test complete episodes | Test counts bull/bear/range/chaotic |
+| --- | ---: | ---: | --- |
+| 424242 | 13 | 4 | 0/1/2/1 |
+| 424243 | 13 | 2 | 1/0/1/0 |
+| 424244 | 16 | 9 | 2/1/3/3 |
+
+Partial episodes also contribute survival information, so these are not counts
+of all usable information. They demonstrate sparse complete-boundary exposure.
+The larger maintained 480-row/24-train/8-test protocol is separately audited
+in the report and must not be conflated with the smaller recent pilots.
+
+The maintained duration_recovery acceptance key compares medians of filtered
+argmax state runs, with first/last truncated runs included. It is a state-run
+proxy, not censored episode-PMF or hazard recovery. For dataset 424242 its
+ground-truth bull window median is 50 rows despite a full-ledger completed
+bull median 123.5 and no fully contained bull test episode. Exact hard-state
+recovery can pass that proxy while the learned latent duration law remains
+wrong. Steps 7–10 did not estimate duration-PMF recovery from their state and
+forecast scores.
+
+### Research interpretation and revised next gate
+
+Yu's review of explicit-duration HSMMs describes zero same-state episode
+transition probabilities and distinguishes boundary/inference assumptions.
+Bulla et al.'s HSMM package paper explicitly treats terminal occupancy as
+right-censored. These are relevant contract choices, not instructions to
+silently change this repository's generalized model.
+
+Primary references:
+- [Yu, Hidden semi-Markov models, 2010](https://www.cs.ubc.ca/~murphyk/Teaching/CS540-Spring10/projects/Yu-hsmm09.pdf), explicit-duration formulation and boundary conditions.
+- [hsmm — An R package for analyzing hidden semi-Markov models, 2010](https://www.sciencedirect.com/science/article/pii/S016794730800426X), terminal right-censoring (publisher abstract retrieved; full-page access returned403).
+- [Johnson and Willsky, Bayesian Nonparametric Hidden Semi-Markov Models](https://arxiv.org/abs/1203.1365), explicit-duration model/inference context.
+
+The diagnosis must therefore include duration-class mismatch, latent renewal
+semantics, mid-episode initialization, sparse exposure and an unsuitable
+duration acceptance interpretation, alongside the previously measured emission
+dependence and optimization effects. The earlier focus on observations alone
+was too narrow. No new evidence establishes that the HSMM recursion itself is
+incorrect.
+
+Next: isolate the HSMM mechanism using a finite support covering260, forbidden
+same-state renewals for that controlled experiment, episode-aligned starts
+or a valid initial state-age distribution, and censored episode likelihood/
+hazard scoring. First use known/matched emissions and transitions; only then
+reintroduce the Trading observation features and joint nuisance learning.
+This separates representability, inference correctness and optimizer recovery.
+It is a controlled research specification, not a production-default migration.
+
+Final verification: 65 focused tests plus six benchmark-metric checks pass
+(**71 total**); the unavailable historical NPZ check is explicitly deselected.
+AST/Ruff/Black pass. The final audit was rerun after the additive v2 label
+repair; source/prior-report/frozen feature hashes were verified.
+[Raw Step 11 report](validation/results/ground-truth-step11-native-20261012.json)
+contains exact PMFs, hazards, projections, window counts and ground-truth checks.

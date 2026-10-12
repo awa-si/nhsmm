@@ -4,9 +4,9 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
-Step 10 completed an age-free D1 HMM control on the three frozen Trading v2 datasets, with six 120-update fits and twelve 40/120 snapshots. Emission/initial restart parameters match the HSMM exactly; all 24 independent NumPy recursion checks pass. HMM–HSMM common-return log-score differences are small and mixed (-0.01797 to +0.02004), while poor named-state recovery persists in both. HSMM accuracy is higher in eight of twelve comparisons, so the result does not justify discarding duration structure. Details: [validation.md](validation.md#age-free-hmm-decision-control--2026-10-12).
+Step 11 rechecked Trading v2 ground truth against the complete generator ledger and exact clipped duration laws. State/episode labels, boundary transitions, OHLCV and causal prefixes pass. V2 now explicitly labels latent remaining life and terminal censoring; old arrays and v1 output are preserved. The audit identifies HSMM-specific contract gaps: D64 geometric tails versus support260, hidden same-state renewals, mid-episode window initialization, sparse complete-episode exposure and an argmax-run proxy mislabeled as duration recovery. The observation-only diagnosis was too narrow. Details: [validation.md](validation.md#trading-ground-truth-and-hsmm-contract-audit--2026-10-12).
 
-Current focused gate: 48 passes; AST/Ruff/Black pass. Source/report/dataset provenance and shared targets are verified. Transition capacity, initial effective persistence, shared training representation and one fit seed remain comparison limits. Production defaults and the historical NPZ limit are unchanged. Decision: stop general duration/budget sweeps; next consolidate one normalized causal observation-contract candidate and its falsifiable control.
+Verification: 71 tests pass; one historical NPZ check deselected; AST/Ruff/Black pass. Exact finite-duration hazards match the independent true PMFs, but this does not establish full joint learning acceptance. Production model defaults remain unchanged. Next: an isolated matched HSMM duration gate with sufficient finite support, no same-state renewals, valid start-age handling, known emissions/transitions and censored likelihood/hazard scoring.
 
 ## Structural research findings — 2026-10-12
 

@@ -9,7 +9,7 @@
 - `range`: near-zero drift, negative return autocorrelation plus episode-anchor mean reversion, bimodal episode durations.
 - `chaotic`: near-zero drift, extreme volatility, frequent large jumps, short heavy-tailed episodes.
 
-Episode durations are explicit and non-geometric. A state never transitions directly to itself; persistence is represented by episode duration, matching HSMM semantics.
+Episode durations are explicit and non-geometric. A state never transitions directly to itself; persistence is represented by episode duration. Generalized NHSMM same-state episode resets are a different contract; see the audited ground-truth section below.
 
 ## Context-conditioned transitions
 
@@ -94,3 +94,33 @@ It records source/array hashes and episode-safe ACF/covariance/tail statistics.
 
 The measured feature-window dependence and nearly duplicated innovations are
 owned by [validation.md](validation.md#maintained-trading-feature-residuals--2026-10-12).
+
+## Audited ground-truth contract — 2026-10-12
+
+Current v2 has an independently checked episode ledger and row labels. The
+generator is a known trading-like process, not a matched IID-emission NHSMM
+testbed. A known ground truth does not guarantee unsupervised recovery by an
+arbitrarily configured HSMM.
+
+| Label | Meaning |
+| --- | --- |
+| gt_episode_age | True episode age including current row, starting at1 |
+| gt_planned_duration | Full sampled duration before any file-end truncation |
+| gt_remaining_duration | Remaining episode rows observed in this file; preserved compatibility field |
+| gt_latent_remaining_duration | Planned duration minus true age; includes simulator-known unobserved residual life |
+| gt_episode_right_censored | Episode is truncated by the file end; evaluation-only label |
+| gt_p_next_* | Transition law conditioned on actual episode-end macro, copied onto the episode's rows |
+
+The two new remaining-life/censor columns, ledger right_censored flags and
+ground_truth_semantics metadata apply only to v2. Legacy v1 output is unchanged.
+At a censored final row the old remaining label is0 while latent remaining life
+can be positive. Non-boundary gt_p_next_* rows may contain future boundary
+context; they must not be treated as current-row forecasts or model inputs.
+
+True duration support reaches260 rows. The recent D64 geometric-tail pilots
+do not match these clipped nonconstant tail laws; generator no-self-renewal
+semantics also differ from generalized NHSMM same-state episode resets.
+Arbitrary benchmark windows introduce left/right censoring, and filtered
+argmax-run medians do not establish latent duration-PMF recovery.
+Full findings and the revised controlled HSMM test specification:
+[validation.md](validation.md#trading-ground-truth-and-hsmm-contract-audit--2026-10-12).
