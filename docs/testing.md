@@ -519,3 +519,38 @@ closure. All three native v2 generations and train/validation/test summaries
 completed within the run bound. Source provenance was verified. This adds
 research diagnostics/evidence only; the full canonical suite was not rerun and
 the unavailable legacy NPZ check remains open.
+
+## Step 7 — common-target feature/emission pilot, 2026-10-12
+
+tests/test_feature_contract_pilot.py verifies training-permutation probability
+mapping, causal next-return design excluding the final future target from inputs,
+frozen train-only calibration, identical target pair counts, raw-unit Gaussian
+score agreement with an independent Normal density, finite explicit Float64
+log-score flooring with zero-probability counts, matched Gaussian/Student-t base
+cluster variances, and real production optimize smoke paths for both families.
+Initial focused gate: eight tests passed. AST/Ruff pass; Black reports 122
+unchanged files in the materialized closure.
+
+Sequential per-seed runs have 300-second bounds, one worker and OMP/MKL/OPENBLAS
+threads 1. Seeds 901/902/903 share the frozen v2 dataset seed 424242 and fixed
+training/test windows. Every model must record 40 completed updates excluding
+restart rescoring. The prior Step 6 report and generated feature hashes are
+verified; source hashes are recorded.
+
+    python -m scripts.diagnose_trading_feature_contract --seed 901 --base-commit 836ada51dad9cca04d7420d228afbe93791d01db --output docs/validation/results/feature-contract-step7-seed901-native-20261012.json
+
+Repeat for 902 and 903 with distinct result filenames. Initial diagnostic
+integration exposed Float32 metric-floor underflow and the public restriction
+of kmeans_cluster_variance to Gaussian. Both were corrected in script-only
+scoring/initialization controls and protected by full optimizer smoke tests
+before rerunning the accepted batches. Production initialization/defaults and
+the historical unavailable NPZ verification are unchanged. Methods/results:
+[validation.md](validation.md#matched-trading-feature-and-emission-contract-pilot--2026-10-12).
+
+
+Final Step 7 focused gate: **35 passed** across feature-contract, redundancy,
+observation, model-conform duration and audit regressions. AST/Ruff pass; Black
+reports 122 unchanged files. All 18 accepted models recorded exactly 40 updates,
+with identical 704 state rows and 700 next-return targets. Source/frozen dataset
+provenance was verified. No production change or new full canonical-suite
+claim; the historical frozen-NPZ verification remains unresolved.

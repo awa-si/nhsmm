@@ -1,0 +1,392 @@
+{
+  "schema": "nhsmm-trading-feature-contract-pilot-v1",
+  "execution": {
+    "runtime": "openai-native-workspace",
+    "base_commit": "836ada51dad9cca04d7420d228afbe93791d01db",
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "torch": "2.14.1+cpu",
+    "workers": 1,
+    "source_sha256": {
+      "/workspace/scratch/022133ec0318/nhsmm/scripts/diagnose_trading_feature_contract.py": "a2fc3a2b7d19a31f026b293e0621149b71024793815c456e2a6b46d0d36816d3",
+      "scripts/generate_trading_regime_dataset.py": "6747265043fdbd12465e269abe1c9728f4f9a61cb3aaf3ba2506376dded462c7",
+      "scripts/validate_trading_regime_usefulness.py": "893a48326164e685fdc7f87b6d6446bca332ae7ddbd64fbc5e89de514d1a65c2",
+      "scripts/diagnose_trading_feature_redundancy.py": "a02420f70c2310e291a23c4b8357e79f150f64058ba570ab631c764d12468d1c",
+      "scripts/diagnose_model_conform_duration.py": "3a0bda50f9886731edbd0f671a7525009ddbf75352a16a887c8b8ce2f1f10a66"
+    }
+  },
+  "contract": {
+    "dataset_seed": 424242,
+    "rows": 60000,
+    "train_range": [
+      0,
+      36000
+    ],
+    "test_range": [
+      48000,
+      60000
+    ],
+    "windows": "8 train/4 test windows of 240 rows; deterministic benchmark anchors",
+    "model": "K4 D64 plus tail, external macro context; 40 actual updates, one restart, temperature1; no post-transition refinement",
+    "initialization": "KMeans cluster variance; Student-t base scale adjusted to same cluster marginal variance; script-only hook",
+    "labels": "training labels freeze state permutation for evaluation only; no labels in HSMM or return-head parameter inputs",
+    "common_targets": "state probability scores after 64-row warmup; raw next log_return_1 Gaussian score/RMSE, 175 causal pairs/window",
+    "return_head": "train-only downstream ridge1e-3 mean fit on current return plus frozen current posterior; posterior-weighted training residual variance; no gradients into representation",
+    "comparison": "input-space densities across feature dimensions are excluded; no OOS selection/default change",
+    "limits": "bounded full-model pilot on one synthetic dataset, three fit seeds; family initialization controlled but hypothesis classes differ; no trading-utility/full acceptance claim"
+  },
+  "run": {
+    "fit_seed": 903,
+    "base_commit": "836ada51dad9cca04d7420d228afbe93791d01db",
+    "dataset_schema": "nhsmm-synthetic-trading-regimes-v2",
+    "dataset_feature_sha256": "1307d3f412a0c5426d46533da8140be70846902ef3b2504dab3c33582876c180",
+    "prior_report_sha256": "101c2f4364b2c67f4971b93509ac33d2f666029a7b41e4d029090201ad936395",
+    "no_regime_return_baseline": {
+      "next_return_log_score": 4.511510084342008,
+      "next_return_rmse": 0.0026548603048447746,
+      "pairs": 700
+    },
+    "arms": {
+      "full8_gaussian": {
+        "features": [
+          "log_return_1",
+          "log_return_3",
+          "log_return_12",
+          "trend_12",
+          "trend_48",
+          "ewma_vol_12",
+          "ewma_vol_48",
+          "volume_z_48"
+        ],
+        "family": "gaussian",
+        "whitening": false,
+        "train_mapping_accuracy": 0.6271306818181818,
+        "train_permutation": [
+          3,
+          1,
+          2,
+          0
+        ],
+        "state": {
+          "accuracy": 0.8863636363636364,
+          "brier": 0.21043192224504773,
+          "state_log_score": -2.339602904233691,
+          "zero_true_state_probabilities": 1,
+          "rows": 704
+        },
+        "return": {
+          "next_return_log_score": 4.641000243022475,
+          "next_return_rmse": 0.002628276435180654,
+          "pairs": 700
+        },
+        "optimization": {
+          "requested_iterations_per_restart": 40,
+          "completed_iterations_per_restart": [
+            40
+          ],
+          "convergence_stop": false,
+          "count_source": "finite entries in production Convergence.scores; restart scoring excluded"
+        },
+        "return_head": {
+          "mean": 0.0001992649973065649,
+          "scale": 0.0025765540171107837,
+          "beta": [
+            0.008213106601509125,
+            -0.01717831091778831,
+            0.0596883185818117,
+            -0.0864345754166864,
+            -0.05601245085430354,
+            0.08276657485780209
+          ],
+          "variances": [
+            2.5680985674880192,
+            1.377361795897401,
+            0.5264108906751724,
+            0.8408631755528997
+          ]
+        }
+      },
+      "reduced4_gaussian": {
+        "features": [
+          "log_return_1",
+          "trend_48",
+          "ewma_vol_12",
+          "volume_z_48"
+        ],
+        "family": "gaussian",
+        "whitening": false,
+        "train_mapping_accuracy": 0.6470170454545454,
+        "train_permutation": [
+          0,
+          3,
+          2,
+          1
+        ],
+        "state": {
+          "accuracy": 0.8607954545454546,
+          "brier": 0.24294104260315105,
+          "state_log_score": -0.8786838850486217,
+          "zero_true_state_probabilities": 0,
+          "rows": 704
+        },
+        "return": {
+          "next_return_log_score": 4.640125402205221,
+          "next_return_rmse": 0.002652651237951723,
+          "pairs": 700
+        },
+        "optimization": {
+          "requested_iterations_per_restart": 40,
+          "completed_iterations_per_restart": [
+            40
+          ],
+          "convergence_stop": false,
+          "count_source": "finite entries in production Convergence.scores; restart scoring excluded"
+        },
+        "return_head": {
+          "mean": 0.0001992649973065649,
+          "scale": 0.0025765540171107837,
+          "beta": [
+            0.0027885245098613906,
+            -0.004998411730270158,
+            0.0917674251648842,
+            -0.022655500374640192,
+            -0.05488329158972511,
+            -0.01422767820805243
+          ],
+          "variances": [
+            0.8333425739905576,
+            2.3545544069253155,
+            0.5036412700794933,
+            1.9461790429826056
+          ]
+        }
+      },
+      "return_volume2_gaussian": {
+        "features": [
+          "log_return_1",
+          "volume_z_48"
+        ],
+        "family": "gaussian",
+        "whitening": false,
+        "train_mapping_accuracy": 0.4055397727272727,
+        "train_permutation": [
+          1,
+          2,
+          3,
+          0
+        ],
+        "state": {
+          "accuracy": 0.40625,
+          "brier": 0.9097831622538741,
+          "state_log_score": -3.026216956174683,
+          "zero_true_state_probabilities": 0,
+          "rows": 704
+        },
+        "return": {
+          "next_return_log_score": 4.597201824650912,
+          "next_return_rmse": 0.0026376381540738417,
+          "pairs": 700
+        },
+        "optimization": {
+          "requested_iterations_per_restart": 40,
+          "completed_iterations_per_restart": [
+            40
+          ],
+          "convergence_stop": false,
+          "count_source": "finite entries in production Convergence.scores; restart scoring excluded"
+        },
+        "return_head": {
+          "mean": 0.0001992649973065649,
+          "scale": 0.0025765540171107837,
+          "beta": [
+            0.02823646007602532,
+            -0.017519393644525108,
+            -0.0336990422746686,
+            -0.0011670897791688335,
+            0.11831028037253036,
+            -0.08344154095678234
+          ],
+          "variances": [
+            0.6153716191419263,
+            0.6511242181699852,
+            2.0298654276027164,
+            1.3547148200868842
+          ]
+        }
+      },
+      "whiten8_gaussian": {
+        "features": [
+          "log_return_1",
+          "log_return_3",
+          "log_return_12",
+          "trend_12",
+          "trend_48",
+          "ewma_vol_12",
+          "ewma_vol_48",
+          "volume_z_48"
+        ],
+        "family": "gaussian",
+        "whitening": true,
+        "train_mapping_accuracy": 0.4971590909090909,
+        "train_permutation": [
+          0,
+          3,
+          2,
+          1
+        ],
+        "state": {
+          "accuracy": 0.7017045454545454,
+          "brier": 0.5541064162426409,
+          "state_log_score": -2.395162954601236,
+          "zero_true_state_probabilities": 0,
+          "rows": 704
+        },
+        "return": {
+          "next_return_log_score": 4.606959860872703,
+          "next_return_rmse": 0.0026230670452690535,
+          "pairs": 700
+        },
+        "optimization": {
+          "requested_iterations_per_restart": 40,
+          "completed_iterations_per_restart": [
+            40
+          ],
+          "convergence_stop": false,
+          "count_source": "finite entries in production Convergence.scores; restart scoring excluded"
+        },
+        "return_head": {
+          "mean": 0.0001992649973065649,
+          "scale": 0.0025765540171107837,
+          "beta": [
+            -0.022764040399661463,
+            -0.012634173330248442,
+            0.03325676859092134,
+            0.11114494051843939,
+            0.014846320928851896,
+            -0.1592437788575883
+          ],
+          "variances": [
+            0.7766076808238087,
+            1.7578290792396882,
+            0.5713344646823808,
+            1.6971246829626938
+          ]
+        }
+      },
+      "full8_studentt": {
+        "features": [
+          "log_return_1",
+          "log_return_3",
+          "log_return_12",
+          "trend_12",
+          "trend_48",
+          "ewma_vol_12",
+          "ewma_vol_48",
+          "volume_z_48"
+        ],
+        "family": "studentt",
+        "whitening": false,
+        "train_mapping_accuracy": 0.6335227272727273,
+        "train_permutation": [
+          3,
+          1,
+          2,
+          0
+        ],
+        "state": {
+          "accuracy": 0.8735795454545454,
+          "brier": 0.2305653644458163,
+          "state_log_score": -1.240216637550065,
+          "zero_true_state_probabilities": 0,
+          "rows": 704
+        },
+        "return": {
+          "next_return_log_score": 4.639547240862682,
+          "next_return_rmse": 0.0026255126230416395,
+          "pairs": 700
+        },
+        "optimization": {
+          "requested_iterations_per_restart": 40,
+          "completed_iterations_per_restart": [
+            40
+          ],
+          "convergence_stop": false,
+          "count_source": "finite entries in production Convergence.scores; restart scoring excluded"
+        },
+        "return_head": {
+          "mean": 0.0001992649973065649,
+          "scale": 0.0025765540171107837,
+          "beta": [
+            0.004282428760033068,
+            -0.017185740752087394,
+            0.04798707713129506,
+            -0.09353820926241292,
+            -0.047575084021361784,
+            0.09312982496673797
+          ],
+          "variances": [
+            2.5370354602931227,
+            1.311895146580343,
+            0.5105369966071357,
+            0.838526850952658
+          ]
+        }
+      },
+      "reduced4_studentt": {
+        "features": [
+          "log_return_1",
+          "trend_48",
+          "ewma_vol_12",
+          "volume_z_48"
+        ],
+        "family": "studentt",
+        "whitening": false,
+        "train_mapping_accuracy": 0.6505681818181818,
+        "train_permutation": [
+          0,
+          3,
+          2,
+          1
+        ],
+        "state": {
+          "accuracy": 0.8409090909090909,
+          "brier": 0.2886070124209307,
+          "state_log_score": -0.9068589567511929,
+          "zero_true_state_probabilities": 0,
+          "rows": 704
+        },
+        "return": {
+          "next_return_log_score": 4.634243838657991,
+          "next_return_rmse": 0.0026456011937999054,
+          "pairs": 700
+        },
+        "optimization": {
+          "requested_iterations_per_restart": 40,
+          "completed_iterations_per_restart": [
+            40
+          ],
+          "convergence_stop": false,
+          "count_source": "finite entries in production Convergence.scores; restart scoring excluded"
+        },
+        "return_head": {
+          "mean": 0.0001992649973065649,
+          "scale": 0.0025765540171107837,
+          "beta": [
+            -0.002905812474293461,
+            -0.006090586785641643,
+            0.1042153931560727,
+            -0.023763257120360804,
+            -0.0501298066257054,
+            -0.03032071416137847
+          ],
+          "variances": [
+            0.8474050196939024,
+            2.441642015349929,
+            0.5082836984673506,
+            1.8007846264448883
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1565,3 +1565,116 @@ Raw densities across different feature dimensions must not be compared as if
 they described the same observation target. Any production emission change
 requires an explicit supported model contract and separate inference/runtime
 verification.
+
+## Matched Trading feature and emission contract pilot — 2026-10-12
+
+Step 7 base: 836ada51dad9cca04d7420d228afbe93791d01db.
+Owner: scripts/diagnose_trading_feature_contract.py. The fixed native v2
+dataset at generator seed 424242 must match Step 6's committed feature hash.
+Fit seeds 901/902/903 use eight deterministic training windows from [0,36000)
+and four test windows from [48000,60000), each 240 rows. The validation segment
+is not used to select features, families, hyperparameters or stopping points.
+This is a bounded benchmark-window pilot, not the full acceptance protocol or
+three independent datasets.
+
+Six predeclared arms compare full8 Gaussian, maintained reduced4 Gaussian,
+return_volume2 Gaussian, train-only whiten8 Gaussian, full8 Student-t and
+reduced4 Student-t. Reduced4 is log_return_1, trend_48, ewma_vol_12 and
+volume_z_48. Return_volume2 keeps log_return_1 and volume_z_48. Whitening uses
+the maintained training-only ZCA helper with its fixed eigenvalue floor.
+All arms retain K=4, D=64 plus tail, explicit macro context and one restart.
+Production optimize executes 40 updates with early stopping disabled; a script
+subclass fixes temperature 1 and no transition refinement is applied.
+
+KMeans centers are unlabeled training estimates. Gaussian uses supported
+kmeans_cluster_variance. Student-t uses supported kmeans plus a script-only
+hook converting cluster variance to the corresponding Student-t marginal
+variance at its current degrees of freedom. The hook runs at restart
+initialization. Production initialization/defaults are not changed. Matching
+base variance does not make the two hypothesis classes or parameterizations
+identical.
+
+Common targets avoid comparing densities over different feature dimensions:
+
+| Target | Frozen train-only preparation | Held-out evaluation |
+| --- | --- | --- |
+| Ground-truth state probability | Best state permutation on training labels only | Accuracy, Brier and state log score |
+| Next raw log_return_1 | Ridge mean head on current return and frozen current posterior; posterior-weighted residual variance | Gaussian log score in raw return units and RMSE |
+
+The first 64 rows in every window are a fixed warmup exclusion. State scores use
+704 test rows; next-return scores use 700 adjacent pairs, with targets strictly
+one row ahead and no crossing of window boundaries. The return head is explicit
+supervised downstream calibration; its gradients do not change the HSMM.
+It uses only training next-return targets, ridge 1e-3, an unpenalized intercept,
+and positive residual variance floors. A current-return-only head supplies the
+same-target no-regime baseline. No state labels enter either model training or
+return-head inputs; training state labels determine evaluation permutation only.
+Input-space likelihoods are deliberately excluded from cross-arm ranking.
+
+State log score uses a 1e-300 floor in Float64, with exact zero true-state
+probability counts reported separately. This is a clipped numerical score,
+not a claim that zero-probability predictions have finite mathematical log loss.
+The full-model pilot also keeps the maintained window episode-start convention;
+warmup mitigates but does not prove elimination of mid-episode initialization
+effects. No live-market, PnL, production-default or full recovery claim.
+
+
+### Measured Step 7 common-target results
+
+All **18 accepted fits completed 40 updates**. Source hashes and the frozen
+dataset hash were verified. Each arm uses the same 704 state-score rows and
+700 next-return targets. The constant-posterior unit control reproduces the
+current-return-only baseline, and raw-unit return scores match an independent
+Gaussian density. Final focused gate: **35 passed**, with AST/Ruff/Black green.
+
+Medians over fit seeds 901/902/903 on the same test windows:
+
+| Arm | State accuracy | State Brier | Next-return log score | Next-return RMSE |
+| --- | ---: | ---: | ---: | ---: |
+| Full8 Gaussian | 88.64% | 0.2097 | 4.64173 | 0.00262687 |
+| Reduced4 Gaussian | 74.86% | 0.4133 | 4.64013 | 0.00262639 |
+| Return/volume2 Gaussian | 38.49% | 0.9495 | 4.59148 | 0.00261696 |
+| Whiten8 Gaussian | 69.89% | 0.5541 | 4.60063 | 0.00264010 |
+| Full8 Student-t | 87.36% | 0.2278 | 4.64062 | 0.00262645 |
+| Reduced4 Student-t | 58.81% | 0.7840 | 4.61344 | 0.00264560 |
+| Current-return-only baseline | — | — | 4.51151 | 0.00265486 |
+
+Full8 state accuracy is stable: Gaussian 88.35–88.78%, Student-t
+87.36–87.50%. Reduced4 is initialization-sensitive: Gaussian 66.48–86.08%,
+Student-t 53.41–84.09%. The earlier residual redundancy result therefore does
+not justify indiscriminate removal of predictive state information. Whitening
+also does not automatically improve the state representation at this budget.
+
+Full8 Gaussian and Student-t have essentially the same common-return score in
+this pilot (median difference 0.00111 nats/target); no statistical superiority
+claim is made. Reduced4 can predict returns similarly while reconstructing
+the four named regimes less reliably. Return/volume2 has the lowest median
+point RMSE but a lower predictive log score and poor named-state accuracy.
+State reconstruction, point forecast error and predictive density are distinct
+objectives; no single arm dominates them all.
+
+All arms improve the weak current-return-only baseline log score on these
+windows. That baseline does not receive the full raw features or macro context,
+so this is not evidence that HSMM state structure adds value beyond the same
+observable information. The return heads are supervised downstream calibrators,
+not native HSMM emission forecasts. Three fit seeds on one dataset are not
+three independent data replications, a walk-forward test or a PnL evaluation.
+The 40-update budget also does not establish optimizer convergence.
+
+Full8 Gaussian reports one zero true-state probability from Float32 posterior
+exponentiation in each seed. Its auxiliary clipped state-log scores are sensitive
+to the declared 1e-300 floor and are not used to rank arms in the table.
+Accuracy/Brier and common-return metrics retain their explicit separate roles.
+A raw log-posterior evaluation would be required for a more precise extreme-loss
+comparison.
+
+[Seed 901 raw report](validation/results/feature-contract-step7-seed901-native-20261012.json),
+[902](validation/results/feature-contract-step7-seed902-native-20261012.json),
+[903](validation/results/feature-contract-step7-seed903-native-20261012.json)
+record mappings, fit-step counts, return-head coefficients/variances and all
+scores. Production implementation, families and defaults remain unchanged.
+The historical frozen-NPZ check remains open; no new full canonical-suite claim.
+
+Next: direct-feature/context baselines with the same information, independent
+dataset or chronological-window replication, and raw log-posterior scoring.
+Those checks precede any production feature/family/default decision.
