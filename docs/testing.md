@@ -782,3 +782,24 @@ held-out likelihood is positive versus uniform in all seeds. The unchanged
 each-PMF-TV<=0.12 gate still fails all three seeds; no statistical threshold
 is relaxed and no global-MLE convergence claim is made. Source hashes and all
 run/numerical gates are verified separately from these retained failures.
+
+## Step15a — compact duration family and nested selection,2026-10-13
+
+tests/test_compact_duration_em.py owns exact block partitions and clipped endpoint
+atoms, invalid support/width rejection, hand-derived constrained Q M-step and its
+zero grouped score, width1 unrestricted equivalence, support/normalization/constant
+density, monotonic observation-only constrained EM, grouped finite-difference
+scores and disjoint inner train/validation likelihood selection.18 focused tests
+pass with Step12–14 controls. AST/Ruff/Black pass over39 verified materialized/new
+Python files.45 connector-verified current inputs include both prior raw reports.
+The unchanged native environment uses Python3.12.14,Torch2.14.1+cpu,NumPy2.5.4.
+
+One worker,OMP/MKL/OPENBLAS threads1,1800-second bound:
+
+    python -m scripts.compare_compact_duration_em --base-commit <Step15a-commit> --output docs/validation/results/compact-duration-step15-native-20261013.json
+
+Widths4/8/16 and inner20/outer30 updates are fixed before outer evaluation.
+Selection is confined to the small training dataset's96/32 split; endpoints
+remain separately learned atoms and known support remains an oracle condition.
+No new full canonical-suite or historical-NPZ acceptance claim. Methods:
+[validation.md](validation.md#compact-duration-family-with-training-only-selection--2026-10-13).

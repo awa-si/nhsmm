@@ -2497,3 +2497,68 @@ compact or smoothed/regularized duration law, with a predeclared design and any
 selection confined to training data. Joint Trading observations/context remain
 deferred. No production default or public artifact/runtime contract is changed.
 [Raw Step14 evidence](validation/results/unlabelled-em-step14-native-20261012.json).
+
+## Compact duration family with training-only selection — 2026-10-13
+
+Step15a base:8b67f37784667fb614f236412fda9648dd6279ff.
+Owner:scripts/compare_compact_duration_em.py. This batch tests the sample/flexibility
+finding from Step14 without changing production defaults or model implementation.
+Dates for this continuation use Europe/Berlin. The stationary nuisance parameters,
+known finite D260 support, zero self-renewals, fresh episode starts, Gaussian
+sigma2.0 observations and correct terminal censoring remain the same oracle controls.
+
+The family gives each state's contiguous interior duration bins a common density
+within blocks of4,8 or16 lengths. The first and last supported lengths are separate
+freely learned point masses, preserving clipped endpoint atoms without forcing
+them to equal neighbouring densities. Only the known support is used; generator
+probability values and regime-specific Gamma/Weibull/mixture shapes are not used
+in fitting or selection. Endpoints/support remain substantial oracle assumptions.
+
+| Family | Free parameters bull/bear/range/chaotic | Total |
+| --- | --- | ---: |
+| Unrestricted supported PMF | 218 / 210 / 232 / 97 | 757 |
+| Interior width4 | 56 / 54 / 59 / 25 | 194 |
+| Interior width8 | 29 / 28 / 30 / 13 | 100 |
+| Interior width16 | 15 / 15 / 16 / 7 | 53 |
+
+The independent E-step is unchanged from Step14. The constrained exact Q M-step
+assigns each block a mass proportional to its total expected count and divides
+that mass uniformly over its member durations. This is restricted maximum
+likelihood in a lower-dimensional family, not an added prior or a smoothing penalty.
+Observed marginal likelihood must increase monotonically within1e-6. The uniform
+per-supported-length initial law is identical across widths and previous controls;
+group masses are initially proportional to their block sizes, not uniform across
+unequal blocks. Width1 recovers the unrestricted count-normalization update.
+
+Predeclared batch:seeds901/902/903, candidate widths4/8/16. For each seed, a seeded
+permutation partitions the128 small training sequences into96 inner training
+and32 inner validation sequences. Every candidate gets20 constrained EM updates.
+Selection uses only highest inner-validation marginal likelihood; exact ties
+choose the smaller width. No episode labels, true PMF values, outer held-out rows
+or outer recovery scores enter the selection API. The selected width is refitted
+from the original uniform law on all128 sequences and on the paired1024-sequence
+sample,30 updates each. It is not reselected using the larger sample. The larger
+arm's first128 observations must equal the small arm, and the unchanged24 outer
+held-out sequences per seed are constructed/scored after inner selection/refits.
+
+Step13/14 input hashes and baseline scores are retained for exact same-data
+comparisons. Small/large held-out gains, training fit costs, PMF TV, mean RMSE,
+residual group scores and parameter counts are reported separately. The unchanged
+full duration gate requires positive outer held-out gain versus the uniform law
+and every state's PMF TV<=0.12, separately for each data-size arm. Public all-logit
+gradient/likelihood discrepancy must remain<=1e-7, and state-probability error<=1e-8.
+There are9 inner candidate fits and6 outer refits:360 total EM updates.
+
+Six new tests cover exact/disjoint endpoint-preserving partitions, invalid support,
+hand-solvable constrained Q maximization, zero grouped score at the M-step,
+width1 equivalence, normalization/support/constant density, constrained monotonicity,
+marginal-score finite differences and disjoint likelihood-only inner selection.
+Together with Step12–14:18 tests pass. AST/Ruff/Black pass over39 verified
+materialized/new Python files.45 immutable inputs were connector-verified;
+the existing native Python/Torch environment remains available.
+
+One worker and a1800-second bound. Step15a accepts the constrained mechanics and
+freezes selection/acceptance before outer result inspection. Step15b statistical
+results are pending. Approximation bias, small inner-validation samples and bounded
+EM remain limitations; no joint Trading-feature/context, runtime/artifact-mask,
+production-default or real-market acceptance follows from this code gate.

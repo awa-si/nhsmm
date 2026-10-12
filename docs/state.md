@@ -4,6 +4,12 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step15a verifies a compact piecewise-uniform duration family with independently
+learned endpoint atoms and observation-only constrained EM. Interior widths4/8/16
+reduce total duration degrees of freedom from757 to194/100/53.18 focused tests
+and static checks pass. The batch selects width on a96/32 inner split of the128
+training sequences, then refits paired128/1024 arms; outer results are pending.
+
 Step 14 completes the independent observation-only EM and paired128-versus1024-sequence control. EM on128 sequences beats the Step13 Adam training objective by0.00273–0.00281 nats/row but worsens held-out likelihood in all three seeds and produces PMF TV0.352–0.660. With8x observations, the same EM improves held-out likelihood in all seeds, reduces PMF TV to0.123–0.287 and reaches duration-mean RMSE0.83–1.42 rows. Each-PMF-TV<=0.12 still fails every seed. Stronger sample fitting alone does not deliver population duration recovery; the paired control supports an important finite-sample/PMF-flexibility limitation under known nuisance parameters. Details: [validation.md](validation.md#independent-unlabelled-em-and-episode-exposure--2026-10-12).
 
 Verification:12 focused tests; AST/Ruff/Black pass over37 verified materialized/new Python files. All180 EM updates, six monotonic objectives, exact Step13 replay/source hashes and paired observations verified. All3120 checked production duration-gradient coordinates agree within2.27e-14; public/reference likelihood error<=1.12e-11 and state-probability error<=1.10e-13. Bounded EM is not a global MLE proof. Statistical failures are retained. Production defaults remain unchanged; research support/reset masks have no runtime/artifact acceptance. Historical NPZ verification remains open. Next: predeclared compact/smoothed duration parameterization or regularization with training-only selection, followed by joint Trading features/context only after the marginal duration gate is understood. Steps12/13 remain separate evidence.
