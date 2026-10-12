@@ -4,6 +4,12 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step 14a verifies the independent observation-only HSMM EM reference mathematically:
+enumerated latent durations/terminal censoring, finite-difference scores and all1040
+production duration-gradient coordinates agree;12 focused tests pass. The paired
+128-versus1024-sequence comparison (30 EM updates, three seeds) is pending.
+This accepts reference mechanics, not new statistical recovery.
+
 Step 13 completed observation-only marginal duration optimization with known nuisance parameters over three seeds. Numerical correctness passes: independent gradient error<=1.91e-9, likelihood error<=1.05e-11 and state-probability error<=6.33e-14. Training likelihood improves in all seeds and duration-mean RMSE falls from30.87 to4.70/5.74/8.11 rows. Statistical acceptance is not closed: held-out likelihood improves in2/3 seeds, degrades in seed902, and no seed reaches each-PMF TV<=0.12 (observed TV0.282–0.498). Details: [validation.md](validation.md#observation-only-marginal-duration-learning--2026-10-12).
 
 Verification:8 focused tests; AST/Ruff/Black pass over35 verified materialized/new Python files; report hashes,240 completed updates, frozen nuisance parameters and numerical gates verified. Statistical gate failures are retained, not waived. Production defaults remain unchanged; script-only support/reset masks have no runtime/artifact acceptance. Historical NPZ verification remains open. Next: distinguish sparse duration-bin exposure from optimizer/reference-MLE gaps using an independent unlabelled EM and a predeclared larger-sample control. Joint Trading features/context remain deferred until this marginal-learning boundary is better understood. Step 12's labelled recovery acceptance remains separate and unchanged.

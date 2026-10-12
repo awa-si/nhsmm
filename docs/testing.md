@@ -746,3 +746,22 @@ The preliminary600-row run was interrupted after its last reported40 updates
 for seed901 due backward-pass cost; only the subsequent300-row execution is
 accepted as completed run evidence. Methods, limits and measured results:
 [validation.md](validation.md#observation-only-marginal-duration-learning--2026-10-12).
+
+## Step 14a — independent unlabelled EM mechanics, 2026-10-12
+
+tests/test_unlabelled_duration_em.py owns expected duration-count enumeration,
+terminal survival/censor allocation, one-row zero duration information,
+all-logit production gradient identity, independent segment likelihood,
+finite-difference scores and EM objective monotonicity. Together with Step12/13:
+12 tests pass. AST/Ruff/Black pass over37 verified materialized/new Python files.
+Current sparse scope contains42 connector-verified immutable inputs plus the
+new script/test. The restored native environment installs the declared CPU
+dependencies and editable package successfully; Python3.12.14, Torch2.14.1+cpu,
+NumPy2.5.4. The long paired-size comparison follows this completed code gate.
+
+One worker, OMP/MKL/OPENBLAS threads1,1800-second bound:
+
+    python -m scripts.compare_unlabelled_duration_em --base-commit <Step14a-commit> --output docs/validation/results/unlabelled-em-step14-native-20261012.json
+
+No new full canonical-suite or historical-NPZ acceptance claim. Methods:
+[validation.md](validation.md#independent-unlabelled-em-and-episode-exposure--2026-10-12).

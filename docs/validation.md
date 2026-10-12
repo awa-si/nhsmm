@@ -2372,3 +2372,43 @@ Final focused tests:8 passed; AST/Ruff/Black pass over35 verified materialized/n
 Python files. No new full canonical-suite, historical-NPZ, runtime/artifact-mask
 or real-market utility acceptance claim.
 [Raw Step 13 evidence](validation/results/unlabelled-hsmm-step13-native-20261012.json).
+
+## Independent unlabelled EM and episode exposure — 2026-10-12
+
+Step 14a base: e34af5efa028b7dbff70215eaf3c16685d20e1a3.
+Owner: scripts/compare_unlabelled_duration_em.py. Production behavior and
+defaults remain unchanged. The independent NumPy reference uses a normalized
+probability-space state-age forward recursion and log-domain backward messages.
+Completed boundary posterior counts include only boundaries before the final
+observed row. Terminal state-age posterior counts allocate latent total length
+using p(L=d | L>=age); their sum is exactly one censored episode/sequence.
+The M-step normalizes total expected duration counts separately per state.
+No labels, hard decoded states or ground-truth episode records enter learning.
+
+Mathematical verification includes complete enumeration of latent full-duration
+paths (including the unobserved terminal length), a one-row zero-duration-score
+control, central finite differences and the independent segment likelihood.
+The posterior-count softmax score counts-p*sum(counts) is compared against all1040
+production duration-gradient coordinates on ambiguous300-row observations.
+Four new tests plus maintained Step12/13 tests pass:12 tests. AST/Ruff/Black
+pass over37 verified materialized/new Python files.
+
+Predeclared comparison: replay Step13 observations and fitted Adam PMFs exactly
+by hash; fit the independent EM from the same uniform-support PMF on128 sequences
+and on1024 paired sequences, each300 rows. The larger arm's first128 sequences
+must equal the small arm byte-for-byte. Both arms use30 full-data EM updates,
+chunks64, the same known nuisance parameters and unchanged24 held-out sequences.
+Seeds901/902/903 are fixed. Ground-truth labels serve exposure/state evaluation
+only after fitting. EM marginal likelihood must be monotonic within1e-6 absolute
+tolerance; public/segment likelihood and all-logit gradient discrepancies must
+remain<=1e-7; public state-probability error<=1e-8. Training objective gains,
+held-out gains, mean RMSE and the unchanged each-PMF-TV<=0.12 criterion are
+reported separately.30 updates are a bounded EM reference, not proof of a global
+MLE; last-update objective increments and residual scores must be retained.
+
+A128-sequence resource smoke and chunk16/32/128 comparison took approximately
+one second per full expectation pass and gave identical likelihoods. The final
+experiment uses one worker, native CPU dependencies and an1800-second bound.
+Numerical mechanics are accepted at Step14a; statistical comparison remains
+pending. This is not joint Trading-feature, macro-context, runtime/artifact-mask
+or real-market acceptance.
