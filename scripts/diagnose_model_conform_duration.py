@@ -45,9 +45,17 @@ def duration_mean(pmf, hazard):
     return float(pmf[:-1] @ np.arange(1, d) + pmf[-1] * (d - 1 + 1 / hazard))
 
 
-def generate(seed, *, tail, count=6, steps=128):
+def generate(seed, *, tail, count=6, steps=128, transition=None):
     """Independent episode-start sequences; final episode always right-censored."""
     rng = np.random.default_rng(seed)
+    transition = TRANSITION if transition is None else np.asarray(transition, dtype=float)
+    if (
+        transition.shape != (2, 2)
+        or not np.isfinite(transition).all()
+        or (transition < 0).any()
+        or not np.allclose(transition.sum(axis=1), 1.0)
+    ):
+        raise ValueError("transition must be a finite normalized nonnegative 2x2 matrix")
     x, states, ledger = [], [], []
     for _ in range(count):
         rows = np.empty((steps, 2), dtype=np.float32)
@@ -67,7 +75,7 @@ def generate(seed, *, tail, count=6, steps=128):
                 {"state": state, "observed": observed, "censored": t + observed == steps}
             )
             t += observed
-            state = int(rng.choice(2, p=TRANSITION[state]))
+            state = int(rng.choice(2, p=transition[state]))
         x.append(rows)
         states.append(labels)
         ledger.append(episodes)

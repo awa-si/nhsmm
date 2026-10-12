@@ -4,11 +4,13 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
-Step 1.2 implements past-only internal emission context, an observation-independent initial prior, matching streaming state, and artifact v2 timing metadata. All 11 predictive contract tests pass. Native verification reports 80 focused passes and 802 broader passes, three CUDA skips, and one unavailable frozen-data test excluded. The full canonical gate remains incomplete until that exact binary fixture can be verified. Details: [testing.md](testing.md#step-12--predictive-neural-production-migration-2026-10-12).
+Step 2 completed the controlled encoderless duration/self-reset comparison: 48 marginal fits across three seeds, finite/D+ laws and true reset probabilities 0/0.02, each with 80 verified updates. Removing resets improves observable-run TV in all 12 cells, but a finite true-reset case loses held-out likelihood when a merged state run exceeds Dmax. Age tying alone does not remove the mismatch. No production defaults change. Independent fixed-parameter likelihood and privileged labeled censored EM controls are reported separately. Details: [validation.md](validation.md#controlled-duration-and-self-reset-baseline--2026-10-12).
+
+Step 1.2's predictive context/artifact repair remains implemented. Current diagnostic/audit focused verification: 23 passes; Ruff and Black pass. The preceding broader native gate had 802 passes, three CUDA skips and one unavailable frozen-NPZ test excluded. That canonical verification limit remains open. Next: adequate per-state tail exposure and a run-duration contract with sufficient support; independent unsupervised EM and observation-model experiments remain pending.
 
 ## Structural research findings — 2026-10-12
 
-The causal emission self-conditioning defect is repaired; the former counterexample now integrates to 1.0. Noncausal internal generative likelihood/training is explicitly rejected. An exact self-reset/tail counterexample still disproves unrestricted episode-duration identifiability. The native fit has imperfect observable run laws despite perfect hard-state recovery. Historical findings: [validation.md](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12). Next is a controlled encoderless duration/self-reset comparison.
+The causal emission self-conditioning defect is repaired; the former counterexample now integrates to 1.0. Noncausal internal generative likelihood/training is explicitly rejected. An exact self-reset/tail counterexample still disproves unrestricted episode-duration identifiability. The native fit has imperfect observable run laws despite perfect hard-state recovery. Historical findings: [validation.md](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12). The controlled encoderless comparison is now reported below; duration identifiability and tail exposure remain bounded research questions.
 
 ## Latest code audit — 2026-10-12
 

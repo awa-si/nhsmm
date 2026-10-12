@@ -356,3 +356,33 @@ The tail-boundary prerequisite is commit
 No new statistical fit acceptance or trading-performance claim is made.
 Next: controlled encoderless duration/self-reset baseline as its own documented,
 pushed stage.
+
+## Step 2 — controlled duration/self-reset diagnostic, 2026-10-12
+
+`tests/test_duration_reset_diagnostic.py` verifies that a zero-reset generator's
+episode boundaries coincide with observed state switches and that the default
+generator remains bitwise unchanged when its existing matrix is explicit. It
+checks short-censor bucket allocation, geometric tail exposure without a false
+terminal end, monotone labeled EM likelihood, and independent NumPy/model
+likelihood agreement for finite and D+ laws across all four transition arms.
+Exact zero diagonal support, age tying, fixed duration gate, known transitions,
+frozen nuisance parameters and actual update counts are checked.
+
+Initial native gate: **12 passed** across the new module and
+`tests/test_model_conform_duration.py`. AST parsing and Ruff passed; Black
+reported **112 files unchanged** in the materialized closure. The final focused gate including the audit regressions reported **23 passed**. Only diagnostic
+scripts, tests and evidence/docs change; production model/defaults do not.
+The broader 802-pass gate from Step 1.2 is historical evidence, not a new full
+suite run. Its unavailable frozen NPZ test remains unresolved.
+
+Bounded execution command, with OMP/MKL/OPENBLAS threads set to 1:
+
+```bash
+python -m scripts.diagnose_duration_resets --seeds 901,902,903 --iterations 80 --base-commit 6eeac114228cda26ff969b0ec207a4bd54902e91 --output docs/validation/results/duration-reset-step2-native-20261012.json
+```
+
+The independent NumPy recursion verifies fixed fitted parameters; the labeled
+censored EM has privileged episode boundaries. Neither is an independent
+unsupervised training baseline. Full statistical acceptance and adequate tail
+exposure remain separate requirements. Results and interpretation belong to
+[validation.md](validation.md#controlled-duration-and-self-reset-baseline--2026-10-12).

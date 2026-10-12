@@ -1079,3 +1079,105 @@ three CUDA skips and one excluded historical frozen-NPZ test whose exact bytes
 were unavailable through the connector. See
 [scope](testing.md#step-12--predictive-neural-production-migration-2026-10-12).
 There is no new statistical fitting or trading acceptance claim.
+
+## Controlled duration and self-reset baseline — 2026-10-12
+
+Research base: 6eeac114228cda26ff969b0ec207a4bd54902e91, native OpenAI
+workspace. This experiment isolates reset capacity from encoder, emission,
+temperature and duration-gate learning. No production distribution or default
+changes. Script owner: `scripts/diagnose_duration_resets.py`.
+
+Each seed (901/902/903) uses six independent 128-row training sequences and four
+independent 128-row test sequences. The existing model-conform PMF, Gaussian
+means and variance are unchanged. Finite and D+ laws are generated separately,
+each with true reset probability 0 or 0.02. Every sequence starts at an episode
+boundary; its final episode is scored as right-censored. All marginal fits use
+the same observations within each seed/scenario/reset cell; test labels and
+episode ledgers never enter fitting. Train/test array hashes are recorded.
+
+All four arms fix the true Gaussian emission law, the 0.5/0.5 initial law and
+duration gate 1. They fit duration logits and, for D+, tail hazard at temperature
+1, Float64, Adam lr 0.008, gradient clip 5 and 80 actual updates:
+
+| Arm | Boundary transition contract |
+| --- | --- |
+| age_specific_resets | Free reset probabilities per state and episode age |
+| tied_resets | One free reset probability per state, shared across ages |
+| no_resets | Exact zero diagonal support; in this K=2 fixture the off-diagonal law is fixed |
+| known_transition | True generator boundary matrix frozen |
+
+The zero-support mask and tied-gradient hook are script-only. The tied hook sums
+age gradients and applies identical updates to duplicated logits; exact equality
+is asserted after fitting. Gradient clipping and parameter coordinates can also
+affect optimization, so this is not a proof attributing every difference solely
+to parameter count. With true resets, no_resets intentionally imposes a different
+run-duration interpretation and is a misspecified episode model.
+
+An independent NumPy scaled probability-space age-chain evaluates every fitted
+held-out likelihood. A separate labeled EM estimator allocates short censored
+episodes among surviving duration buckets and estimates the tail hazard from
+completed ends plus censored survival exposure. It has privileged episode
+labels and known transitions; it is not an independent unsupervised EM baseline.
+Its unregularized PMF can assign zero mass to unseen held-out durations; complete
+episode scores use the existing diagnostic's 1e-300 mass floor. Metrics separate
+episode-duration TV from observable-run TV, including residual mass beyond the
+run-law horizon. State accuracy alone cannot establish duration recovery.
+
+
+### Measured reset-capacity results
+
+All **48 marginal fits completed 80 updates**. The maximum independent/model
+held-out likelihood difference was **2.665e-15 per row**. Every arm attained
+100% filtered hard-state accuracy on these strongly separated Gaussian data.
+These are exploratory measurements, not acceptance thresholds.
+
+Medians across seeds 901/902/903:
+
+| Generator | Arm | Episode TV | Observable-run TV | Test log likelihood/row |
+| --- | --- | ---: | ---: | ---: |
+| Finite, reset 0 | Age-specific | 0.1235 | 0.2103 | -1.1936 |
+| Finite, reset 0 | Tied | 0.1170 | 0.2104 | -1.1940 |
+| Finite, reset 0 | No resets / known | 0.1143 | 0.1143 | -1.1646 |
+| Finite, reset 0.02 | Age-specific | 0.1341 | 0.2017 | -1.2026 |
+| Finite, reset 0.02 | Tied | 0.1264 | 0.2044 | -1.2030 |
+| Finite, reset 0.02 | No resets | 0.1189 | 0.1211 | -1.1727 |
+| Finite, reset 0.02 | Known | 0.1182 | 0.1170 | -1.1749 |
+| D+, reset 0 | Age-specific | 0.1651 | 0.1456 | -1.1582 |
+| D+, reset 0 | Tied | 0.1545 | 0.1595 | -1.1589 |
+| D+, reset 0 | No resets / known | 0.0968 | 0.0968 | -1.1587 |
+| D+, reset 0.02 | Age-specific | 0.1744 | 0.1428 | -1.1625 |
+| D+, reset 0.02 | Tied | 0.1613 | 0.1530 | -1.1636 |
+| D+, reset 0.02 | No resets | 0.1054 | 0.1011 | -1.1623 |
+| D+, reset 0.02 | Known | 0.1112 | 0.1086 | -1.1627 |
+
+The no-reset arm improves observable-run TV versus the age-specific arm in all
+12 seed/scenario/reset cells. Even on true zero-reset data, free reset fits retain
+median reset probabilities 0.2525 (finite) and 0.3410 (D+). Tying ages reduces them
+to 0.2178 and 0.2729 but does not close the run-law gap at this budget. This
+supports reset/duration optimization coupling as a mechanism in this fixture.
+It does not prove that longer or differently initialized fits cannot improve.
+
+A material exception is hidden by medians: seed 903, finite law with true resets
+0.02, has an observed same-state test run of length 9. A finite reset-free model
+with Dmax=8 cannot represent its true state path. Its test likelihood is
+**-1.4224/row**, versus **-1.2047** age-specific and **-1.1820** known transition,
+despite all having 100% marginal hard-state accuracy. Likelihood sums coherent
+paths; marginal argmax labels need not form a supported path. Removing resets
+must therefore be paired with an explicit run-duration contract and adequate
+support, not silently imposed on episode-model data.
+
+Tail information remains inadequate: state 1 has 2/4/0 completed training D+
+episodes for zero-reset seeds and 2/3/0 with reset 0.02. For seed 903 the labeled
+tail hazard stays at its initial 0.5 because it has no observed tail exposure;
+that is an unidentified value, not a recovered estimate. The labeled estimator's
+run-TV results also vary by seed and are not uniformly better than the finite
+optimizer. More samples and explicit per-state exposure controls are the next
+duration experiment. An independent unsupervised EM fit and observation-model
+experiments remain unexecuted.
+
+[Raw results](validation/results/duration-reset-step2-native-20261012.json)
+retain every fitted law, per-age reset probability, held-out score, actual update
+count, independent likelihood error, labeled EM history and coverage count.
+The completed checks are owned by
+[testing.md](testing.md#step-2--controlled-durationself-reset-diagnostic-2026-10-12).
+No trading-utility, general recovery, or new full canonical-suite claim is made.
