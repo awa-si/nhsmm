@@ -186,6 +186,10 @@ the causal model derives context through its configured encoder/runtime path. Pe
 
 When the configured encoder exposes incremental streaming state, the runtime keeps bounded encoder state. Custom causal encoders without that contract may use the correctness-first retained-prefix fallback.
 
+## Neural likelihood interpretation — open normalization issue
+
+When the internal encoder consumes the current observation and its output parameterizes that same observation's emission, the resulting score is not guaranteed to be a normalized generative density over observations. A supported causal-encoder counterexample integrates to 1.059 rather than 1. Prefix causality and correct HSMM recursion do not resolve this issue. The default encoderless path and emissions conditional on appropriately held-fixed exogenous context have a different contract. See the [structural diagnosis](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12) for the scope and reproducer.
+
 ## External context
 
 External context is supplied explicitly:

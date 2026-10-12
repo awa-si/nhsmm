@@ -902,3 +902,154 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1   python scripts/diag
 
 [Raw schema-v2 results](validation/results/model-conform-duration-post-audit-native-20261012.json)
 retain all per-arm measurements, iteration evidence and execution provenance.
+
+
+## Structural diagnosis of poor recovery — 2026-10-12
+
+Research base: `2fa38999a71f05e9792ff718ea0b8ea26fac0b9e`, native OpenAI
+workspace. The diagnosis combines current source inspection, fixed-parameter
+counterexamples and analysis of the existing seed-901 fit; it does not change
+production parameters, defaults or estimator behavior.
+
+### Neural emission scores need not define a generative likelihood
+
+`NHSMM._build_sequence_set` feeds the current observation into its encoder and
+then uses the resulting current-row context to parameterize that same
+observation's emission. Thus the score has the form
+Normal(x; mu(encoder(x)), variance), rather than a density whose conditioning
+information is held fixed while x varies. The causal initial-state context can
+also contain the first observation. Prefix causality does not establish density
+normalization.
+
+A supported injected causal identity encoder gives a two-state, one-row
+counterexample using existing Gaussian emission networks, finite parameters,
+unit variance, means 0/4 and bounded state-centered context deltas. Numerical
+integration over [-12,16] with 28,001 and 56,001 grid points gives **1.0590187**
+for the public log_likelihood score exponentiated, while holding emission context
+fixed gives **1.0000000**. Grid refinement leaves the discrepancy unchanged.
+Positive density outside the interval cannot repair an integral already above 1.
+This disproves a general normalized-generative-likelihood claim for the supported
+internal-context model family. It is not future lookahead.
+
+The proof uses an injected encoder, not a fit of the built-in CNN/LSTM. The
+built-in path shares current-row emission conditioning, so its normalization
+requires an independent argument; this evidence does not quantify distortion
+for every parameter setting. The current model-conform pilot has its encoder
+disabled and is unaffected by this particular counterexample.
+
+Predictive emission parameters based only on past observations or appropriately
+held-fixed exogenous covariates would avoid this self-conditioning issue.
+An alternative discriminative/energy-model interpretation requires its own
+objective and normalization contract. Simply adding a Jacobian to an arbitrary,
+noninvertible encoder is not a valid generic repair.
+
+### Episode duration and self resets are not generally identifiable
+
+The allowed D=1 geometric-tail subfamily has observable state-switch hazard
+q = h * (1-r), where h is episode-end hazard and r is self-reset probability.
+Models (h=0.2,r=0.5) and (h=0.125,r=0.2) both have q=0.1. Their latent
+episode means are 5 and 8, but both observable run means are 10. They define the
+same observable hidden-state process when emissions/initial probabilities match.
+
+Production evaluation on three length-20 Float64 sequences gives exactly equal
+log likelihoods (-102.89941355147715) and maximum filtered-posterior difference
+3.33e-16. Even perfect state labels cannot identify which same-state resets
+occurred. This is an exact counterexample in an allowed subfamily, not a theorem
+that every restricted finite-duration model is unidentifiable.
+
+Johnson and Willsky explicitly distinguish self-reset episode durations from
+observable state durations and motivate excluding self-transitions when durations
+are intended to model state runs directly. The current transition structures all
+allow self-transitions. Excluding resets must be an explicit model contract,
+not a silent patch; in particular K=1 and datasets with true self resets require
+separate handling.
+
+### Correct hard states do not establish correct run distributions
+
+An independent probability-space absorbing age chain combines each fitted
+duration hazard with its age-specific self-reset probabilities. This measures
+observable contiguous state runs, rather than individual latent episodes.
+
+For seed 901 scheduled joint training at 40 updates:
+
+| Scenario | Mean latent episode TV | Mean observable run TV | State-1 predicted run mean | State-1 true run mean |
+| --- | ---: | ---: | ---: | ---: |
+| Finite | 0.1997 | 0.3400 | 5.831 | 3.286 |
+| Tail | 0.2266 | 0.2863 | 5.925 | 3.343 |
+
+Despite 100% hard state accuracy on these strongly separated emissions, the
+probabilistic duration forecasts are materially wrong. This is more than a
+semantic relabeling of otherwise recovered run laws. High joint self-reset
+probabilities and unrestricted age-specific transitions give learning multiple
+ways to explain persistence.
+
+### Training and inference temperatures differ
+
+Production _compute_loss changes categorical temperature from approximately 1
+toward 0.3, while public inference normally uses 1. For the 40-update scheduled
+fit, final training temperature is 0.3060042. The same learned duration parameters
+have finite/tail episode TV 0.1431/0.1891 at that counterfactual final temperature,
+versus 0.1997/0.2266 at inference temperature 1. These numbers hold fitted tail
+hazards fixed and compare duration laws only, not a complete alternate decoder.
+
+The trainer therefore optimizes changing distributions and serves a different
+temperature at the end. This is a demonstrated mismatch, but fixed-temperature
+training alone is insufficient: the matched pilot improves TV slightly while
+worsening tail episode NLL. Duration logits and the separately learned sigmoid
+duration gate also provide redundant PMF parameterization at a fixed temperature.
+The gate's small one-sided smoothness penalty does not identify episode resets.
+
+### Observation assumptions and tail information limit recovery
+
+The historical matched-observation controls give median causal accuracy 96.46%
+for IID Gaussian data versus 78.44% after introducing rho=0.9 AR(1) dependence
+with the same population Gaussian marginals. Original Trading accuracy is 79.69%.
+This supports a temporal-emission misspecification investigation; it does not
+prove actual Trading residuals have rho=0.9. Within-row covariance and marginal
+non-Gaussianity also remain unresolved. Student-t changes marginal tails but does
+not model residual autocorrelation or full feature covariance.
+
+Seed-901 state 1 has only two completed training tail episodes, lengths 10 and 8.
+Their tail exposure is four rows, so the complete-tail geometric MLE is 2/4=0.5,
+despite generator hazard 0.35. The duration-only fit's 0.5203 is close to this
+sample estimate. A separate 600-step labeled likelihood calculation including
+terminal censoring also yielded 0.5 for state 1 and 0.1132075 for state 0.
+That is diagnostic labeled evidence, not an unsupervised acceptance result.
+
+### Consequences and next controlled work
+
+1. Resolve the internal-context emission likelihood contract before claiming
+   general neural generative likelihood or density-calibrated forecasts.
+2. Define whether duration means latent episode length or observable regime run;
+   compare a self-reset-free run model against the current episode model.
+3. Use one inference/training temperature in that controlled comparison, tie
+   unnecessary age-specific transitions and fix the redundant duration gate.
+4. Compare an independent classical fixed-parameter/EM baseline and a labeled
+   censored-duration estimator under matched budgets and adequate per-state tail
+   exposure. More optimizer steps cannot resolve exact nonidentifiability.
+5. Test past-conditioned AR/full-covariance emissions on residual diagnostics;
+   measure held-out predictive density and survival/boundary calibration as well
+   as state accuracy.
+
+The verified recurrence/filtering results remain conditional on supplied
+distribution scores. They do not prove that observation-derived neural scores
+integrate to one, that all generative parameters are identifiable, or that
+marginal argmax decisions optimize boundary timing.
+
+Reproducer:
+`scripts/diagnose_model_identifiability.py --pilot
+docs/validation/results/model-conform-duration-post-audit-native-20261012.json
+--output /tmp/structural-diagnostics.json --base-commit
+2fa38999a71f05e9792ff718ea0b8ea26fac0b9e` (with PYTHONPATH=.).
+It validates the geometric absorbing-chain formula against an analytic law,
+asserts likelihood/posterior equivalence and checks density quadrature against
+fixed-context controls at two resolutions. Ruff, Black and bounded native
+execution passed. No production code or full-package test suite changed.
+
+[Machine-readable structural evidence](validation/results/structural-diagnostics-20261012.json).
+
+Primary references:
+- Johnson and Willsky (2013), [Bayesian Nonparametric Hidden Semi-Markov Models](https://jmlr.org/papers/volume14/johnson13a/johnson13a.pdf), section 3.
+- McFarland et al. (2011), [Explicit-Duration Hidden Markov Model Inference of UP-DOWN States from Continuous Signals](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0021606), conditional IID emissions and no self-transitions.
+- Rojas-Salazar et al. (2021), [HSMMs for high-frequency environmental data](https://arxiv.org/abs/2109.09949), conditional-independence violations.
+- Papamakarios et al. (2021), [Normalizing Flows for Probabilistic Modeling and Inference](https://www.jmlr.org/papers/v22/19-1028.html), normalized transformation-based densities.

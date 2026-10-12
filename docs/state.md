@@ -2,6 +2,10 @@
 
 Current package readiness and next package-level boundary. Detailed model semantics are in [model.md](model.md), configuration and tuning in [configuration.md](configuration.md), validation semantics and accepted package evidence in [validation.md](validation.md), verification policy in [testing.md](testing.md), and release procedure in [release.md](release.md).
 
+## Structural research findings — 2026-10-12
+
+General neural generative-likelihood normalization is **open**: current-observation-conditioned emissions admit a supported counterexample whose score integrates above one. Fixed-score HSMM inference verification remains separate. An exact allowed self-reset/tail counterexample also disproves unrestricted episode-duration identifiability. The native fit has imperfect observable run laws despite perfect hard-state recovery. Findings and prioritized controlled comparisons are owned by [validation.md](validation.md#structural-diagnosis-of-poor-recovery--2026-10-12). No production behavior or defaults changed in this research stage.
+
 ## Latest code audit — 2026-10-12
 
 The repository-wide code audit is complete: 787 CPU tests passed, three CUDA-only tests skipped, and AST/Ruff/Black/diff checks passed. Ten production defects were corrected and protected by eleven new regression tests. Legacy emission initializer behavior remains unchanged. Detailed scope, findings, diagnostic corrections and evidence are owned by [testing.md](testing.md#complete-code-audit--2026-10-12).
@@ -30,7 +34,7 @@ Controlled package evidence currently supports these narrow claims:
 - **Latent-state recovery:** PASS up to permutation when the controlled acceptance harness explicitly uses K-Means initialization.
 - **Learning and held-out prediction:** PASS for the maintained strong/moderate/weak contracts; null remains a negative control.
 - **Transition context:** PASS for strong/moderate recovery with near-zero null effect under the maintained refinement policy.
-- **Multi-component identifiability:** package-core PASS across the frozen controlled gate.
+- **Multi-component identifiability:** historical PASS across the frozen controlled gate; not a general identifiability guarantee for unrestricted self-reset/tail models.
 - **General-context robustness:** package-core PASS under split-fit direction replication.
 
 
@@ -181,7 +185,7 @@ The milestone is complete only when all of the following are observed:
 
 Passing this milestone supports the precise claim: **the maintained HSMM recurrence and outputs are independently verified against exhaustive small-model reference calculations**. It does not imply formal proof for arbitrary floating-point executions, statistical identifiability on every dataset, or downstream trading utility.
 
-No unresolved package-core mathematical defect is currently known. Gate 10 closed on 2026-10-07 with Ruff, Black, diff-check, and the canonical CPU suite green (`668 passed, 3 skipped`).
+Fixed-score core verification does not settle the open neural emission normalization issue documented above. Gate 10 closed on 2026-10-07 with Ruff, Black, diff-check, and the canonical CPU suite green (`668 passed, 3 skipped`).
 
 Downstream integration is a separate post-milestone scope and is not evidence for this core correctness claim.
 
