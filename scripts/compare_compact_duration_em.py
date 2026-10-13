@@ -48,10 +48,20 @@ def argument_parser():
     parser.add_argument("--base-commit", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="reuse completed seeds only when source, inputs and contract match",
+    )
+    parser.add_argument(
         "--support-mode",
         choices=("full", "oracle"),
         default="full",
         help="full (default): ages1..260 in every state; oracle: known per-state bounds",
+    )
+    parser.add_argument(
+        "--stop-after-seed",
+        action="store_true",
+        help="save one new complete seed and exit for bounded resumable segments",
     )
     return parser
 
@@ -65,6 +75,35 @@ def check_output_mode(path, mode):
             raise ValueError(
                 f"output contains {old_mode} support evidence; use a separate {mode} path"
             )
+
+
+def resume_payload(path, expected, *, enabled=False):
+    if not enabled:
+        return expected
+    if not path.exists():
+        raise ValueError("resume report does not exist")
+    saved = json.loads(path.read_text())
+    for key in ("schema", "execution", "contract"):
+        if saved.get(key) != expected[key]:
+            raise ValueError(f"resume {key} differs from current source/input/runtime contract")
+    seeds = [r.get("seed") for r in saved.get("runs", [])]
+    if len(seeds) != len(set(seeds)) or any(s not in (901, 902, 903) for s in seeds):
+        raise ValueError("resume has invalid or duplicate seeds")
+    for r in saved.get("runs", []):
+        if r.get("support_mode") != expected["contract"]["support_mode"]:
+            raise ValueError("resume run support mode differs")
+        for key in ("small_history", "large_history"):
+            if [h["completed_updates"] for h in r.get(key, [])] != list(range(OUTER_UPDATES + 1)):
+                raise ValueError("resume seed is incomplete")
+        candidates = r.get("selection", {}).get("candidates", [])
+        if [c.get("width") for c in candidates] != list(WIDTHS):
+            raise ValueError("resume selection is incomplete")
+        for c in candidates:
+            if [h["completed_updates"] for h in c.get("train_history", [])] != list(
+                range(INNER_UPDATES + 1)
+            ):
+                raise ValueError("resume inner candidate is incomplete")
+    return saved
 
 
 def partitions(support, width):
@@ -321,10 +360,18 @@ def main():
         },
         "runs": [],
     }
+    try:
+        payload = resume_payload(args.output, payload, enabled=args.resume)
+    except ValueError as exc:
+        parser.error(str(exc))
+    completed = {r["seed"] for r in payload["runs"]}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     for r, prior in zip(old["runs"], previous["runs"], strict=True):
         if r["seed"] != prior["seed"]:
             raise AssertionError("seed alignment")
+        if r["seed"] in completed:
+            print(f"seed={r['seed']} resumed completed result", flush=True)
+            continue
         result = run(r, prior, support_mode=args.support_mode)
         payload["runs"].append(result)
         args.output.write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n")
@@ -346,6 +393,8 @@ def main():
             ),
             flush=True,
         )
+        if args.stop_after_seed:
+            return
 
 
 if __name__ == "__main__":

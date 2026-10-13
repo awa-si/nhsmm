@@ -849,3 +849,28 @@ as training. Legacy diagnostic callers retain their original oracle default.
 The existing v1 compact reports are interpreted as oracle evidence; a full-mode
 run must use a separate output path. CLI help and support modes are smoke-verified.
 This is switch/short-run correctness, not a new full generic recovery acceptance.
+
+## Step17a — bounded resumable full-support execution,2026-10-13
+
+The full-support resource smoke is slower than the earlier oracle control.
+A preliminary run at8c7865c743c8465e74d0fa5ab6c6d763679af3ba was interrupted
+after its last reported small-seed901 update30, before a completed seed/result
+was saved. Its partial work is not included in final statistical evidence.
+A CPU denormal-mode comparison had identical likelihood/counts but little speed
+gain; it was not adopted and numerical computation remains unchanged.
+
+--stop-after-seed exits after one new complete seed is written. --resume loads
+only reports with matching schema, source/input hashes, software/runtime metadata,
+base commit and full support contract. Invalid/duplicate seeds and incomplete
+inner/outer histories are rejected. Completed seeds are skipped, including
+the all-completed no-op. The entire batch still consists of9 inner20-update
+fits and6 outer30-update refits over901/902/903. No threshold/budget changes.
+
+The prior combined23-test gate and final12-test compact module cover24 distinct
+focused tests; resume metadata/completeness rejection and the segmented CLI
+save/skip/no-op behavior are covered. AST/Ruff/Black pass over39 files.48 current
+immutable inputs are connector-verified. Native environment is unchanged.
+Each bounded segment uses one worker,threads1, and a2400-second bound; after
+the first segment, append --resume while retaining --stop-after-seed and the
+same --base-commit and output path. Numerical results are checked and pushed
+at complete-seed checkpoints, with partial versus full acceptance explicit.

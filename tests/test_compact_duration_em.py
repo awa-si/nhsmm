@@ -12,6 +12,7 @@ from scripts.compare_compact_duration_em import (
     group_score,
     partitions,
     public_check,
+    resume_payload,
     select_width,
 )
 from scripts.compare_unlabelled_duration_em import aggregate, emission_scores
@@ -23,6 +24,11 @@ def test_support_defaults_full_and_oracle_is_explicit_and_retained(monkeypatch):
 
     args = argument_parser().parse_args(["--base-commit", "test", "--output", "out.json"])
     assert args.support_mode == "full"
+    assert not args.resume and not args.stop_after_seed
+    segmented = argument_parser().parse_args(
+        ["--base-commit", "test", "--output", "out.json", "--resume", "--stop-after-seed"]
+    )
+    assert segmented.resume and segmented.stop_after_seed
     oracle = duration_support("oracle")
     np.testing.assert_array_equal(oracle, true_law() > 0)
     monkeypatch.setattr(compact, "true_law", lambda: pytest.fail("oracle accessed in full mode"))
@@ -70,6 +76,88 @@ def test_full_support_constrained_fit_is_finite_and_monotonic():
     assert np.isfinite(p).all()
     assert min(np.diff([h["ll"] for h in history])) >= -1e-6
     assert history[-1]["ll"] > history[0]["ll"]
+
+
+def test_resume_requires_matching_sources_contract_and_complete_seed(tmp_path):
+    import copy
+    import json
+
+    expected = {
+        "schema": "test",
+        "execution": {"source_sha256": {"x": "abc"}},
+        "contract": {"support_mode": "full"},
+        "runs": [],
+    }
+    seed = {
+        "seed": 901,
+        "support_mode": "full",
+        "small_history": [{"completed_updates": i} for i in range(31)],
+        "large_history": [{"completed_updates": i} for i in range(31)],
+        "selection": {
+            "candidates": [
+                {"width": w, "train_history": [{"completed_updates": i} for i in range(21)]}
+                for w in (4, 8, 16)
+            ]
+        },
+    }
+    saved = copy.deepcopy(expected)
+    saved["runs"] = [seed]
+    path = tmp_path / "resume.json"
+    path.write_text(json.dumps(saved))
+    assert resume_payload(path, expected, enabled=True)["runs"] == [seed]
+    assert resume_payload(path, expected, enabled=False)["runs"] == []
+    changed = copy.deepcopy(expected)
+    changed["execution"]["source_sha256"]["x"] = "def"
+    with pytest.raises(ValueError, match="execution differs"):
+        resume_payload(path, changed, enabled=True)
+    saved["runs"][0]["large_history"].pop()
+    path.write_text(json.dumps(saved))
+    with pytest.raises(ValueError, match="incomplete"):
+        resume_payload(path, expected, enabled=True)
+
+
+def test_segmented_main_saves_each_seed_and_skips_completed_results(tmp_path, monkeypatch):
+    import json
+    import sys
+    import scripts.compare_compact_duration_em as compact
+
+    called = []
+
+    def fake_run(old, previous, *, support_mode):
+        called.append(old["seed"])
+        return {
+            "seed": old["seed"],
+            "support_mode": support_mode,
+            "selected_width": 16,
+            "small_history": [{"completed_updates": i} for i in range(31)],
+            "large_history": [{"completed_updates": i} for i in range(31)],
+            "selection": {
+                "candidates": [
+                    {"width": w, "train_history": [{"completed_updates": i} for i in range(21)]}
+                    for w in (4, 8, 16)
+                ]
+            },
+            "small_metrics": {},
+            "large_metrics": {},
+            "small_heldout_gain_nats_per_row": 0,
+            "large_heldout_gain_nats_per_row": 0,
+            "small_full_gate": False,
+            "large_full_gate": False,
+        }
+
+    monkeypatch.setattr(compact, "run", fake_run)
+    path = tmp_path / "segments.json"
+    args = ["test", "--base-commit", "test", "--output", str(path), "--stop-after-seed"]
+    monkeypatch.setattr(sys, "argv", args)
+    compact.main()
+    assert called == [901]
+    for n in (2, 3):
+        monkeypatch.setattr(sys, "argv", args + ["--resume"])
+        compact.main()
+        assert len(json.loads(path.read_text())["runs"]) == n
+    assert called == [901, 902, 903]
+    compact.main()  # A completed report does no further model work.
+    assert called == [901, 902, 903]
 
 
 def test_partition_covers_support_once_and_preserves_endpoint_atoms():

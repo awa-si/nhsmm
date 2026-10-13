@@ -4,6 +4,14 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step17a adds guarded --resume and --stop-after-seed to the full-support batch.
+Completed seeds are retained only when source/input/runtime/contract match and
+all20/30-update histories are complete. The model, data and acceptance budgets
+are unchanged.24 focused tests cover mechanics plus bounded CLI resume/skip.
+The initial full-support attempt was interrupted after the last reported
+small901 update30, before any completed seed report; it supplies no acceptance.
+Full-support statistical results are still pending.
+
 Oracle duration support is now disabled by default in the compact research CLI:
 --support-mode full uses ages1..260 for every state. --support-mode oracle
 retains the per-state bounds as an explicit control; no oracle code or evidence

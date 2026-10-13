@@ -2684,3 +2684,29 @@ support, verify default/explicit modes and output protection, and execute short
 monotonic generic-support fits. No new full three-seed recovery batch is claimed.
 Production defaults remain unchanged. Next: execute the generic full-support
 control while retaining the explicit oracle mode for comparison.
+
+## Full-support batch execution checkpoint — 2026-10-13
+
+Step17a preserves the fixed Full-Support experiment: configured ages1..260 in
+every state, no per-state oracle mask, widths4/8/16, inner96/32 likelihood-only
+selection at20 updates and128/1024 paired refits at30 updates, three seeds.
+The oracle mode and prior acceptance evidence remain available independently.
+
+Resource profiling showed slower native execution than the oracle run. The
+preliminary attempt was interrupted after its last reported small901 update30,
+before any seed completed its full comparison or wrote a report. Its partial
+updates are discarded, and no fitted held-out result from it is accepted.
+A denormal-mode timing probe produced zero observed likelihood/count difference
+on a128-sequence expectation pass but only a modest timing change; it was not
+used to alter numerical mode. Source algorithms, sample sizes and thresholds
+remain unchanged for the completed experiment.
+
+Bounded segments now use --stop-after-seed. Subsequent --resume calls require
+identical schema, base/source/input/runtime/contract metadata and complete
+20-update inner/30-update outer histories for every saved seed. Only complete
+seeds are reused; duplicates, unknown IDs or incomplete results are rejected.
+This is execution/recovery tooling, not new likelihood optimization or a model
+change. The three-seed experiment remains360 actual M-steps at completion.
+24 focused test cases and static checks cover this checkpoint; statistical
+Full-Support results remain pending. Completed-seed and final checkpoints will
+state coverage explicitly and retain the original numerical and recovery gates.
