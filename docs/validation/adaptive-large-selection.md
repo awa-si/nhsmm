@@ -140,3 +140,9 @@ results/adaptive-large-selection-seed1906-candidate0-verification-native-2026101
 The raw result supersedes the active Step22d snapshot with a completed phase.
 The same bounded resume command above next executes candidate_1, factor0.5.
 Source3966159 and all frozen settings, including oracle OFF, remain unchanged.
+
+Step22f captures candidate_1, factor0.5, at update10/27 with
+18/13/19/9 blocks. Thirteen source hashes, unchanged prior completed phases/
+data/contract identity, active budget/history, normalized positive full-age PMFs
+and partition consistency pass. Snapshot SHA256a4895fdd084f4cb236c6e1c431b62884e1f010b3c2c84097a4c2d66d13489e19.
+Terminal independent scoring and selection are pending; fitting continues.
