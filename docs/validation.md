@@ -2882,3 +2882,41 @@ Nine new tests and24 unchanged focused cases verify mechanics; statistical
 results are pending. Production defaults and retained oracle controls remain
 unchanged. Fresh data avoid reusing the previous diagnostic held-out set,
 but one short pilot cannot establish general recovery or Trading usefulness.
+
+## Adaptive pilot result — 2026-10-13
+
+Step18b completes the predeclared38-update seed1901 pilot at source commit
+324de0e100b44ecd3a85fad21b91170c589b56d1. Raw evidence is in
+docs/validation/results/adaptive-duration-pilot-native-20261013.json.
+Inner validation LL for factors0.5/1/2 is-10413.07914/-10414.63996/-10412.45309;
+factor2 wins, with refit penalty8.317766 per additional block.
+
+| Fit | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|adaptive|0.175780 /0.408261 /0.461643 /0.291849|22.240347|+0.00543874|FAIL|
+|fixed width16|0.176501 /0.156730 /0.207276 /0.229820|5.693451|+0.00961770|FAIL|
+
+Learned adaptive blocks have zero-based exclusive-end boundaries:
+bull[0,76),[76,161),[161,260); bear/range[0,260); chaotic[0,59),[59,260).
+Both bear and range remain uniform, with mean130.5. These are training-derived
+blocks covering every configured age, not generator support masks. There is
+no improved recovery: adaptive held-out gain is lower and three state TVs are
+worse than the paired fixed control, with only a slight bull-TV improvement.
+
+The ability to represent narrow boundaries does not mean penalized EM will
+learn them from a uniform start. A strong complexity penalty can retain a
+one-block solution, and short inner validation may select that solution.
+Here the selected factor and resulting uniform rows are observed facts;
+separating initialization, penalty and small-sample selection effects requires
+a new controlled experiment. The new DP solves its count-based M-step globally,
+but does not guarantee a global observed-likelihood optimum. Its correct
+penalized objective is distinct from fine-PMF recovery.
+
+All source/data/selection hashes,38 updates, PMF coverage/normalization, reported
+metrics/gates, penalized-objective monotonicity and public numerical checks
+pass. Maximum raw duration-gradient error is5.08e-14; likelihood/filter errors
+remain below the original gates. This is a verified negative single-seed pilot,
+not generic recovery or a production change. Next: predeclare a fresh-data
+comparison of weaker penalties and an observation-only EM warm start before
+spending time on another1024-sequence batch. Preserve these failed results and
+the previous family-bound evidence; do not tune against this outer held-out set.

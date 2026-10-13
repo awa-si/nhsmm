@@ -14,8 +14,14 @@ checks and split isolation. Together with24 unchanged focused cases,33 distinct
 cases are verified. Syntax, smoke, Ruff and Black pass for both added files.
 The predeclared pilot uses fresh seed1901,64 training/16 held-out sequences of
 300 rows,48/16 inner selection,three six-update candidates and two ten-update
-refits (adaptive and fixed-width16 control):38 M-steps total. Results pending;
-no production/default/oracle-mode changes or three-seed recovery claim.
+refits (adaptive and fixed-width16 control):38 M-steps total.
+Step18b completes and verifies this pilot. Likelihood selection chooses factor2;
+adaptive blocks are3/1/1/2 by state. Both arms are held-out-positive but fail
+recovery. Adaptive TVs0.17578/0.40826/0.46164/0.29185 and mean RMSE22.24 are
+worse than the fixed control (RMSE5.69, TVs0.17650/0.15673/0.20728/0.22982).
+Bear/range stay uniform. All numerical/replay/objective checks pass. This pilot
+does not repair recovery; penalty/initialization need a fresh-data comparison.
+No production/default/oracle-mode changes or three-seed recovery claim.
 
 Step17a adds guarded --resume and --stop-after-seed to the full-support batch.
 Completed seeds are retained only when source/input/runtime/contract match and

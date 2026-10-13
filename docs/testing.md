@@ -959,3 +959,20 @@ per candidate and ten per outer arm. Syntax/smoke precede the bounded single-
 worker job. Candidate/refit/held-out data are fresh relative to901/902/903.
 The pilot will evaluate unchanged TV0.12 and positive held-out gain separately
 from numerical acceptance; it cannot provide large-sample/multi-seed acceptance.
+
+## Step18b — adaptive pilot verification,2026-10-13
+
+docs/validation/results/adaptive-duration-pilot-native-20261013.json records
+the bounded seed1901 pilot at source commit324de0e100b44ecd3a85fad21b91170c589b56d1.
+All ten source hashes, fresh64/16 observation replay,48/16 disjoint inner split
+and hashes, likelihood selection,38 completed update indices and objective
+monotonicity pass. Recomputed PMF TV and held-out/full gates match the report.
+Adaptive PMFs remain positive/normalized and block-constant, with complete
+disjoint coverage of every age1..260. The final penalized objective is separately
+recomputed from LL, PMF, penalty and block count. Fixed-control LL is monotonic.
+Maximum independent posterior-gradient error is5.08e-14, segment-reference LL
+error6.71e-12, public recursion LL error1.14e-12 and state-probability error1.20e-13.
+Both statistical gates fail, and the adaptive fit is worse than the fixed
+control on held-out likelihood and three of four state TVs. Source remains
+unchanged from the verified nine new cases plus24 existing focused cases.
+No further broad/canonical/Trading acceptance is asserted.
