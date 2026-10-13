@@ -874,3 +874,24 @@ Each bounded segment uses one worker,threads1, and a2400-second bound; after
 the first segment, append --resume while retaining --stop-after-seed and the
 same --base-commit and output path. Numerical results are checked and pushed
 at complete-seed checkpoints, with partial versus full acceptance explicit.
+
+## Step17b — full-support seed901 verified checkpoint,2026-10-13
+
+The saved v2 report at
+docs/validation/results/compact-duration-full-support-native-20261013.json
+contains exactly one complete seed901 at source commit
+ca73c96cddf373677be0711882981e618e89e9a6. Three inner histories contain20 updates
+each and both outer histories30 each:120 actual M-steps over five fits.
+Resume completeness, current nine source hashes and both input-report hashes,
+128/1024 observation replay and paired-prefix hashes, held-out replay,96/32
+disjoint selection and inner hashes, selected validation argmax, monotonicity,
+full support1..260, normalized/nonnegative block-constant PMFs and independently
+recomputed TV/held-out/full-gate values all pass. No code changed since Step17a;
+its24 focused cases/static verification remain applicable.
+
+All1040 checked raw duration coordinates agree with independent posterior-count
+gradients within2.05e-14. Public/reference LL errors are at most1.10e-11 and
+state-probability errors at most7.29e-14. Both statistical recovery gates fail;
+numerical verification does not imply recovery. Seeds902/903 and full batch
+acceptance remain pending. Resume retains the original ca73c96 source identity,
+even when subsequent commits update only report/documentation.

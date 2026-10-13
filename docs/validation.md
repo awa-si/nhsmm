@@ -2707,6 +2707,38 @@ identical schema, base/source/input/runtime/contract metadata and complete
 seeds are reused; duplicates, unknown IDs or incomplete results are rejected.
 This is execution/recovery tooling, not new likelihood optimization or a model
 change. The three-seed experiment remains360 actual M-steps at completion.
-24 focused test cases and static checks cover this checkpoint; statistical
-Full-Support results remain pending. Completed-seed and final checkpoints will
+24 focused test cases and static checks cover this checkpoint; remaining
+Full-Support seeds are pending. Completed-seed and final checkpoints will
 state coverage explicitly and retain the original numerical and recovery gates.
+
+## Full-support seed901 result — 2026-10-13
+
+Step17b reports one complete seed of three, at source commit
+ca73c96cddf373677be0711882981e618e89e9a6, in
+docs/validation/results/compact-duration-full-support-native-20261013.json.
+Oracle support is disabled: every state learns over configured ages1..260.
+Known emission/transition/initial nuisance parameters remain frozen. Inner
+validation selects width16 (72 duration degrees of freedom); candidate NLLs
+for widths4/8/16 are2.16874794/2.16520026/2.16511685 nats/row.
+
+| Arm | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|128 sequences|0.120317 /0.174091 /0.181125 /0.149312|1.800663|+0.00712244|FAIL|
+|1024 sequences|0.066578 /0.104138 /0.111409 /0.140846|1.249540|+0.00698475|FAIL|
+
+The large fit improves the first three TVs below0.12, while the chaotic law
+still misses the unchanged gate. Both held-out gains are positive. Relative
+to the paired Step15 oracle-support compact fits, absolute held-out LL changes
+by+0.00254739 nats/row in the small arm and-0.00049290 in the large arm.
+These paired differences compare fitted likelihoods directly: the uniform
+baselines differ between modes. Removing oracle support also changes block
+alignment and approximation bias; this single seed does not identify their
+separate contributions or establish generic duration recovery.
+
+All120 updates, five complete monotonic histories, source/input/data hashes,
+inner-selection and compact-PMF invariants are verified. Independent posterior
+gradients and public/reference recursion agree within the original numerical
+gates (gradient2.05e-14, LL1.10e-11, state probability7.29e-14). Numerical
+correctness passes, statistical recovery fails. Seeds902/903 remain pending;
+production defaults, stock joint optimization and Trading/market acceptance
+are unchanged and not inferred from this checkpoint.

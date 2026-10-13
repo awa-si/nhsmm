@@ -10,14 +10,20 @@ all20/30-update histories are complete. The model, data and acceptance budgets
 are unchanged.24 focused tests cover mechanics plus bounded CLI resume/skip.
 The initial full-support attempt was interrupted after the last reported
 small901 update30, before any completed seed report; it supplies no acceptance.
-Full-support statistical results are still pending.
+Step17b completes seed901, the first of three full-support seeds (120 actual
+EM updates). Width16 is selected. Both128/1024 arms improve held-out likelihood
+against their own full-support uniform baseline, but both fail full recovery.
+Large-arm PMF TVs are0.06658/0.10414/0.11141/0.14085; the chaotic-state TV
+exceeds the unchanged0.12 gate. Source/input/replay hashes, complete histories,
+compact PMFs and public numerical checks are verified. Seeds902/903 remain
+pending; this is a complete-seed checkpoint, not three-seed acceptance.
 
 Oracle duration support is now disabled by default in the compact research CLI:
 --support-mode full uses ages1..260 for every state. --support-mode oracle
 retains the per-state bounds as an explicit control; no oracle code or evidence
 is removed. Training, public filter/likelihood, gradient checks and uniform
 baseline all use the selected mode.22 focused tests pass. The full generic
-three-seed recovery experiment has not yet been rerun; the accepted Step15
+three-seed recovery experiment has only completed seed901; the accepted Step15
 statistics below remain oracle-support evidence. Known emission/transition/initial
 parameters remain controlled in both modes. Width16 has72 parameters in full
 mode, versus53 in oracle mode.
