@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22a audits the existing small-inner selection and freezes the next
+large-exposure experiment in docs/validation/adaptive-large-selection.md and
+its machine-readable protocol. Fresh seeds1906/1907/1908 use768/256 inner
+training/validation sequences, the unchanged three factors and warm3+fit27,
+then full1024 selected/factor2 matched refits. Actual budget114..141 M-steps
+per seed; no new results yet. env21 is lost and system Python lacks Torch.
+Driver implementation, runtime restoration and static/real-fit smoke remain
+before any long execution. Oracle support remains OFF and retained.
+
+
 Step21e completes both fresh1024-only replications at frozen source8fcb7ca.
 All60 new updates, source/data/phase/PMF/objective/metric and numerical gates
 pass. Combined with1903, all90 large-arm updates are verified, but full recovery
