@@ -4,6 +4,14 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22q persists seed1907 candidate_1 factor0.5 at5/27 updates,
+blocks8/14/10/9. Thirteen current source/contract/software identities, data/
+split replay, preserved prior warm/candidate_0, active budget/history and positive
+full-age normalized PMF/partition checks pass. This is an active checkpoint;
+terminal replay/inner score and factor selection/outer recovery remain pending.
+Seed1908 still awaits candidate_1; native1907 fitting continues at3966159.
+
+
 Step22p restores the lost native environment. All54 current input/checkpoint
 blob identities pass; declared CPU dependencies and editable install succeed
 at matching Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu. All47 focused cases and

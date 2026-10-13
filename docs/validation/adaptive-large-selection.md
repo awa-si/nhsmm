@@ -307,3 +307,9 @@ support, threshold or budget changes are made; oracle remains OFF.
 Step22p restores the native runtime and passes54 connector identities,47 focused
 cases and44-file static checks at matching versions. The existing first-candidate
 checkpoints remain intact. Next candidate_1 uses the unchanged frozen source.
+
+Step22q records seed1907 candidate_1 factor0.5 at5/27 with8/14/10/9 blocks.
+Source/contract/software, dataset/split replay, preserved previous fits, budget/
+history/objective and positive normalized full-age partition checks pass.
+Snapshot SHA25668ae800323223063451bed9ad9254e8decf74c047bc25caa880155e472ba19a3. Terminal independent E-step and inner validation
+are pending; native fitting continues. Source3966159 and oracle OFF unchanged.
