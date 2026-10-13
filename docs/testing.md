@@ -1209,3 +1209,18 @@ Torch/NumPy/test/static/build dependencies and editable install succeed.
 Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu match the prior experiment;44-file AST,
 Ruff and Black pass. These are implementation/preflight checks, not fresh large
 statistical recovery or production/joint Trading acceptance.
+
+## Step22c — first large inner warm checkpoint,2026-10-13
+
+At immutable source3966159902a48bfc2c1fad6a22c375a15cd71dee, seed1906
+finishes three unpenalized inner-warm updates on768 of1024 training sequences.
+The bounded --max-phases1 invocation exits0 at the completed phase boundary.
+All13 source hashes, full protocol/software/seed equality, training and disjoint
+768/256 split replay hashes, indices0..3 and monotonic fixed objective pass.
+Independent fit_adaptive terminal replay validates positive normalized full-age
+PMF/partition coverage/densities and reproduces saved LL/objective within the
+existing1e-7 resume tolerance without any new M-step. Selection/evaluation remain
+null and active is null. No truth/outer statistics are evaluated for this stage.
+Raw checkpoint SHA256: 80d9c9556c1f81c929cbc15c67ff28ff2e801da9a871eeeb35dee07e78b191db.
+The final unified preflight suite has47 passed in12.07s;44-file static checks
+pass. Large predictive/recovery acceptance remains pending.

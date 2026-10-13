@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22c completes seed1906's inner warm3 on768 observations at source3966159.
+All13 source/contract identities,1024 training and768/256 split replay hashes,
+phase indices0..3, positive normalized full-support PMFs/partitions and fixed
+objective monotonicity pass. Independent terminal E-step replay reproduces the
+saved LL/objective without another M-step. Blocks254/250/228/129; selection and
+outer evaluation remain null. Durable raw checkpoint is in validation/results.
+Next resume starts candidate_0 (factor0.125), preserving the completed warm fit;
+seeds1907/1908 and all large recovery gates remain pending. Oracle remains OFF.
+
+
 Step22b implements the resumable large-selection driver and phase budget CLI.
 Source/contract/software/data hashes bind resume; completed phases are re-scored
 without new M-steps. Training-only selection is saved before outer evaluation;

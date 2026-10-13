@@ -89,3 +89,30 @@ control fitting, selection-only observations, completed no-op and a real short
 fit/public likelihood/gradient/filter evaluation smoke. No large recovery result
 or improvement is claimed by this preparation. Next: bounded large phases and
 verified checkpoint writeback. Production/joint Trading acceptance is unchanged.
+
+## Step22c — verified seed1906 execution checkpoint
+
+Raw checkpoint: results/adaptive-large-selection-seed1906-native-20261013.json.
+Source3966159902a48bfc2c1fad6a22c375a15cd71dee remains frozen. The first bounded
+invocation exits0 after inner_warm updates0..3 on768 training observations.
+All13 source identities, protocol/software/seed binding,1024-data and768/256
+split replay hashes, positive normalized full support, partition consistency
+and fixed-phase objective monotonicity pass. Terminal E-step replay reproduces
+LL-499446.2814603957 and objective-499446.28935215634; blocks254/250/228/129.
+Selection/evaluation remain null. This is execution evidence, not recovery.
+
+Next bounded command, from the repository root:
+
+```bash
+timeout 1200 ../nhsmm-env23/bin/python -m scripts.compare_adaptive_large_selection \\
+  --base-commit 3966159902a48bfc2c1fad6a22c375a15cd71dee --seed 1906 \\
+  --output docs/validation/results/adaptive-large-selection-seed1906-native-20261013.json \\
+  --resume --max-phases 1
+```
+
+This starts candidate_0 (factor0.125), reusing the verified inner warm state.
+Completed phases are re-scored without new M-steps. If interrupted, the same
+command resumes the active candidate from its last atomic five-update snapshot.
+Native checkpoints are durable only after connector writeback. The source commit
+argument stays3966159 while later commits modify only documentation/evidence.
+Seeds1907/1908 are not started. No outer outcome has changed the frozen protocol.
