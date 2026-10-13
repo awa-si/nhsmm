@@ -2948,3 +2948,53 @@ are retained. This is a bounded paired single-seed pilot, not general recovery.
 Different factors may win by mode, so the final selected comparison includes
 their interaction; it cannot attribute all differences solely to initialization.
 The six inner candidates separately expose the matched-data factorial contrast.
+
+## Paired warm-start pilot result — 2026-10-13
+
+Step19b completes all84 actual M-steps on fresh seed1902 at source commit
+1c5301c62c209a374239fa58aa8caf8bdb7db9af. Raw evidence is in
+docs/validation/results/adaptive-warmstart-pilot-native-20261013.json.
+
+| Penalty factor | Uniform inner validation LL | Warm inner validation LL |
+| --- | --- | --- |
+|0.125|-10555.342758|-10591.577128|
+|0.5|-10442.564175|-10494.324664|
+|2|-10425.145969|-10434.100661|
+
+Both modes select factor2 on their shared48/16 inner split, giving refit penalty
+8.317766. The lower penalties produce more blocks but substantially worse
+validation likelihood. This is predictive evidence on inner observations,
+not an inference from outer truth or proof of a particular variance mechanism.
+
+| Fit | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|uniform adaptive|0.301523 /0.408261 /0.330522 /0.315181|17.504755|+0.00598975|FAIL|
+|warm adaptive|0.258426 /0.408261 /0.204404 /0.249366|16.540235|+0.00572418|FAIL|
+|fixed width16|0.321220 /0.248608 /0.132082 /0.194173|5.297360|+0.00289584|FAIL|
+
+Uniform/warm refits learn3/1/3/2 and3/1/5/3 blocks, respectively. Warm-start
+changes the learned solutions and improves three state TVs relative to uniform;
+bear remains one full-age block with mean130.5 and identical TV0.408261.
+Since both selected the same factor and used matched twelve-update paths,
+their paired difference concerns initialization/phasing, not selected penalty
+strength. Warm-start held-out LL is lower by0.00026557 nats/row despite better
+three-state TV. The fixed control has lower mean RMSE and better three TVs
+than warm, but lower held-out LL. Predictive likelihood and fine-PMF recovery
+again rank methods differently. All three full recovery gates fail.
+
+Source/data/split/selection hashes, all84 steps, warm-state continuation,
+positive normalized PMFs, complete learned age partitions, monotonic fixed-
+objective phases and independently recomputed metrics/gates pass. Maximum
+public gradient/LL/state-probability errors are4.86e-14/3.64e-12/1.28e-13.
+Thus the numerical implementation is verified while the recovery objective
+remains unmet. The exact adaptive M-step does not remove finite-sample or
+initialization effects in the observed penalized objective.
+
+The weaker penalties did not win validation, and the warm start did not repair
+bear recovery. Before further tuning on fresh pilots, the next useful controlled
+comparison is sample-size replication at unchanged predeclared penalty rules
+and adequate fixed update budgets. Increasing exposure changes count evidence
+relative to the logarithmic penalty; improvement is a hypothesis to test, not
+accepted here. Preserve both failed pilots; do not reuse their outer test data
+for further method selection. Production defaults, oracle controls, joint
+learning and Trading/live-market acceptance are unchanged.

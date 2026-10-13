@@ -997,3 +997,26 @@ receive twelve total updates each: uniform12, warm3+9, fixed-width16 control12.
 Shared inner warm-up reduces actual work to48 inner plus36 outer M-steps=84;
 all individual adaptive paths have equal total budgets. The original1901 pilot
 remains historical evidence at324de0e, not a current-source hash assertion.
+
+## Step19b — paired warm-start pilot verification,2026-10-13
+
+docs/validation/results/adaptive-warmstart-pilot-native-20261013.json records
+the complete seed1902 experiment at1c5301c62c209a374239fa58aa8caf8bdb7db9af.
+All eleven current source hashes,64/16 observation replay,48/16 inner split and
+hashes, six factor/mode candidates, selected-factor argmax and all84 actual
+M-steps pass. Both warm histories contain three updates; uniform candidates
+have nine and warm candidates six, with matching total path budgets. Initial
+warm continuation LL matches the shared preceding warm result in inner fits
+and refit. Uniform/warm/fixed outer histories contain12/9/12 updates, respectively,
+and the warm outer path additionally has its separately verified three-step
+phase. Monotonicity is checked within each fixed-objective phase, not across
+the change from warm penalty0 to the selected nonzero penalty.
+
+All PMF positivity/normalization and full-age block coverage/density checks,
+recomputed final penalized scores, TV, held-out gains and unchanged full gates
+pass. Three public/all-logit checks cover3120 coordinates: maximum gradient
+error4.86e-14, public recursion LL error3.64e-12 and state-probability error1.28e-13.
+All three recovery gates fail. No source changes occurred during the pilot;
+the combined35-case focused suite and AST/smoke/Ruff/Black evidence remain
+applicable. No current canonical-suite, historical NPZ or Trading acceptance
+is implied by this paired single-seed pilot.

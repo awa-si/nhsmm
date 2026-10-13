@@ -11,8 +11,15 @@ The48/16 inner split,64 training/16 held-out sequences of300 rows and all84
 actual M-steps are fixed before evaluation. Shared warm-up is computed once;
 each refit warm-up uses its own training observations. Initial PMFs/partitions
 are validated and copied. No oracle support or production changes. Results
-pending; Step18's negative pilot is preserved at its immutable source commit.
-All35 focused tests, AST/warm smoke and Ruff/Black checks pass.
+complete in Step19b; Step18's negative pilot is preserved at its immutable source
+commit. All35 focused tests, AST/warm smoke and Ruff/Black checks pass. Both
+initializations select factor2. Warm-start TV improves bull/range/chaotic versus
+uniform, with bear unchanged at0.40826 (one uniform block); all three fits,
+including fixed-width16, fail full recovery. Warm mean RMSE16.54 remains worse
+than the fixed control5.30. All84 updates, replay/source hashes, warm continuity,
+PMF/objective/metric gates and public numerical checks are verified. Next
+research boundary is sample-size replication before further penalty tuning;
+the weaker inner candidates had substantially worse validation likelihood.
 
 Step18a adds a research-only adaptive full-support duration histogram. Exact
 dynamic programming learns contiguous block boundaries from posterior duration
