@@ -167,3 +167,26 @@ Source/data/contract and prior completed phases are preserved; active budget,
 phase indices, fixed-objective monotonicity and positive normalized full-age
 PMF/partition coverage pass. SHA256bd646722f7613d41b03a61854498e5fca926086df7fd3897d492eeceb2c74856. Selection/outer evaluation
 are still null. The native bounded seed1906 batch continues under3966159.
+
+## Step22i — selection and active full-data refit checkpoint
+
+All three inner candidates finish; their marginal validation LLs are:
+
+| Factor | Inner validation LL |
+| --- | ---: |
+|0.125|-166868.3480591295|
+|0.5|-166776.27502647758|
+|2|-166718.363173187|
+
+The predeclared criterion selects2, before any outer data or truth evaluation.
+Its gain over0.5 is57.911853 nats on the same256 validation sequences.
+The independent full-data warm3 is complete. Active selected_refit reaches
+5/27 with6/4/8/5 blocks, penalty2*log(1024). Because selected factor
+is2, this same completed fit will represent the matched factor2 control.
+
+Thirteen source hashes, original completed phase/data/contract identities,
+indices, monotonic fixed objectives, normalized positive full-age PMFs, block
+coverage/densities, scalar objective recalculation and phase continuity pass.
+Snapshot SHA256c337e6e6fac1ec8a73d038fd0ba7a1007708884823133026c4308d0c5da1e5bc. This is an execution checkpoint; terminal
+independent E-step/public numerical/recovery verification remains pending.
+Outer evaluation is null and the native bounded batch continues at3966159.

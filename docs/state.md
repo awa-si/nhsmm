@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22i persists seed1906's completed three-candidate selection: factor2 wins
+on inner validation LL -166718.363173, ahead of factor0.5 by57.911853 nats.
+The full1024 warm3 completes and selected_refit is at5/27,6/4/8/5 blocks.
+Thirteen source hashes, immutable prior fits/data/contract, phase/objective/PMF
+checks and warm-to-refit LL continuity pass. This is an active execution
+checkpoint; final independent E-step/public numerical/recovery checks remain
+pending. Selected/control fits are identical, so the completed fit will be
+reused. Source3966159 and oracle OFF unchanged; outer evaluation remains null.
+
+
 Step22h persists seed1906 candidate_2 (factor2) at update10/27,
 blocks5/4/7/5. All13 source hashes, immutable prior completed phases/data/
 contract identity, active budget/history, full positive normalized PMFs and
