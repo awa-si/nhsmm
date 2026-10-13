@@ -4,6 +4,14 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step27-1909-active-width8
+
+Width-cap pilot seed1909 checkpoint: width8 at10/27,
+blocks[33, 33, 33, 33]. Source/software/contract/data/phase/history/
+objective/PMF/partition and shared warm-PMF continuity checks pass. This is
+recovery evidence; final terminal replay/outer/numerical and recovery gates
+remain pending. Frozen source8fc245e,256 training sequences, oracle OFF.
+
 Step27-1909-active
 
 Width-cap pilot seed1909 checkpoint: unrestricted at10/27,
