@@ -1045,3 +1045,17 @@ can advance the branch while --base-commit retains the frozen code identity.
 Native execution uses one worker/threads1 and a2400-second bound. Checkpoints
 are local until explicitly pushed at verified report gates; they alone do not
 guarantee survival of workspace loss. Statistical acceptance remains pending.
+
+## Step20b — complete128-arm checkpoint,2026-10-13
+
+The sample-size report snapshot at source421ef280fafce80f4ae1cedd3e30df303b2c36de
+contains one complete128 arm plus an active1024 warm-state update0. Complete
+small-arm source hashes,128 training and24 held-out replay, paired-prefix hash,
+warm0..3 and fit0..27 histories, phase continuity, monotonic fixed objectives,
+positive/normalized full-age block PMFs, recomputed final score, TV and held-out
+gates all pass. Maximum gradient error1.85e-14, segment-reference LL error1.14e-12,
+public recursion LL error2.28e-13 and state-probability error7.59e-14 pass the
+unchanged numerical gates. Small full recovery fails. The active large state
+is execution/recovery data, not completed large-arm numerical/statistical
+acceptance. The running local report may advance beyond this immutable snapshot;
+resume retains --base-commit421ef28 even after docs/report-only commits.

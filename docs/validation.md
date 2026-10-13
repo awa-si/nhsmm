@@ -3023,3 +3023,20 @@ under matching source/data/runtime/contract metadata. Resume rechecks evidence
 at the saved state, and monotonicity applies within each fixed-objective phase.
 This is one paired seed, not multi-seed or joint-production/Trading acceptance.
 38 focused cases and static/smoke checks pass; statistical results are pending.
+
+## Adaptive128-arm checkpoint — 2026-10-13
+
+Step20b verifies the first sample-size arm at frozen source421ef28. The raw
+snapshot is docs/validation/results/adaptive-sample-size-native-20261013.json;
+the1024 arm remains active and is not accepted as a result.
+
+| Train count | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|128|0.203553 /0.166745 /0.190507 /0.155557|4.152821|+0.00752151|FAIL|
+
+The fit learns3/3/5/4 blocks; bear no longer remains uniform in this dataset.
+All30 updates, source/data hashes, warm-state continuity, PMF/partition and
+fixed-objective invariants, reported metrics and public numerical checks pass.
+No state reaches the unchanged0.12 fine-TV gate. Cross-pilot differences mix
+seed and budget changes, so this partial result cannot attribute improvement
+to sample size alone. The decisive paired1024 comparison remains pending.

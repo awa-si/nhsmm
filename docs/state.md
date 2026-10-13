@@ -12,7 +12,11 @@ save warm/fitting phase, positive PMF, partitions and histories at phase start,
 every five fitting updates and phase end. Resume checks frozen metadata, data
 replay and reproduces checkpoint evidence before continuing. Completed arms
 are skipped.38 focused tests, syntax/resume smoke and Ruff/Black pass. Source
-and execution contract are ready; sample-size statistical results are pending.
+and execution contract are ready. Step20b completes and verifies the128 arm:
+TVs0.20355/0.16675/0.19051/0.15556, mean RMSE4.15282, held-out gain+0.00752151.
+Numerical/replay/objective checks pass, full recovery fails. The checkpoint
+retains the completed small result and large warm-phase update0;1024 statistics
+are still pending. The long fit continues with the same frozen source identity.
 
 Step19a prepares a fresh paired warm-start/penalty pilot (seed1902). Factors
 0.125/0.5/2 are compared from uniform and observation-only three-update EM
