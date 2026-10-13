@@ -4,6 +4,14 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step23-1907-active
+
+Seed1907 candidate_2 factor2 checkpoint: 5/27 updates,
+blocks5/4/8/5. Source/software/contract/data/split/prior phase preservation,
+history/objective/full-age PMF and partition checks pass. This snapshot is
+recovery evidence; terminal independent replay and factor choice remain pending.
+Native fitting continues at unchanged source3966159; oracle OFF.
+
 Step22t completes candidate_1 factor0.5 for seeds1907/1908:27 updates each,
 54 new M-steps and114 total including their prior warm/candidate_0 phases.
 Both independent terminal E-step and validation replays pass; all13 source,

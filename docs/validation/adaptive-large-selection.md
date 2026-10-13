@@ -344,3 +344,11 @@ and paired results/adaptive-large-selection-candidate1-batch-native-20261013.jso
 bind exact raw report SHA256 values. Selection and outer evaluation remain null.
 Next candidate_2 factor2 on both seeds, unchanged frozen source3966159, support,
 method, thresholds and budgets. Oracle remains OFF.
+
+## Step23-1907-active
+
+Seed1907 candidate_2 factor2 checkpoint: 5/27 updates,
+blocks5/4/8/5. Source/software/contract/data/split/prior phase preservation,
+history/objective/full-age PMF and partition checks pass. This snapshot is
+recovery evidence; terminal independent replay and factor choice remain pending.
+Native fitting continues at unchanged source3966159; oracle OFF.
