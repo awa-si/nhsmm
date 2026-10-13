@@ -403,3 +403,20 @@ All13 source/software/contract/data/split identities, prior inner phase records
 and selected factor are preserved. Full-age PMF/partition/history/objective and
 warm/refit continuity checks pass. This is recovery evidence; terminal replays,
 outer evaluation and recovery/numerical gates remain pending. Oracle OFF.
+
+## Step24-1907-complete
+
+Seed1907 completes full_warm3 plus selected_refit27 on1024 sequences,
+114 total actual M-steps. Selected factor2 and its matched frozen-factor control
+reuse the identical fit. All13 source/software/contract/data/split/phase/history/
+objective/PMF/partition checks, independent warm/refit terminal E-step replay,
+regenerated outer evaluation and public likelihood/gradient/filtering checks
+pass. Prior inner records and selection remain identical; completed CLI resume
+is a byte-preserving no-op. Outer gain0.00592318680781116 nats/row;
+PMF TVs[0.10871667616130973, 0.11004879204839987, 0.12596853943506775, 0.11614778987526281]; mean RMSE0.8229498555275837.
+Full recovery gateFAIL; failed states['range'].
+Learned blocks[5, 4, 8, 6]; post-fit partition TV lower bounds[0.10845232583663918, 0.1092965235192142, 0.12497076145532046, 0.11436916048165213];
+feasible forward-KL projection TVs[0.11094778037100295, 0.1146360225418479, 0.12722818351149318, 0.11685519102449432].
+Verification is SHA-bound toe785101743f7cfb86ca146dbf3409969aef8e9ce5af97e8841e1ec2a6e0f2110.
+Post-fit diagnostics do not enter fitting/selection or change the gates. Oracle
+remains OFF; no production/joint-neural/legacy NPZ acceptance is claimed.
