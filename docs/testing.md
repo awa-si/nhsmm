@@ -1416,3 +1416,33 @@ tie break. Factor2 validation LL-166599.38091861576, chosen factor2.0.
 Blocks5/4/8/5. Main report SHA256172a2ce05a5d12d8f8c7ee9cc269fc1f208c00ea9317619edfa5420c660f6f61.
 Selection is complete; outer evaluation remains null and full-data refit pending.
 Frozen source3966159, method, budgets, gates and oracle OFF remain unchanged.
+
+## Step23-1908-complete
+
+Seed1908 candidate_2 factor2 completes27 updates (84 total M-steps).
+Source/software/contract/data/split/history/objective/full-age PMF/partition and
+independent terminal training E-step replay pass. All prior phases are preserved
+exactly. All three candidates are independently scored on the same256 inner
+validation sequences and the selection matches the maximum with stronger-factor
+tie break. Factor2 validation LL-167164.1952762566, chosen factor2.0.
+Blocks5/4/8/5. Main report SHA2568051085a684c3967fe17c83a9b303a9c7746e3af030623a56eaa2f30194f5f5d.
+Selection is complete; outer evaluation remains null and full-data refit pending.
+Frozen source3966159, method, budgets, gates and oracle OFF remain unchanged.
+
+## Step23-batch — inner candidate selection complete
+
+Both seeds1907/1908 finish candidate_2 factor2:27 updates each,54 new
+M-steps and168 cumulative including prior inner phases. All independent terminal
+replays, regenerated datasets/splits, source/software/contract checks and prior
+phase preservation pass. All three candidate validation scores and chosen factors
+are independently reproduced. Selection is complete and saved before outer data;
+outer evaluation remains null. Next full_warm (3 updates on1024 sequences) and
+selected_refit (27), with frozen source3966159/method/budgets/gates and oracle OFF.
+SHA-bound paired evidence: results/adaptive-large-selection-candidate2-batch-native-20261013.json.
+
+| Seed | Factor2 inner validation LL | Gain over0.125 (nats) | Selected factor | Blocks bull/bear/range/chaotic |
+| --- | ---: | ---: | ---: | --- |
+| 1907 | -166599.38091861576 | +155.26236209457 | 2.0 | 5/4/8/5 |
+| 1908 | -167164.19527625659 | +165.89892961740 | 2.0 | 5/4/8/5 |
+
+Factor comparisons use the same within-seed256 validation observations; absolute likelihoods do not rank seeds. Selection does not establish the true-PMF recovery or outer predictive gates.

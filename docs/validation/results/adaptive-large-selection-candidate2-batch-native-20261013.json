@@ -1,0 +1,109 @@
+{
+  "schema": "nhsmm-adaptive-large-selection-candidate-batch-v1",
+  "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+  "seeds": [
+    1907,
+    1908
+  ],
+  "factor": 2.0,
+  "candidate_updates_per_seed": 27,
+  "new_candidate_msteps": 54,
+  "total_completed_msteps_including_prior_phases": 168,
+  "software_source_contract_equivalent": true,
+  "distinct_training_datasets": true,
+  "inputs": {
+    "1907": {
+      "path": "docs/validation/results/adaptive-large-selection-seed1907-native-20261013.json",
+      "sha256": "172a2ce05a5d12d8f8c7ee9cc269fc1f208c00ea9317619edfa5420c660f6f61"
+    },
+    "1908": {
+      "path": "docs/validation/results/adaptive-large-selection-seed1908-native-20261013.json",
+      "sha256": "8051085a684c3967fe17c83a9b303a9c7746e3af030623a56eaa2f30194f5f5d"
+    }
+  },
+  "rows": [
+    {
+      "verified": true,
+      "seed": 1907,
+      "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+      "source_hashes": 13,
+      "updates": 27,
+      "total_msteps": 84,
+      "penalty": 13.287579466295345,
+      "blocks": [
+        5,
+        4,
+        8,
+        5
+      ],
+      "final_ll": -500259.3963340518,
+      "final_objective": -500498.5826065271,
+      "validation_ll": -166599.38091861576,
+      "candidate0_validation_ll": -166754.64328071033,
+      "improvement_nats": 155.26236209456692,
+      "selected_factor": 2.0,
+      "candidate_validation_scores": [
+        {
+          "factor": 0.125,
+          "validation_ll": -166754.64328071033,
+          "phase": "candidate_0"
+        },
+        {
+          "factor": 0.5,
+          "validation_ll": -166628.70723221602,
+          "phase": "candidate_1"
+        },
+        {
+          "factor": 2.0,
+          "validation_ll": -166599.38091861576,
+          "phase": "candidate_2"
+        }
+      ],
+      "outer_evaluation": false,
+      "sha256": "172a2ce05a5d12d8f8c7ee9cc269fc1f208c00ea9317619edfa5420c660f6f61"
+    },
+    {
+      "verified": true,
+      "seed": 1908,
+      "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+      "source_hashes": 13,
+      "updates": 27,
+      "total_msteps": 84,
+      "penalty": 13.287579466295345,
+      "blocks": [
+        5,
+        4,
+        8,
+        5
+      ],
+      "final_ll": -500641.98100827006,
+      "final_objective": -500881.16670812684,
+      "validation_ll": -167164.1952762566,
+      "candidate0_validation_ll": -167330.094205874,
+      "improvement_nats": 165.8989296173968,
+      "selected_factor": 2.0,
+      "candidate_validation_scores": [
+        {
+          "factor": 0.125,
+          "validation_ll": -167330.094205874,
+          "phase": "candidate_0"
+        },
+        {
+          "factor": 0.5,
+          "validation_ll": -167213.64745267865,
+          "phase": "candidate_1"
+        },
+        {
+          "factor": 2.0,
+          "validation_ll": -167164.1952762566,
+          "phase": "candidate_2"
+        }
+      ],
+      "outer_evaluation": false,
+      "sha256": "8051085a684c3967fe17c83a9b303a9c7746e3af030623a56eaa2f30194f5f5d"
+    }
+  ],
+  "selection_complete": true,
+  "outer_evaluation_complete": false,
+  "limits": "Inner selection complete per seed; no cross-seed absolute likelihood ranking, final refit, true-PMF recovery or production acceptance."
+}

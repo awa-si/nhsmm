@@ -4,6 +4,29 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step23-batch
+
+Both seeds1907/1908 finish candidate_2 factor2:27 updates each,54 new
+M-steps and168 cumulative including prior inner phases. All independent terminal
+replays, regenerated datasets/splits, source/software/contract checks and prior
+phase preservation pass. All three candidate validation scores and chosen factors
+are independently reproduced. Selection is complete and saved before outer data;
+outer evaluation remains null. Next full_warm (3 updates on1024 sequences) and
+selected_refit (27), with frozen source3966159/method/budgets/gates and oracle OFF.
+SHA-bound paired evidence: results/adaptive-large-selection-candidate2-batch-native-20261013.json.
+
+Step23-1908-complete
+
+Seed1908 candidate_2 factor2 completes27 updates (84 total M-steps).
+Source/software/contract/data/split/history/objective/full-age PMF/partition and
+independent terminal training E-step replay pass. All prior phases are preserved
+exactly. All three candidates are independently scored on the same256 inner
+validation sequences and the selection matches the maximum with stronger-factor
+tie break. Factor2 validation LL-167164.1952762566, chosen factor2.0.
+Blocks5/4/8/5. Main report SHA2568051085a684c3967fe17c83a9b303a9c7746e3af030623a56eaa2f30194f5f5d.
+Selection is complete; outer evaluation remains null and full-data refit pending.
+Frozen source3966159, method, budgets, gates and oracle OFF remain unchanged.
+
 Step23-1907-complete
 
 Seed1907 candidate_2 factor2 completes27 updates (84 total M-steps).
