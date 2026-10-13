@@ -934,3 +934,28 @@ width8 projection passes every state-TV threshold, without asserting learned
 recovery or changing the completed likelihood-selection experiment.
 Production/canonical suite, historical NPZ and Trading acceptance are not
 extended by these research checks.
+
+## Step18a — exact adaptive block optimizer,2026-10-13
+
+scripts/compare_adaptive_duration_em.py adds full-support training-derived
+contiguous duration blocks. The DP is compared against every partition of a
+six-age row at penalties0/0.7/8; additional cases check count-derived boundaries,
+positive mass across all ages, zero-exposure behavior and invalid inputs.
+An actual short observation fit checks monotonic penalized evidence plus public
+likelihood/filter and all-logit gradient agreement. Selection isolation uses
+disjoint inner observations and a deterministic stronger-penalty tie rule.
+
+Nine new cases pass. The initial combined run passed32 of33 cases and failed a
+new strict-improvement assertion: with two short sequences, positive penalty
+correctly retained the initial single block. The real-fit improvement case
+was corrected to penalty0, and all nine new cases then passed. The24 unchanged
+existing cases passed in the combined run:33 distinct verified cases in total.
+Both added files pass AST, exact-M-step smoke, Ruff and Black checks.
+This is a script-only research scope; the canonical production suite is unchanged.
+
+Before the pilot, fixed its budget to seed1901,64/16 training/held-out sequences,
+300 steps,48/16 inner split, factors0.5/1/2 times log(sequence count),six updates
+per candidate and ten per outer arm. Syntax/smoke precede the bounded single-
+worker job. Candidate/refit/held-out data are fresh relative to901/902/903.
+The pilot will evaluate unchanged TV0.12 and positive held-out gain separately
+from numerical acceptance; it cannot provide large-sample/multi-seed acceptance.

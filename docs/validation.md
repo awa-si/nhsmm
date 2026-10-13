@@ -2849,3 +2849,36 @@ NPZ verification and Trading/live-market acceptance are unchanged. Next research
 requires a support-independent family capable of resolving abrupt duration
 shape changes, training-only selection and fresh evaluation. No acceptance
 threshold or completed result is retroactively changed.
+
+## Adaptive full-support research contract — 2026-10-13
+
+Step18a implements an alternative family without per-state oracle bounds or
+fixed-grid alignment. A partition covers every configured age1..260. For
+posterior count n_i and fixed pseudocount eta=1e-6, define q_i=n_i+eta.
+Given a block B, its exact optimal density is sum(q_i in B)/(size(B)*sum(q_i)).
+Its unnormalized profile Q contribution is C_B*log(C_B/size(B)); the omitted
+row-normalization term is independent of partition. Prefix dynamic programming
+maximizes the sum of block contributions minus lambda*(number_of_blocks-1)
+over all contiguous partitions, separately by state. Positive pseudocounts
+prevent irreversible support exclusion and are included in the objective.
+
+The observed objective is LL + eta*sum(log PMF) - lambda*sum(extra_blocks).
+For fixed lambda, exact penalized Q maximization guarantees this objective
+cannot decrease under exact EM; unpenalized LL need not be monotonic when the
+number of blocks changes. The script checks the penalized objective explicitly.
+The objective uses posterior counts from observations, not decoded labels,
+true supports or generator duration probabilities. Nuisance parameters remain
+known/frozen and valid starts/right censoring follow the verified E-step.
+
+The predeclared bounded pilot uses fresh seed1901,64 training and16 held-out
+sequences of300 rows. Inner48/16 likelihood selection compares fixed factors
+0.5/1/2 with lambda=factor*log(inner training sequence count),six updates each;
+ties prefer stronger penalty. Refit scales the selected factor by log(64)
+and runs ten updates, paired with a fixed full-support width16 ten-update
+control. Outer data and truth evaluation occur only after selection and both
+fits. All38 M-steps are fixed before evaluation. This heuristic penalty scale
+is an experimental contract, not a claim of BIC consistency or optimality.
+Nine new tests and24 unchanged focused cases verify mechanics; statistical
+results are pending. Production defaults and retained oracle controls remain
+unchanged. Fresh data avoid reusing the previous diagnostic held-out set,
+but one short pilot cannot establish general recovery or Trading usefulness.

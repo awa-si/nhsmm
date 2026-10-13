@@ -4,6 +4,19 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step18a adds a research-only adaptive full-support duration histogram. Exact
+dynamic programming learns contiguous block boundaries from posterior duration
+counts; a symmetric1e-6 pseudocount preserves every configured age. The EM
+objective includes a fixed penalty per extra block and is checked for monotonicity.
+Penalty selection sees training observations only. Nine new tests pass, including
+exhaustive partition comparisons, learned boundaries, public gradient/recursion
+checks and split isolation. Together with24 unchanged focused cases,33 distinct
+cases are verified. Syntax, smoke, Ruff and Black pass for both added files.
+The predeclared pilot uses fresh seed1901,64 training/16 held-out sequences of
+300 rows,48/16 inner selection,three six-update candidates and two ten-update
+refits (adaptive and fixed-width16 control):38 M-steps total. Results pending;
+no production/default/oracle-mode changes or three-seed recovery claim.
+
 Step17a adds guarded --resume and --stop-after-seed to the full-support batch.
 Completed seeds are retained only when source/input/runtime/contract match and
 all20/30-update histories are complete. The model, data and acceptance budgets
