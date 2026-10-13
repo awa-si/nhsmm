@@ -303,3 +303,7 @@ Seed1908 phase evidence: results/adaptive-large-selection-seed1908-candidate0-ve
 Selection and outer evaluation remain null. Next bounded resume each seed with
 its matching output/source3966159 starts candidate_1 (factor0.5). No method,
 support, threshold or budget changes are made; oracle remains OFF.
+
+Step22p restores the native runtime and passes54 connector identities,47 focused
+cases and44-file static checks at matching versions. The existing first-candidate
+checkpoints remain intact. Next candidate_1 uses the unchanged frozen source.

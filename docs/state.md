@@ -4,6 +4,13 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22p restores the lost native environment. All54 current input/checkpoint
+blob identities pass; declared CPU dependencies and editable install succeed
+at matching Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu. All47 focused cases and
+44-file AST/Ruff/Black pass again. Prior fits/checkpoints are intact. Next
+candidate_1 factor0.5 for1907/1908; no training outcome changed. Oracle OFF.
+
+
 Step22o completes candidate_0 factor0.125 for both1907/1908:27 updates each,
 54 new M-steps and60 total with their prior warm3. Source/software/contract/data/
 split/PMF/partition/history/objective and independent terminal E-step checks pass;

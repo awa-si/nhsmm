@@ -1353,3 +1353,16 @@ total including prior warm starts. The candidate-batch JSON binds both exact
 raw report hashes and verification metrics. No absolute cross-seed LL ranking,
 factor choice, outer statistics or public final recovery result follows. Source
 and environment are unchanged, so prior47-case/44-file preflight remains valid.
+
+## Step22p — recovered native runtime preflight,2026-10-13
+
+The prior virtual environment was lost;54 retained source/doc/test/checkpoint
+files match current connector blob identities at057717d. A transient exec
+transport interruption cancelled the initial network approval without a
+returned decision. The offline cache lacked Torch. After transport recovered,
+normal declared CPU dependencies install successfully; no policy escalation
+or alternate runtime is used. Editable install succeeds. Restored versions are
+Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu, matching checkpoint identity.
+Forty-seven focused cases including real fit/resume/public numerical smoke
+pass in48.53s;44-file AST/Ruff/Black pass. Both candidate_0 results remain intact.
+Next: candidate_1 factor0.5 for1907/1908 with unchanged3966159 and oracle OFF.
