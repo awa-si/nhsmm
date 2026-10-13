@@ -136,7 +136,7 @@ Step28 completes all predeclared width-cap pilot seeds1909/1910/1911.
 Matched256-sequence arms use warm3 and27 M-steps each;171 total M-steps.
 All3 source/software/contract/data/PMF/phase/history/objective and independent
 terminal/outer/public numerical/completed-noop verification checks pass.
-Full recovery gates: unrestricted0/3; width80/3.
+Full recovery gates: unrestricted 0/3; width8 0/3.
 Exact raw reports are SHA-bound by individual and batch verification. The
 pilot changes the allowed partition class without true-PMF/label input; oracle
 OFF. No1024-sequence, joint-neural/production or legacy NPZ acceptance follows.
