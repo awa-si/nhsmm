@@ -3148,3 +3148,7 @@ The first success1903 does not replicate universally: currently1903 PASS and
 1904 FAIL. The predeclared1905 run remains pending and will use identical
 rules; do not retune thresholds, penalties or partitions on this outer result.
 Known-nuisance controls and production/Trading limits remain unchanged.
+
+Step21d persists1905's active execution state at warm3+fit10,5/4/9/5 blocks,
+source8fcb7ca. Source/data/phase/objective/PMF/partition checks pass. Outer truth
+is not evaluated for this partial state; final1905 statistics remain pending.

@@ -24,6 +24,10 @@ only on bear. Its learned-partition TV lower bound0.126560 already exceeds
 0.12; additional mass optimization cannot pass that partition. All numerical/
 replay/objective checks pass.1903 remains PASS and1904 FAIL;1905 is pending.
 
+Step21d persists1905 at warm3+fit10 with5/4/9/5 blocks. Source/data replay,
+phase histories, objective and full-age PMF/partition checks pass. This is
+execution/recovery evidence only; final1905 recovery remains pending.
+
 Step20d completes paired128/1024 adaptive warm-start fits on fresh seed1903:
 all60 M-steps and numerical/replay/objective gates pass. Fixed factor2 and
 lambda2*log(count), warm3 plus penalized27 updates per arm, full ages1..260

@@ -1151,3 +1151,13 @@ median TV bounds and normalized forward-KL projection TVs. Bear's bound0.126560
 exceeds0.12, proving failure for this learned partition independently of fitted
 mass updates. This post-fit diagnosis does not alter the method or gate.1905
 remains to be executed under the same frozen code/contract.
+
+## Step21d — seed1905 execution snapshot,2026-10-13
+
+The second fresh replication at source8fcb7ca reaches warm3+fit10 with5/4/9/5
+blocks. Eleven source hashes,1024 training replay, complete phase indices,
+warm-to-fit LL continuity, monotonic fixed objectives, positive normalized full-
+age PMFs, contiguous block coverage/density and independently recomputed active
+penalized score pass. The snapshot is durable recovery data only; no1905 outer
+truth/held-out or public final-gradient acceptance is asserted. Seed1904 remains
+fully verified with failed bear recovery, independent of this partial run.
