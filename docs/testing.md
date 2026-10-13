@@ -976,3 +976,24 @@ Both statistical gates fail, and the adaptive fit is worse than the fixed
 control on held-out likelihood and three of four state TVs. Source remains
 unchanged from the verified nine new cases plus24 existing focused cases.
 No further broad/canonical/Trading acceptance is asserted.
+
+## Step19a — matched-budget warm-start pilot,2026-10-13
+
+The adaptive research fitter now accepts a copied positive normalized initial
+PMF and validated contiguous block partition covering every age1..260. Existing
+default behavior is unchanged. New checks cover warm-state immutability, invalid
+support/partition rejection, actual warm-fit objective monotonicity and shared
+inner warm-up with matched candidate update budgets and split isolation.
+AST and an actual one-step warm/pruning smoke pass before longer execution;
+Ruff/Black pass for the three changed/new Python files. The combined five-module
+focused suite passes all35 cases, including the eleven adaptive cases.
+
+The predeclared pilot uses fresh seed1902,64/16 training/held-out sequences of
+300 rows and one48/16 inner split. Factors0.125/0.5/2 times log(training sequence
+count) are compared separately from uniform starts (nine updates) and shared
+three-update unpenalized warm starts (six additional updates). Selection uses
+validation marginal LL only, with stronger factor on an exact tie. Outer arms
+receive twelve total updates each: uniform12, warm3+9, fixed-width16 control12.
+Shared inner warm-up reduces actual work to48 inner plus36 outer M-steps=84;
+all individual adaptive paths have equal total budgets. The original1901 pilot
+remains historical evidence at324de0e, not a current-source hash assertion.

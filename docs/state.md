@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step19a prepares a fresh paired warm-start/penalty pilot (seed1902). Factors
+0.125/0.5/2 are compared from uniform and observation-only three-update EM
+starts, with equal nine-update inner paths and twelve-update outer paths.
+The48/16 inner split,64 training/16 held-out sequences of300 rows and all84
+actual M-steps are fixed before evaluation. Shared warm-up is computed once;
+each refit warm-up uses its own training observations. Initial PMFs/partitions
+are validated and copied. No oracle support or production changes. Results
+pending; Step18's negative pilot is preserved at its immutable source commit.
+All35 focused tests, AST/warm smoke and Ruff/Black checks pass.
+
 Step18a adds a research-only adaptive full-support duration histogram. Exact
 dynamic programming learns contiguous block boundaries from posterior duration
 counts; a symmetric1e-6 pseudocount preserves every configured age. The EM

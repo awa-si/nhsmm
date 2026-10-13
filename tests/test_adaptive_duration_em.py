@@ -88,3 +88,41 @@ def test_selection_receives_only_inner_training_observations(monkeypatch):
     assert len(tr) == 6 and len(va) == 2 and not set(tr) & set(va)
     for train in seen:
         np.testing.assert_array_equal(train, x[tr])
+
+
+def test_warm_start_preserves_input_and_checks_initial_partition():
+    x, _ = sequences(302, count=2, steps=60, sigma=2.0)
+    warm_p, warm_blocks, _ = fit_adaptive(x, 0.0, iterations=2)
+    original = warm_p.copy()
+    p, blocks, history = fit_adaptive(x, 0.2, iterations=2, initial_state=(warm_p, warm_blocks))
+    np.testing.assert_array_equal(warm_p, original)
+    assert min(np.diff([h["penalized_objective"] for h in history])) >= -1e-6
+    assert np.all(p > 0) and len(blocks) == 4
+    with pytest.raises(ValueError, match="cover"):
+        fit_adaptive(x, 0.2, initial_state=(warm_p, [[(0, 259)]] * 4))
+    with pytest.raises(ValueError, match="positive"):
+        fit_adaptive(x, 0.2, initial_state=(np.zeros((4, 260)), warm_blocks))
+
+
+def test_paired_selection_shares_inner_warm_and_matches_path_budgets(monkeypatch):
+    import scripts.compare_adaptive_warmstart as paired
+
+    x = np.arange(8 * 2).reshape(8, 2, 1)
+    seen = []
+    warm_p = np.full((4, 260), 1 / 260)
+    warm_blocks = [[(0, 260)]] * 4
+
+    def fitted(train, penalty, *, iterations, initial_state=None, **kwargs):
+        seen.append((train.copy(), penalty, iterations, initial_state))
+        return warm_p, warm_blocks, []
+
+    monkeypatch.setattr(paired, "fit_adaptive", fitted)
+    monkeypatch.setattr(paired, "aggregate", lambda scores, p: (0.0, None))
+    result = paired.paired_selection(x, seed=20)
+    assert result["selected_factor_by_mode"] == {"uniform": 2.0, "warm": 2.0}
+    assert len(seen) == 7 and seen[0][2] == 3
+    for train, penalty, updates, initial in seen:
+        np.testing.assert_array_equal(train, x[result["train_indices"]])
+    assert [s[2] for s in seen[1:4]] == [9] * 3
+    for call in seen[4:]:
+        assert call[2] == 6 and call[3][0] is warm_p and call[3][1] is warm_blocks

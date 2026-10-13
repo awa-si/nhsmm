@@ -81,11 +81,35 @@ def objective(ll, pmf, blocks, penalty, *, pseudocount=PSEUDOCOUNT):
     return float(ll + pseudocount * np.log(pmf).sum() - penalty * sum(len(b) - 1 for b in blocks))
 
 
-def fit_adaptive(x, penalty, *, iterations=OUTER_UPDATES, tag="adaptive"):
+def fit_adaptive(x, penalty, *, iterations=OUTER_UPDATES, tag="adaptive", initial_state=None):
     if not isinstance(iterations, int) or iterations < 0:
         raise ValueError("nonnegative integer iterations required")
-    p = np.full((4, D), 1.0 / D)
-    blocks = [[(0, D)] for _ in range(4)]
+    if not np.isfinite(penalty) or penalty < 0:
+        raise ValueError("finite nonnegative penalty required")
+    if initial_state is None:
+        p = np.full((4, D), 1.0 / D)
+        blocks = [[(0, D)] for _ in range(4)]
+    else:
+        p = np.array(initial_state[0], dtype=float, copy=True)
+        blocks = [[tuple(b) for b in state] for state in initial_state[1]]
+        if p.shape != (4, D) or not np.isfinite(p).all() or np.any(p <= 0):
+            raise ValueError("positive finite full-support initial PMF required")
+        if not np.allclose(p.sum(1), 1, rtol=0, atol=1e-12) or len(blocks) != 4:
+            raise ValueError("normalized initial PMF and four state partitions required")
+        for row, state in zip(p, blocks, strict=True):
+            cursor = 0
+            for start, end in state:
+                if (
+                    not isinstance(start, (int, np.integer))
+                    or not isinstance(end, (int, np.integer))
+                    or start != cursor
+                    or not start < end <= D
+                    or not np.allclose(row[start:end], row[start], rtol=0, atol=1e-15)
+                ):
+                    raise ValueError("initial blocks must cover all ages and match densities")
+                cursor = end
+            if cursor != D:
+                raise ValueError("initial blocks must cover all ages")
     scores = emission_scores(x)
     history = []
     start = time.monotonic()

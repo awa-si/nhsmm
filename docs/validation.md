@@ -2920,3 +2920,31 @@ not generic recovery or a production change. Next: predeclare a fresh-data
 comparison of weaker penalties and an observation-only EM warm start before
 spending time on another1024-sequence batch. Preserve these failed results and
 the previous family-bound evidence; do not tune against this outer held-out set.
+
+## Fresh paired warm-start pilot contract — 2026-10-13
+
+Step19a compares weaker penalties and initialization without reusing seed1901
+outer observations. The new driver scripts/compare_adaptive_warmstart.py fixes
+seed1902,64 training and16 held-out300-row sequences. Inner selection uses the
+same48/16 split for both modes and fixed penalty factors0.125/0.5/2. Each uniform
+candidate gets nine EM updates. The warm variant first runs three unpenalized
+updates with the same symmetric pseudocount, using inner training observations
+only; that result is copied into six penalized updates per factor. All warm
+candidates share the same learned start. Each mode independently selects its
+best marginal validation LL, with stronger penalty on an exact tie.
+
+Refits use their own64 training sequences and selected factor*log(64): uniform
+twelve updates and warm three unpenalized plus nine penalized updates. The
+fixed-width16 full-support control also receives twelve updates. Actual work
+is84 M-steps after sharing identical inner warm-up, versus90 if repeated.
+Every individual adaptive selection path has nine updates and every outer path
+twelve. Warm/uniform trajectories use different objectives during their first
+three steps; penalized monotonicity is checked only within each fixed-penalty
+phase. Warm phase itself uses penalty0 and the same positive prior.
+
+Full support, known nuisance parameters, fresh starts/censoring, outer-data
+construction after all selection/fits and unchanged TV/held-out numerical gates
+are retained. This is a bounded paired single-seed pilot, not general recovery.
+Different factors may win by mode, so the final selected comparison includes
+their interaction; it cannot attribute all differences solely to initialization.
+The six inner candidates separately expose the matched-data factorial contrast.
