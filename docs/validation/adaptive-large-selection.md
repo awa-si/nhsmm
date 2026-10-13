@@ -116,3 +116,9 @@ command resumes the active candidate from its last atomic five-update snapshot.
 Native checkpoints are durable only after connector writeback. The source commit
 argument stays3966159 while later commits modify only documentation/evidence.
 Seeds1907/1908 are not started. No outer outcome has changed the frozen protocol.
+
+Step22d persists an active candidate_0 snapshot at update10/27,67/73/57/36
+blocks. Source/contract/prior warm and split identity, active budget/history,
+full-age PMFs and block consistency pass. Independent terminal scoring and
+selection remain pending. The raw file is a recovery checkpoint; native fitting
+continues under unchanged3966159. No outer data/truth evaluation is performed.

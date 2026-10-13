@@ -1224,3 +1224,13 @@ null and active is null. No truth/outer statistics are evaluated for this stage.
 Raw checkpoint SHA256: 80d9c9556c1f81c929cbc15c67ff28ff2e801da9a871eeeb35dee07e78b191db.
 The final unified preflight suite has47 passed in12.07s;44-file static checks
 pass. Large predictive/recovery acceptance remains pending.
+
+## Step22d — candidate_0 active execution snapshot,2026-10-13
+
+The immutable raw snapshot captures update10/27 of factor0.125*log(768).
+Thirteen current source hashes and unchanged prior warm/split/source/contract
+identity pass. Active phase key, budget, complete history indices, monotonic
+fixed objective, positive finite normalized full-age PMFs and contiguous
+block/density coverage pass. Blocks67/73/57/36. Snapshot SHA256:
+df35bace71808d4650f9fb58da3ca275030d0666e7b2be1bb53db24df67592ad. No independent terminal score, completed-candidate
+validation or outer recovery claim is made at this checkpoint. Fitting continues.
