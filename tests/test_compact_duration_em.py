@@ -4,14 +4,72 @@ import numpy as np
 import pytest
 
 from scripts.compare_compact_duration_em import (
+    argument_parser,
+    check_output_mode,
     compact_mstep,
+    duration_support,
     fit_compact,
     group_score,
     partitions,
+    public_check,
     select_width,
 )
 from scripts.compare_unlabelled_duration_em import aggregate, emission_scores
 from scripts.verify_isolated_trading_hsmm import sequences, true_law
+
+
+def test_support_defaults_full_and_oracle_is_explicit_and_retained(monkeypatch):
+    import scripts.compare_compact_duration_em as compact
+
+    args = argument_parser().parse_args(["--base-commit", "test", "--output", "out.json"])
+    assert args.support_mode == "full"
+    oracle = duration_support("oracle")
+    np.testing.assert_array_equal(oracle, true_law() > 0)
+    monkeypatch.setattr(compact, "true_law", lambda: pytest.fail("oracle accessed in full mode"))
+    support = duration_support()
+    assert support.shape == (4, 260) and support.all()
+    with pytest.raises(ValueError):
+        duration_support("invalid")
+
+
+def test_full_support_public_and_gradient_checks_keep_probability_outside_oracle(monkeypatch):
+    import scripts.compare_unlabelled_duration_em as reference
+
+    support = duration_support()
+    p = support / support.sum(1, keepdims=True)
+    assert p[~duration_support("oracle")].sum() > 0
+    x, labels = sequences(58, count=1, steps=80, sigma=2.0)
+    monkeypatch.setattr(reference, "true_law", lambda: pytest.fail("hidden oracle gradient mask"))
+    assert (
+        reference.posterior_gradient_check(x, p, support=support)[
+            "maximum_all_logit_gradient_error"
+        ]
+        < 1e-7
+    )
+    assert public_check(p, x, labels, support=support)["ll_error"] < 1e-7
+
+
+def test_existing_oracle_evidence_cannot_be_overwritten_by_full_default(tmp_path):
+    import json
+
+    path = tmp_path / "report.json"
+    path.write_text(json.dumps({"contract": {}}))  # Historical v1 is oracle mode.
+    check_output_mode(path, "oracle")
+    with pytest.raises(ValueError, match="separate full path"):
+        check_output_mode(path, "full")
+    path.write_text(json.dumps({"contract": {"support_mode": "full"}}))
+    check_output_mode(path, "full")
+    with pytest.raises(ValueError):
+        check_output_mode(path, "oracle")
+
+
+def test_full_support_constrained_fit_is_finite_and_monotonic():
+    x, _ = sequences(59, count=2, steps=80, sigma=2.0)
+    p, history = fit_compact(x, duration_support(), 16, iterations=3)
+    np.testing.assert_allclose(p.sum(1), 1, atol=1e-12)
+    assert np.isfinite(p).all()
+    assert min(np.diff([h["ll"] for h in history])) >= -1e-6
+    assert history[-1]["ll"] > history[0]["ll"]
 
 
 def test_partition_covers_support_once_and_preserves_endpoint_atoms():

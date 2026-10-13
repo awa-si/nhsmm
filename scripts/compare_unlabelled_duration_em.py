@@ -152,8 +152,10 @@ def fit_em(x, initial_pmf, *, iterations=ITERATIONS, label="EM"):
     return p, history
 
 
-def posterior_gradient_check(x, pmf):
-    model = make_model(true_law(), sigma=SIGMA)
+def posterior_gradient_check(x, pmf, *, support=None):
+    # Existing callers retain their oracle control; new callers can pass generic support.
+    carrier = true_law() if support is None else support / support.sum(1, keepdims=True)
+    model = make_model(carrier, sigma=SIGMA)
     with torch.no_grad():
         model.dist.duration.logits.copy_(torch.tensor(np.log(np.maximum(pmf, 1e-300))))
     actual_p = model_law(model).detach().numpy()

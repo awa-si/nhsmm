@@ -4,9 +4,19 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Oracle duration support is now disabled by default in the compact research CLI:
+--support-mode full uses ages1..260 for every state. --support-mode oracle
+retains the per-state bounds as an explicit control; no oracle code or evidence
+is removed. Training, public filter/likelihood, gradient checks and uniform
+baseline all use the selected mode.22 focused tests pass. The full generic
+three-seed recovery experiment has not yet been rerun; the accepted Step15
+statistics below remain oracle-support evidence. Known emission/transition/initial
+parameters remain controlled in both modes. Width16 has72 parameters in full
+mode, versus53 in oracle mode.
+
 Step15 completes the compact-duration batch. All three inner validations select width16, reducing duration degrees of freedom from757 to53. With1024 observation-only sequences/seed, all three fits pass the unchanged full duration gate: each state PMF TV<=0.12 (observed0.05292–0.11169) and positive held-out gain0.00323–0.00379 nats/row. The128-sequence arms fail full recovery; seed903 also remains held-out-negative. Compactness improves every state/seed TV and held-out score versus the unrestricted Step14 fits, while sacrificing training likelihood. Details: [validation.md](validation.md#compact-duration-family-with-training-only-selection--2026-10-13).
 
-Verification:18 focused tests; AST/Ruff/Black pass over39 verified materialized/new Python files. All360 EM updates and15 monotonic fits, replay/source/input-report hashes, disjoint inner selection and compact support/density invariants are verified. All3120 checked production duration-gradient coordinates agree within3.01e-14; six public/reference likelihood errors<=1.14e-11 and state-probability errors<=8.66e-14. This accepts label-free duration recovery only under known support/nuisance parameters, finite D260 and valid starts; it is not stock joint optimize or Trading-feature acceptance. Production defaults remain unchanged; research masks/family have no public runtime/artifact contract. Historical NPZ verification remains open. Next: remove oracle per-state support in a controlled experiment before integrating the compact family into public optimization or unfreezing joint nuisance/Trading learning. Earlier Steps12–14 remain separate evidence.
+Verification:18 focused tests; AST/Ruff/Black pass over39 verified materialized/new Python files. All360 EM updates and15 monotonic fits, replay/source/input-report hashes, disjoint inner selection and compact support/density invariants are verified. All3120 checked production duration-gradient coordinates agree within3.01e-14; six public/reference likelihood errors<=1.14e-11 and state-probability errors<=8.66e-14. This accepts label-free duration recovery only under known support/nuisance parameters, finite D260 and valid starts; it is not stock joint optimize or Trading-feature acceptance. Production defaults remain unchanged; research masks/family have no public runtime/artifact contract. Historical NPZ verification remains open. Next: execute the default full-support control with the oracle mode retained for comparison before integrating the compact family into public optimization or unfreezing joint nuisance/Trading learning. Earlier Steps12–14 remain separate evidence.
 
 ## Structural research findings — 2026-10-12
 

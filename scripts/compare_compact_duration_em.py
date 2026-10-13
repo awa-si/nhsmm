@@ -19,6 +19,7 @@ from scripts.compare_unlabelled_duration_em import (
     posterior_gradient_check,
 )
 from scripts.verify_isolated_trading_hsmm import (
+    D,
     check_recursion,
     make_model,
     sequences,
@@ -31,6 +32,39 @@ INNER_UPDATES = 20
 OUTER_UPDATES = 30
 STEPS = 300
 LARGE_COUNT = 1024
+
+
+def duration_support(mode="full"):
+    """Oracle bounds remain available; default uses only configured K4/D260."""
+    if mode == "full":
+        return np.ones((4, D), dtype=bool)
+    if mode == "oracle":
+        return true_law() > 0
+    raise ValueError("support mode must be full or oracle")
+
+
+def argument_parser():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base-commit", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--support-mode",
+        choices=("full", "oracle"),
+        default="full",
+        help="full (default): ages1..260 in every state; oracle: known per-state bounds",
+    )
+    return parser
+
+
+def check_output_mode(path, mode):
+    """Preserve historic oracle evidence when the active default changes."""
+    if path.exists():
+        prior = json.loads(path.read_text())
+        old_mode = prior["contract"].get("support_mode", "oracle")
+        if old_mode != mode:
+            raise ValueError(
+                f"output contains {old_mode} support evidence; use a separate {mode} path"
+            )
 
 
 def partitions(support, width):
@@ -147,17 +181,18 @@ def select_width(x, support, *, seed, iterations=INNER_UPDATES, widths=WIDTHS):
     }
 
 
-def public_check(p, x, labels):
-    model = make_model(true_law(), sigma=SIGMA)
+def public_check(p, x, labels, *, support=None):
+    if support is None:
+        support = np.ones_like(p, dtype=bool)
+    model = make_model(support / support.sum(1, keepdims=True), sigma=SIGMA)
     with torch.no_grad():
         model.dist.duration.logits.copy_(torch.tensor(np.log(np.maximum(p, 1e-300))))
     return check_recursion(model, x[:2], labels[:2], sigma=SIGMA)
 
 
-def run(old, previous):
+def run(old, previous, *, support_mode="full"):
     seed = old["seed"]
-    truth = true_law()
-    support = truth > 0
+    support = duration_support(support_mode)
     x, _ = sequences(seed + 400000, count=128, steps=STEPS, sigma=SIGMA)
     if hashlib.sha256(x.tobytes()).hexdigest() != old["small_observation_sha256"]:
         raise AssertionError("small replay mismatch")
@@ -173,14 +208,24 @@ def run(old, previous):
     if hashlib.sha256(heldout.tobytes()).hexdigest() != previous["heldout_observation_sha256"]:
         raise AssertionError("heldout replay mismatch")
     scores = emission_scores(heldout)
+    initial_test, _ = aggregate(scores, support / support.sum(1, keepdims=True))
+    if support_mode == "oracle" and abs(initial_test - old["initial_heldout_ll"]) > 1e-7:
+        raise AssertionError("oracle baseline replay mismatch")
     small_test, _ = aggregate(scores, small)
     large_test, _ = aggregate(scores, large)
-    small_gain = (small_test - old["initial_heldout_ll"]) / labels.size
-    large_gain = (large_test - old["initial_heldout_ll"]) / labels.size
+    small_gain = (small_test - initial_test) / labels.size
+    large_gain = (large_test - initial_test) / labels.size
+    truth = true_law()  # Ground-truth probabilities enter evaluation only.
     small_metrics = metrics(small, truth)
     large_metrics = metrics(large, truth)
     return {
         "seed": seed,
+        "support_mode": support_mode,
+        "oracle_support_enabled": support_mode == "oracle",
+        "support_min_by_state": (support.argmax(1) + 1).tolist(),
+        "support_max_by_state": (D - support[:, ::-1].argmax(1)).tolist(),
+        "initial_heldout_ll": initial_test,
+        "unrestricted_reference_support_mode": "oracle",
         "selected_width": width,
         "selection": selection,
         "labels_used_in_learning_or_selection": False,
@@ -212,19 +257,21 @@ def run(old, previous):
         - old["large_em_history"][-1]["ll"],
         "small_full_gate": bool(small_gain > 0 and small_metrics["fine_pmf_gate"]),
         "large_full_gate": bool(large_gain > 0 and large_metrics["fine_pmf_gate"]),
-        "gradient_check": posterior_gradient_check(x[:1], small),
-        "small_public_recursion": public_check(small, heldout, labels),
-        "large_public_recursion": public_check(large, heldout, labels),
+        "gradient_check": posterior_gradient_check(x[:1], small, support=support),
+        "small_public_recursion": public_check(small, heldout, labels, support=support),
+        "large_public_recursion": public_check(large, heldout, labels, support=support),
         "small_fitted_pmf": small.tolist(),
         "large_fitted_pmf": large.tolist(),
     }
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--base-commit", required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser = argument_parser()
     args = parser.parse_args()
+    try:
+        check_output_mode(args.output, args.support_mode)
+    except ValueError as exc:
+        parser.error(str(exc))
     torch.set_num_threads(1)
     p13 = Path("docs/validation/results/unlabelled-hsmm-step13-native-20261012.json")
     p14 = Path("docs/validation/results/unlabelled-em-step14-native-20261012.json")
@@ -242,7 +289,7 @@ def main():
         "nhsmm/distributions/default.py",
     ]
     payload = {
-        "schema": "nhsmm-compact-duration-inner-selection-v1",
+        "schema": "nhsmm-compact-duration-inner-selection-v2",
         "execution": {
             "runtime": "openai-native-workspace",
             "base_commit": args.base_commit,
@@ -258,12 +305,19 @@ def main():
             },
         },
         "contract": {
-            "family": "uniform-density interior blocks at widths4/8/16; first/last known supported lengths separate freely learned atoms; zero outside support",
+            "support_mode": args.support_mode,
+            "oracle_support_enabled": args.support_mode == "oracle",
+            "support": (
+                "configured ages1..260 in every state"
+                if args.support_mode == "full"
+                else "known per-state generator support (retained oracle control)"
+            ),
+            "family": "uniform-density interior blocks at widths4/8/16; first/last active supported lengths separate freely learned atoms; zero outside active support",
             "training": "observation-only constrained EM, exact grouped-count Q M-step; uniform-support initial PMF; known Step14 nuisance parameters and censor/start semantics",
             "selection": "seeded96/32 split of the128 small training sequences;20 EM updates per candidate; highest validation marginal LL, smaller width on exact tie; no labels, true PMF values or heldout observations used",
             "evaluation": "refit selected width on128 and1024 paired sequences with30 updates each; unchanged24 heldout sequences; three seeds901/902/903; larger arm uses width selected only from small training observations",
             "gates": "monotonic within1e-6; public all-logit gradient and LL<=1e-7; state probability error<=1e-8; joint heldout gain>0 and each-PMF-TV<=0.12 separately per arm",
-            "limits": "oracle known support and nuisance parameters, research-only constraints, piecewise-uniform family approximation bias, finite inner-validation sample and bounded EM; no joint Trading features, production defaults, runtime/artifact masks or live acceptance",
+            "limits": "nuisance emission/transition/initial parameters remain known; finite D260 and fresh starts; oracle support only with explicit mode; research-only constraints, family bias and bounded EM; no joint Trading features, production defaults, runtime/artifact masks or live acceptance",
         },
         "runs": [],
     }
@@ -271,7 +325,7 @@ def main():
     for r, prior in zip(old["runs"], previous["runs"], strict=True):
         if r["seed"] != prior["seed"]:
             raise AssertionError("seed alignment")
-        result = run(r, prior)
+        result = run(r, prior, support_mode=args.support_mode)
         payload["runs"].append(result)
         args.output.write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n")
         print(

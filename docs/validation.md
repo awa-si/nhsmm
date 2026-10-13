@@ -2647,3 +2647,40 @@ observations/context and market usefulness remain open. Next: remove oracle
 per-state support while keeping nuisance parameters known, before public-optimizer
 integration or joint Trading learning.
 [Raw Step15 evidence](validation/results/compact-duration-step15-native-20261013.json).
+
+## Oracle support disabled by default, retained as a control — 2026-10-13
+
+The compact-duration CLI now has --support-mode full|oracle, default full.
+Full mode constructs support from configured K4/D260 only: every state permits
+durations1..260 and its free endpoint atoms are at1/260. Oracle mode explicitly
+restores the earlier bounds42..260,30..240,18..250,8..105 and their endpoint atoms.
+The oracle implementation and historical reports are retained. This switches
+duration support only; emission/transition/initial parameters remain known.
+
+The selected mask reaches inner selection, fitting, expanded production models,
+likelihood/filter and all-logit gradient reference checks. In full mode those
+paths do not reinstate the ground-truth mask. Its held-out gain uses a newly
+computed uniform full-support baseline, rather than Step14's uniform oracle
+baseline. Comparisons to stored unrestricted Step14 fits are labelled as oracle
+references and therefore include a support-assumption difference in full mode.
+Ground-truth probability values enter recovery metrics after fitting only.
+
+At width16, generic full support has18 free parameters/state (72 total), versus
+the earlier15/15/16/7 (53) under oracle bounds. Thus turning off oracle support
+also changes block alignment and approximation bias. New full-support statistics
+must not be inferred from the successful oracle-support Step15 results.
+
+Schema v2 records mode/flag, active per-state bounds and the matched uniform
+baseline. Existing compact v1 reports are recognized as oracle-mode evidence;
+the CLI rejects overwriting an existing report with the other mode. New full
+results should use a distinct path, for example
+docs/validation/results/compact-duration-full-support-native-20261013.json.
+To rerun the oracle control with current code, specify --support-mode oracle.
+
+Verification:22 focused tests; AST/Ruff/Black pass over39 materialized Python
+files. The new regressions forbid ground-truth mask access in the full path,
+check public probability/gradient agreement with positive mass outside true
+support, verify default/explicit modes and output protection, and execute short
+monotonic generic-support fits. No new full three-seed recovery batch is claimed.
+Production defaults remain unchanged. Next: execute the generic full-support
+control while retaining the explicit oracle mode for comparison.

@@ -821,3 +821,31 @@ statistical findings, not waived thresholds or production-default changes.
 Known per-state support remains an oracle condition; unknown-support/public
 optimizer, joint Trading and runtime/artifact acceptance remain open. No new
 full canonical-suite or historical-NPZ claim.
+
+## Oracle-support switch retained, default off — 2026-10-13
+
+The compact CLI defaults to --support-mode full (all ages1..260/state).
+Explicit --support-mode oracle preserves Step15's per-state-bound control.
+The historical Step15 command above ran at immutable
+d3e6e9ad983ac4f1558f21333c68b49c304819fd with that version's oracle default.
+With current code an oracle rerun requires the explicit flag; for example:
+
+    python -m scripts.compare_compact_duration_em --support-mode oracle --base-commit <verified-current-commit> --output docs/validation/results/compact-duration-oracle-control-native-20261013.json
+
+Original reports/source hashes remain
+historical evidence tied to their recorded commits, not generic-support passes.
+
+Four additional regressions verify the CLI/default and explicit oracle mask,
+full-mode support construction without ground-truth access, public gradient/
+likelihood agreement with nonzero mass outside true support, report-mode overwrite
+protection, and finite monotonic full-support fitting. With prior focused tests:
+22 passed. AST/Ruff/Black pass over39 materialized Python files.45 immutable
+inputs were connector-verified; native dependencies/editable package restored.
+
+Report schema v2 records support mode, oracle-support flag, per-state bounds,
+matching uniform baseline and the previous unrestricted reference's oracle mode.
+Likelihood/filter and gradient diagnostics use the same explicit active mask
+as training. Legacy diagnostic callers retain their original oracle default.
+The existing v1 compact reports are interpreted as oracle evidence; a full-mode
+run must use a separate output path. CLI help and support modes are smoke-verified.
+This is switch/short-run correctness, not a new full generic recovery acceptance.
