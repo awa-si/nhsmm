@@ -1059,3 +1059,16 @@ unchanged numerical gates. Small full recovery fails. The active large state
 is execution/recovery data, not completed large-arm numerical/statistical
 acceptance. The running local report may advance beyond this immutable snapshot;
 resume retains --base-commit421ef28 even after docs/report-only commits.
+
+## Step20c — large-fit execution checkpoint,2026-10-13
+
+The immutable report snapshot advances the active1024 phase to warm3 plus
+fit10, preserving the complete128 result. Source hashes,1024 data replay,
+paired128-prefix identity, contiguous phase histories, warm-to-fit evidence
+continuity, monotonic fixed objectives, positive normalized full-age PMFs,
+block coverage/density and independently recomputed active penalized score
+are verified. The active fit has5/5/9/7 blocks. This is an execution/recovery
+checkpoint only; no large-arm held-out/truth or public final-gradient acceptance
+is inferred. The running local file may advance after snapshot capture. Restoring
+this snapshot resumes with the same421ef28 source identity and re-scores fit10
+before applying its remaining17 M-steps.

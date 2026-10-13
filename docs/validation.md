@@ -3040,3 +3040,8 @@ fixed-objective invariants, reported metrics and public numerical checks pass.
 No state reaches the unchanged0.12 fine-TV gate. Cross-pilot differences mix
 seed and budget changes, so this partial result cannot attribute improvement
 to sample size alone. The decisive paired1024 comparison remains pending.
+
+Step20c advances the durable execution snapshot to the1024 arm's warm3 plus
+fit10, with5/5/9/7 adaptive blocks. Source/data/prefix hashes, phase histories,
+PMF/partition and fixed-objective invariants pass. This partial trajectory is
+not a completed large-arm recovery result; no outer truth is evaluated for it.
