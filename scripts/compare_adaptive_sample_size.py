@@ -39,8 +39,9 @@ def load_checkpoint(path, expected):
     for key in ("schema", "execution", "contract"):
         if saved.get(key) != expected[key]:
             raise ValueError(f"resume {key} differs from frozen experiment")
+    requested = expected["contract"].get("train_counts", list(COUNTS))
     counts = [r["train_count"] for r in saved["runs"]]
-    if counts != list(COUNTS[: len(counts)]):
+    if counts != requested[: len(counts)]:
         raise ValueError("completed arms must be a unique ordered prefix")
     for r in saved["runs"]:
         for key, updates in (("warm_history", WARM_UPDATES), ("history", FIT_UPDATES)):
@@ -48,7 +49,7 @@ def load_checkpoint(path, expected):
                 raise ValueError("completed arm history is incomplete")
     active = saved.get("active")
     if active is not None:
-        if len(counts) == len(COUNTS) or active["train_count"] != COUNTS[len(counts)]:
+        if len(counts) == len(requested) or active["train_count"] != requested[len(counts)]:
             raise ValueError("active arm differs from next incomplete count")
         phase = active["phase"]
         if phase not in ("warm", "fit"):
@@ -73,7 +74,12 @@ def main():
     parser.add_argument("--base-commit", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--seed", type=int, choices=(1903, 1904, 1905), default=SEED)
+    parser.add_argument(
+        "--large-only", action="store_true", help="replicate1024 without refitting128"
+    )
     args = parser.parse_args()
+    counts = (1024,) if args.large_only else COUNTS
     torch.set_num_threads(1)
     sources = [
         "scripts/compare_adaptive_sample_size.py",
@@ -99,8 +105,8 @@ def main():
             "source_sha256": {s: hashlib.sha256(Path(s).read_bytes()).hexdigest() for s in sources},
         },
         "contract": {
-            "seed": SEED,
-            "train_counts": list(COUNTS),
+            "seed": args.seed,
+            "train_counts": list(counts),
             "heldout_count": 24,
             "steps": 300,
             "factor": FACTOR,
@@ -121,11 +127,11 @@ def main():
         parser.error("existing evidence: use --resume or a new path")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     completed = {r["train_count"] for r in payload["runs"]}
-    for count in COUNTS:
+    for count in counts:
         if count in completed:
             print(f"count={count} resumed complete", flush=True)
             continue
-        x, _ = sequences(SEED + 400000, count=count, steps=300, sigma=2.0)
+        x, _ = sequences(args.seed + 400000, count=count, steps=300, sigma=2.0)
         train_hash = hashlib.sha256(x.tobytes()).hexdigest()
         active = payload["active"]
         if active is not None and active["training_sha256"] != train_hash:
@@ -181,7 +187,7 @@ def main():
             tag=f"count={count} adaptive",
         )
         # Ground truth and outer observations are used only after this fit completes.
-        y, labels = sequences(SEED + 500000, count=24, steps=300, sigma=2.0)
+        y, labels = sequences(args.seed + 500000, count=24, steps=300, sigma=2.0)
         support = np.ones((4, D), dtype=bool)
         scores = emission_scores(y)
         baseline, _ = aggregate(scores, support / D)

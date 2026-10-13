@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step21a prepares fresh1024-only replications for seeds1904/1905. The driver
+adds explicit seed and large-only controls; guarded resume binds both to its
+frozen contract. The factor2, warm3+fit27 path, prior and all acceptance gates
+are unchanged. Historical1903 paired evidence remains separate. Runtime loss
+required connector restoration of53 required files; all Git-blob hashes pass,
+and Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu are restored with editable install.
+All40 focused cases and AST/Ruff/Black over42 scoped Python files pass.
+Replication results are pending.
+
 Step20d completes paired128/1024 adaptive warm-start fits on fresh seed1903:
 all60 M-steps and numerical/replay/objective gates pass. Fixed factor2 and
 lambda2*log(count), warm3 plus penalized27 updates per arm, full ages1..260

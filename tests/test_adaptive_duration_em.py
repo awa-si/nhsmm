@@ -185,7 +185,10 @@ def test_sample_checkpoint_requires_matching_metadata_and_order(tmp_path):
         load_checkpoint(path, expected)
 
 
-def test_sample_cli_resumes_interrupted_large_phase_and_skips_completed_arm(monkeypatch, tmp_path):
+@pytest.mark.parametrize("large_only", [False, True])
+def test_sample_cli_resumes_interrupted_large_phase_and_skips_completed_arm(
+    monkeypatch, tmp_path, large_only
+):
     import json
     import sys
 
@@ -222,18 +225,48 @@ def test_sample_cli_resumes_interrupted_large_phase_and_skips_completed_arm(monk
     monkeypatch.setattr(sample, "public_check", lambda *a, **k: {})
     path = tmp_path / "sample.json"
     argv = ["sample", "--base-commit", "test", "--output", str(path)]
+    if large_only:
+        argv += ["--large-only", "--seed", "1904"]
     monkeypatch.setattr(sys, "argv", argv)
     with pytest.raises(RuntimeError, match="large fit"):
         sample.main()
     saved = json.loads(path.read_text())
-    assert [r["train_count"] for r in saved["runs"]] == [128]
+    assert [r["train_count"] for r in saved["runs"]] == ([] if large_only else [128])
+    assert saved["contract"]["seed"] == (1904 if large_only else 1903)
     assert saved["active"]["phase"] == "fit" and len(saved["active"]["history"]) == 6
     before = len(calls)
     monkeypatch.setattr(sys, "argv", argv + ["--resume"])
     sample.main()
     assert calls[before:] == [(1024, "count=1024 adaptive", 6)]
     final = json.loads(path.read_text())
-    assert [r["train_count"] for r in final["runs"]] == [128, 1024] and final["active"] is None
+    assert [r["train_count"] for r in final["runs"]] == (
+        [1024] if large_only else [128, 1024]
+    ) and final["active"] is None
     before = len(calls)
     sample.main()
     assert len(calls) == before
+
+
+def test_large_only_checkpoint_cannot_resume_other_seed_or_small_arm(tmp_path):
+    import copy
+
+    from scripts.compare_adaptive_sample_size import load_checkpoint, save
+
+    expected = {
+        "schema": "test",
+        "execution": {},
+        "contract": {"seed": 1904, "train_counts": [1024]},
+        "runs": [],
+        "active": None,
+    }
+    path = tmp_path / "large.json"
+    save(path, expected)
+    other = copy.deepcopy(expected)
+    other["contract"]["seed"] = 1905
+    with pytest.raises(ValueError, match="contract"):
+        load_checkpoint(path, other)
+    bad = copy.deepcopy(expected)
+    bad["active"] = {"train_count": 128}
+    save(path, bad)
+    with pytest.raises(ValueError, match="active arm"):
+        load_checkpoint(path, expected)

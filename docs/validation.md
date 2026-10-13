@@ -3094,3 +3094,25 @@ controlled1024-sequence seed, not multi-seed robustness, stock joint optimizatio
 or Trading/live acceptance. Bull TV0.118297 is close to0.12; repeat the frozen
 method on additional fresh seeds before public integration or unfreezing
 nuisance parameters. Preserve every preceding failed control and oracle mode.
+
+## Fresh-seed adaptive replication contract — 2026-10-13
+
+Step21a predeclares two independent1024-only replications, seeds1904 and1905,
+to assess the successful1903 result with bull TV close to the gate. Each uses
+the same configured ages1..260, known nuisance parameters, fresh starts/right
+censoring, symmetric prior1e-6, fixed factor2*log(1024), three unpenalized warm
+updates and27 penalized updates. Its24 held-out300-row sequences are generated
+from that seed only after fitting. No labels/true law/support bounds enter
+learning and no new penalty/family search occurs. TV<=0.12 in every state and
+positive gain over full-support uniform remain required independently per seed.
+
+The driver extension adds seed/large-only options and binds resume metadata to
+both. Original1903 evidence retains the421ef28 source identity; the new CLI
+source identity is recorded separately, with no numerical algorithm changes.
+Fresh reports will be stored as
+docs/validation/results/adaptive-replication-seed1904-native-20261013.json and
+docs/validation/results/adaptive-replication-seed1905-native-20261013.json.
+Run serially with checkpoints, verifying and pushing each completed seed before
+continuing. No small-arm repeats save60 unnecessary M-steps; new work is60
+large-arm M-steps total. Results are pending. Known-nuisance controlled evidence
+does not establish joint-production/Trading/live-market usefulness.

@@ -1097,3 +1097,28 @@ lower bound exceeds0.12; all large-arm feasible projection TVs are below0.12.
 These are representation diagnostics, not new training/selection data or
 minimum-normalized-TV claims. Multi-seed/current-canonical/production/Trading
 and historical NPZ acceptance are not extended by this single paired result.
+
+## Step21a — fresh-seed large-only replication,2026-10-13
+
+The local runtime recycled after the prior completed result.53 required paths
+were restored/read through the GitHub connector at3aeb2ff and their Git-blob
+identities verified (12 restored files,41 already matching). Declared runtime/
+test/build tools were reinstalled; Python3.12.14, NumPy2.5.4 and Torch2.14.1+cpu
+match the previous experiment. Editable package install uses the sparse-snapshot
+SCM version override0.0.0 after declared dependencies are satisfied.
+
+The sample-size driver now accepts --seed (1903/1904/1905) and --large-only. The
+default remains the original paired1903 experiment. Resume follows the requested
+ordered arm list and rejects other seeds/contracts or a small active arm when
+large-only is requested. CLI interruption/resume/completed-no-op tests cover
+both paired and large-only modes, with a separate cross-seed/arm rejection case.
+All40 focused cases pass in the restored environment. AST and actual-fit smoke
+precede jobs; AST/Ruff/Black pass over42 scoped files.
+
+The new replication contract fixes seeds1904/1905 with1024 training and24 held-
+out300-row sequences per seed, one worker/threads1, warm3 plus fit27, factor2,
+prior1e-6 and unchanged numerical/TV/held-out gates. Seeds are executed serially
+with2400-second bounds and separate guarded phase/arm JSON reports; completed
+seeds are verified/documented/pushed individually. No128 refits or renewed
+penalty selection are performed. Large-only source hashes differ from421ef28
+only through the driver extension; old reports keep their immutable identities.
