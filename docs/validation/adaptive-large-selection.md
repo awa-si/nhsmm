@@ -325,3 +325,22 @@ Source/contract/software/data/split, prior phase preservation, budget/history/
 continuity and positive normalized full-age partition checks pass. Terminal
 independent E-step/validation and selection/outer gates are pending.1907's
 second candidate is already complete; native1908 continues at3966159.
+
+## Step22t — second-candidate batch complete for1907/1908
+
+
+| Seed | Factor | Blocks bull/bear/range/chaotic | Inner validation LL | Gain over0.125 (nats) |
+| --- | ---: | --- | ---: | ---: |
+| 1907 | 0.5 | 8/14/10/9 | -166628.70723221602 | +125.93604849430 |
+| 1908 | 0.5 | 13/17/14/9 | -167213.64745267865 | +116.44675319534 |
+
+
+Both complete27 updates;54 new M-steps and114 cumulative including prior phases.
+Source/software/contract/data/split/history/PMF/partition/objective checks and
+independent terminal E-step and validation replays pass. Earlier completed fits
+are preserved exactly. Improvements compare factors on the same within-seed
+validation data; absolute likelihoods do not rank seeds. Individual verification
+and paired results/adaptive-large-selection-candidate1-batch-native-20261013.json
+bind exact raw report SHA256 values. Selection and outer evaluation remain null.
+Next candidate_2 factor2 on both seeds, unchanged frozen source3966159, support,
+method, thresholds and budgets. Oracle remains OFF.

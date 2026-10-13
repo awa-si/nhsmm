@@ -1,0 +1,35 @@
+{
+  "schema": "nhsmm-adaptive-large-selection-phase-verification-v1",
+  "seed": 1908,
+  "phase": "candidate_1",
+  "input_report": "docs/validation/results/adaptive-large-selection-seed1908-native-20261013.json",
+  "input_report_sha256": "7b406ac8931abbf1c30ec4f708e2e1817a3329b5ddf30ba5e56f28694f803091",
+  "prior_completed_records_preserved": [
+    "inner_warm",
+    "candidate_0"
+  ],
+  "selection_complete": false,
+  "outer_evaluation_complete": false,
+  "evidence": {
+    "verified": true,
+    "seed": 1908,
+    "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+    "source_hashes": 13,
+    "updates": 27,
+    "total_msteps": 57,
+    "penalty": 3.321894866573836,
+    "blocks": [
+      13,
+      17,
+      14,
+      9
+    ],
+    "final_ll": -500535.0002042337,
+    "final_objective": -500697.7827806857,
+    "validation_ll": -167213.64745267865,
+    "candidate0_validation_ll": -167330.094205874,
+    "improvement_nats": 116.44675319534144,
+    "outer_evaluation": false,
+    "sha256": "7b406ac8931abbf1c30ec4f708e2e1817a3329b5ddf30ba5e56f28694f803091"
+  }
+}

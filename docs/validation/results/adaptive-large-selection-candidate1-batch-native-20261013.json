@@ -1,0 +1,73 @@
+{
+  "schema": "nhsmm-adaptive-large-selection-candidate-batch-v1",
+  "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+  "seeds": [
+    1907,
+    1908
+  ],
+  "factor": 0.5,
+  "candidate_updates_per_seed": 27,
+  "total_completed_msteps_including_prior_phases": 114,
+  "new_candidate_msteps": 54,
+  "software_source_contract_equivalent": true,
+  "distinct_training_datasets": true,
+  "inputs": {
+    "1907": {
+      "path": "docs/validation/results/adaptive-large-selection-seed1907-native-20261013.json",
+      "sha256": "b061d60828e9af4bc9ebf122565cc648ead559e136581febfcab080fbeb2d37d"
+    },
+    "1908": {
+      "path": "docs/validation/results/adaptive-large-selection-seed1908-native-20261013.json",
+      "sha256": "7b406ac8931abbf1c30ec4f708e2e1817a3329b5ddf30ba5e56f28694f803091"
+    }
+  },
+  "rows": [
+    {
+      "verified": true,
+      "seed": 1907,
+      "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+      "source_hashes": 13,
+      "updates": 27,
+      "total_msteps": 57,
+      "penalty": 3.321894866573836,
+      "blocks": [
+        8,
+        14,
+        10,
+        9
+      ],
+      "final_ll": -500167.31410301256,
+      "final_objective": -500290.23463600525,
+      "validation_ll": -166628.70723221602,
+      "candidate0_validation_ll": -166754.64328071033,
+      "improvement_nats": 125.93604849430267,
+      "outer_evaluation": false,
+      "sha256": "b061d60828e9af4bc9ebf122565cc648ead559e136581febfcab080fbeb2d37d"
+    },
+    {
+      "verified": true,
+      "seed": 1908,
+      "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+      "source_hashes": 13,
+      "updates": 27,
+      "total_msteps": 57,
+      "penalty": 3.321894866573836,
+      "blocks": [
+        13,
+        17,
+        14,
+        9
+      ],
+      "final_ll": -500535.0002042337,
+      "final_objective": -500697.7827806857,
+      "validation_ll": -167213.64745267865,
+      "candidate0_validation_ll": -167330.094205874,
+      "improvement_nats": 116.44675319534144,
+      "outer_evaluation": false,
+      "sha256": "7b406ac8931abbf1c30ec4f708e2e1817a3329b5ddf30ba5e56f28694f803091"
+    }
+  ],
+  "selection_complete": false,
+  "outer_evaluation_complete": false,
+  "limits": "Two inner candidates completed per seed; no cross-seed absolute likelihood ranking, factor choice, fine-PMF or production acceptance."
+}

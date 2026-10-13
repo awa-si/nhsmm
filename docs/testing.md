@@ -1379,3 +1379,20 @@ new M-steps. Independently scored validation LL-166628.70723221602 improves
 on candidate_0 by125.93604849430267 nats using identical256 sequences.
 Phase evidence binds raw SHA256b061d60828e9af4bc9ebf122565cc648ead559e136581febfcab080fbeb2d37d. No factor selection or outer
 recovery/public final acceptance is claimed yet.
+
+## Step22t — second inner candidate batch independently verified
+
+
+Seeds1907/1908 each finish27 candidate_1 updates at factor0.5 (54 new,
+114 cumulative M-steps). Current source/software/contract equivalence and
+distinct training datasets are checked. Each source identity, regenerated
+training/split hash, preserved warm/candidate_0 record, ordered phase/budget,
+monotone objective, positive normalized4x260 PMF and contiguous constant-density
+partition passes. Terminal training E-step replays agree within1e-7; both
+candidate_1 and candidate_0 are independently scored on the same per-seed256
+inner validation sequences. The47 focused tests and44-file static checks from
+Step22p apply to the unchanged source; no additional M-step is performed by
+verification. Both main reports are SHA256-bound by individual phase evidence
+and results/adaptive-large-selection-candidate1-batch-native-20261013.json.
+No outer evaluation, factor selection, true-PMF recovery, production or legacy
+NPZ acceptance is claimed. Oracle remains OFF.
