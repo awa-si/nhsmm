@@ -1600,3 +1600,11 @@ Main report SHA25636a9e6e24cf2188fd5ced16008bf18f057a8b367d5747efd57178636281a6e
 not1024-sequence or production/joint-neural/legacy NPZ acceptance. Oracle OFF.
 unrestricted: blocks[4, 4, 5, 4], TVs[0.1512682124673306, 0.11415891768091632, 0.19243455817006525, 0.14708438297226797], gain0.005200034136191284 nats/row, full gateFAIL, partition TV lower bounds[0.13949747652704678, 0.11036037126376683, 0.18967903496131433, 0.1358535170371385].
 width8: blocks[33, 33, 34, 33], TVs[0.16021754190356455, 0.22176273932976012, 0.21373524132051733, 0.12752437326266428], gain0.0013064974200463237 nats/row, full gateFAIL, partition TV lower bounds[0.023814457857965984, 0.02430026697124297, 0.04952418313143421, 0.05010040354108249].
+
+## Step27-1911-active-unrestricted
+
+Width-cap pilot seed1911 checkpoint: unrestricted at5/27,
+blocks[3, 4, 5, 4]. Source/software/contract/data/phase/history/
+objective/PMF/partition and shared warm-PMF continuity checks pass. This is
+recovery evidence; final terminal replay/outer/numerical and recovery gates
+remain pending. Frozen source8fc245e,256 training sequences, oracle OFF.
