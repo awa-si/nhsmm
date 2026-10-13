@@ -255,3 +255,11 @@ candidate_0 at factor0.125 without repeating the warm M-steps. Keep separate
 output files and unchanged statistical settings. Later phase/selection/refit/
 outer gates remain pending; no three-seed conclusion is made yet. Admin layers
 are fully refreshed and the active regime-v2 branch is retained.
+
+Step22l captures seed1907 candidate_0 (factor0.125) at10/27 with
+76/63/65/34 blocks. Thirteen source hashes, preserved prior warm/data/contract,
+phase budget/indices, positive normalized full-age PMFs and contiguous partition
+checks pass. Fixed-objective history is monotonic. Snapshot SHA256c86b6d4fdfa9765d5a3f18543c4db58bc91d4863b9251eff1e7f602136f5ab7d.
+This is active execution evidence; terminal replay and inner validation scoring
+are pending. Source3966159 is unchanged; native fitting continues. Seed1908
+has its durable warm3 and has not yet begun candidate_0.
