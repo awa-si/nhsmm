@@ -1048,8 +1048,9 @@ guarantee survival of workspace loss. Statistical acceptance remains pending.
 
 ## Step20b — complete128-arm checkpoint,2026-10-13
 
-The sample-size report snapshot at source421ef280fafce80f4ae1cedd3e30df303b2c36de
-contains one complete128 arm plus an active1024 warm-state update0. Complete
+At this checkpoint the sample-size snapshot, with source identity
+421ef280fafce80f4ae1cedd3e30df303b2c36de, contained one complete128 arm plus
+an active1024 warm-state update0. Complete
 small-arm source hashes,128 training and24 held-out replay, paired-prefix hash,
 warm0..3 and fit0..27 histories, phase continuity, monotonic fixed objectives,
 positive/normalized full-age block PMFs, recomputed final score, TV and held-out
@@ -1072,3 +1073,27 @@ checkpoint only; no large-arm held-out/truth or public final-gradient acceptance
 is inferred. The running local file may advance after snapshot capture. Restoring
 this snapshot resumes with the same421ef28 source identity and re-scores fit10
 before applying its remaining17 M-steps.
+
+## Step20d — complete paired sample-size result,2026-10-13
+
+The final adaptive sample-size report contains both128/1024 arms and active=null,
+with source identity421ef28 unchanged. All60 actual M-step indices, eleven
+source hashes, both training replays, paired128-prefix identity, identical24-
+sequence held-out replay, warm/fit continuity and fixed-objective monotonicity
+pass. Positive normalized full-age block PMFs, independently recomputed final
+scores, TVs, held-out gains and full gates agree with the report. Completed
+CLI resume skips both arms without fitting.38 focused cases and static/smoke
+checks remain applicable; no algorithm/source change occurred during the experiment.
+
+The two public gradient checks cover2080 duration coordinates: maximum error
+1.85e-14. Maximum segment-reference LL error1.48e-12, public recursion LL error
+2.28e-13 and state-probability error7.59e-14 pass the original gates.128 full
+recovery fails;1024 full recovery passes for this one fresh paired seed.
+
+The separate learned-family-bias report is bound to the final raw report SHA256.
+Its evaluation-only block-median bounds and normalized forward-KL projections
+are recomputed from the learned partitions and exact true PMF. Every small-arm
+lower bound exceeds0.12; all large-arm feasible projection TVs are below0.12.
+These are representation diagnostics, not new training/selection data or
+minimum-normalized-TV claims. Multi-seed/current-canonical/production/Trading
+and historical NPZ acceptance are not extended by this single paired result.

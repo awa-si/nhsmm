@@ -4,22 +4,24 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
-Step20a prepares paired128/1024 adaptive warm-start fits on fresh seed1903.
-Factor2 is frozen from the previous inner selections; each arm receives three
-unpenalized plus27 penalized updates,60 M-steps total, with lambda2*log(count).
-All ages remain available and oracle support is disabled. Atomic JSON snapshots
-save warm/fitting phase, positive PMF, partitions and histories at phase start,
-every five fitting updates and phase end. Resume checks frozen metadata, data
-replay and reproduces checkpoint evidence before continuing. Completed arms
-are skipped.38 focused tests, syntax/resume smoke and Ruff/Black pass. Source
-and execution contract are ready. Step20b completes and verifies the128 arm:
-TVs0.20355/0.16675/0.19051/0.15556, mean RMSE4.15282, held-out gain+0.00752151.
-Numerical/replay/objective checks pass, full recovery fails. The checkpoint
-retained the completed small result and large warm-phase update0. Step20c
-advances the durable snapshot to large warm3 plus fit10, with5/5/9/7 blocks.
-Large replay/prefix, phase continuity, positive PMF and objective invariants
-pass; final1024 numerical/statistical acceptance is still pending. The long fit
-continues with the same frozen source identity.
+Step20d completes paired128/1024 adaptive warm-start fits on fresh seed1903:
+all60 M-steps and numerical/replay/objective gates pass. Fixed factor2 and
+lambda2*log(count), warm3 plus penalized27 updates per arm, full ages1..260
+and known nuisance parameters remain unchanged. Oracle support is disabled.
+The1024 arm passes full duration recovery: TV0.11830/0.09873/0.10548/0.08922,
+mean RMSE1.38373 and held-out gain+0.00792613 nats/row. The128 arm fails:
+TV0.20355/0.16675/0.19051/0.15556, mean RMSE4.15282, gain+0.00752151.
+Learned blocks grow from3/3/5/4 to5/5/9/7. Evaluation-only median-TV bounds
+prove every small-arm partition exceeds0.12, while each large-arm partition
+admits a forward-KL projection below0.12. This is one controlled paired seed;
+the near-threshold bull result needs fresh-seed replication before integration.
+
+Atomic phase/arm checkpoints and guarded resume are verified. Completed arms
+are skipped, and restored phase evidence is re-scored before continuation.
+38 focused tests, syntax/resume smoke and Ruff/Black pass; source stayed fixed
+at421ef28 throughout the completed experiment. Production/joint Trading and
+historical NPZ acceptance remain unchanged. Next: replicate the frozen method
+on additional fresh seeds, retaining failed/successful evidence independently.
 
 Step19a prepares a fresh paired warm-start/penalty pilot (seed1902). Factors
 0.125/0.5/2 are compared from uniform and observation-only three-update EM

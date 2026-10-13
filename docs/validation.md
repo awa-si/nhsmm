@@ -3045,3 +3045,52 @@ Step20c advances the durable execution snapshot to the1024 arm's warm3 plus
 fit10, with5/5/9/7 adaptive blocks. Source/data/prefix hashes, phase histories,
 PMF/partition and fixed-objective invariants pass. This partial trajectory is
 not a completed large-arm recovery result; no outer truth is evaluated for it.
+
+## Complete adaptive sample-size result — 2026-10-13
+
+Step20d completes the frozen421ef28 experiment on seed1903. Both arms receive
+the same30-update path (warm3+penalized27), factor2, prior1e-6 and full support;
+lambda follows the predeclared2*log(sequence count) rule. The128 observations
+are exactly the1024 prefix and both fits use the same24 fresh held-out sequences.
+Raw result: docs/validation/results/adaptive-sample-size-native-20261013.json.
+No true support bounds, labels or true PMF values enter learning. Nuisance
+emission/transition/initial parameters remain known and fixed.
+
+| Train count | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|128|0.203553 /0.166745 /0.190507 /0.155557|4.152821|+0.00752151|FAIL|
+|1024|0.118297 /0.098732 /0.105484 /0.089218|1.383730|+0.00792613|PASS|
+
+The larger fit passes every unchanged0.12 TV gate with positive predictive gain.
+Its held-out LL exceeds the small fit by0.00040462 nats/row. Mean RMSE decreases
+from4.15 to1.38 and each state TV improves. Learned block counts grow from
+3/3/5/4 to5/5/9/7 under the same factor/log-count penalty policy.
+
+Post-fit representation diagnostics are saved in
+docs/validation/results/adaptive-sample-size-family-bias-native-20261013.json,
+with the input raw-report SHA256. On each learned partition, the block-median
+absolute-deviation bound applies independently of fitted block masses; assigning
+each block its true mass uniformly gives the feasible forward-KL projection.
+Both are computed only after learning and do not change selection or fitting.
+
+| Arm | TV lower bound: bull / bear / range / chaotic | Feasible forward-KL projection TV |
+| --- | --- | --- |
+|128|0.200328 /0.154621 /0.184957 /0.138523|0.202747 /0.159616 /0.190777 /0.157459|
+|1024|0.112807 /0.092965 /0.102193 /0.088732|0.115207 /0.094911 /0.105707 /0.090278|
+
+All small-arm partitions cannot meet0.12 regardless of further mass updates.
+All large-arm partitions have a feasible projection below0.12, and the learned
+PMFs also pass. Fitted TVs are close to these representation diagnostics,
+supporting shape resolution as a material contributor under this penalty rule.
+The median lower bound is not the constrained minimum-TV solution, and the
+forward-KL projection need not minimize TV. No pure count-only causal claim is
+made: the predeclared logarithmic penalty also scales with sample count.
+
+All60 steps, source/data/prefix/held-out hashes, objective/partition/PMF/metric
+checks and public numerical gates pass. Maximum raw gradient/segment-LL/filter-
+LL/state-probability errors are1.85e-14/1.48e-12/2.28e-13/7.59e-14. Completed
+resume is a no-op. This establishes full-support label-free recovery for one
+controlled1024-sequence seed, not multi-seed robustness, stock joint optimization
+or Trading/live acceptance. Bull TV0.118297 is close to0.12; repeat the frozen
+method on additional fresh seeds before public integration or unfreezing
+nuisance parameters. Preserve every preceding failed control and oracle mode.
