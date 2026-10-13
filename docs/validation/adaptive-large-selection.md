@@ -161,3 +161,9 @@ and outer evaluation remain null. Phase verification is in
 results/adaptive-large-selection-seed1906-candidate1-verification-native-20261013.json.
 The same resume command above next runs candidate_2 at unchanged3966159.
 The raw completed report supersedes Step22f's active checkpoint.
+
+Step22h saves candidate_2 factor2 at update10/27 with5/4/7/5 blocks.
+Source/data/contract and prior completed phases are preserved; active budget,
+phase indices, fixed-objective monotonicity and positive normalized full-age
+PMF/partition coverage pass. SHA256bd646722f7613d41b03a61854498e5fca926086df7fd3897d492eeceb2c74856. Selection/outer evaluation
+are still null. The native bounded seed1906 batch continues under3966159.
