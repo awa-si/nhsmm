@@ -1318,3 +1318,20 @@ observations/truth, factor selection, final numerical or statistical recovery
 acceptance is asserted for these seeds. Compute concurrency stays1; independent
 connector reads and checkpoint reads are bounded parallel. Source3966159, all
 factors/budgets/gates, known nuisance controls and oracle OFF are unchanged.
+
+## Step22m — seed1907 first candidate completion,2026-10-13
+
+A lost internal session reference was distinguished from remote movement: the
+branch still pointed to e172589. All54 required local inputs/checkpoints were
+compared against current connector blob identities and passed; Python3.12.14/
+NumPy2.5.4/Torch2.14.1+cpu persisted. No source or dependency changes invalidate
+the existing static/real-smoke evidence.
+
+Seed1907's bounded invocation exits0 with inner_warm/candidate_0 complete and
+active/selection/evaluation null. All27 phase updates at0.125*log(768) pass
+source/data/split/history/PMF/partition/objective checks. The warm record remains
+identical. Terminal E-step replay reproduces LL-499961.7578440498 and objective
+-500156.10102691303 within1e-7 without new M-steps. Independent256-sequence
+inner validation LL is-166754.64328071033; blocks76/63/65/34; total30 M-steps.
+SHA-bound phase verification uses input hashbf46e82188f8b3ccae5471055fbe0c0994bd4606e8461365ab290f3fb7c0f9b3. Selection, outer
+statistics and public final numerical/recovery gates are still pending.

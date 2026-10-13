@@ -263,3 +263,15 @@ checks pass. Fixed-objective history is monotonic. Snapshot SHA256c86b6d4fdfa976
 This is active execution evidence; terminal replay and inner validation scoring
 are pending. Source3966159 is unchanged; native fitting continues. Seed1908
 has its durable warm3 and has not yet begun candidate_0.
+
+## Step22m — seed1907 candidate_0 complete
+
+Factor0.125 completes27 updates with76/63/65/34 blocks. All source/data/split/
+PMF/partition/history/objective checks and independent terminal E-step replay
+pass; the warm record is unchanged. Final LL/objective are-499961.7578440498/
+-500156.10102691303. Independent inner validation LL is-166754.64328071033.
+Total1907 work30 M-steps. No factor is selected and no outer evaluation occurs.
+SHA-bound evidence: results/adaptive-large-selection-seed1907-candidate0-verification-native-20261013.json.
+Next seed1908 executes candidate_0 from its separately verified warm3; all source,
+method, support and acceptance settings remain fixed. Cross-seed absolute inner
+likelihoods are not treated as a ranking of method performance.
