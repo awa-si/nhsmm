@@ -1186,3 +1186,26 @@ maximum gradient/public-LL/state-probability errors are3.52e-14/1.05e-11/1.38e-1
 Forty focused cases and42-file static/smoke checks remain applicable. Numerical
 verification passes; robust three-seed recovery is not accepted. Production,
 joint Trading, current canonical-suite and historical NPZ acceptance are unchanged.
+
+## Step22b — large-selection driver and restored native preflight,2026-10-13
+
+New research driver/test owners: scripts/compare_adaptive_large_selection.py and
+ tests/test_adaptive_large_selection.py. Atomic active snapshots bind seed,
+protocol, software/source hashes, phase dataset hashes, penalty and update
+budget. Completed phases form an ordered prefix and are re-scored without
+extra M-steps; PMF/partition/history/objective checks use the existing fitter.
+Selection is durably saved before outer data is generated. A factor2 winner
+reuses its selected refit; otherwise a matched control is independently fitted.
+--max-phases bounds new completed phases; completed evaluation is a no-op.
+
+Seven new focused cases cover real checkpoint interruption at phase start/end
+with identical resumed PMFs, phase limits, changed data/contract/PMF rejection,
+validation-only scoring, exact-tie stronger-factor selection, control reuse and
+separate control fitting, early outer-data/truth rejection, completed no-op,
+and short real-fit/public numerical evaluation. The existing40 cases remain
+covered. Fifty connector-restored inputs pass Git-blob identity verification;
+one dependency reopen restored the old test's warmstart helper. Declared CPU
+Torch/NumPy/test/static/build dependencies and editable install succeed.
+Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu match the prior experiment;44-file AST,
+Ruff and Black pass. These are implementation/preflight checks, not fresh large
+statistical recovery or production/joint Trading acceptance.

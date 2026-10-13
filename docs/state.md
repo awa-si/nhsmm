@@ -4,6 +4,17 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22b implements the resumable large-selection driver and phase budget CLI.
+Source/contract/software/data hashes bind resume; completed phases are re-scored
+without new M-steps. Training-only selection is saved before outer evaluation;
+factor2 control reuse and separate control fitting are verified. Fifty current
+files are Git-blob restored (one test-helper scope reopen), declared CPU deps
+and editable install succeed, and44-file AST/Ruff/Black plus the focused suite
+and real short-fit/resume/public numerical smoke pass. Native environment is
+Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu. Large fits remain pending at this code
+checkpoint; oracle remains OFF. Execution checkpoints belong to validation.md.
+
+
 Step22a audits the existing small-inner selection and freezes the next
 large-exposure experiment in docs/validation/adaptive-large-selection.md and
 its machine-readable protocol. Fresh seeds1906/1907/1908 use768/256 inner

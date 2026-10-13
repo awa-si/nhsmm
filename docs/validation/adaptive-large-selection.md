@@ -6,7 +6,7 @@ Machine-readable contract: [adaptive-large-selection-protocol.json](adaptive-lar
 ## Source audit and question
 
 `scripts/compare_adaptive_duration_em.py::select_penalty` selected factors
-0.125/0.5/2 on a 48/16 split with six updates per candidate.
+0.5/1/2 on a 48/16 split with six updates per candidate.
 `scripts/compare_adaptive_warmstart.py::paired_selection` compared uniform
 and warm paths on the same 48/16 split, with nine updates per path (warm3+fit6).
 `scripts/compare_adaptive_sample_size.py` then held factor2 fixed at 1024
@@ -64,14 +64,28 @@ A recycled runtime is not evidence of a continuing or completed fit.
 
 ## Verified milestone and remaining work
 
-Current source audit and protocol arithmetic are complete; training is pending.
-The prior env21 runtime is absent, and available system Python lacks Torch.
-No new training, smoke result, recovery result or improvement is claimed.
+Step22b implements scripts/compare_adaptive_large_selection.py using the existing
+fit_adaptive, score/evaluation owners and atomic-save primitive. Seed, protocol,
+software and source hashes bind resume; training and inner split hashes bind
+phase replay. Completed phases must be an ordered prefix. Every five-update
+checkpoint and phase completion preserves PMF/partition/history; resume checks
+positive normalized full support and re-scores the last objective. Completed
+phases are re-scored without additional M-steps. Selected factor is saved before
+outer data construction. A selected factor2 reuses its fit for the control.
 
-Next implementation should compose existing fit_adaptive, emission_scores,
-aggregate, evaluation and atomic-save primitives in a new resumable research
-driver. Restore and verify its material source closure and declared runtime;
-pass syntax/static and a short real-fit/resume smoke before long execution.
-Persist verified stages through the connector under the standing stepwise
-writeback instruction. Public package and joint Trading integration remain
-outside this experiment.
+Use --max-phases to bound newly completed phases per invocation; existing fits
+are retained. --resume continues the same source/contract/data identity. Completed
+evaluation is a no-op. Separate seed/output files permit independent later work,
+but this frozen experiment retains one compute worker. Connector reads and
+independent checks can run in bounded parallel lanes.
+
+Fifty required current source/doc/test files are restored and Git-blob verified
+(one evidence-backed dependency reopen for the existing warmstart test helper).
+Declared CPU dependencies and editable install succeed: Python3.12.14,
+NumPy2.5.4, Torch2.14.1+cpu, pytest9.1.1. AST/Ruff/Black pass44 scoped Python
+files. Focused tests include real interruption/resume equality at both phase
+start/end, phase limits, data/contract/PMF rejection, tie/control reuse, separate
+control fitting, selection-only observations, completed no-op and a real short
+fit/public likelihood/gradient/filter evaluation smoke. No large recovery result
+or improvement is claimed by this preparation. Next: bounded large phases and
+verified checkpoint writeback. Production/joint Trading acceptance is unchanged.
