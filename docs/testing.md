@@ -1234,3 +1234,20 @@ fixed objective, positive finite normalized full-age PMFs and contiguous
 block/density coverage pass. Blocks67/73/57/36. Snapshot SHA256:
 df35bace71808d4650f9fb58da3ca275030d0666e7b2be1bb53db24df67592ad. No independent terminal score, completed-candidate
 validation or outer recovery claim is made at this checkpoint. Fitting continues.
+
+## Step22e — completed candidate_0 and independent verification,2026-10-13
+
+The bounded invocation exits0 with inner_warm and candidate_0 complete, active
+null and selection/evaluation null. All27 updates (history0..27) use penalty
+0.830473716643459=0.125*log(768); completed actual work is30 M-steps.
+The original warm record and source/contract/software/data/split identity are
+unchanged. All13 current source hashes and1024 training/768+256 split replay
+hashes pass. Full positive normalized PMF/partition and monotonic fixed-objective
+history checks pass. Independent terminal E-step replay reproduces saved
+LL-499451.2684951689 and objective-499641.4594240784 within1e-7, with no new
+M-step. Separately recomputed inner validation LL is-166868.3480591295 on256
+observations; no labels/truth or outer data participate. Blocks67/73/57/36.
+The SHA-bound phase-verification JSON records these values and the input report
+SHA256eb7f047f6d431a4a23ab38eb6196ffdd71938338570df806898c85ea7ac9b416. No public large recovery or factor-selection conclusion
+is asserted until remaining candidates/refits/evaluation finish. Prior47-case
+and44-file preflight evidence remains applicable; sources are unchanged.

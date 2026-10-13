@@ -1,0 +1,31 @@
+{
+  "schema": "nhsmm-adaptive-large-selection-phase-verification-v1",
+  "seed": 1906,
+  "phase": "candidate_0",
+  "input_report": "docs/validation/results/adaptive-large-selection-seed1906-native-20261013.json",
+  "input_report_sha256": "eb7f047f6d431a4a23ab38eb6196ffdd71938338570df806898c85ea7ac9b416",
+  "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+  "verification": "independent source/data replay, terminal E-step/objective, inner validation likelihood; post-phase only, no outer data or truth",
+  "warm_record_preserved": true,
+  "selection_complete": false,
+  "outer_evaluation_complete": false,
+  "evidence": {
+    "verified": true,
+    "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+    "source_hashes": 13,
+    "updates": 27,
+    "total_msteps": 30,
+    "penalty": 0.830473716643459,
+    "blocks": [
+      67,
+      73,
+      57,
+      36
+    ],
+    "final_ll": -499451.2684951689,
+    "final_objective": -499641.4594240784,
+    "validation_ll": -166868.3480591295,
+    "outer_evaluation": false,
+    "sha256": "eb7f047f6d431a4a23ab38eb6196ffdd71938338570df806898c85ea7ac9b416"
+  }
+}

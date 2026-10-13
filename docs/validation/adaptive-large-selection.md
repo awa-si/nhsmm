@@ -122,3 +122,21 @@ blocks. Source/contract/prior warm and split identity, active budget/history,
 full-age PMFs and block consistency pass. Independent terminal scoring and
 selection remain pending. The raw file is a recovery checkpoint; native fitting
 continues under unchanged3966159. No outer data/truth evaluation is performed.
+
+## Step22e — complete first candidate,2026-10-13
+
+Candidate_0 finishes27/27 updates at factor0.125 and penalty0.830473716643459.
+Its final LL/objective are-499451.2684951689/-499641.4594240784; learned block
+counts are67/73/57/36. Independent terminal replay, all13 source identities,
+full training/inner split replay, phase indices, fixed-objective monotonicity
+and positive normalized full-support partition checks pass. The prior warm
+record is unchanged. Total completed work is30 M-steps.
+
+Inner validation LL, independently re-scored on the256 inner-validation
+observations, is-166868.3480591295. This is one candidate score; no factor
+is selected yet. Both selection and evaluation remain null, so no outer recovery
+claim follows. SHA-bound verification is in
+results/adaptive-large-selection-seed1906-candidate0-verification-native-20261013.json.
+The raw result supersedes the active Step22d snapshot with a completed phase.
+The same bounded resume command above next executes candidate_1, factor0.5.
+Source3966159 and all frozen settings, including oracle OFF, remain unchanged.
