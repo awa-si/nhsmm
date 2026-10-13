@@ -81,7 +81,16 @@ def objective(ll, pmf, blocks, penalty, *, pseudocount=PSEUDOCOUNT):
     return float(ll + pseudocount * np.log(pmf).sum() - penalty * sum(len(b) - 1 for b in blocks))
 
 
-def fit_adaptive(x, penalty, *, iterations=OUTER_UPDATES, tag="adaptive", initial_state=None):
+def fit_adaptive(
+    x,
+    penalty,
+    *,
+    iterations=OUTER_UPDATES,
+    tag="adaptive",
+    initial_state=None,
+    resume_history=None,
+    checkpoint=None,
+):
     if not isinstance(iterations, int) or iterations < 0:
         raise ValueError("nonnegative integer iterations required")
     if not np.isfinite(penalty) or penalty < 0:
@@ -110,28 +119,51 @@ def fit_adaptive(x, penalty, *, iterations=OUTER_UPDATES, tag="adaptive", initia
                 cursor = end
             if cursor != D:
                 raise ValueError("initial blocks must cover all ages")
+    if resume_history is not None:
+        if initial_state is None or not resume_history:
+            raise ValueError("resume requires initial state and nonempty history")
+        first_update = len(resume_history) - 1
+        if first_update > iterations or [h["completed_updates"] for h in resume_history] != list(
+            range(first_update + 1)
+        ):
+            raise ValueError("resume history has invalid update indices")
+        if not all(
+            np.isfinite(h[key])
+            for h in resume_history
+            for key in ("ll", "penalized_objective", "elapsed_seconds")
+        ):
+            raise ValueError("resume history must be finite")
+        history = [dict(h) for h in resume_history[:-1]]
+        time_offset = resume_history[-1]["elapsed_seconds"]
+    else:
+        first_update, time_offset, history = 0, 0.0, []
     scores = emission_scores(x)
-    history = []
     start = time.monotonic()
-    for update in range(iterations + 1):
+    for update in range(first_update, iterations + 1):
         ll, counts = aggregate(scores, p)
         score = objective(ll, p, blocks, penalty)
+        if resume_history is not None and update == first_update:
+            saved = resume_history[-1]
+            if abs(ll - saved["ll"]) > 1e-7 or abs(score - saved["penalized_objective"]) > 1e-7:
+                raise ValueError("resume state does not reproduce saved evidence/objective")
         history.append(
             {
                 "completed_updates": update,
                 "ll": ll,
                 "penalized_objective": score,
                 "blocks_by_state": [len(b) for b in blocks],
-                "elapsed_seconds": time.monotonic() - start,
+                "elapsed_seconds": time_offset + time.monotonic() - start,
             }
         )
         if update and score < history[-2]["penalized_objective"] - 1e-6:
             raise AssertionError("penalized marginal objective decreased")
-        if update == 0 or update % 5 == 0 or update == iterations:
+        if update == first_update or update % 5 == 0 or update == iterations:
             print(
                 f"{tag} EM={update}/{iterations} blocks={history[-1]['blocks_by_state']}",
                 flush=True,
             )
+            if checkpoint is not None:
+                checkpoint(p.copy(), [list(b) for b in blocks], [dict(h) for h in history])
         if update < iterations:
             p, blocks = adaptive_mstep(counts, penalty)
     return p, blocks, history

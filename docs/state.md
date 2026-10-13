@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step20a prepares paired128/1024 adaptive warm-start fits on fresh seed1903.
+Factor2 is frozen from the previous inner selections; each arm receives three
+unpenalized plus27 penalized updates,60 M-steps total, with lambda2*log(count).
+All ages remain available and oracle support is disabled. Atomic JSON snapshots
+save warm/fitting phase, positive PMF, partitions and histories at phase start,
+every five fitting updates and phase end. Resume checks frozen metadata, data
+replay and reproduces checkpoint evidence before continuing. Completed arms
+are skipped.38 focused tests, syntax/resume smoke and Ruff/Black pass. Source
+and execution contract are ready; sample-size statistical results are pending.
+
 Step19a prepares a fresh paired warm-start/penalty pilot (seed1902). Factors
 0.125/0.5/2 are compared from uniform and observation-only three-update EM
 starts, with equal nine-update inner paths and twelve-update outer paths.

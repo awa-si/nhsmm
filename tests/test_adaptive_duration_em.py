@@ -126,3 +126,114 @@ def test_paired_selection_shares_inner_warm_and_matches_path_budgets(monkeypatch
     assert [s[2] for s in seen[1:4]] == [9] * 3
     for call in seen[4:]:
         assert call[2] == 6 and call[3][0] is warm_p and call[3][1] is warm_blocks
+
+
+def test_checkpoint_resume_reproduces_uninterrupted_fit_and_rejects_tampering():
+    x, _ = sequences(304, count=2, steps=60, sigma=2.0)
+    full, _, full_history = fit_adaptive(x, 0.01, iterations=7)
+    saved = {}
+
+    def interrupted(p, blocks, history):
+        saved.update(p=p, blocks=blocks, history=history)
+        if history[-1]["completed_updates"] == 5:
+            raise RuntimeError("simulated runtime loss")
+
+    with pytest.raises(RuntimeError, match="runtime loss"):
+        fit_adaptive(x, 0.01, iterations=7, checkpoint=interrupted)
+    resumed, _, history = fit_adaptive(
+        x,
+        0.01,
+        iterations=7,
+        initial_state=(saved["p"], saved["blocks"]),
+        resume_history=saved["history"],
+    )
+    np.testing.assert_array_equal(resumed, full)
+    np.testing.assert_allclose([h["ll"] for h in history], [h["ll"] for h in full_history])
+    bad = [dict(h) for h in saved["history"]]
+    bad[-1]["ll"] += 1
+    with pytest.raises(ValueError, match="reproduce"):
+        fit_adaptive(
+            x, 0.01, iterations=7, initial_state=(saved["p"], saved["blocks"]), resume_history=bad
+        )
+
+
+def test_sample_checkpoint_requires_matching_metadata_and_order(tmp_path):
+    import copy
+    import json
+
+    from scripts.compare_adaptive_sample_size import load_checkpoint, save
+
+    expected = {
+        "schema": "test",
+        "execution": {"source": "a"},
+        "contract": {},
+        "runs": [],
+        "active": None,
+    }
+    path = tmp_path / "out.json"
+    save(path, expected)
+    assert load_checkpoint(path, expected) == expected
+    bad = copy.deepcopy(expected)
+    bad["execution"]["source"] = "b"
+    save(path, bad)
+    with pytest.raises(ValueError, match="execution"):
+        load_checkpoint(path, expected)
+    bad = copy.deepcopy(expected)
+    bad["runs"] = [{"train_count": 1024}]
+    path.write_text(json.dumps(bad))
+    with pytest.raises(ValueError, match="prefix"):
+        load_checkpoint(path, expected)
+
+
+def test_sample_cli_resumes_interrupted_large_phase_and_skips_completed_arm(monkeypatch, tmp_path):
+    import json
+    import sys
+
+    import scripts.compare_adaptive_sample_size as sample
+
+    def data(seed, *, count, **kwargs):
+        return np.full((count, 2, 1), seed, dtype=float), np.zeros((count, 2), dtype=int)
+
+    calls = []
+    fail_once = [True]
+
+    def fit(
+        x, penalty, *, iterations, tag, initial_state=None, resume_history=None, checkpoint=None
+    ):
+        calls.append((len(x), tag, len(resume_history or [])))
+        p = np.full((4, 260), 1 / 260)
+        blocks = [[(0, 260)]] * 4
+        first = len(resume_history) - 1 if resume_history else 0
+        history = list(resume_history[:-1]) if resume_history else []
+        for update in range(first, iterations + 1):
+            history.append({"completed_updates": update, "ll": 0.0})
+            if update == first or update % 5 == 0 or update == iterations:
+                checkpoint(p, blocks, history)
+                if len(x) == 1024 and "adaptive" in tag and update == 5 and fail_once[0]:
+                    fail_once[0] = False
+                    raise RuntimeError("interrupted large fit")
+        return p, blocks, history
+
+    monkeypatch.setattr(sample, "sequences", data)
+    monkeypatch.setattr(sample, "fit_adaptive", fit)
+    monkeypatch.setattr(sample, "aggregate", lambda scores, p: (0.0, None))
+    monkeypatch.setattr(sample, "metrics", lambda p, truth: {"fine_pmf_gate": False})
+    monkeypatch.setattr(sample, "posterior_gradient_check", lambda *a, **k: {})
+    monkeypatch.setattr(sample, "public_check", lambda *a, **k: {})
+    path = tmp_path / "sample.json"
+    argv = ["sample", "--base-commit", "test", "--output", str(path)]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(RuntimeError, match="large fit"):
+        sample.main()
+    saved = json.loads(path.read_text())
+    assert [r["train_count"] for r in saved["runs"]] == [128]
+    assert saved["active"]["phase"] == "fit" and len(saved["active"]["history"]) == 6
+    before = len(calls)
+    monkeypatch.setattr(sys, "argv", argv + ["--resume"])
+    sample.main()
+    assert calls[before:] == [(1024, "count=1024 adaptive", 6)]
+    final = json.loads(path.read_text())
+    assert [r["train_count"] for r in final["runs"]] == [128, 1024] and final["active"] is None
+    before = len(calls)
+    sample.main()
+    assert len(calls) == before

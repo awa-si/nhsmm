@@ -2998,3 +2998,28 @@ relative to the logarithmic penalty; improvement is a hypothesis to test, not
 accepted here. Preserve both failed pilots; do not reuse their outer test data
 for further method selection. Production defaults, oracle controls, joint
 learning and Trading/live-market acceptance are unchanged.
+
+## Adaptive sample-size replication contract — 2026-10-13
+
+Step20a freezes a new experiment on seed1903. Train128 and1024 sequences of300
+rows, with the128 arm exactly the large arm's prefix. Both adaptive fits use
+three unpenalized warm updates followed by27 penalized updates. Factor2,
+pseudocount1e-6 and lambda=factor*log(sequence count) remain the previously
+selected rule; no new selection sees this experiment's outer data. The
+previous pilots had twelve-update outer paths, so comparing against them
+directly mixes seed and budget changes. The paired128/1024 contrast within
+this experiment instead holds generator, start, model family, factor and
+30-update budget fixed; the predeclared penalty scaling changes with sample
+count. That scaling is part of the intervention and not a pure unregularized
+sample-size contrast.
+
+The same24 fresh held-out sequences evaluate both completed fits; truth is
+evaluation-only. All configured ages1..260 remain available with known nuisance
+parameters and valid starts/right censoring. Positive held-out gain and each
+PMF TV<=0.12 are unchanged. Numerical correctness remains a separate gate.
+The new research driver is scripts/compare_adaptive_sample_size.py; phase/arm
+checkpoints retain sufficient PMF/partition/history state for exact continuation
+under matching source/data/runtime/contract metadata. Resume rechecks evidence
+at the saved state, and monotonicity applies within each fixed-objective phase.
+This is one paired seed, not multi-seed or joint-production/Trading acceptance.
+38 focused cases and static/smoke checks pass; statistical results are pending.

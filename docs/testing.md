@@ -1020,3 +1020,28 @@ All three recovery gates fail. No source changes occurred during the pilot;
 the combined35-case focused suite and AST/smoke/Ruff/Black evidence remain
 applicable. No current canonical-suite, historical NPZ or Trading acceptance
 is implied by this paired single-seed pilot.
+
+## Step20a — resumable sample-size replication,2026-10-13
+
+The adaptive research fitter supports checkpoint callbacks and guarded phase
+history continuation. A real observation fit interrupted at update5 resumes
+to exactly the uninterrupted final PMF; altered saved evidence is rejected.
+The sample-size driver validates source/runtime/base/contract identity and
+ordered completed arms. Its mocked CLI interrupts the1024 fitting phase,
+preserves the completed128 arm, resumes the saved six-item history and skips
+all completed work on the final no-op. Synthetic mocked results are test data,
+not statistical evidence. All38 cases pass across the five focused modules;
+AST and a real checkpoint/resume smoke pass. Ruff/Black cover all three changed
+or added Python files. No production package code is changed.
+
+Predeclared execution: fresh seed1903,128 and1024 paired300-row sequences,
+the same24 fresh held-out sequences, fixed factor2, pseudocount1e-6, warm3 plus
+penalized27 updates per arm. No renewed width/penalty selection uses these
+outer observations. A phase snapshot writes to a temporary file then replaces
+the JSON atomically. Resume re-scores its last saved PMF and verifies LL/objective
+within1e-7 before proceeding; this may repeat an E-step, not an M-step. Source
+and numerical/runtime metadata must remain identical; docs/report-only commits
+can advance the branch while --base-commit retains the frozen code identity.
+Native execution uses one worker/threads1 and a2400-second bound. Checkpoints
+are local until explicitly pushed at verified report gates; they alone do not
+guarantee survival of workspace loss. Statistical acceptance remains pending.
