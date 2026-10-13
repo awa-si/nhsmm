@@ -4,6 +4,8 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step26 implements the separate research-only width-cap M-step/fitter and checkpointed paired driver. Exhaustive bounded partition optimality, inactive-cap equivalence, positive zero-exposure PMF, probability-preserving warm refinement, real censored short EM/interrupted resume, guarded source/contract/seed/prefix/history, post-fit public numerics and completed no-op checks pass.44 focused tests pass in12.94s; new3-file Ruff/Black/syntax checks pass. Existing adaptive/production owners and prior frozen source hashes remain unchanged. Next execute frozen256-sequence paired pilot, concurrency1, oracle OFF.
+
 Step25 freezes a new width8 mechanism pilot before implementation/execution. Fresh seeds1909/1910/1911, matched256 training and24 outer sequences, warm3 plus27 updates per arm, fixed factor2, unrestricted versus width8,171 total M-steps, concurrency1. Full support1..260, oracle OFF and recovery/numerical gates unchanged. No label/truth enters fitting. This is not1024-sequence or production acceptance. See docs/validation/adaptive-width-cap-protocol.json and adaptive-width-cap.md.
 
 Step24-batch completes the predeclared large-selection seeds1906/1907/1908.

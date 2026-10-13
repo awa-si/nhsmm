@@ -37,3 +37,8 @@ mechanism intervention, not a published optimality claim.
 Current checkpoint: protocol committed before fitting. Next implement the
 restricted M-step, verify exhaustive small cases, actual short-fit/resume,
 then execute and independently replay all three paired fits. Oracle stays OFF.
+
+## Step26 — implementation verified before fitting
+
+Step26 implements the separate research-only width-cap M-step/fitter and checkpointed paired driver. Exhaustive bounded partition optimality, inactive-cap equivalence, positive zero-exposure PMF, probability-preserving warm refinement, real censored short EM/interrupted resume, guarded source/contract/seed/prefix/history, post-fit public numerics and completed no-op checks pass.44 focused tests pass in12.94s; new3-file Ruff/Black/syntax checks pass. Existing adaptive/production owners and prior frozen source hashes remain unchanged. Next execute frozen256-sequence paired pilot, concurrency1, oracle OFF.
+
