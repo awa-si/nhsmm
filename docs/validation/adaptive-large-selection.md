@@ -420,3 +420,12 @@ feasible forward-KL projection TVs[0.11094778037100295, 0.1146360225418479, 0.12
 Verification is SHA-bound toe785101743f7cfb86ca146dbf3409969aef8e9ce5af97e8841e1ec2a6e0f2110.
 Post-fit diagnostics do not enter fitting/selection or change the gates. Oracle
 remains OFF; no production/joint-neural/legacy NPZ acceptance is claimed.
+
+## Step24-1908-active
+
+Seed1908 full_warm completes3 updates on1024 sequences; selected_refit
+factor2 reaches5/27, blocks6/4/8/5.
+All13 source/software/contract/data/split identities, prior inner phase records
+and selected factor are preserved. Full-age PMF/partition/history/objective and
+warm/refit continuity checks pass. This is recovery evidence; terminal replays,
+outer evaluation and recovery/numerical gates remain pending. Oracle OFF.
