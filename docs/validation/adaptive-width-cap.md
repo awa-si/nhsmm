@@ -116,3 +116,54 @@ blocks[33, 33, 33, 33]. Source/software/contract/data/phase/history/
 objective/PMF/partition and shared warm-PMF continuity checks pass. This is
 recovery evidence; final terminal replay/outer/numerical and recovery gates
 remain pending. Frozen source8fc245e,256 training sequences, oracle OFF.
+
+## Step27-1911-complete
+
+Width-cap pilot seed1911 completes57 actual M-steps (warm3 plus27 per arm).
+All16 source/software/contract/training/outer identities, shared initial PMF,
+matched budgets, phase/history/objective/positive full-age PMF/partition checks,
+independent terminal E-step replays, regenerated outer evaluation, public
+likelihood/gradient/filtering and byte-preserving completed no-op pass.
+Width8 minus unrestricted outer LL: -41.36282740908973 nats.
+Main report SHA256c6143fbf3d60243ed7a647260f0c54425034335206cce74fc85b1801b9faa08e. All results are pilot evidence,
+not1024-sequence or production/joint-neural/legacy NPZ acceptance. Oracle OFF.
+unrestricted: blocks[3, 4, 5, 4], TVs[0.17231219803297143, 0.11355436047328024, 0.1755661830409554, 0.1542870439059833], gain0.007597737959804615 nats/row, full gateFAIL, partition TV lower bounds[0.1659261942818482, 0.11049688153007527, 0.16907706199625655, 0.14704087707064722].
+width8: blocks[33, 33, 33, 33], TVs[0.165242131703969, 0.17840184113484747, 0.16190821052544285, 0.12391747696442625], gain0.0018529008196532637 nats/row, full gateFAIL, partition TV lower bounds[0.02386179381417981, 0.024971122106164048, 0.051052002730845564, 0.04834243315574044].
+
+## Step28 — paired three-seed pilot complete
+
+Step28 completes all predeclared width-cap pilot seeds1909/1910/1911.
+Matched256-sequence arms use warm3 and27 M-steps each;171 total M-steps.
+All3 source/software/contract/data/PMF/phase/history/objective and independent
+terminal/outer/public numerical/completed-noop verification checks pass.
+Full recovery gates: unrestricted0/3; width80/3.
+Exact raw reports are SHA-bound by individual and batch verification. The
+pilot changes the allowed partition class without true-PMF/label input; oracle
+OFF. No1024-sequence, joint-neural/production or legacy NPZ acceptance follows.
+Evidence: results/adaptive-width-cap-batch-native-20261013.json.
+
+Width8 beats the control on outer LL for1/3 seeds. Every width8 state has a normalized feasible true-PMF projection with TV below0.12, while every fitted width8 state exceeds0.12. Thus this pilot removes the demonstrated partition obstruction but leaves a mass-estimation component in every width8 state; it is not a robust predictive improvement. This is finite-sample evidence, not proof that a particular smoother or more data will pass.
+
+| Seed | Arm | PMF TV bull/bear/range/chaotic | Outer gain nats/row | Full gate |
+| --- | --- | --- | ---: | --- |
+| 1909 | unrestricted | 0.131016/0.147963/0.175326/0.175868 | +0.005149776 | FAIL |
+| 1909 | width8 | 0.185083/0.155111/0.149090/0.148271 | +0.007342580 | FAIL |
+| 1910 | unrestricted | 0.151268/0.114159/0.192435/0.147084 | +0.005200034 | FAIL |
+| 1910 | width8 | 0.160218/0.221763/0.213735/0.127524 | +0.001306497 | FAIL |
+| 1911 | unrestricted | 0.172312/0.113554/0.175566/0.154287 | +0.007597738 | FAIL |
+| 1911 | width8 | 0.165242/0.178402/0.161908/0.123917 | +0.001852901 | FAIL |
+
+Seed1909 unrestricted: bull: partition_lower_bound_exceeds_gate; bear: partition_lower_bound_exceeds_gate; range: partition_lower_bound_exceeds_gate; chaotic: partition_lower_bound_exceeds_gate.
+Seed1909 width8: bull: same_partition_feasible_projection_passes_mass_estimation_contributes; bear: same_partition_feasible_projection_passes_mass_estimation_contributes; range: same_partition_feasible_projection_passes_mass_estimation_contributes; chaotic: same_partition_feasible_projection_passes_mass_estimation_contributes.
+Seed1910 unrestricted: bull: partition_lower_bound_exceeds_gate; range: partition_lower_bound_exceeds_gate; chaotic: partition_lower_bound_exceeds_gate.
+Seed1910 width8: bull: same_partition_feasible_projection_passes_mass_estimation_contributes; bear: same_partition_feasible_projection_passes_mass_estimation_contributes; range: same_partition_feasible_projection_passes_mass_estimation_contributes; chaotic: same_partition_feasible_projection_passes_mass_estimation_contributes.
+Seed1911 unrestricted: bull: partition_lower_bound_exceeds_gate; range: partition_lower_bound_exceeds_gate; chaotic: partition_lower_bound_exceeds_gate.
+Seed1911 width8: bull: same_partition_feasible_projection_passes_mass_estimation_contributes; bear: same_partition_feasible_projection_passes_mass_estimation_contributes; range: same_partition_feasible_projection_passes_mass_estimation_contributes; chaotic: same_partition_feasible_projection_passes_mass_estimation_contributes.
+
+A partition median-based bound above0.12 proves block-mass changes alone cannot
+pass that fitted partition. A forward-KL projection below0.12 is a normalized
+feasible witness of a mass-estimation contribution, not a minimum-TV solution.
+These diagnostics are post-fit only. Within-seed outer LL differences compare
+matched observations; absolute likelihoods do not rank seeds. Next design a
+separate predeclared estimator/large-exposure experiment; do not tune this pilot
+after its outer results.

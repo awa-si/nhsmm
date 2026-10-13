@@ -1,0 +1,129 @@
+{
+  "schema": "nhsmm-adaptive-width-cap-final-verification-v1",
+  "verified": true,
+  "seed": 1911,
+  "source_commit": "8fc245eb32fb0866510fc4c56eecc873b63b67d7",
+  "source_hashes": 16,
+  "input_report": "docs/validation/results/adaptive-width-cap-seed1911-native-20261013.json",
+  "input_report_sha256": "c6143fbf3d60243ed7a647260f0c54425034335206cce74fc85b1801b9faa08e",
+  "source_contract_software_training_outer_replayed": true,
+  "matched_initial_pmf_budgets": true,
+  "terminal_fits_replayed_without_msteps": true,
+  "numerical_checks_pass": true,
+  "completed_resume_noop": true,
+  "evaluation": {
+    "heldout_sha256": "c231c693dac515a8b94a32d0e094053ab4adf63b63695a8dca02c0a1296f6091",
+    "uniform_heldout_ll": -15737.541845528089,
+    "arms": {
+      "unrestricted": {
+        "metrics": {
+          "pmf_tv": [
+            0.17231219803297143,
+            0.11355436047328024,
+            0.1755661830409554,
+            0.1542870439059833
+          ],
+          "mean": [
+            124.19491044164316,
+            96.33181806207027,
+            93.88528741866594,
+            35.05843974768692
+          ],
+          "mean_rmse": 3.708008254234952,
+          "fine_pmf_gate": false
+        },
+        "heldout_ll": -15682.838132217496,
+        "heldout_gain_nats_per_row": 0.007597737959804615,
+        "full_gate": false,
+        "blocks": [
+          3,
+          4,
+          5,
+          4
+        ],
+        "learned_partition_tv_lower_bound": [
+          0.1659261942818482,
+          0.11049688153007527,
+          0.16907706199625655,
+          0.14704087707064722
+        ],
+        "forward_kl_projection_tv": [
+          0.17623085102452257,
+          0.11703054884623881,
+          0.17353939423595516,
+          0.16310241643443393
+        ],
+        "gradient_check": {
+          "maximum_all_logit_gradient_error": 1.5654144647214707e-14,
+          "public_ll_error": 5.684341886080801e-13,
+          "segment_reference_ll_error": 1.9326762412674725e-12
+        },
+        "public_recursion": {
+          "public_ll": -1305.5720372919918,
+          "independent_ll": -1305.5720372919905,
+          "ll_error": 1.3642420526593924e-12,
+          "maximum_state_probability_error": 5.6621374255882984e-14,
+          "accuracy": 0.9883333333333333,
+          "uncertain_rows_max_probability_below_0_99": 78,
+          "rows": 600
+        }
+      },
+      "width8": {
+        "metrics": {
+          "pmf_tv": [
+            0.165242131703969,
+            0.17840184113484747,
+            0.16190821052544285,
+            0.12391747696442625
+          ],
+          "mean": [
+            120.31514419440329,
+            97.02481098015366,
+            93.61630713485253,
+            33.15069168335792
+          ],
+          "mean_rmse": 3.7649969853092884,
+          "fine_pmf_gate": false
+        },
+        "heldout_ll": -15724.200959626585,
+        "heldout_gain_nats_per_row": 0.0018529008196532637,
+        "full_gate": false,
+        "blocks": [
+          33,
+          33,
+          33,
+          33
+        ],
+        "learned_partition_tv_lower_bound": [
+          0.02386179381417981,
+          0.024971122106164048,
+          0.051052002730845564,
+          0.04834243315574044
+        ],
+        "forward_kl_projection_tv": [
+          0.02544874301104983,
+          0.029283224760375735,
+          0.0518311434044033,
+          0.050602286693985185
+        ],
+        "gradient_check": {
+          "maximum_all_logit_gradient_error": 3.7192471324942744e-14,
+          "public_ll_error": 0.0,
+          "segment_reference_ll_error": 1.8189894035458565e-12
+        },
+        "public_recursion": {
+          "public_ll": -1318.5370439265903,
+          "independent_ll": -1318.5370439265882,
+          "ll_error": 2.0463630789890885e-12,
+          "maximum_state_probability_error": 5.784261958297066e-14,
+          "accuracy": 0.9783333333333334,
+          "uncertain_rows_max_probability_below_0_99": 88,
+          "rows": 600
+        }
+      }
+    },
+    "width8_minus_unrestricted_heldout_ll": -41.36282740908973,
+    "actual_msteps": 57,
+    "labels_used_in_learning_or_selection": false
+  }
+}
