@@ -394,3 +394,12 @@ SHA-bound paired evidence: results/adaptive-large-selection-candidate2-batch-nat
 | 1908 | -167164.19527625659 | +165.89892961740 | 2.0 | 5/4/8/5 |
 
 Factor comparisons use the same within-seed256 validation observations; absolute likelihoods do not rank seeds. Selection does not establish the true-PMF recovery or outer predictive gates.
+
+## Step24-1907-active
+
+Seed1907 full_warm completes3 updates on1024 sequences; selected_refit
+factor2 reaches5/27, blocks5/4/8/6.
+All13 source/software/contract/data/split identities, prior inner phase records
+and selected factor are preserved. Full-age PMF/partition/history/objective and
+warm/refit continuity checks pass. This is recovery evidence; terminal replays,
+outer evaluation and recovery/numerical gates remain pending. Oracle OFF.

@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step24-1907-active
+
+Seed1907 full_warm completes3 updates on1024 sequences; selected_refit
+factor2 reaches5/27, blocks5/4/8/6.
+All13 source/software/contract/data/split identities, prior inner phase records
+and selected factor are preserved. Full-age PMF/partition/history/objective and
+warm/refit continuity checks pass. This is recovery evidence; terminal replays,
+outer evaluation and recovery/numerical gates remain pending. Oracle OFF.
+
 Step23-batch
 
 Both seeds1907/1908 finish candidate_2 factor2:27 updates each,54 new
