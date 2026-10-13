@@ -1587,3 +1587,16 @@ blocks[33, 33, 34, 33]. Source/software/contract/data/phase/history/
 objective/PMF/partition and shared warm-PMF continuity checks pass. This is
 recovery evidence; final terminal replay/outer/numerical and recovery gates
 remain pending. Frozen source8fc245e,256 training sequences, oracle OFF.
+
+## Step27-1910-complete
+
+Width-cap pilot seed1910 completes57 actual M-steps (warm3 plus27 per arm).
+All16 source/software/contract/training/outer identities, shared initial PMF,
+matched budgets, phase/history/objective/positive full-age PMF/partition checks,
+independent terminal E-step replays, regenerated outer evaluation, public
+likelihood/gradient/filtering and byte-preserving completed no-op pass.
+Width8 minus unrestricted outer LL: -28.033464356243712 nats.
+Main report SHA25636a9e6e24cf2188fd5ced16008bf18f057a8b367d5747efd57178636281a6e57. All results are pilot evidence,
+not1024-sequence or production/joint-neural/legacy NPZ acceptance. Oracle OFF.
+unrestricted: blocks[4, 4, 5, 4], TVs[0.1512682124673306, 0.11415891768091632, 0.19243455817006525, 0.14708438297226797], gain0.005200034136191284 nats/row, full gateFAIL, partition TV lower bounds[0.13949747652704678, 0.11036037126376683, 0.18967903496131433, 0.1358535170371385].
+width8: blocks[33, 33, 34, 33], TVs[0.16021754190356455, 0.22176273932976012, 0.21373524132051733, 0.12752437326266428], gain0.0013064974200463237 nats/row, full gateFAIL, partition TV lower bounds[0.023814457857965984, 0.02430026697124297, 0.04952418313143421, 0.05010040354108249].
