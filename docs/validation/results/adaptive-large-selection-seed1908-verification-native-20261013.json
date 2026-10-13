@@ -1,0 +1,92 @@
+{
+  "schema": "nhsmm-adaptive-large-selection-final-verification-v1",
+  "seed": 1908,
+  "input_report": "docs/validation/results/adaptive-large-selection-seed1908-native-20261013.json",
+  "input_report_sha256": "b6cb1b8c5c04b4c00e255e25c5548bfcc09fb182106f2b4a4c5b12074ee92d79",
+  "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+  "prior_completed_records_preserved": [
+    "inner_warm",
+    "candidate_0",
+    "candidate_1",
+    "candidate_2"
+  ],
+  "prior_selection_preserved": true,
+  "completed_resume_noop": true,
+  "selection_complete": true,
+  "outer_evaluation_complete": true,
+  "numerical_checks_pass": true,
+  "full_recovery_pass": false,
+  "failed_states": [
+    "range",
+    "chaotic"
+  ],
+  "diagnostic_method": "Post-fit only: half summed absolute deviations from each learned block true-PMF median lower-bounds TV for any constant block densities. Forward-KL projection is normalized and feasible, not minimum-TV. No learning/selection/gate changes.",
+  "evidence": {
+    "verified": true,
+    "seed": 1908,
+    "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+    "source_hashes": 13,
+    "completed_msteps": 114,
+    "selected_factor": 2,
+    "input_report_sha256": "b6cb1b8c5c04b4c00e255e25c5548bfcc09fb182106f2b4a4c5b12074ee92d79",
+    "arm_phase_keys": {
+      "selected": "selected_refit",
+      "factor2_control": "selected_refit"
+    },
+    "rows": {
+      "selected_refit": {
+        "metrics": {
+          "pmf_tv": [
+            0.10355058387936868,
+            0.1102053532205235,
+            0.14247093861838375,
+            0.12593786647721306
+          ],
+          "mean": [
+            123.05163189198626,
+            98.28588419842075,
+            100.38407973975717,
+            33.90468954771395
+          ],
+          "mean_rmse": 0.46875875257468874,
+          "fine_pmf_gate": false
+        },
+        "heldout_ll": -15743.084146041758,
+        "heldout_gain_nats_per_row": 0.005763641079615051,
+        "full_gate": false,
+        "gradient_check": {
+          "maximum_all_logit_gradient_error": 7.382983113757291e-15,
+          "public_ll_error": 5.684341886080801e-13,
+          "segment_reference_ll_error": 1.7053025658242404e-12
+        },
+        "public_recursion": {
+          "public_ll": -1320.8527550948252,
+          "independent_ll": -1320.852755094826,
+          "ll_error": 9.094947017729282e-13,
+          "maximum_state_probability_error": 1.4033219031261979e-13,
+          "accuracy": 0.97,
+          "uncertain_rows_max_probability_below_0_99": 143,
+          "rows": 600
+        },
+        "blocks": [
+          6,
+          4,
+          8,
+          5
+        ],
+        "learned_partition_tv_lower_bound": [
+          0.09669158388290576,
+          0.10879501011025602,
+          0.13445370129747347,
+          0.12447137080809408
+        ],
+        "forward_kl_projection_tv": [
+          0.09928397853501024,
+          0.11083711265195112,
+          0.13702119954683634,
+          0.12789760322328086
+        ]
+      }
+    }
+  }
+}

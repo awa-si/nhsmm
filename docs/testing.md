@@ -1481,3 +1481,53 @@ All13 source/software/contract/data/split identities, prior inner phase records
 and selected factor are preserved. Full-age PMF/partition/history/objective and
 warm/refit continuity checks pass. This is recovery evidence; terminal replays,
 outer evaluation and recovery/numerical gates remain pending. Oracle OFF.
+
+## Step24-1908-complete
+
+Seed1908 completes full_warm3 plus selected_refit27 on1024 sequences,
+114 total actual M-steps. Selected factor2 and its matched frozen-factor control
+reuse the identical fit. All13 source/software/contract/data/split/phase/history/
+objective/PMF/partition checks, independent warm/refit terminal E-step replay,
+regenerated outer evaluation and public likelihood/gradient/filtering checks
+pass. Prior inner records and selection remain identical; completed CLI resume
+is a byte-preserving no-op. Outer gain0.005763641079615051 nats/row;
+PMF TVs[0.10355058387936868, 0.1102053532205235, 0.14247093861838375, 0.12593786647721306]; mean RMSE0.46875875257468874.
+Full recovery gateFAIL; failed states['range', 'chaotic'].
+Learned blocks[6, 4, 8, 5]; post-fit partition TV lower bounds[0.09669158388290576, 0.10879501011025602, 0.13445370129747347, 0.12447137080809408];
+feasible forward-KL projection TVs[0.09928397853501024, 0.11083711265195112, 0.13702119954683634, 0.12789760322328086].
+Verification is SHA-bound tob6cb1b8c5c04b4c00e255e25c5548bfcc09fb182106f2b4a4c5b12074ee92d79.
+Post-fit diagnostics do not enter fitting/selection or change the gates. Oracle
+remains OFF; no production/joint-neural/legacy NPZ acceptance is claimed.
+
+## Step24-batch — completed frozen large-selection experiment
+
+Step24-batch completes the predeclared large-selection seeds1906/1907/1908.
+All choose factor2 from inner validation. All3 numerical/integrity/replay checks
+pass; full duration-PMF plus positive-outer-gain gates pass for0/3 seeds.
+Seeds1907/1908 add60 full-data M-steps in this batch; each complete seed uses114,
+342 total. Selected and frozen-factor2 controls reuse the identical fit per
+protocol. Source/software/protocol match, training/outer datasets differ, and
+all main reports are SHA-bound to independently verified final evidence.
+Oracle OFF; support, factor grid, budgets and gates remain unchanged.
+
+| Seed | PMF TV bull/bear/range/chaotic | Outer gain nats/row | Full gate | Failed states |
+| --- | --- | ---: | --- | --- |
+| 1906 | 0.095938/0.108081/0.143096/0.126634 | +0.005741339 | FAIL | range, chaotic |
+| 1907 | 0.108717/0.110049/0.125969/0.116148 | +0.005923187 | FAIL | range |
+| 1908 | 0.103551/0.110205/0.142471/0.125938 | +0.005763641 | FAIL | range, chaotic |
+
+Seed1906: range: learned_partition_lower_bound_exceeds_gate; chaotic: learned_partition_lower_bound_exceeds_gate.
+Seed1907: range: learned_partition_lower_bound_exceeds_gate.
+Seed1908: range: learned_partition_lower_bound_exceeds_gate; chaotic: learned_partition_lower_bound_exceeds_gate.
+
+Median-based TV lower bounds prove failure cannot be repaired by block mass
+optimization alone only when that learned-partition bound exceeds0.12. A
+normalized forward-KL projection below0.12 is a feasible witness that mass
+estimation contributes; that projection is not a minimum-TV solution. These
+post-fit diagnostics never enter training or selection. Paired seed comparisons
+use the same within-seed evaluation data; absolute LLs do not rank seeds.
+
+Evidence: results/adaptive-large-selection-batch-native-20261013.json. No
+production/joint-neural or legacy NPZ dataset acceptance is implied. Next work
+needs a separately predeclared partition experiment without changing this
+completed protocol or its gates.
