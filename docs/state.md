@@ -4,6 +4,8 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step25 freezes a new width8 mechanism pilot before implementation/execution. Fresh seeds1909/1910/1911, matched256 training and24 outer sequences, warm3 plus27 updates per arm, fixed factor2, unrestricted versus width8,171 total M-steps, concurrency1. Full support1..260, oracle OFF and recovery/numerical gates unchanged. No label/truth enters fitting. This is not1024-sequence or production acceptance. See docs/validation/adaptive-width-cap-protocol.json and adaptive-width-cap.md.
+
 Step24-batch completes the predeclared large-selection seeds1906/1907/1908.
 All choose factor2 from inner validation. All3 numerical/integrity/replay checks
 pass; full duration-PMF plus positive-outer-gain gates pass for0/3 seeds.

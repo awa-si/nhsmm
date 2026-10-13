@@ -1531,3 +1531,9 @@ Evidence: results/adaptive-large-selection-batch-native-20261013.json. No
 production/joint-neural or legacy NPZ dataset acceptance is implied. Next work
 needs a separately predeclared partition experiment without changing this
 completed protocol or its gates.
+
+## Step25 — width-cap pilot predeclared
+
+Step25 freezes a new width8 mechanism pilot before implementation/execution. Fresh seeds1909/1910/1911, matched256 training and24 outer sequences, warm3 plus27 updates per arm, fixed factor2, unrestricted versus width8,171 total M-steps, concurrency1. Full support1..260, oracle OFF and recovery/numerical gates unchanged. No label/truth enters fitting. This is not1024-sequence or production acceptance. See docs/validation/adaptive-width-cap-protocol.json and adaptive-width-cap.md.
+
+Required checks: exhaustive bounded partition optimality, PMF-preserving warm refinement, actual censored short EM with monotonic objective and interrupted-resume equivalence, source/contract/data identity rejection, post-fit only evaluation and completed no-op. Heavy execution waits for these checks and source commit.

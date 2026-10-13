@@ -1,0 +1,14 @@
+{
+  "schema": "nhsmm-adaptive-width-cap-protocol-v1",
+  "status": "predeclared_not_executed",
+  "audit_base": "87409786571327ee611d334e91744060325bf06d",
+  "seeds": [1909, 1910, 1911],
+  "data": {"training_sequences": 256, "outer_sequences": 24, "steps": 300, "sigma": 2.0, "training_seed_offset": 400000, "outer_seed_offset": 500000},
+  "method": {"support": "all configured ages1..260 in every state", "oracle_support": false, "known_nuisance_parameters": true, "pseudocount": 0.000001, "factor": 2.0, "warm_updates": 3, "penalized_updates": 27, "maximum_block_width": 8, "arms": ["unrestricted", "width8"], "selection": "none; evaluate both predeclared arms", "initialization": "shared unpenalized unrestricted warm fit; width8 splits warm blocks deterministically without changing PMF", "objective": "LL + pseudocount*sum(log PMF) - factor*log(training sequences)*sum(block count-1)", "constrained_mstep": "global dynamic-program optimum over contiguous full-age partitions with each block width<=8"},
+  "budget": {"actual_msteps_per_seed": 57, "total_actual_msteps": 171, "concurrency": 1},
+  "gates": {"each_state_pmf_tv_at_most": 0.12, "heldout_gain_nats_per_row_strictly_greater_than": 0.0, "numerical": "existing public likelihood/gradient<=1e-7 and filtering<=1e-8"},
+  "integrity": ["immutable source commit plus source/software/protocol/data hashes", "atomic per-phase checkpoints at0/every5/final; guarded resume", "same training and outer observations and same update budgets in both arms", "outer observations and true PMF available only after both fits", "positive normalized full-support PMFs, contiguous bounded partitions and monotone within-arm objective"],
+  "primary_comparison": "report all three per-seed width8 versus unrestricted PMF TVs, positive-outer-gain/full gates, and within-seed outer LL differences; no arm chosen after results",
+  "post_fit_diagnostics": "median-based learned-partition TV lower bounds and feasible forward-KL projection; never learning inputs",
+  "limits": ["256-sequence mechanism pilot, not1024-sequence replication", "known frozen nuisance parameters and fresh episode starts", "fixed penalty and width may increase estimation variance; no recovery guarantee", "no new widths/factors/budgets selected after outer outcomes", "no production/joint-neural/Trading or legacy NPZ acceptance"]
+}
