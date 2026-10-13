@@ -1291,3 +1291,30 @@ not change learning/selection/gates. Numerical verification passes while range/
 chaotic fail fine-PMF recovery. Prior47 tests/44-file static checks remain
 applicable; sources are unchanged. Remaining1907/1908 and production/joint
 Trading/historical NPZ acceptance are not asserted.
+
+## Step22k — two fresh inner warm starts after control-plane reload,2026-10-13
+
+Current global instructions/workflow/coding, NHSMM project instructions/workflow
+and regime-v2 AGENTS are fully reread through the GitHub connector. The explicit
+active regime-v2 branch persists over default develop headers. Current13-source
+hashes match completed1906; the existing47-case/44-file static/real-smoke evidence
+remains applicable. Environment is still Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu.
+
+The seed1907 and1908 --max-phases1 invocations each exit0 at completed inner_warm,
+with active/selection/evaluation null. Each has768 fit and256 validation sequences
+from1024 independently generated300-row observations; all data and split hashes
+are independently replayed. Their training hashes differ. Source/software/seed/
+protocol identity, history0..3, positive finite normalized full-age PMFs, block
+coverage/densities and monotonic fixed objective pass. Terminal fit_adaptive
+E-step replay reproduces each saved LL/objective within1e-7 without new M-steps.
+
+| Seed | Blocks bull/bear/range/chaotic | Terminal LL | Terminal objective | Raw SHA256 |
+| --- | --- | ---: | ---: | --- |
+|1907|260/253/233/186|-499953.9123828681|-499953.9201610947|7658a145d8c31e55ea720566d8ac1e9550e5e79074247a2e8428f1d321acbab5|
+|1908|254/254/245/153|-500322.4408234874|-500322.4485786696|21ca554f6834e61ce381de4879ee01faca9498c3cff7e2033ddc9b100a74dd6e|
+
+These six completed M-steps are warm execution/recovery evidence only. No outer
+observations/truth, factor selection, final numerical or statistical recovery
+acceptance is asserted for these seeds. Compute concurrency stays1; independent
+connector reads and checkpoint reads are bounded parallel. Source3966159, all
+factors/budgets/gates, known nuisance controls and oracle OFF are unchanged.

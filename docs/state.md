@@ -4,6 +4,18 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22k begins both remaining fresh large-selection seeds1907/1908: each
+inner_warm completes3/3 updates at frozen3966159. Both bounded jobs exit0;
+independent terminal E-step replay verifies all13 source/software/contract
+identities,1024-data and disjoint768/256 split hashes, indices0..3, full positive
+normalized PMFs/partitions and monotonic fixed objectives. Distinct data hashes
+confirm separate generated datasets. Blocks1907:260/253/233/186;1908:254/254/
+245/153. Selection/evaluation and active remain null. Next bounded resume starts
+candidate_0 for each seed; no new recovery outcome is asserted. Admin global/
+project/AGENTS layers are fully refreshed; active regime-v2 remains authoritative.
+Oracle stays OFF; source/method/gates and the completed1906 result are unchanged.
+
+
 Step22j completes seed1906's full large-selection experiment at3966159:
 all114 M-steps, source/data/split/phase/objective/PMF replay and public numeric
 gates pass. Inner validation chooses factor2, so selected/control reuse the

@@ -235,3 +235,23 @@ resolution in this first fresh seed. No thresholds, oracle support, candidate
 factors or learning parameters are changed in response to this outcome. Complete
 the frozen1907/1908 replications before broad conclusions or a new estimator
 change; known nuisance and production/joint Trading limitations remain unchanged.
+
+## Step22k — warm-start checkpoints for1907/1908,2026-10-13
+
+Both remaining fresh seeds complete inner_warm3 at unchanged3966159. Independent
+terminal E-step/source/data/split/PMF/partition/objective replay passes. Both
+active/selection/evaluation fields are null, and no outer data is evaluated.
+The datasets have distinct hashes. Total new work is6 M-steps; completed1906
+remains an independent failed recovery result under the same frozen protocol.
+
+| Seed | Warm blocks bull/bear/range/chaotic | Checkpoint |
+| --- | --- | --- |
+|1907|260/253/233/186|results/adaptive-large-selection-seed1907-native-20261013.json|
+|1908|254/254/245/153|results/adaptive-large-selection-seed1908-native-20261013.json|
+
+Next resume each checkpoint with source3966159902a48bfc2c1fad6a22c375a15cd71dee,
+its matching --seed and --output, --resume and --max-phases1; this begins
+candidate_0 at factor0.125 without repeating the warm M-steps. Keep separate
+output files and unchanged statistical settings. Later phase/selection/refit/
+outer gates remain pending; no three-seed conclusion is made yet. Admin layers
+are fully refreshed and the active regime-v2 branch is retained.
