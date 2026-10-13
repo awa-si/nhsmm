@@ -1122,3 +1122,15 @@ with2400-second bounds and separate guarded phase/arm JSON reports; completed
 seeds are verified/documented/pushed individually. No128 refits or renewed
 penalty selection are performed. Large-only source hashes differ from421ef28
 only through the driver extension; old reports keep their immutable identities.
+
+## Step21b — seed1904 execution snapshot,2026-10-13
+
+Source identity8fcb7ca is unchanged. The immutable replication snapshot stores
+warm3 and fit0..10 for the active1024-only seed1904 arm, with5/4/9/6 blocks.
+All eleven source hashes,1024 training replay, phase/update completeness,
+warm-to-fit LL continuity, monotonic fixed objectives, positive normalized PMFs,
+full-age partition/density invariants and independently recomputed last penalized
+score pass. No outer observations/truth are evaluated at this partial gate.
+The snapshot is execution/recovery evidence, not a complete statistical or
+public final-gradient result. Resume retains --seed1904, --large-only, source
+8fcb7ca and the same software contract; seed1905 remains unstarted.

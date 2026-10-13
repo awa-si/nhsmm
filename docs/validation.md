@@ -3116,3 +3116,8 @@ Run serially with checkpoints, verifying and pushing each completed seed before
 continuing. No small-arm repeats save60 unnecessary M-steps; new work is60
 large-arm M-steps total. Results are pending. Known-nuisance controlled evidence
 does not establish joint-production/Trading/live-market usefulness.
+
+Step21b persists the1904 execution state at warm3+fit10,5/4/9/6 learned blocks,
+source8fcb7ca. Source/data/phase/PMF/partition/objective checks pass. The large
+fit continues; neither1904 held-out/TV acceptance nor1905 evidence is available
+yet. The method and all thresholds remain frozen.

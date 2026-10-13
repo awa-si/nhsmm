@@ -13,6 +13,11 @@ and Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu are restored with editable install.
 All40 focused cases and AST/Ruff/Black over42 scoped Python files pass.
 Replication results are pending.
 
+Step21b persists seed1904 at warm3+fit10 with5/4/9/6 blocks. Current source/
+data hashes, phase histories, positive normalized full-age PMFs and fixed-
+objective invariants pass. This is a recovery/execution snapshot; final1904
+statistics and the1905 replication remain pending. Native fitting continues.
+
 Step20d completes paired128/1024 adaptive warm-start fits on fresh seed1903:
 all60 M-steps and numerical/replay/objective gates pass. Fixed factor2 and
 lambda2*log(count), warm3 plus penalized27 updates per arm, full ages1..260
