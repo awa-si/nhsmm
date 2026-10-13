@@ -1251,3 +1251,20 @@ The SHA-bound phase-verification JSON records these values and the input report
 SHA256eb7f047f6d431a4a23ab38eb6196ffdd71938338570df806898c85ea7ac9b416. No public large recovery or factor-selection conclusion
 is asserted until remaining candidates/refits/evaluation finish. Prior47-case
 and44-file preflight evidence remains applicable; sources are unchanged.
+
+## Step22g — completed candidate_1 and independent verification,2026-10-13
+
+The bounded invocation exits0 with warm/candidate_0/candidate_1 complete, active
+null and selection/evaluation null. Candidate_1's27 updates (history0..27)
+use penalty3.321894866573836=0.5*log(768); total completed work57 M-steps.
+Prior completed phase records and all source/contract/software/data/split
+identities are exactly preserved. All13 current source hashes,1024 training
+and768/256 split replay, fixed-objective monotonicity, full positive normalized
+PMF/partition consistency and terminal E-step replay pass. Saved LL/objective
+are-499629.0984813526/-499811.8135767134, reproduced within1e-7 without new
+M-steps. Blocks18/13/19/9. Independently scored inner validation LL on256
+sequences is-166776.27502647758: +92.07303265191149 nats versus candidate_0 on the
+identical validation observations. This is a predictive score comparison, not
+fine-PMF recovery, significance or final factor selection. The third candidate
+and outer refits/evaluation remain pending. SHA-bound verification JSON records
+input hash7f7cb99c8efeede4917917d84fc844d28b0e3eb4a8dfc2f3c0c3cd8d26ad9bb2; prior47-case/44-file preflight remains applicable.

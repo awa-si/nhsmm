@@ -146,3 +146,18 @@ Step22f captures candidate_1, factor0.5, at update10/27 with
 data/contract identity, active budget/history, normalized positive full-age PMFs
 and partition consistency pass. Snapshot SHA256a4895fdd084f4cb236c6e1c431b62884e1f010b3c2c84097a4c2d66d13489e19.
 Terminal independent scoring and selection are pending; fitting continues.
+
+## Step22g — complete second candidate,2026-10-13
+
+Candidate_1 finishes27/27 updates with factor0.5, penalty3.321894866573836,
+LL-499629.0984813526, objective-499811.8135767134 and18/13/19/9 blocks.
+All13 source hashes, training/split replay, full positive normalized PMF and
+partition/history/objective checks pass. Independent terminal E-step replay
+reproduces the score; prior warm and candidate_0 records are unchanged.
+Total completed work57 M-steps. Inner validation LL is-166776.27502647758,
+improving on candidate_0 by92.07303265191149 nats on the same256 validation sequences.
+No final factor is selected: candidate_2 (factor2) is still pending. Selection
+and outer evaluation remain null. Phase verification is in
+results/adaptive-large-selection-seed1906-candidate1-verification-native-20261013.json.
+The same resume command above next runs candidate_2 at unchanged3966159.
+The raw completed report supersedes Step22f's active checkpoint.

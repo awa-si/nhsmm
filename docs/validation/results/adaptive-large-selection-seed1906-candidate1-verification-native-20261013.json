@@ -1,0 +1,41 @@
+{
+  "schema": "nhsmm-adaptive-large-selection-phase-verification-v1",
+  "seed": 1906,
+  "phase": "candidate_1",
+  "input_report": "docs/validation/results/adaptive-large-selection-seed1906-native-20261013.json",
+  "input_report_sha256": "7f7cb99c8efeede4917917d84fc844d28b0e3eb4a8dfc2f3c0c3cd8d26ad9bb2",
+  "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+  "verification": "independent source/data replay, terminal E-step/objective, inner validation likelihood; no outer data or truth",
+  "prior_completed_records_preserved": [
+    "inner_warm",
+    "candidate_0"
+  ],
+  "selection_complete": false,
+  "outer_evaluation_complete": false,
+  "comparison": {
+    "candidate0_validation_ll": -166868.3480591295,
+    "candidate1_validation_ll": -166776.27502647758,
+    "improvement_nats": 92.07303265191149,
+    "same_validation_sequences": 256,
+    "no_significance_or_final_selection_claim": true
+  },
+  "evidence": {
+    "verified": true,
+    "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+    "source_hashes": 13,
+    "updates": 27,
+    "total_msteps": 57,
+    "penalty": 3.321894866573836,
+    "blocks": [
+      18,
+      13,
+      19,
+      9
+    ],
+    "final_ll": -499629.0984813526,
+    "final_objective": -499811.8135767134,
+    "validation_ll": -166776.27502647758,
+    "outer_evaluation": false,
+    "sha256": "7f7cb99c8efeede4917917d84fc844d28b0e3eb4a8dfc2f3c0c3cd8d26ad9bb2"
+  }
+}
