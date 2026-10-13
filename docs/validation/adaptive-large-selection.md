@@ -313,3 +313,9 @@ Source/contract/software, dataset/split replay, preserved previous fits, budget/
 history/objective and positive normalized full-age partition checks pass.
 Snapshot SHA25668ae800323223063451bed9ad9254e8decf74c047bc25caa880155e472ba19a3. Terminal independent E-step and inner validation
 are pending; native fitting continues. Source3966159 and oracle OFF unchanged.
+
+Step22r completes seed1907 candidate_1 factor0.5 with8/14/10/9 blocks,
+inner validation LL-166628.70723221602, +125.93604849430267 nats over0.125.
+All source/data/phase/PMF/objective and terminal replay checks pass; prior fits
+are preserved. Phase evidence: results/adaptive-large-selection-seed1907-candidate1-verification-native-20261013.json.
+Selection and outer evaluation remain null. Next same candidate on1908.

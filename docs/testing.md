@@ -1366,3 +1366,16 @@ Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu, matching checkpoint identity.
 Forty-seven focused cases including real fit/resume/public numerical smoke
 pass in48.53s;44-file AST/Ruff/Black pass. Both candidate_0 results remain intact.
 Next: candidate_1 factor0.5 for1907/1908 with unchanged3966159 and oracle OFF.
+
+## Step22r — seed1907 second candidate completed,2026-10-13
+
+The bounded invocation exits0 at complete candidate_1,27 updates with penalty
+3.321894866573836,57 total actual M-steps. Prior completed phase records are preserved.
+All13 source/software/contract identities,1024 training and768/256 split replay,
+phase indices, positive normalized full-age PMFs/partitions, fixed-objective
+monotonicity and warm-to-fit continuity pass. Independent terminal E-step
+reproduces LL-500167.31410301256/objective-500290.23463600525 within1e-7 without
+new M-steps. Independently scored validation LL-166628.70723221602 improves
+on candidate_0 by125.93604849430267 nats using identical256 sequences.
+Phase evidence binds raw SHA256b061d60828e9af4bc9ebf122565cc648ead559e136581febfcab080fbeb2d37d. No factor selection or outer
+recovery/public final acceptance is claimed yet.
