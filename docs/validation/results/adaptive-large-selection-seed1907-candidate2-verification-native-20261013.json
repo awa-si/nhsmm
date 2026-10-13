@@ -1,0 +1,54 @@
+{
+  "schema": "nhsmm-adaptive-large-selection-phase-verification-v1",
+  "seed": 1907,
+  "phase": "candidate_2",
+  "input_report": "docs/validation/results/adaptive-large-selection-seed1907-native-20261013.json",
+  "input_report_sha256": "172a2ce05a5d12d8f8c7ee9cc269fc1f208c00ea9317619edfa5420c660f6f61",
+  "prior_completed_records_preserved": [
+    "inner_warm",
+    "candidate_0",
+    "candidate_1"
+  ],
+  "selection_complete": true,
+  "outer_evaluation_complete": false,
+  "evidence": {
+    "verified": true,
+    "seed": 1907,
+    "source_commit": "3966159902a48bfc2c1fad6a22c375a15cd71dee",
+    "source_hashes": 13,
+    "updates": 27,
+    "total_msteps": 84,
+    "penalty": 13.287579466295345,
+    "blocks": [
+      5,
+      4,
+      8,
+      5
+    ],
+    "final_ll": -500259.3963340518,
+    "final_objective": -500498.5826065271,
+    "validation_ll": -166599.38091861576,
+    "candidate0_validation_ll": -166754.64328071033,
+    "improvement_nats": 155.26236209456692,
+    "selected_factor": 2.0,
+    "candidate_validation_scores": [
+      {
+        "factor": 0.125,
+        "validation_ll": -166754.64328071033,
+        "phase": "candidate_0"
+      },
+      {
+        "factor": 0.5,
+        "validation_ll": -166628.70723221602,
+        "phase": "candidate_1"
+      },
+      {
+        "factor": 2.0,
+        "validation_ll": -166599.38091861576,
+        "phase": "candidate_2"
+      }
+    ],
+    "outer_evaluation": false,
+    "sha256": "172a2ce05a5d12d8f8c7ee9cc269fc1f208c00ea9317619edfa5420c660f6f61"
+  }
+}

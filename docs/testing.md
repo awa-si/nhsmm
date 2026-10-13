@@ -1404,3 +1404,15 @@ blocks5/4/8/5. Source/software/contract/data/split/prior phase preservation,
 history/objective/full-age PMF and partition checks pass. This snapshot is
 recovery evidence; terminal independent replay and factor choice remain pending.
 Native fitting continues at unchanged source3966159; oracle OFF.
+
+## Step23-1907-complete
+
+Seed1907 candidate_2 factor2 completes27 updates (84 total M-steps).
+Source/software/contract/data/split/history/objective/full-age PMF/partition and
+independent terminal training E-step replay pass. All prior phases are preserved
+exactly. All three candidates are independently scored on the same256 inner
+validation sequences and the selection matches the maximum with stronger-factor
+tie break. Factor2 validation LL-166599.38091861576, chosen factor2.0.
+Blocks5/4/8/5. Main report SHA256172a2ce05a5d12d8f8c7ee9cc269fc1f208c00ea9317619edfa5420c660f6f61.
+Selection is complete; outer evaluation remains null and full-data refit pending.
+Frozen source3966159, method, budgets, gates and oracle OFF remain unchanged.
