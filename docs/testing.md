@@ -1542,3 +1542,11 @@ Required checks: exhaustive bounded partition optimality, PMF-preserving warm re
 
 Step26 implements the separate research-only width-cap M-step/fitter and checkpointed paired driver. Exhaustive bounded partition optimality, inactive-cap equivalence, positive zero-exposure PMF, probability-preserving warm refinement, real censored short EM/interrupted resume, guarded source/contract/seed/prefix/history, post-fit public numerics and completed no-op checks pass.44 focused tests pass in12.94s; new3-file Ruff/Black/syntax checks pass. Existing adaptive/production owners and prior frozen source hashes remain unchanged. Next execute frozen256-sequence paired pilot, concurrency1, oracle OFF.
 
+
+## Step27-1909-active
+
+Width-cap pilot seed1909 checkpoint: unrestricted at10/27,
+blocks[4, 3, 5, 4]. Source/software/contract/data/phase/history/
+objective/PMF/partition and shared warm-PMF continuity checks pass. This is
+recovery evidence; final terminal replay/outer/numerical and recovery gates
+remain pending. Frozen source8fc245e,256 training sequences, oracle OFF.
