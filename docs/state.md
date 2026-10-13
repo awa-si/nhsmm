@@ -18,6 +18,12 @@ data hashes, phase histories, positive normalized full-age PMFs and fixed-
 objective invariants pass. This is a recovery/execution snapshot; final1904
 statistics and the1905 replication remain pending. Native fitting continues.
 
+Step21c completes/verifies1904: TVs0.11526/0.12859/0.11470/0.11288, mean
+RMSE2.32256 and positive held-out gain+0.00707556 nats/row. Full recovery fails
+only on bear. Its learned-partition TV lower bound0.126560 already exceeds
+0.12; additional mass optimization cannot pass that partition. All numerical/
+replay/objective checks pass.1903 remains PASS and1904 FAIL;1905 is pending.
+
 Step20d completes paired128/1024 adaptive warm-start fits on fresh seed1903:
 all60 M-steps and numerical/replay/objective gates pass. Fixed factor2 and
 lambda2*log(count), warm3 plus penalized27 updates per arm, full ages1..260

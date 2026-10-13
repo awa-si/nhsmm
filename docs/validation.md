@@ -3121,3 +3121,30 @@ Step21b persists the1904 execution state at warm3+fit10,5/4/9/6 learned blocks,
 source8fcb7ca. Source/data/phase/PMF/partition/objective checks pass. The large
 fit continues; neither1904 held-out/TV acceptance nor1905 evidence is available
 yet. The method and all thresholds remain frozen.
+
+## Seed1904 adaptive replication result — 2026-10-13
+
+Step21c completes all30 updates at unchanged source8fcb7ca. Raw result:
+docs/validation/results/adaptive-replication-seed1904-native-20261013.json.
+
+| Seed | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|1904|0.115256 /0.128586 /0.114698 /0.112880|2.322559|+0.00707556|FAIL|
+
+Bull/range/chaotic pass the unchanged0.12 gate; bear fails. The fitted partition
+has5/4/9/6 blocks. Post-fit diagnostics in
+docs/validation/results/adaptive-replication-seed1904-family-bias-native-20261013.json
+are bound to the raw-report SHA256. Median-TV lower bounds by state are
+0.114710/0.126560/0.103704/0.110634; forward-KL projection TVs are
+0.117346/0.130410/0.107109/0.115617. Bear's lower bound already exceeds0.12,
+so further mass optimization on these blocks cannot repair its failed gate.
+The fitted TV is close to the representational obstruction. This does not
+disprove representability by the full adaptive family, only by this learned
+partition under the frozen rule and data.
+
+Source/data/prefix/held-out hashes, complete budgets, phase/objective/PMF/metric
+checks and public numerical gates all pass; completed resume is a no-op.
+The first success1903 does not replicate universally: currently1903 PASS and
+1904 FAIL. The predeclared1905 run remains pending and will use identical
+rules; do not retune thresholds, penalties or partitions on this outer result.
+Known-nuisance controls and production/Trading limits remain unchanged.

@@ -1,0 +1,126 @@
+{
+  "schema": "nhsmm-adaptive-replication-family-bias-v1",
+  "seed": 1904,
+  "source_commit": "8fcb7ca5b020de44aa4f3d47080d2bbc5c74260b",
+  "input_report": "docs/validation/results/adaptive-replication-seed1904-native-20261013.json",
+  "input_report_sha256": "5119ab6c907d96046fc599bb11629963a8496a1519f0cba2f59b2ee92b3bcdf0",
+  "method": "Post-fit only: sum half absolute deviations from true-PMF median per learned block is a TV lower bound; forward-KL projection spreads each block true mass uniformly. No learning/selection or acceptance changes. Not minimum feasible normalized-TV.",
+  "blocks": [
+    [
+      [
+        0,
+        48
+      ],
+      [
+        48,
+        68
+      ],
+      [
+        68,
+        138
+      ],
+      [
+        138,
+        196
+      ],
+      [
+        196,
+        260
+      ]
+    ],
+    [
+      [
+        0,
+        30
+      ],
+      [
+        30,
+        144
+      ],
+      [
+        144,
+        198
+      ],
+      [
+        198,
+        260
+      ]
+    ],
+    [
+      [
+        0,
+        17
+      ],
+      [
+        17,
+        28
+      ],
+      [
+        28,
+        45
+      ],
+      [
+        45,
+        57
+      ],
+      [
+        57,
+        106
+      ],
+      [
+        106,
+        130
+      ],
+      [
+        130,
+        166
+      ],
+      [
+        166,
+        194
+      ],
+      [
+        194,
+        260
+      ]
+    ],
+    [
+      [
+        0,
+        8
+      ],
+      [
+        8,
+        40
+      ],
+      [
+        40,
+        60
+      ],
+      [
+        60,
+        75
+      ],
+      [
+        75,
+        99
+      ],
+      [
+        99,
+        260
+      ]
+    ]
+  ],
+  "block_median_tv_lower_bound": [
+    0.11470960177906138,
+    0.12656008718884454,
+    0.10370394149024931,
+    0.11063423232469514
+  ],
+  "forward_kl_projection_tv": [
+    0.11734568085008401,
+    0.13041023127675339,
+    0.1071093641674508,
+    0.11561661140879609
+  ]
+}

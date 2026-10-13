@@ -1125,7 +1125,7 @@ only through the driver extension; old reports keep their immutable identities.
 
 ## Step21b — seed1904 execution snapshot,2026-10-13
 
-Source identity8fcb7ca is unchanged. The immutable replication snapshot stores
+At this checkpoint source identity8fcb7ca was unchanged. The snapshot stored
 warm3 and fit0..10 for the active1024-only seed1904 arm, with5/4/9/6 blocks.
 All eleven source hashes,1024 training replay, phase/update completeness,
 warm-to-fit LL continuity, monotonic fixed objectives, positive normalized PMFs,
@@ -1134,3 +1134,20 @@ score pass. No outer observations/truth are evaluated at this partial gate.
 The snapshot is execution/recovery evidence, not a complete statistical or
 public final-gradient result. Resume retains --seed1904, --large-only, source
 8fcb7ca and the same software contract; seed1905 remains unstarted.
+
+## Step21c — seed1904 completed and verified,2026-10-13
+
+The final1904 report has active=null and one complete1024 arm at8fcb7ca.
+All30 M-step indices, eleven source hashes, training/first128/held-out replay,
+warm-fit continuity and fixed-objective monotonicity pass. Positive normalized
+full-age block PMFs, independently recomputed final scores, TV/gain/full gates
+and public numerical checks pass. Complete CLI resume skips the arm. Maximum
+all-logit gradient error7.55e-15, segment-reference LL error1.82e-12, public
+recursion LL error1.05e-11 and state-probability error1.38e-13 meet the gates.
+Statistical recovery fails on bear TV0.128586; all other state TVs pass.
+
+The separate1904 family-bias report records its raw-input SHA256, learned blocks,
+median TV bounds and normalized forward-KL projection TVs. Bear's bound0.126560
+exceeds0.12, proving failure for this learned partition independently of fitted
+mass updates. This post-fit diagnosis does not alter the method or gate.1905
+remains to be executed under the same frozen code/contract.
