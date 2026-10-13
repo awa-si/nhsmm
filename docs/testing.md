@@ -1335,3 +1335,21 @@ identical. Terminal E-step replay reproduces LL-499961.7578440498 and objective
 inner validation LL is-166754.64328071033; blocks76/63/65/34; total30 M-steps.
 SHA-bound phase verification uses input hashbf46e82188f8b3ccae5471055fbe0c0994bd4606e8461365ab290f3fb7c0f9b3. Selection, outer
 statistics and public final numerical/recovery gates are still pending.
+
+## Step22o — seed1908 completion and two-seed candidate join,2026-10-13
+
+Seed1908's bounded invocation exits0 with warm/candidate_0 complete, all27
+updates and active/selection/evaluation null. Source/software/contract and
+1024-data/768+256 split replay, positive normalized full-age PMFs/partitions,
+phase indices, monotonic fixed objective and warm-to-fit continuity pass.
+The original warm record is preserved. Independent terminal E-step replay
+reproduces LL-500336.32880270877/objective-500538.9761965589 within1e-7 without
+new M-steps; independent inner256-sequence validation LL is-167330.094205874.
+Blocks68/80/63/37. SHA-bound phase report uses input hash42f05224570252ffd12430ba36387b05da731f03015aae5a2a2d3656b4e2fefc.
+
+The batch join verifies equal source/software/contract and distinct training
+hashes for1907/1908. Both27-update first candidates pass,54 new updates and60
+total including prior warm starts. The candidate-batch JSON binds both exact
+raw report hashes and verification metrics. No absolute cross-seed LL ranking,
+factor choice, outer statistics or public final recovery result follows. Source
+and environment are unchanged, so prior47-case/44-file preflight remains valid.

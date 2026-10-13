@@ -283,3 +283,23 @@ objective history is monotonic. Snapshot SHA256273107f1b5c123d87531e084f415a3ae8
 recovery evidence only; terminal independent score and inner validation remain
 pending. Seed1907's first candidate is durably complete; source3966159 and all
 method settings remain unchanged. Native seed1908 fitting continues.
+
+## Step22o — first-candidate batch complete for1907/1908
+
+| Seed | Factor | Blocks bull/bear/range/chaotic | Inner validation LL |
+| --- | ---: | --- | ---: |
+|1907|0.125|76/63/65/34|-166754.64328071033|
+|1908|0.125|68/80/63/37|-167330.094205874|
+
+Both complete27 updates. All source/software/contract/data/split/history/PMF/
+partition/objective checks and independent terminal E-step replays pass; each
+prior warm record is unchanged. The source/software/protocol match across seeds
+and their training hashes differ. These are separate validation datasets; the
+absolute LL values do not rank method performance across seeds.
+
+Total54 new candidate M-steps,60 including the previous warm starts. SHA-bound
+joined evidence: results/adaptive-large-selection-candidate0-batch-native-20261013.json.
+Seed1908 phase evidence: results/adaptive-large-selection-seed1908-candidate0-verification-native-20261013.json.
+Selection and outer evaluation remain null. Next bounded resume each seed with
+its matching output/source3966159 starts candidate_1 (factor0.5). No method,
+support, threshold or budget changes are made; oracle remains OFF.

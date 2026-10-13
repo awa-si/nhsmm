@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22o completes candidate_0 factor0.125 for both1907/1908:27 updates each,
+54 new M-steps and60 total with their prior warm3. Source/software/contract/data/
+split/PMF/partition/history/objective and independent terminal E-step checks pass;
+both warm records are unchanged. Blocks1907:76/63/65/34;1908:68/80/63/37.
+Inner validation LLs -166754.643281/-167330.094206. These are seed-specific
+scores, not a cross-seed ranking. Both selection/evaluation/active fields remain
+null. Next candidate_1 factor0.5 on each seed; source3966159 and oracle OFF stay
+unchanged. Dataset/raw/verification/batch evidence is SHA-bound and pushed.
+
+
 Step22n checkpoints seed1908 candidate_0 at10/27 updates, factor0.125,
 blocks68/80/64/37. Source/software/contract and prior warm/data identity,
 active budget/indices, positive normalized full-age PMFs, partitions and monotonic
