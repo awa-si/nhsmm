@@ -4,29 +4,26 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
-Step21a prepares fresh1024-only replications for seeds1904/1905. The driver
-adds explicit seed and large-only controls; guarded resume binds both to its
-frozen contract. The factor2, warm3+fit27 path, prior and all acceptance gates
-are unchanged. Historical1903 paired evidence remains separate. Runtime loss
-required connector restoration of53 required files; all Git-blob hashes pass,
-and Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu are restored with editable install.
-All40 focused cases and AST/Ruff/Black over42 scoped Python files pass.
-Replication results are pending.
+Step21e completes both fresh1024-only replications at frozen source8fcb7ca.
+All60 new updates, source/data/phase/PMF/objective/metric and numerical gates
+pass. Combined with1903, all90 large-arm updates are verified, but full recovery
+passes only1/3 seeds:1903 PASS,1904 fails bearTV0.128586,1905 fails rangeTV0.125884
+and chaoticTV0.130775. All three held-out gains remain positive.
+Post-fit learned-partition bounds exceed0.12 for1904 bear(0.126560) and1905
+chaotic(0.126638), proving insufficient resolution in those fitted partitions.
+1905 range has a feasible projection below0.12 but its fitted masses miss the
+gate, so representation bias alone does not explain every failure. The frozen
+rule's recovery is not robust enough for public integration. Next: training-only
+capacity/penalty selection at adequate exposure, with fresh outer evaluation.
 
-Step21b persists seed1904 at warm3+fit10 with5/4/9/6 blocks. Current source/
-data hashes, phase histories, positive normalized full-age PMFs and fixed-
-objective invariants pass. This is a recovery/execution snapshot; final1904
-statistics and the1905 replication remain pending. Native fitting continues.
-
-Step21c completes/verifies1904: TVs0.11526/0.12859/0.11470/0.11288, mean
-RMSE2.32256 and positive held-out gain+0.00707556 nats/row. Full recovery fails
-only on bear. Its learned-partition TV lower bound0.126560 already exceeds
-0.12; additional mass optimization cannot pass that partition. All numerical/
-replay/objective checks pass.1903 remains PASS and1904 FAIL;1905 is pending.
-
-Step21d persists1905 at warm3+fit10 with5/4/9/5 blocks. Source/data replay,
-phase histories, objective and full-age PMF/partition checks pass. This is
-execution/recovery evidence only; final1905 recovery remains pending.
+Runtime loss was recovered through53 Git-blob-verified connector inputs and a
+restored matching Python/NumPy/CPU-Torch environment with editable install.
+All40 focused tests and AST/Ruff/Black over42 scoped Python files pass. Phase
+checkpoints, guarded resume, completed no-ops and remote writeback are verified.
+Factor2, prior1e-6, warm3+fit27, full ages1..260 and all gates stayed unchanged.
+Oracle support remains off with its controls/code preserved. Known nuisance
+parameters remain fixed; production/joint Trading/historical NPZ acceptance
+is unchanged. Full raw/diagnostic/combined evidence is owned by validation.md.
 
 Step20d completes paired128/1024 adaptive warm-start fits on fresh seed1903:
 all60 M-steps and numerical/replay/objective gates pass. Fixed factor2 and
@@ -44,8 +41,8 @@ Atomic phase/arm checkpoints and guarded resume are verified. Completed arms
 are skipped, and restored phase evidence is re-scored before continuation.
 38 focused tests, syntax/resume smoke and Ruff/Black pass; source stayed fixed
 at421ef28 throughout the completed experiment. Production/joint Trading and
-historical NPZ acceptance remain unchanged. Next: replicate the frozen method
-on additional fresh seeds, retaining failed/successful evidence independently.
+historical NPZ acceptance remain unchanged. The subsequent Step21 replication
+above preserves this single successful paired result and the failed fresh seeds.
 
 Step19a prepares a fresh paired warm-start/penalty pilot (seed1902). Factors
 0.125/0.5/2 are compared from uniform and observation-only three-update EM

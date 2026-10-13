@@ -3152,3 +3152,48 @@ Known-nuisance controls and production/Trading limits remain unchanged.
 Step21d persists1905's active execution state at warm3+fit10,5/4/9/5 blocks,
 source8fcb7ca. Source/data/phase/objective/PMF/partition checks pass. Outer truth
 is not evaluated for this partial state; final1905 statistics remain pending.
+
+## Complete adaptive replication result — 2026-10-13
+
+Step21e completes1905 at unchanged8fcb7ca and the three-seed comparison. New
+raw evidence and diagnostics:
+docs/validation/results/adaptive-replication-seed1905-native-20261013.json and
+docs/validation/results/adaptive-replication-seed1905-family-bias-native-20261013.json.
+The combined SHA-bound summary is
+docs/validation/results/adaptive-replication-summary-native-20261013.json.
+
+| Seed | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|1903|0.118297 /0.098732 /0.105484 /0.089218|1.383730|+0.00792613|PASS|
+|1904|0.115256 /0.128586 /0.114698 /0.112880|2.322559|+0.00707556|FAIL: bear|
+|1905|0.102762 /0.119044 /0.125884 /0.130775|1.567043|+0.00600716|FAIL: range/chaotic|
+
+Both fresh seeds retain1024 training and24 independent held-out300-row sequences,
+factor2*log(1024), prior1e-6 and warm3+fit27. Combined work is90 large-arm M-steps,
+including the original1903 result; the two new replications add60. Ten numerical
+algorithm/core source hashes and Python/NumPy/Torch versions match; the new
+driver adds only seed/large-only execution controls. No oracle support, labels
+or truth probabilities enter training, and no method/threshold retuning occurs.
+Known emission/transition/initial nuisance parameters remain fixed.
+
+All three predictive gains are positive, while full recovery passes only1/3.
+1905 learns5/4/9/5 blocks. Its median-TV lower bounds by state are
+0.101838/0.116018/0.112068/0.126638; forward-KL projection TVs are
+0.105093/0.117769/0.115803/0.130113. The chaotic partition cannot reach0.12
+through additional block-mass optimization. Its fitted TV0.130775 is close to
+the feasible projection, indicating a material resolution limit for this fit.
+Range differs: its feasible projection passes0.12, but fitted TV0.125884 does
+not, so finite-sample mass estimation/optimization error also matters. These
+diagnostics do not establish which contribution dominates every trajectory or
+disprove representability by the unrestricted adaptive partition family.
+
+All budgets, data/source/input hashes, PMF/partition/phase/objective/metric checks,
+completed-resume no-ops and public numerical gates pass. Combined maximum
+gradient/public-LL/state-probability errors are3.52e-14/1.05e-11/1.38e-13.
+The HSMM numerical calculation is verified in these controlled comparisons;
+the frozen penalty-selected resolution does not provide robust fine-PMF recovery.
+Do not promote the original one-seed PASS to three-seed/public acceptance.
+Next research should select capacity/regularization from training-only evidence
+at adequate exposure and evaluate on fresh outer data, retaining all failed
+replications. Production defaults, oracle controls, joint optimization,
+historical NPZ and Trading/live-market acceptance remain unchanged.

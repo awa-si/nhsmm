@@ -1150,14 +1150,39 @@ The separate1904 family-bias report records its raw-input SHA256, learned blocks
 median TV bounds and normalized forward-KL projection TVs. Bear's bound0.126560
 exceeds0.12, proving failure for this learned partition independently of fitted
 mass updates. This post-fit diagnosis does not alter the method or gate.1905
-remains to be executed under the same frozen code/contract.
+was still pending at this checkpoint under the same frozen code/contract.
 
 ## Step21d — seed1905 execution snapshot,2026-10-13
 
-The second fresh replication at source8fcb7ca reaches warm3+fit10 with5/4/9/5
+At this checkpoint the second replication at8fcb7ca reached warm3+fit10 with5/4/9/5
 blocks. Eleven source hashes,1024 training replay, complete phase indices,
 warm-to-fit LL continuity, monotonic fixed objectives, positive normalized full-
 age PMFs, contiguous block coverage/density and independently recomputed active
 penalized score pass. The snapshot is durable recovery data only; no1905 outer
 truth/held-out or public final-gradient acceptance is asserted. Seed1904 remains
 fully verified with failed bear recovery, independent of this partial run.
+
+## Step21e — complete replication and combined verification,2026-10-13
+
+The final1905 report has active=null and one complete1024 arm. All30 updates,
+eleven current source hashes, training/first128/held-out replay, phase continuity
+and monotonic fixed objectives pass. Positive normalized full-age block PMFs,
+recomputed objective/TV/held-out/full gates and public numerical checks pass;
+complete resume is a no-op. Maximum gradient error3.52e-14, segment-reference
+LL error3.87e-12, public recursion LL error8.87e-12 and state-probability error
+7.00e-14 meet the unchanged gates. Range/chaotic TVs fail recovery.
+
+The SHA-bound1905 family diagnostic verifies median-TV bounds and normalized
+forward-KL projections. Chaos's bound0.126638 exceeds0.12. Range's bound0.112068
+and feasible projection0.115803 are below0.12, yet fitted TV0.125884 fails:
+mass estimation/optimization can also contribute beyond representational bias.
+
+The combined summary records immutable input-report SHA256s for1903/1904/1905,
+all90 large-arm updates and method/software equivalence. Ten algorithm/core
+source hashes match across the old/new driver versions; only the seed/large-only
+CLI driver source differs. Python/NumPy/Torch and all method contract parameters
+match. Independently recomputed state TVs and full gates give pass1/fail2;
+maximum gradient/public-LL/state-probability errors are3.52e-14/1.05e-11/1.38e-13.
+Forty focused cases and42-file static/smoke checks remain applicable. Numerical
+verification passes; robust three-seed recovery is not accepted. Production,
+joint Trading, current canonical-suite and historical NPZ acceptance are unchanged.
