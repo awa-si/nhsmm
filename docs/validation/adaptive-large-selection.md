@@ -319,3 +319,9 @@ inner validation LL-166628.70723221602, +125.93604849430267 nats over0.125.
 All source/data/phase/PMF/objective and terminal replay checks pass; prior fits
 are preserved. Phase evidence: results/adaptive-large-selection-seed1907-candidate1-verification-native-20261013.json.
 Selection and outer evaluation remain null. Next same candidate on1908.
+
+Step22s saves1908 candidate_1 at5/27,13/17/14/9 blocks, SHA25605e3778e961f0c302922e1a48fab4ce61febac6c7ba9807e7bdbd324f2dd6e1f.
+Source/contract/software/data/split, prior phase preservation, budget/history/
+continuity and positive normalized full-age partition checks pass. Terminal
+independent E-step/validation and selection/outer gates are pending.1907's
+second candidate is already complete; native1908 continues at3966159.
