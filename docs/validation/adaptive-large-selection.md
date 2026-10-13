@@ -275,3 +275,11 @@ SHA-bound evidence: results/adaptive-large-selection-seed1907-candidate0-verific
 Next seed1908 executes candidate_0 from its separately verified warm3; all source,
 method, support and acceptance settings remain fixed. Cross-seed absolute inner
 likelihoods are not treated as a ranking of method performance.
+
+Step22n captures seed1908 candidate_0 at10/27 with68/80/64/37 blocks.
+Thirteen source hashes and unchanged prior warm/data/contract, active budget/
+history, positive normalized full-support PMFs and partitions pass. Fixed
+objective history is monotonic. Snapshot SHA256273107f1b5c123d87531e084f415a3ae8e85597397a27161ae5b5be0ad499625. This is execution
+recovery evidence only; terminal independent score and inner validation remain
+pending. Seed1907's first candidate is durably complete; source3966159 and all
+method settings remain unchanged. Native seed1908 fitting continues.

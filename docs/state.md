@@ -4,6 +4,14 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22n checkpoints seed1908 candidate_0 at10/27 updates, factor0.125,
+blocks68/80/64/37. Source/software/contract and prior warm/data identity,
+active budget/indices, positive normalized full-age PMFs, partitions and monotonic
+fixed objectives pass. Terminal E-step/validation score remain pending while
+native fitting continues. Seed1907 candidate_0 is complete and verified; factor
+selection and outer evaluation remain pending for both. Oracle remains OFF.
+
+
 Step22m completes seed1907 candidate_0, factor0.125, all27 updates at3966159.
 Warm3 is unchanged. Thirteen source/software/contract identities, training and
 768/256 split replay, full-age PMF/partition/history/objective checks and terminal
