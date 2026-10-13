@@ -190,3 +190,48 @@ coverage/densities, scalar objective recalculation and phase continuity pass.
 Snapshot SHA256c337e6e6fac1ec8a73d038fd0ba7a1007708884823133026c4308d0c5da1e5bc. This is an execution checkpoint; terminal
 independent E-step/public numerical/recovery verification remains pending.
 Outer evaluation is null and the native bounded batch continues at3966159.
+
+## Step22j — complete seed1906 result,2026-10-13
+
+The complete native batch at3966159 uses114 actual M-steps. All three inner
+validation scores and factor2 selection are independently reproduced. Both
+selected and frozen factor2 control refer to the identical completed1024 fit;
+no performance difference between these arms is claimed. The initial warm and
+candidate_0/1 records remain unchanged. Seeds1907/1908 remain pending.
+
+| Metric | Selected/control result |
+| --- | --- |
+|Fine-PMF TV, bull/bear/range/chaotic|0.095938 /0.108081 /0.143096 /0.126634|
+|Mean RMSE|1.448104|
+|Outer gain over full-support uniform, nats/row|+0.005741339|
+|Learned block counts|6 /4 /8 /5|
+|Full recovery gate|FAIL: range/chaotic|
+
+Independent verification passes all114 phase budgets/histories, source/data/
+split replay and objective/PMF/partition invariants. Candidate_2, full_warm and
+selected_refit terminal E-steps reproduce saved evidence without new M-steps.
+Outer observations are generated only after complete training and selection;
+24-sequence replay, baseline/fitted likelihood, metrics/gates and public numerical
+checks pass. Gradient/public-recursion LL/state-probability maxima are
+1.4433e-15 /4.5475e-12 /1.0148e-13. Completed resume is a no-op.
+
+Final SHA-bound evidence:
+results/adaptive-large-selection-seed1906-verification-native-20261013.json;
+raw report: results/adaptive-large-selection-seed1906-native-20261013.json.
+Raw SHA2567f3c68610d2dc4fac25d507a8829dce43f198f9ad747a523c1d4304dc85599f5.
+
+Post-fit median-TV bounds by learned partition are0.093883/0.106256/0.125738/
+0.125731; normalized forward-KL projection TVs are0.095822/0.113457/0.131687/
+0.128146. Half the sum of deviations from each block's true-PMF median is a
+valid lower bound for every density constant on those blocks, even before its
+normalization constraint. Range and chaotic bounds exceed0.12, proving that
+those fitted partitions cannot pass solely through additional mass optimization.
+The forward-KL projection is feasible, not the minimum normalized-TV solution.
+These bounds concern the learned partitions, not all possible adaptive partitions.
+
+Predictive improvement does not establish fine-PMF recovery. Adequate-exposure
+inner likelihood selection still chooses2 and leaves insufficient partition
+resolution in this first fresh seed. No thresholds, oracle support, candidate
+factors or learning parameters are changed in response to this outcome. Complete
+the frozen1907/1908 replications before broad conclusions or a new estimator
+change; known nuisance and production/joint Trading limitations remain unchanged.

@@ -1268,3 +1268,26 @@ identical validation observations. This is a predictive score comparison, not
 fine-PMF recovery, significance or final factor selection. The third candidate
 and outer refits/evaluation remain pending. SHA-bound verification JSON records
 input hash7f7cb99c8efeede4917917d84fc844d28b0e3eb4a8dfc2f3c0c3cd8d26ad9bb2; prior47-case/44-file preflight remains applicable.
+
+## Step22j — completed seed1906 large-selection result,2026-10-13
+
+The bounded batch exits0 after candidate_2, full_warm and selected_refit; the
+selected factor2 reuses its identical fit as control. All114 actual M-steps
+complete. Independent verifier replays all13 source/software/contract identities,
+1024 training and disjoint768/256 split hashes, all candidate validation scores
+and the fixed selection rule, all phase budgets/indices/objective/PMF/partition
+checks and warm-to-fit LL continuity. New candidate_2/full_warm/refit terminal
+E-steps independently reproduce saved LL/objectives within1e-7; prior warm and
+candidate_0/1 records remain identical to their verified checkpoints.
+
+Outer24-sequence replay/hash, uniform baseline, fitted LL, PMF TVs/means/RMSE,
+positive predictive gain and full gates are independently recomputed. Public
+all-logit gradient, segment likelihood and filtering checks pass: max gradient
+1.4433e-15, public recursion LL4.5475e-12 and state-probability1.0148e-13.
+Completed CLI resume exits0 without new fitting/evaluation. SHA-bound final
+verification records input report hash7f3c68610d2dc4fac25d507a8829dce43f198f9ad747a523c1d4304dc85599f5.
+Post-fit learned-partition TV bounds/projections are evaluation only; they do
+not change learning/selection/gates. Numerical verification passes while range/
+chaotic fail fine-PMF recovery. Prior47 tests/44-file static checks remain
+applicable; sources are unchanged. Remaining1907/1908 and production/joint
+Trading/historical NPZ acceptance are not asserted.

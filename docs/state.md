@@ -4,6 +4,19 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step22j completes seed1906's full large-selection experiment at3966159:
+all114 M-steps, source/data/split/phase/objective/PMF replay and public numeric
+gates pass. Inner validation chooses factor2, so selected/control reuse the
+same1024 fit. Outer gain+0.00574134 nats/row; TVs0.095938/0.108081/0.143096/
+0.126634 and mean RMSE1.448104. Full recovery fails range/chaotic. Their learned-
+partition TV bounds0.125738/0.125731 already exceed0.12, so those partitions
+cannot pass through block-mass updates alone. Larger training-only selection
+does not resolve fine-PMF recovery in this seed. Known nuisance/oracle OFF
+controls and all gates remain unchanged. Seeds1907/1908 remain to be executed;
+no three-seed/public/joint Trading acceptance follows. Completed resume is a
+no-op; raw and SHA-bound verification evidence are durably owned by validation.
+
+
 Step22i persists seed1906's completed three-candidate selection: factor2 wins
 on inner validation LL -166718.363173, ahead of factor0.5 by57.911853 nats.
 The full1024 warm3 completes and selected_refit is at5/27,6/4/8/5 blocks.
