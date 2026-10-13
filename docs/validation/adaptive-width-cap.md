@@ -108,3 +108,11 @@ blocks[3, 4, 5, 4]. Source/software/contract/data/phase/history/
 objective/PMF/partition and shared warm-PMF continuity checks pass. This is
 recovery evidence; final terminal replay/outer/numerical and recovery gates
 remain pending. Frozen source8fc245e,256 training sequences, oracle OFF.
+
+## Step27-1911-active-width8
+
+Width-cap pilot seed1911 checkpoint: width8 at5/27,
+blocks[33, 33, 33, 33]. Source/software/contract/data/phase/history/
+objective/PMF/partition and shared warm-PMF continuity checks pass. This is
+recovery evidence; final terminal replay/outer/numerical and recovery gates
+remain pending. Frozen source8fc245e,256 training sequences, oracle OFF.
