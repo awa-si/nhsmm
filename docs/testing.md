@@ -895,3 +895,15 @@ state-probability errors at most7.29e-14. Both statistical recovery gates fail;
 numerical verification does not imply recovery. Seeds902/903 and full batch
 acceptance remain pending. Resume retains the original ca73c96 source identity,
 even when subsequent commits update only report/documentation.
+
+## Step17c — second full-support seed checkpoint,2026-10-13
+
+The combined report now contains complete seeds901/902,240 actual updates and
+ten monotonic fits. The Step17b source/input hash, replay/paired-prefix, inner
+split/selection/hash, compact PMF and independently recomputed metric/gate checks
+pass for both seeds. Seed902 checks all1040 raw duration coordinates: maximum
+gradient error1.94e-14, public/reference LL error1.23e-11 and state-probability
+error8.45e-14. Source code and numerical mode remain unchanged at ca73c96;
+the previous24 focused cases/static checks remain applicable. Both902 arms
+fail the statistical recovery gate despite positive held-out gain. Seed903
+remains pending. This checkpoint accepts two complete numerical runs only.

@@ -2742,3 +2742,21 @@ gates (gradient2.05e-14, LL1.10e-11, state probability7.29e-14). Numerical
 correctness passes, statistical recovery fails. Seeds902/903 remain pending;
 production defaults, stock joint optimization and Trading/market acceptance
 are unchanged and not inferred from this checkpoint.
+
+## Full-support seed902 result — 2026-10-13
+
+Step17c appends the second complete seed to the same v2 report and source
+identity ca73c96. Inner selection again chooses width16. All240 cumulative
+updates over ten fits and the same replay/hash/selection/PMF/numerical gates
+are verified. Known nuisance parameters remain frozen; oracle support is off.
+
+| Arm | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|128 sequences|0.136356 /0.192948 /0.206291 /0.163519|7.402074|+0.00489078|FAIL|
+|1024 sequences|0.074259 /0.074719 /0.099911 /0.140136|1.483045|+0.00645551|FAIL|
+
+As in901, the large arm passes the first three state-TV gates but fails the
+chaotic law. Positive held-out likelihood gain alone is not full recovery.
+Seed902 maximum numerical errors are gradient1.94e-14, LL1.23e-11 and state
+probability8.45e-14. Two seeds are complete; seed903 and the final three-seed
+interpretation remain pending. No production or Trading acceptance is added.
