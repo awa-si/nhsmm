@@ -2760,3 +2760,92 @@ chaotic law. Positive held-out likelihood gain alone is not full recovery.
 Seed902 maximum numerical errors are gradient1.94e-14, LL1.23e-11 and state
 probability8.45e-14. Two seeds are complete; seed903 and the final three-seed
 interpretation remain pending. No production or Trading acceptance is added.
+
+## Compact-family representation bound — 2026-10-13
+
+Evaluation-only analytic evidence is saved in
+docs/validation/results/compact-duration-family-bias-native-20261013.json.
+For true PMF p and each disjoint constant-density block B, every scalar density
+c satisfies sum(i in B)|p_i-c| >= sum(i in B)|p_i-median(p_B)|. Summing over
+blocks and dividing by2 yields a valid TV lower bound; additionally requiring
+normalization cannot lower it. Endpoint singleton atoms contribute zero.
+The retained oracle support contains all true mass, so its outside-support
+contribution is also zero. This calculation uses truth only after training;
+it changes neither the active run nor likelihood-only width selection.
+
+| Support / width | Chaos TV lower bound | Chaos TV of forward-KL projection |
+| --- | --- | --- |
+|full /4|0.029476|0.031434|
+|full /8|0.051848|0.055117|
+|full /16|0.136925|0.138386|
+|oracle /16|0.096626|0.101201|
+
+Full-support width16 cannot satisfy the0.12 chaotic-law TV gate at any sample
+size or optimizer budget. The observed large901/902 TVs near0.140 are close
+to this representational obstruction. The forward-KL projection assigns each
+block its true total mass, uniformly within that block; it is a feasible
+family member, not the minimum-TV solution. Full-support width8 has a feasible
+projection below0.12 for every state (TV0.022054/0.030194/0.050430/0.055117),
+but this does not establish finite-sample recovery or guarantee its selection.
+
+The ages2..17 block alone contributes at least0.077118 TV for the chaotic
+state. It spans zero true mass at ages2..7 and positive mass starting at8;
+one constant density cannot represent that boundary. Ages34..49 contribute
+another0.022489. The raw diagnostic retains every block contribution, whose
+sum reproduces the0.136925 lower bound.
+
+Removing the oracle changes the alignment of blocks and eliminates separately
+free atoms at true clipped endpoints. The above bound proves a family-bias
+failure for this configured width16; it does not prove an HSMM recursion defect
+or unrestricted identifiability. Likelihood selection optimizes predictive
+evidence, which need not recover the fine PMF. Next research should examine
+a support-independent duration family that can resolve abrupt shape changes,
+with training-only selection and fresh evaluation; retain the unchanged current
+batch and failed gate as evidence rather than changing its acceptance threshold.
+
+## Complete full-support batch — 2026-10-13
+
+Step17d completes the unchanged ca73c96 experiment with all three seeds.
+The final v2 report above contains360 actual EM updates over15 monotonic fits,
+with widths selected solely from inner training observations. All three choose
+width16. Support is1..260 for every state; oracle support is disabled and its
+explicit mode/evidence retained. Emission/transition/initial nuisance parameters
+remain known and frozen. Ground-truth probabilities enter evaluation only.
+
+| Seed / arm | PMF TV: bull / bear / range / chaotic | Mean RMSE | Held-out gain over full-support uniform, nats/row | Full gate |
+| --- | --- | --- | --- | --- |
+|901 /128|0.120317 /0.174091 /0.181125 /0.149312|1.800663|+0.00712244|FAIL|
+|901 /1024|0.066578 /0.104138 /0.111409 /0.140846|1.249540|+0.00698475|FAIL|
+|902 /128|0.136356 /0.192948 /0.206291 /0.163519|7.402074|+0.00489078|FAIL|
+|902 /1024|0.074259 /0.074719 /0.099911 /0.140136|1.483045|+0.00645551|FAIL|
+|903 /128|0.141035 /0.096494 /0.245746 /0.157305|7.492731|+0.00704970|FAIL|
+|903 /1024|0.053135 /0.062190 /0.101877 /0.155491|1.044839|+0.00668295|FAIL|
+
+All six arms improve predictive likelihood against the same-mode uniform
+baseline. Every large arm passes the first three state-TV gates but fails
+the chaotic-law gate. Large-arm mean RMSE remains1.04–1.48, illustrating why
+accurate means and predictive gain do not establish fine PMF recovery.
+
+| Seed | Full minus oracle fitted held-out LL/row,128 | Full minus oracle fitted held-out LL/row,1024 |
+| --- | --- | --- |
+|901|+0.00254739|-0.00049290|
+|902|-0.00016030|-0.00127514|
+|903|+0.00747040|+0.00039201|
+
+These are paired absolute fitted-likelihood differences on identical held-out
+observations, not differences between mode-specific baseline gains. Support
+removal does not uniformly worsen predictive likelihood. Nevertheless, the
+selected full-support width16 family has a proven chaotic TV floor0.136925;
+it cannot satisfy0.12 with more samples or further optimization. The bound
+and observed fits distinguish representational bias from a numerical defect.
+They do not exclude finite-sample or optimization error above that floor.
+
+Source/input/replay hashes, selection and PMF invariants, complete budgets and
+independently recomputed metrics/gates all pass. Maximum public/reference
+gradient/LL/state-probability errors are2.05e-14/1.23e-11/8.45e-14; completed
+CLI resume skips all seeds. Numerical correctness is verified; generic duration
+recovery remains unaccepted. Production defaults, joint optimization, historical
+NPZ verification and Trading/live-market acceptance are unchanged. Next research
+requires a support-independent family capable of resolving abrupt duration
+shape changes, training-only selection and fresh evaluation. No acceptance
+threshold or completed result is retroactively changed.

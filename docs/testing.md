@@ -879,7 +879,7 @@ at complete-seed checkpoints, with partial versus full acceptance explicit.
 
 The saved v2 report at
 docs/validation/results/compact-duration-full-support-native-20261013.json
-contains exactly one complete seed901 at source commit
+contained exactly one complete seed901 at this checkpoint, at source commit
 ca73c96cddf373677be0711882981e618e89e9a6. Three inner histories contain20 updates
 each and both outer histories30 each:120 actual M-steps over five fits.
 Resume completeness, current nine source hashes and both input-report hashes,
@@ -898,7 +898,7 @@ even when subsequent commits update only report/documentation.
 
 ## Step17c — second full-support seed checkpoint,2026-10-13
 
-The combined report now contains complete seeds901/902,240 actual updates and
+At this checkpoint the report contained seeds901/902,240 actual updates and
 ten monotonic fits. The Step17b source/input hash, replay/paired-prefix, inner
 split/selection/hash, compact PMF and independently recomputed metric/gate checks
 pass for both seeds. Seed902 checks all1040 raw duration coordinates: maximum
@@ -907,3 +907,30 @@ error8.45e-14. Source code and numerical mode remain unchanged at ca73c96;
 the previous24 focused cases/static checks remain applicable. Both902 arms
 fail the statistical recovery gate despite positive held-out gain. Seed903
 remains pending. This checkpoint accepts two complete numerical runs only.
+
+## Step17d — complete full-support batch and representation bound,2026-10-13
+
+The final v2 report contains seeds901/902/903 with360 actual M-steps over15
+complete monotonic fits. All nine source hashes and both input-report hashes
+match the frozen ca73c96 source identity. Each seed passes complete-history
+checks,128/1024 paired data replay, held-out replay,96/32 disjoint inner
+selection and hashes, selected validation argmax, full-support bounds,
+nonnegative/normalized block-constant PMFs, and independently recomputed TV,
+held-out gains and unchanged acceptance gates. The all-complete CLI resume
+skips all three seeds without new fitting. No source/algorithm changes were
+made during this batch; Step17a's24 focused cases/static checks remain valid.
+
+All3120 raw duration coordinates agree with independent posterior-count scores
+within2.05e-14. Across six public/reference comparisons, maximum LL error is
+1.23e-11 and maximum state-probability error8.45e-14. All numerical checks pass;
+all six statistical recovery gates fail. These are separate conclusions.
+
+The separate family-bias JSON retains six support/width combinations. Current
+source hashes, normalized forward-KL projections, their block-mass equality,
+TV values, block-median lower bounds and chaotic block decomposition are
+verified. Independent scalar candidate checks confirm the median minimizer.
+Full-support width16 chaotic TV is bounded below by0.136925>0.12; the feasible
+width8 projection passes every state-TV threshold, without asserting learned
+recovery or changing the completed likelihood-selection experiment.
+Production/canonical suite, historical NPZ and Trading acceptance are not
+extended by these research checks.

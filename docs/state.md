@@ -10,30 +10,32 @@ all20/30-update histories are complete. The model, data and acceptance budgets
 are unchanged.24 focused tests cover mechanics plus bounded CLI resume/skip.
 The initial full-support attempt was interrupted after the last reported
 small901 update30, before any completed seed report; it supplies no acceptance.
-Step17b completed seed901, the first of three full-support seeds (120 actual
-EM updates). Width16 is selected. Both128/1024 arms improve held-out likelihood
-against their own full-support uniform baseline, but both fail full recovery.
-Large-arm PMF TVs are0.06658/0.10414/0.11141/0.14085; the chaotic-state TV
-exceeds the unchanged0.12 gate. Source/input/replay hashes, complete histories,
-compact PMFs and public numerical checks are verified.
-Step17c adds verified seed902: two seeds,240 actual EM updates and ten complete
-fits. Width16 is again selected; both arms remain held-out-positive but fail
-full recovery. Large902 TVs are0.07426/0.07472/0.09991/0.14014, again missing
-the chaotic-state gate. Seed903 remains pending; three-seed acceptance is open.
+Step17d completes all three full-support seeds,360 actual EM updates and15
+monotonic fits. Every inner selection chooses width16. All six arms improve
+held-out likelihood over their own full-support uniform baseline, but all six
+fail the unchanged full recovery gate. Large-arm bull/bear/range TVs all pass;
+chaotic TVs are0.14085/0.14014/0.15549 versus the0.12 gate. Source/input/replay
+hashes, complete histories, compact PMFs and public numerical checks pass;
+maximum gradient/LL/state-probability errors are2.05e-14/1.23e-11/8.45e-14.
+An evaluation-only representation bound proves full-support width16 cannot
+achieve chaotic TV below0.136925, independent of data volume or optimization.
+The likelihood-selected family has insufficient shape resolution; this gate
+failure is not evidence of a recursion defect. See validation.md for the
+full report, paired oracle comparison and exact block-bound derivation.
 
 Oracle duration support is now disabled by default in the compact research CLI:
 --support-mode full uses ages1..260 for every state. --support-mode oracle
 retains the per-state bounds as an explicit control; no oracle code or evidence
 is removed. Training, public filter/likelihood, gradient checks and uniform
 baseline all use the selected mode.22 focused tests pass. The full generic
-three-seed recovery experiment has completed seeds901/902; the accepted Step15
+three-seed recovery experiment is complete with failed recovery; the accepted Step15
 statistics below remain oracle-support evidence. Known emission/transition/initial
 parameters remain controlled in both modes. Width16 has72 parameters in full
 mode, versus53 in oracle mode.
 
 Step15 completes the compact-duration batch. All three inner validations select width16, reducing duration degrees of freedom from757 to53. With1024 observation-only sequences/seed, all three fits pass the unchanged full duration gate: each state PMF TV<=0.12 (observed0.05292–0.11169) and positive held-out gain0.00323–0.00379 nats/row. The128-sequence arms fail full recovery; seed903 also remains held-out-negative. Compactness improves every state/seed TV and held-out score versus the unrestricted Step14 fits, while sacrificing training likelihood. Details: [validation.md](validation.md#compact-duration-family-with-training-only-selection--2026-10-13).
 
-Verification:18 focused tests; AST/Ruff/Black pass over39 verified materialized/new Python files. All360 EM updates and15 monotonic fits, replay/source/input-report hashes, disjoint inner selection and compact support/density invariants are verified. All3120 checked production duration-gradient coordinates agree within3.01e-14; six public/reference likelihood errors<=1.14e-11 and state-probability errors<=8.66e-14. This accepts label-free duration recovery only under known support/nuisance parameters, finite D260 and valid starts; it is not stock joint optimize or Trading-feature acceptance. Production defaults remain unchanged; research masks/family have no public runtime/artifact contract. Historical NPZ verification remains open. Next: execute the default full-support control with the oracle mode retained for comparison before integrating the compact family into public optimization or unfreezing joint nuisance/Trading learning. Earlier Steps12–14 remain separate evidence.
+Step15 verification:18 focused tests; AST/Ruff/Black pass over39 verified materialized/new Python files. All360 EM updates and15 monotonic fits, replay/source/input-report hashes, disjoint inner selection and compact support/density invariants are verified. All3120 checked production duration-gradient coordinates agree within3.01e-14; six public/reference likelihood errors<=1.14e-11 and state-probability errors<=8.66e-14. This accepts label-free duration recovery only under known support/nuisance parameters, finite D260 and valid starts; it is not stock joint optimize or Trading-feature acceptance. Production defaults remain unchanged; research masks/family have no public runtime/artifact contract. Historical NPZ verification remains open. Next research boundary: a support-independent family with enough shape resolution, selected from training observations and evaluated on fresh data, before public integration or joint nuisance/Trading learning. Earlier Steps12–14 remain separate evidence.
 
 ## Structural research findings — 2026-10-12
 
