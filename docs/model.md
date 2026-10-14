@@ -293,7 +293,15 @@ HSMMFilterRuntime / HSMMFilterState
 downstream representation
 ```
 
-The dependency direction is one-way: host adapters may depend on the public `nhsmm` package API; `nhsmm` must not depend on host/framework packages. For NautilusTrader, the active adapter owner is `awa-si/nautilus@main/adapters/nhsmm`.
+The dependency direction is one-way: host adapters may depend on the public `nhsmm` package API; `nhsmm` must not depend on host/framework packages. For NautilusTrader, the active adapter owner is `awa-si/nautilus@main/adapter/nhsmm`.
+
+Microsoft Qlib research mapping is implemented in the maintained host's
+[`adapter/qlib`](https://github.com/awa-si/nautilus/tree/dev/qlib-nhsmm/adapter/qlib)
+development branch. It consumes trusted causal artifacts and the public streaming
+runtime, isolates instrument state, and builds real Qlib datasets with explicit
+label-maturity purging. Fit-cutoff/observation-schema provenance and walk-forward
+state alignment remain caller obligations. Qlib is an optional host dependency;
+it does not replace NHSMM inference or become a model-core dependency.
 
 The deprecated [awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces) repository remains available as public reference/history for earlier adapter and walk-forward contracts.
 

@@ -4,6 +4,20 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step64: development focus updated to Microsoft Qlib integration.
+The all-static recovery study remains closed at Step63; Oracle remains OFF.
+The maintained host bridge is awa-si/nautilus@dev/qlib-nhsmm, commit
+b809cb0c5f72cac729e314abae61b15c644563cc ([draft PR](https://github.com/awa-si/nautilus/pull/1)).
+It maps causal NHSMM artifact/runtime outputs to per-instrument regime features
+and actual Qlib DatasetH with chronological label-maturity purging.
+17 focused tests passed, including real Qlib0.9.7/LightGBM4.7.0 fit/predict and
+SQLite recorder roundtrip; Ruff/format/compile/dependency checks pass.
+Qlib dependencies belong to the optional host requirements-qlib.txt; no model-core dependency.
+Evidence: host adapter/qlib/README.md and docs/qlib-nhsmm-validation-20261014.json.
+Synthetic integration acceptance only; no trading-utility or full host-suite acceptance.
+Next gate: seal real observation/fit provenance and fold state alignment, then
+preregister chronological base versus base+NHSMM Qlib ablation on independent data.
+
 Step63: preregistered all-static study complete, independently verified and batch aggregated.
 270 actual updates across seeds1934/1935/1936; verification adds0 updates; source2294c6e/60 identities.
 Full gates: known_chain_reference3/3, estimated_chain_frozen0/3 (transition only), estimated_chain_joint3/3.
