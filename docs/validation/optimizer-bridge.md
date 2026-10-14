@@ -1,5 +1,19 @@
 # Optimizer bridge — Step35
 
+## Step56 — transition and initial probabilities can now learn
+
+Separate joint_static_chain owner extends soft Gaussian/duration statistics
+with expected boundary transitions and start-state counts. Censored endpoints
+add no transitions; initial counts total sequence count, transition counts
+total completed episodes. Structural diagonal stays zero; all allowed chain
+entries and duration ages remain positive. M-steps use per-entry1e-6 priors,
+including those terms in the augmented marginal objective and score checks.
+17 focused tests pass (2.16s), Ruff/Black/compilation pass. Native autograd
+checks all five parameter groups; independent segment/causal filtering and
+monotone EM pass. Oracle OFF; prior studies unchanged. The three-arm protocol
+for1934/1935/1936 is committed before new outcomes, not executed. Actual bounded
+all-static smoke precedes the checkpointed statistical runner.
+
 ## Step55 — joint scalar Gaussian/duration recovery established
 
 All270 preregistered EM updates and independent zero-update proofs complete.

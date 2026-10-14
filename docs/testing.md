@@ -1,5 +1,17 @@
 # Testing and verification
 
+## Step56 — all-static chain preflight
+
+17 focused cases pass in2.16s: ten new test_joint_static_chain cases plus seven
+prior Gaussian cases. Checks cover independent duration/LL/chunk equivalence,
+bit-identical known-chain statistics, one-row censoring with zero transitions,
+all five learned parameter gradient groups/public and segment filtering,
+monotone EM with unmodified input arrays and five invalid chain laws.
+Ruff/Black/compilation pass. All136 existing local repo files matched current
+Git identities before edits. Oracle OFF; prior frozen study owners unchanged.
+joint-static-chain-protocol.json declares fresh three-arm seeds1934/1935/1936;
+statistical fits/runner remain pending. Actual16x300 smoke is next.
+
 ## Step55 — complete joint recovery batch independently verified
 
 All three seeds finish270 actual updates; independent verification adds0.

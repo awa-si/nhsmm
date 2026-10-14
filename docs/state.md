@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step56 adds a separate all-static chain EM research owner: soft expected
+boundary transition counts and initial-state posteriors, alongside Gaussian
+and censored full-age duration statistics. The endpoint has no outgoing event;
+one-row, count-conservation and unchanged known-chain equivalence checks pass.
+All17 focused tests pass in2.16s, including public gradients for all five groups,
+public/segment causal filtering, monotone augmented EM and invalid chain laws.
+Ruff/Black/compilation pass. Oracle OFF; previous study owners unchanged.
+The fresh1934/1935/1936 three-arm protocol is preregistered, not executed.
+Next: frozen-source16x300 actual all-five-parameter smoke, then statistical runner.
+
 Step55 completes and independently verifies the joint Gaussian/duration batch:
 seeds1930/1931/1932,270 actual EM updates,0 verification updates. Full gates:
 known control3/3, estimated frozen0/3, estimated joint3/3. All nine numerical
