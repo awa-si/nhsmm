@@ -1,0 +1,143 @@
+{
+  "schema": "nhsmm-fixed-bin-optimizer-verification-v1",
+  "verified": true,
+  "seed": 1923,
+  "source_commit": "bd8e3f6023f288a1287ee05e8b9b7b8f6af760a6",
+  "input_report_sha256": "adb0e8b5411d401bfd412634bece6867e44efa979b5da2e09932e8481111d612",
+  "source_files": 23,
+  "terminal_replay_optimizer_updates": 0,
+  "source_software_contract_data_phase_history_grid_moments_pass": true,
+  "numerical_replay_pass": true,
+  "completed_resume_noop": true,
+  "evaluation": {
+    "heldout_sha256": "9e56f71630b0d00ec473135c6add869e28ff16fae047a5176272ce3622f6afdb",
+    "uniform_heldout_ll": -15664.319860636182,
+    "arms": {
+      "fixed_bin_em": {
+        "metrics": {
+          "pmf_tv": [
+            0.0752702945870401,
+            0.08676611376649788,
+            0.07820326789831794,
+            0.06409483572621358
+          ],
+          "mean": [
+            122.24649506822155,
+            99.18285227197306,
+            101.12546495092833,
+            34.039444216794394
+          ],
+          "mean_rmse": 0.6615510311957828,
+          "fine_pmf_gate": true
+        },
+        "heldout_ll": -15618.325664540507,
+        "heldout_gain_nats_per_row": 0.006388082791065951,
+        "full_gate": true,
+        "blocks": [
+          33,
+          33,
+          33,
+          33
+        ],
+        "learned_partition_tv_lower_bound": [
+          0.02422778085700007,
+          0.025163683254851587,
+          0.05228327082775793,
+          0.05424085851097055
+        ],
+        "forward_kl_projection_tv": [
+          0.025318176640863298,
+          0.02989483470240341,
+          0.053042351403458955,
+          0.05652726226725767
+        ],
+        "gradient_check": {
+          "maximum_all_logit_gradient_error": 4.6851411639181606e-14,
+          "public_ll_error": 3.410605131648481e-13,
+          "segment_reference_ll_error": 3.979039320256561e-12
+        },
+        "public_recursion": {
+          "public_ll": -1285.201087661083,
+          "independent_ll": -1285.2010876610912,
+          "ll_error": 8.185452315956354e-12,
+          "maximum_state_probability_error": 2.3436808049837055e-13,
+          "accuracy": 0.985,
+          "uncertain_rows_max_probability_below_0_99": 82,
+          "rows": 600
+        }
+      },
+      "fixed_bin_adam": {
+        "metrics": {
+          "pmf_tv": [
+            0.07277652286599537,
+            0.08839222894485098,
+            0.08098915628330385,
+            0.06502311069380386
+          ],
+          "mean": [
+            122.2985872232559,
+            99.36180898213141,
+            102.06132314928948,
+            34.246691119922836
+          ],
+          "mean_rmse": 0.9793625952437884,
+          "fine_pmf_gate": true
+        },
+        "heldout_ll": -15618.419391571713,
+        "heldout_gain_nats_per_row": 0.0063750651478428864,
+        "full_gate": true,
+        "blocks": [
+          33,
+          33,
+          33,
+          33
+        ],
+        "learned_partition_tv_lower_bound": [
+          0.02422778085700007,
+          0.025163683254851587,
+          0.05228327082775793,
+          0.05424085851097055
+        ],
+        "forward_kl_projection_tv": [
+          0.025318176640863298,
+          0.02989483470240341,
+          0.053042351403458955,
+          0.05652726226725767
+        ],
+        "gradient_check": {
+          "maximum_all_logit_gradient_error": 4.0190073491430667e-14,
+          "public_ll_error": 2.2737367544323206e-13,
+          "segment_reference_ll_error": 3.524291969370097e-12
+        },
+        "public_recursion": {
+          "public_ll": -1285.208917645113,
+          "independent_ll": -1285.2089176451213,
+          "ll_error": 8.412825991399586e-12,
+          "maximum_state_probability_error": 2.9032332093947844e-13,
+          "accuracy": 0.985,
+          "uncertain_rows_max_probability_below_0_99": 82,
+          "rows": 600
+        }
+      }
+    },
+    "adam_minus_em_heldout_ll": -0.09372703120607184,
+    "actual_updates": 57,
+    "actual_em_msteps": 30,
+    "actual_adam_updates": 27,
+    "labels_used_in_learning_or_selection": false,
+    "post_fit_training_episode_exposure": {
+      "completed_per_state": [
+        686,
+        660,
+        877,
+        836
+      ],
+      "terminal_censored_per_state": [
+        332,
+        217,
+        370,
+        105
+      ]
+    }
+  }
+}
