@@ -4,6 +4,19 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step41 validates accumulated optimizer execution on16x300 observations with
+batch4, source b2c96267, one actual Adam update. Wall time6.174489s,
+whole-process Linux peak582652 KiB (568.996 MiB), terminal target/reference
+LL error0; known frozen nuisance preserved, no outer evaluation, Oracle OFF.
+All195 materialized focused cases pass in9.14s. The prior4x300 smoke used
+581704 KiB; measured peak differs by948 KiB across these separate runs.
+These are resource observations, not equal-condition speed benchmarks or
+full1024-sequence extrapolations. Chunking bounds the autograd sequence batch;
+full input/initialization and reference-evaluation storage still scale with N.
+Next: predeclare sufficient-exposure matched duration optimizer comparison,
+using the same family and target objective; account for measured runtime before
+allocating long fits. Neural/joint recovery remains unaccepted.
+
 Step40 adds opt-in whole-sequence gradient accumulation via positive
 optimizer_batch_size. Sum likelihood gradients, global penalty once, single
 clip/Adam update per full batch; fixed-target scoring also respects chunk size.

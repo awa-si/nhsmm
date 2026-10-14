@@ -1,5 +1,11 @@
 # Testing and verification
 
+Step41:195 focused tests pass in9.14s. Actual16x300/batch4/one-update
+accumulation smoke exits0:6.174489s,582652 KiB whole-process peak, target/
+reference likelihood discrepancy0, frozen nuisance preserved. Data and all
+recorded source hashes are checked before writeback. No outer evaluation.
+Evidence: validation/results/optimizer-accumulation-smoke-native-20261014.json.
+
 Step40:11 new gradient accumulation cases cover strict positive batch-size
 validation, summed loss/gradient equivalence including once-only bias penalty,
 actual2-step Adam agreement, target scores, uneven/empty variable-length chunks,

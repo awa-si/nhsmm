@@ -1,5 +1,27 @@
 # Optimizer bridge — Step35
 
+## Steps40–41 — accumulation implemented and verified
+
+Opt-in optimizer_batch_size bounds the number of whole sequences whose graph
+is retained for backward. Sum all likelihood gradients, apply the global bias
+penalty once, then clip/step once per full training batch. Target monitoring and
+final restart scores sum all chunks. Deterministic loss, gradient and two-step
+Adam comparisons pass for plain float64 and context/encoder float32 models,
+including uneven chunks and variable/empty sequences. Full inputs and
+initialization storage are not reduced by this graph bound.
+
+All195 focused cases pass. At fresh seed401919,16x300 observations, batch4,
+one actual Adam update takes6.174489s and peaks at582652 KiB (568.996 MiB);
+terminal fixed-target/reference likelihood error is0. Known frozen nuisance is
+preserved and there is no outer evaluation. The earlier4x300 process peak was
+581704 KiB: these measurements support the practical bounded-batch path,
+but differ in seed/source/run and are not an equal-condition speed benchmark
+or a guarantee about full1024-sequence resource use.
+
+Next: freeze a sufficient-exposure statistical optimizer comparison before
+outcomes, match duration family/initialization/data/target and record actual
+compute. Development checks may be batched; training remains concurrency1.
+
 ## Step39 —300-row resource smoke completed
 
 The fixed fresh401918 training-only smoke runs the actual public optimizer on
