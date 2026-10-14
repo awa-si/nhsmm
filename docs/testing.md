@@ -1,5 +1,11 @@
 # Testing and verification
 
+Step39 actual resource smoke exits0:4x300, one optimizer update,1.795389s;
+whole-process peak581704 KiB, frozen nuisance preserved, terminal target/public/
+reference LL error9.094947017729282e-13. Runner syntax/Ruff/Black pass.
+Evidence: validation/results/optimizer-resource-smoke-native-20261014.json.
+No statistical/out-of-sample evaluation or full-size resource extrapolation.
+
 Step38 final affected-scope join:184 tests pass in8.38s. This is the complete
 materialized focused suite, not a new claim that the full historical package
 suite was rerun.

@@ -1,5 +1,23 @@
 # Optimizer bridge — Step35
 
+## Step39 —300-row resource smoke completed
+
+The fixed fresh401918 training-only smoke runs the actual public optimizer on
+4x300 rows, one constant-temperature Adam update at lr0.01, full positive
+duration support and frozen known nuisance/current initialization. It takes
+1.795389s in the observed native environment; the whole process peaks at
+581704 KiB (568.07 MiB). Terminal target/public/reference LL error is
+9.094947017729282e-13. It uses no held-out data or labels to choose a model.
+Source d2d2389a and exact data/core/runner hashes are recorded in the raw report.
+
+Next resource boundary is exact gradient accumulation over bounded sequence
+chunks: sum the sequence likelihood gradients, then clip and take one Adam
+step per full batch. Test against unchunked float64 loss/gradients/updates on a
+small problem, including uneven final chunks and variable lengths. Fixed-target
+monitoring must also aggregate over the full training sample. A full-size fit
+requires a separately frozen statistical protocol and measured bounded memory;
+this single4-sequence timing does not justify linear memory extrapolation.
+
 ## Step38 — pilot complete and independently verified
 
 Source21428b6f, fresh seeds1915/1916/1917,4 training and2 outer sequences of60

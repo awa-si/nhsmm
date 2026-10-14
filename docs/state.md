@@ -4,6 +4,18 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step39: actual4x300 one-step optimizer resource smoke completes successfully
+at source d2d2389a. Constant-temperature/current-initialization Adam preserves
+known frozen nuisance parameters. Optimizer wall time1.795389s, whole-process
+Linux peak RSS581704 KiB (568.07 MiB), target/public/reference LL discrepancy
+9.094947017729282e-13. No outer evaluation, oracle OFF. This is one bounded
+execution sample, not an estimate of1024-sequence peak memory or convergence.
+Next: implement/test exact gradient accumulation over bounded sequence chunks
+before preregistering a sufficient-exposure duration-only optimizer comparison.
+Keep one optimizer step/clipping operation per full accumulated batch and score
+all restarts against the same fixed objective. Do not free neural/nuisance
+parameters until that comparison passes its separately declared gates.
+
 Step38 completes independent verification of the optimizer bridge pilot.
 All nine terminal models pass training/outer/public LL, gradient and filtering
 replays;21 source identities and regenerated data hashes match,18 actual pilot
