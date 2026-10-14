@@ -1,5 +1,17 @@
 # Testing and verification
 
+## Step47 — joint Gaussian/duration preflight
+
+All21 focused cases pass in2.66s across test_joint_gaussian_duration,
+test_fixed_bin_posterior_score and test_fixed_bin_optimizer_runner. Seven new
+cases cover soft posterior sufficient statistics, uneven chunks, public marginal
+LL and all duration/mean/raw-variance gradients (1e-7), public causal filtering
+(1e-8), monotone joint EM and invalid inputs. Black, Ruff and compilation pass.
+The backend keeps static known transition/initial parameters and full positive
+ages1..260 with fixed width8 bins. Initialization uses training observations only.
+joint-gaussian-duration-protocol.json freezes three fresh seeds and three arms;
+its statistical fits have not started. Oracle OFF; no production acceptance.
+
 ## Step46 — matched recovery batch complete
 
 Step46 completes all frozen matched fixed-bin optimizer recovery seeds1922/1923/1924.

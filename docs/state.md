@@ -4,6 +4,17 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step47 validates the research joint scalar-Gaussian/fixed-bin duration EM backend.
+Soft posterior occupancy updates means and variances; censored duration counts
+retain positive support on all ages1..260. Known transition/initial parameters
+remain fixed. All21 focused tests pass (2.66s), including public likelihood,
+duration/mean/raw-variance gradients within1e-7, causal filtering within1e-8,
+and monotone augmented marginal EM updates. Oracle OFF; production unchanged.
+The three-arm protocol for seeds1930/1931/1932 is preregistered, not executed:
+known-emission control, frozen observation-initialized emissions, joint emissions.
+Next: frozen-source16x300 execution smoke, then checkpointed statistical runner.
+No joint statistical, neural, Trading or legacy NPZ acceptance is established.
+
 Step46 completes all frozen matched fixed-bin optimizer recovery seeds1922/1923/1924.
 Each uses1024x300 training and24 outer sequences, shared EM warm3 and27 updates
 per matched arm. Total171 updates (90 EM M-steps,81 Adam steps); verification

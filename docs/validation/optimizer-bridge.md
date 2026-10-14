@@ -1,5 +1,20 @@
 # Optimizer bridge — Step35
 
+## Step47 — free scalar Gaussian emissions
+
+Research joint_gaussian_duration computes soft state occupancy and weighted
+observation moments alongside censored duration posterior counts. Its M-step
+updates Gaussian means/variances and the existing positive fixed-bin family.
+All21 focused tests pass in2.66s: public LL/all parameter gradients1e-7,
+causal filter1e-8, conservation/chunk checks, monotone updates and validation.
+No prior experiment owner or production optimizer is changed. Oracle OFF.
+The preregistered joint-gaussian-duration-protocol.json compares known-emission
+control, frozen observation-initialized emissions and jointly learned emissions.
+Known control is an information reference, not initialization-matched; joint
+versus frozen estimated arms share initialization. Static transition/initial
+parameters remain known. Fresh statistical fits and checkpointed runner pending.
+The upcoming16x300 smoke establishes execution only, not statistical recovery.
+
 ## Step46 — matched recovery batch complete
 
 Step46 completes all frozen matched fixed-bin optimizer recovery seeds1922/1923/1924.
