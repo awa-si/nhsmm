@@ -1,5 +1,16 @@
 # Optimizer bridge — Step35
 
+## Step48 — bounded joint execution confirmed
+
+Frozen source666013d:16x300 observations, three actual joint EM updates in0.782s.
+Augmented marginal objective improves monotonically from -12625.720454 to
+-10379.349808. Both source hashes, regenerated training identity, counters and
+finite monotonic scores independently verified. Raw evidence is
+results/joint-gaussian-duration-smoke-native-20261014.json. Oracle OFF and no
+outer evaluation. Observation-only initialization and joint soft-posterior
+updates execute; statistical joint recovery is still untested. Next boundary is
+the checkpointed runner and independent replay for the frozen three-arm protocol.
+
 ## Step47 — free scalar Gaussian emissions
 
 Research joint_gaussian_duration computes soft state occupancy and weighted

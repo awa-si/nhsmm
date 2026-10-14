@@ -1,5 +1,17 @@
 # Testing and verification
 
+## Step48 — actual joint EM smoke
+
+Frozen source666013d executes16x300 training observations, seed401928, three
+joint EM updates in0.781618644s. Augmented objective increases at every update:
+-12625.720453970, -10507.376889965, -10398.613570034, -10379.349808180.
+Independently regenerated training SHA256 and both source hashes match; update
+counters0..3, finite monotonic scores and oracle/outer guards pass. Initialization
+is observation-only. Raw evidence: validation/results/
+joint-gaussian-duration-smoke-native-20261014.json. The21-case preflight passed.
+Oracle OFF, no outer data or statistical recovery gate evaluated. Three-arm
+statistical runner/replay remain pending; no neural or Trading acceptance.
+
 ## Step47 — joint Gaussian/duration preflight
 
 All21 focused cases pass in2.66s across test_joint_gaussian_duration,

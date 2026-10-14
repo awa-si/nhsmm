@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step48 completes the frozen-source joint EM execution smoke:16x300 observations,
+three actual updates in0.782s, augmented objective -12625.720454 to -10379.349808
+with no decrease. Source666013d, both source SHA256s and regenerated training
+hash/counters independently verified. Initialization uses observations only;
+Oracle OFF, no outer evaluation. Evidence: validation/results/
+joint-gaussian-duration-smoke-native-20261014.json. Step47's21 focused tests pass.
+Next: implement the checkpointed three-arm statistical runner and independent
+replay for the frozen protocol. Joint statistical recovery remains untested;
+this scalar Gaussian smoke does not establish neural or Trading acceptance.
+
 Step47 validates the research joint scalar-Gaussian/fixed-bin duration EM backend.
 Soft posterior occupancy updates means and variances; censored duration counts
 retain positive support on all ages1..260. Known transition/initial parameters
