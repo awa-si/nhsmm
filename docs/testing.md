@@ -1,5 +1,12 @@
 # Testing and verification
 
+Step52-1932-joint: verified immutable snapshot; 75 actual updates saved.
+Completed phases known_emission_control,estimated_emission_frozen; active estimated_emission_joint at15 updates.
+All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
+Frozen ac312d6, Oracle OFF. Final outer/recovery/public replay remains pending.
+Evidence: validation/results/joint-gaussian-duration-seed1932-checkpoint-joint-native-20261014.json.
+
+
 Step52-1932-frozen: verified immutable snapshot; 50 actual updates saved.
 Completed phases known_emission_control; active estimated_emission_frozen at20 updates.
 All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
