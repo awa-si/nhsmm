@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step42 implements an exact posterior-score backend for research-only fixed-bin
+duration learning with frozen nuisance parameters. Six new tests pass, including
+native public censored likelihood gradients and a clipped Adam update versus
+expected-count gradients; unequal final bins and curvature prior are checked.
+No production/neural fast path is introduced. Next matched benchmark is frozen
+at fresh401921,4x300 rows,sigma2,three repetitions,identical uniform33-bin
+initialization,temperature1,prior1e-6,clip5,Adam lr0.01; no outer evaluation.
+Oracle OFF. No new recovery study has started yet.
+
 Step41 validates accumulated optimizer execution on16x300 observations with
 batch4, source b2c96267, one actual Adam update. Wall time6.174489s,
 whole-process Linux peak582652 KiB (568.996 MiB), terminal target/reference

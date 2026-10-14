@@ -1,5 +1,14 @@
 # Testing and verification
 
+Step42:6 posterior-score tests pass in2.11s. They independently compare the
+analytic score with autograd of the concave augmented count objective (including
+unequal final bin and curvature) and the unchanged public censored likelihood
+graph plus age prior. Public score error<=1e-7 and clipped Adam step error<=1e-10.
+Invalid negative/nonfinite/mismatched counts fail closed. The backend assumes
+known frozen nuisance, fixed full-age bins and target temperature1; it cannot
+replace joint/neural model gradients. Matched benchmark contract is declared
+in docs/state.md and scripts/benchmark_fixed_bin_score.py before outcomes.
+
 Step41:195 focused tests pass in9.14s. Actual16x300/batch4/one-update
 accumulation smoke exits0:6.174489s,582652 KiB whole-process peak, target/
 reference likelihood discrepancy0, frozen nuisance preserved. Data and all
