@@ -4,6 +4,10 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step45-1923-fixed_bin_em-0
+
+Seed1923 verified checkpoint: fixed_bin_em at0 updates; complete phases warm. All23 source/software/contract/training identities, history/grid/PMF and Adam moment/step guards pass. Final outer/replay/recovery gates remain pending. Frozen source bd8e3f6, oracle OFF. Resume only with exact saved runner source and optimizer state.
+
 Step45-1922-complete
 
 Seed1922 completes57 actual updates (30 EM M-steps,27 Adam steps). All23 source/software/contract/training/outer/phase/history/grid/moment checks and independent terminal/public LL/gradient/filtering replays pass; verification performs0 updates and completed resume is byte-preserving. Frozen source bd8e3f6, oracle OFF. Raw report SHA2560d98e942e65381039e040072cc8f4ad48b40ea381d1d170e1fecbeab9e489d4f.
