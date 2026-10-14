@@ -1,5 +1,16 @@
 # Testing and verification
 
+## Step51 — optimized runner execution smoke passed
+
+Frozen source ac312d6,52 source/software/protocol files: actual16x300 runner smoke
+performs six updates with interruption/resume and all three independent terminal,
+outer, autograd, public/segment filter gates passing in4.601602372s. Evidence:
+validation/results/joint-runner-scaled-smoke-native-20261014.json. Independent
+log-duration E-step versus scaled joint statistics16x300 (three repeats) averages
+0.137762013s versus0.066649670s;2.067x is local arithmetic evidence only.23 focused
+tests/Ruff/Black/compilation pass. Frozen full study may proceed, Oracle OFF;
+no statistical acceptance is inferred from either smoke.
+
 ## Step50 — runner execution and scaled-backward preflight
 
 joint-runner-smoke-native-20261014.json records frozen bbfc8df source/software

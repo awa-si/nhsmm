@@ -1,5 +1,17 @@
 # Optimizer bridge — Step35
 
+## Step51 — full joint study execution gate passed
+
+Source ac312d6 freezes52 source/software/protocol files. Optimized16x300 runner
+smoke performs six actual updates, exact interruption/resume and independent
+terminal/outer/public/segment verification in4.602s; all numerical gates pass.
+Local three-repeat log-duration E-step versus scaled joint-statistics benchmark:
+0.137762s versus0.066650s (2.067x). This is not production/neural speed evidence.
+23 focused tests plus static/compilation checks pass. Raw smoke:
+results/joint-runner-scaled-smoke-native-20261014.json. The unchanged statistical
+contract1930/1931/1932,30 updates per arm (270 total) can execute with atomic
+checkpoints and independent final replay. Oracle OFF; recovery outcomes pending.
+
 ## Step50 — bounded runner execution and arithmetic performance
 
 Frozen bbfc8df runner smoke performs six actual EM updates on16x300 observations,

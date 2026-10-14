@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step51 passes optimized-source ac312d6 actual runner smoke:16x300, six updates,
+interrupted/resumed, all three independent numerical gates pass in4.602s.52
+source/software/protocol files are frozen. Independent log-duration-only E-step
+versus scaled joint statistics on16x300 averages0.137762s versus0.066650s (2.067x)
+in a local three-repeat arithmetic benchmark, not production/neural speed evidence.
+23 focused tests/Ruff/Black/compilation pass. Statistical fits may now proceed
+under the unchanged1930/1931/1932 three-arm contract; Oracle OFF. Raw smoke:
+validation/results/joint-runner-scaled-smoke-native-20261014.json.
+
 Step50 completes the actual checkpointed runner smoke at frozen source bbfc8df:
 16x300 observations, two updates per arm (six actual), interrupted/resumed,
 all independent terminal/outer/public numerical checks pass in6.024s. This is
