@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step31 implements the checkpointed matched fixed-bin smoothing runner. All65
+focused cases pass in13.56s (7 new runner cases plus58 existing). Actual
+interrupted/resumed smoothed fits reproduce uninterrupted PMFs exactly;
+phase/source/contract/data/solver/budget guards, shared warm/grid semantics,
+post-fit-only public evaluation and byte-preserving completed no-op pass.
+New2-file Ruff/Black/syntax and representative real short CLI/resume pass.
+Next freeze this runner's source commit and execute all fresh seeds1912/1913/1914,
+57 actual M-steps each. Source/runtime/contract/data are guarded; oracle OFF.
+
 Step30 implements the separate fixed-bin block-mass smoothing M-step and
 penalized marginal objective.14 new cases plus44 existing focused cases pass
 (58 total,8.44s). Analytic unpenalized masses, spacing-aware curvature,

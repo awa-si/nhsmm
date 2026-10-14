@@ -2,6 +2,14 @@
 
 The maintained automated contract is the pytest-discovered suite under `tests/`.
 
+Step31 (2026-10-14):65 focused cases pass in13.56s, including7 new runner cases.
+tests/test_block_mass_smoothing_runner.py owns actual interrupted/resumed
+smoothed EM exactness, evidence/certificate tampering rejection, bounded
+warm/paired phase budgets, shared initial PMF and fixed partitions, premature
+outer evaluation protection, real post-fit public numerics, completed CLI
+byte-preserving no-op and source/seed/contract/data/active/prefix guards. All
+new2-file static checks and the real short CLI/resume smoke pass before long
+execution. Frozen source commit and per-seed SHA-bound checkpoints are required.
 Step30 (2026-10-14):58 focused cases pass in8.44s, including14 new block-mass
 smoothing cases. New2-file Ruff/Black/syntax gates pass. New tests own independent
 analytical gradient/Hessian/concavity, lambda0 block masses and unequal widths,

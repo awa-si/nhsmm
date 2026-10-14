@@ -1,5 +1,15 @@
 # Fixed-bin block-mass smoothing
 
+Step31: scripts/compare_block_mass_smoothing.py now owns atomic checkpoints,
+strict phase/source/software/contract/data/solver history guards and bounded
+warm/unsmoothed/smoothed phases. It reuses the existing full-support matched
+outer/public evaluator through an immutable arm-name translation.65 focused
+cases and new-file static checks pass. Freeze the runner commit before large
+fits, then invoke --source-commit with that immutable SHA, --seed1912/1913/1914,
+and a separate docs/validation/results/block-mass-smoothing-seed<seed>-native-20261014.json.
+Resume only matching source/software/contract/output with --resume; --max-phases
+bounds newly completed phases. Completed experiments are no-ops. Oracle OFF.
+
 Current checkpoint (Step30): the M-step/objective is implemented separately in
 scripts/block_mass_smoothing.py. All58 focused tests (14 new) and the new-file
 static gates pass. The preflight evidence binds exact source/test/protocol
