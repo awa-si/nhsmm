@@ -1,5 +1,11 @@
 # Optimizer bridge — Step35
 
+Step52-1930-estimated_emission_frozen-20: verified immutable snapshot,
+completed phases known_emission_control; active estimated_emission_frozen at20 updates.
+All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
+Frozen ac312d6, Oracle OFF. Final outer/recovery/public replay remains pending.
+Evidence: validation/results/joint-gaussian-duration-seed1930-checkpoint-frozen-native-20261014.json.
+
 Step52-1930-control25: immutable control-arm25-update snapshot passes frozen
 ac312d6 source/software/contract/data/initialization/history/grid integrity.
 Oracle OFF; other arms, outer outcomes and final independent replay pending.
