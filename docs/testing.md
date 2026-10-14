@@ -2,6 +2,19 @@
 
 The maintained automated contract is the pytest-discovered suite under `tests/`.
 
+Step30 (2026-10-14):58 focused cases pass in8.44s, including14 new block-mass
+smoothing cases. New2-file Ruff/Black/syntax gates pass. New tests own independent
+analytical gradient/Hessian/concavity, lambda0 block masses and unequal widths,
+small exhaustive log-density reference, zero exposure, failed solver/invalid
+initial-state rejection and input nonmutation. Actual2-sequence60-row censored
+EM3-update smoke passes monotone penalized objective,1e-8 normalized anchored
+solver gradient and unchanged public likelihood/gradient/filter gates. The
+solver's initial Hessian whitening and at most3 native Newton corrections are
+required by the strict certificate, not statistical hyperparameter tuning.
+No strength/width/data budget/recovery threshold is relaxed. The preflight
+JSON binds exact new source/test/protocol SHA256 and software identity. This
+does not verify a checkpointed smoothing runner or the unexecuted1024 study.
+
 Step29 (2026-10-14): native runtime recovery preserves all53 material connector
 identities and reruns44 focused adaptive/width-cap cases successfully in9.07s.
 The closure is reopened once for the observed direct import of

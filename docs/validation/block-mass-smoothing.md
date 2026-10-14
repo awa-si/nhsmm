@@ -1,5 +1,12 @@
 # Fixed-bin block-mass smoothing
 
+Current checkpoint (Step30): the M-step/objective is implemented separately in
+scripts/block_mass_smoothing.py. All58 focused tests (14 new) and the new-file
+static gates pass. The preflight evidence binds exact source/test/protocol
+hashes at matching runtime versions. The1024-sequence study is not started;
+next build and test the checkpointed matched runner, then freeze its source
+before bounded training phases. No empirical recovery result is claimed here.
+
 The width-cap pilot proved that its partitions admit normalized approximations
 to the true duration PMF with TV below0.12, yet every fitted width8 state failed
 that gate. Increasing partition resolution alone was not a robust improvement.
@@ -17,6 +24,10 @@ It is negative semidefinite; fixing the last z to0 removes the additive shift.
 Positive per-age pseudocounts give a finite strictly concave anchored problem.
 Lambda0 has the exact analytic augmented block-mass solution. Positive lambda
 uses the existing Torch float64 LBFGS solver, not a new optimizer dependency.
+The initial normalized negative Hessian whitens its coordinates. Up to3 native
+Newton corrections address floating-point line-search stagnation near the
+optimum; they consume the same solver iteration budget and may not decrease Q
+beyond1e-7. The original-coordinate gradient certificate remains unchanged.
 Acceptance requires normalized-gradient stationarity and no Q decrease; the
 subsequent EM owner must independently check the penalized marginal objective.
 These are numerical checks, not claims of statistical recovery.
@@ -37,3 +48,10 @@ unequal widths, full-support normalization, constant-density block semantics,
 stationarity failure and a real short censored EM/public numerical smoke before
 building/running the checkpointed1024-sequence driver. Existing production and
 historical experiment owners stay unchanged.
+
+Numerical refinement is frozen before any fresh experiment outcome. The first
+short smoke exposed badly scaled joint L-BFGS (1000 iterations without the
+required certificate); whitening reached a near-stationary point but its
+4e-8 residual still failed the declared1e-8 gate. The bounded native correction
+passes the original gate. No lambda, width, data budget or recovery threshold
+was changed to make the smoke pass.

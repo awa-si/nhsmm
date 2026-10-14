@@ -4,6 +4,18 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step30 implements the separate fixed-bin block-mass smoothing M-step and
+penalized marginal objective.14 new cases plus44 existing focused cases pass
+(58 total,8.44s). Analytic unpenalized masses, spacing-aware curvature,
+independent derivatives/Hessian, concavity, numerical stationarity, failed
+solver rejection and actual short censored EM/public numerical checks pass.
+Hessian-whitened native L-BFGS with up to3 budgeted Newton corrections meets
+the unchanged1e-8 normalized-gradient gate. All new2-file static checks pass.
+Evidence: docs/validation/results/block-mass-smoothing-preflight-native-20261014.json.
+The1024-sequence experiment has not started. Next implement and verify its
+checkpointed fixed-grid matched runner/resume before freezing execution source.
+Existing production/historical experiment owners are unchanged; oracle OFF.
+
 Step29 restores the native sparse execution snapshot against a4ace3f. All53
 material files match connector Git blob identities after one evidence-backed
 dependency reopen;44 existing focused tests pass in9.07s at unchanged

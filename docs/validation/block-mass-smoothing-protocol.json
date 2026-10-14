@@ -17,9 +17,11 @@
     "density_parameterization": "log p_age=z_bin-logsumexp(z_bin+log bin_width)",
     "curvature": "difference between adjacent log-density slopes at bin centers; center distances normalized by8; no wrap or endpoint pseudo-neighbors",
     "objective": "marginal LL + pseudocount*sum(log PMF) - lambda/2*sum((curvature operator times log bin density)^2)",
-    "mstep": "concave augmented count log-density objective; existing Torch float64 LBFGS with strong Wolfe, last log-density anchored to0; lambda0 exact analytic block masses",
+    "mstep": "concave augmented count log-density objective; existing Torch float64 LBFGS with strong Wolfe and initial negative-Hessian coordinate whitening; last log-density anchored to0; lambda0 exact analytic block masses",
     "solver_max_iterations": 1000,
     "solver_max_evaluations": 2000,
+    "solver_newton_polish_max_iterations": 3,
+    "solver_polish_budget": "native analytic-Hessian solve; corrections consume the same1000-iteration budget; reject Q-decreasing or nonfinite corrections; final original-coordinate certificate unchanged",
     "solver_acceptance": "finite positive normalized PMF, maximum anchored-gradient residual divided by each state's augmented count total<=1e-8, no Q decrease beyond1e-7; fail closed otherwise",
     "em_acceptance": "monotonic fixed-arm penalized marginal objective within1e-6"
   },
