@@ -1,5 +1,12 @@
 # Optimizer bridge — Step35
 
+Step52-1931-control: verified immutable snapshot; 25 actual updates saved.
+Completed phases ; active known_emission_control at25 updates.
+All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
+Frozen ac312d6, Oracle OFF. Final outer/recovery/public replay remains pending.
+Evidence: validation/results/joint-gaussian-duration-seed1931-checkpoint-control-native-20261014.json.
+
+
 Step53-1930-complete:90 actual EM updates (30 per arm), independently verified.
 All52 source/software/protocol/data/initialization/history/grid/digest checks,
 terminal/outer/public LL/all gradients/segment and causal filter replay pass.
