@@ -1,5 +1,16 @@
 # Testing and verification
 
+Step43 matched benchmark exits0 on4x300 observations,three repetitions.
+All trials match native public objective within1.818989e-12,gradient within
+4.463097e-14,and clipped Adam step within3.469447e-18. Median analytic score
+0.049636s versus1.057941s public Autograd. Recorded data and21 source hashes
+are verified before writeback. Benchmark excludes setup, includes observed
+score/gradient/clipped Adam work,uses frozen known nuisance,and evaluates no
+outer data. This does not benchmark the general joint NHSMM optimizer.
+Evidence: validation/results/fixed-bin-score-benchmark-native-20261014.json.
+Next sufficient-exposure protocol is frozen before its fresh fit outcomes;
+its checkpointed runner is not yet executed/accepted.
+
 Step42:6 posterior-score tests pass in2.11s. They independently compare the
 analytic score with autograd of the concave augmented count objective (including
 unequal final bin and curvature) and the unchanged public censored likelihood

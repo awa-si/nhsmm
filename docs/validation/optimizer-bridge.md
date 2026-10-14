@@ -1,5 +1,32 @@
 # Optimizer bridge — Step35
 
+## Steps42–43 — exact posterior score and matched timing
+
+For known fixed emissions/transitions/initial parameters at temperature1,
+the marginal duration gradient equals the expected censored-episode count
+score. Aggregate expected counts into the fixed bins, subtract the state total
+times bin probability mass, then add the age prior and any declared curvature
+derivative. The final bin log density is anchored0. No labels or true support
+enter this calculation. This identity does not remove neural/nuisance gradients
+when those parameters are trainable.
+
+Six tests pass, including independent concave-count Autograd gradients and
+native public censored-likelihood/Adam-step agreement. On the exact same
+4x300 fresh401921 observations,uniform initial bins,prior1e-6,clip5,lr0.01,
+three timed trials give medians1.057941s public Autograd and0.049636s analytic
+score (21.31x). Objective/gradient/step discrepancies are respectively
+1.818989e-12,4.463097e-14,3.469447e-18. Setup is excluded; score/backward and
+one clipped Adam update are included. No outer/statistical model selection.
+
+The next statistical comparison is separately predeclared in
+fixed-bin-optimizer-recovery-protocol.json. It matches both optimizer arms on
+full positive width8 density bins,same1024x300 training data,same shared EM
+warm3 start and same target/prior;27 updates per arm are a bounded comparison,
+not equal-compute or convergence guarantees. Fresh1922/1923/1924 outer outcomes
+must not change protocol choices. Exact checkpointed Adam moments/step count
+and independent final replay are required before accepting results. Runner and
+study execution remain pending. Oracle OFF.
+
 ## Steps40–41 — accumulation implemented and verified
 
 Opt-in optimizer_batch_size bounds the number of whole sequences whose graph

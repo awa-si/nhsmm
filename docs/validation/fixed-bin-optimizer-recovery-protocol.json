@@ -1,0 +1,28 @@
+{
+  "schema": "nhsmm-fixed-bin-optimizer-recovery-protocol-v1",
+  "status": "predeclared_not_executed",
+  "seeds": [1922, 1923, 1924],
+  "data": {"training_sequences": 1024, "outer_sequences": 24, "steps": 300, "sigma": 2.0, "training_seed_offset": 400000, "outer_seed_offset": 500000},
+  "model": {"ages": 260, "states": 4, "fixed_bin_width": 8, "last_bin_width": 4, "target_temperature": 1.0, "known_frozen_nuisance": true, "oracle": false},
+  "method": {
+    "pseudocount_per_age": 0.000001,
+    "smoothing_strength": 0.0,
+    "shared_warm_em_updates": 3,
+    "updates_per_arm": 27,
+    "arms": ["fixed_bin_em", "fixed_bin_adam"],
+    "initialization": "identical PMF from shared3-update fixed-bin unpenalized EM, then independent arms",
+    "adam_parameterization": "last bin log density anchored0, same constant age-density family as EM",
+    "adam_gradient": "exact independent censored posterior-count score plus age pseudocount prior, verified against public Autograd",
+    "adam_lr": 0.01,
+    "adam_betas": [0.9, 0.999],
+    "adam_eps": 1e-8,
+    "adam_gradient_clip_norm": 5.0,
+    "adam_scheduler": false,
+    "adam_early_stopping": false,
+    "selection": "none; both predeclared arms reported"
+  },
+  "budget": {"updates_per_seed": 57, "total_updates": 171, "compute_concurrency": 1},
+  "gates": {"each_state_pmf_tv_at_most": 0.12, "heldout_gain_nats_per_row_strictly_greater_than": 0.0, "public_ll_and_gradient_error_at_most": 1e-7, "filter_probability_error_at_most": 1e-8},
+  "integrity": ["freeze runner/config/software/protocol/source identities before fresh fits", "record training and outer hashes", "atomic0/every5/final checkpoints", "Adam moments/step count/bin logits required for exact resume", "outer observations/labels/true PMFs scored only after both arms finish", "report runtime/update counts separately; no equal-compute claim", "regenerate post-fit completed/censored episode exposure from training labels"],
+  "limitations": ["matching families and data isolate bounded optimizer behavior, not global convergence", "same update count does not imply equal runtime or equal convergence effort", "known frozen nuisance only; no joint-neural/Trading acceptance", "no changing seeds/grid/lr/budgets/gates after outer outcomes", "matching older study dimensions does not make this a paired rerun of older seeds"]
+}

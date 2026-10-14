@@ -4,6 +4,18 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step43 matched score benchmark completes: same4x300 data,uniform fixed-bin
+initial PMF,temperature1,age prior1e-6,clip5,Adam lr0.01,three repetitions.
+Median public Autograd1.057941s vs analytic posterior score0.049636s (21.31x).
+Objective error1.818989e-12,gradient error4.463097e-14,Adam step error3.469447e-18.
+This is a frozen-nuisance research backend measurement, not a production/neural
+speed claim. Benchmark source22a0f4bf and raw outcomes remain immutable.
+Next recovery comparison is predeclared in
+validation/fixed-bin-optimizer-recovery-protocol.json: fresh1922/1923/1924,
+1024x300 training,24 outer sequences,shared EM warm3 then27 per matched
+fixed-bin EM/Adam arm. Exact Adam moment/step checkpoints are required before
+running. Runner implementation and execution remain pending; Oracle OFF.
+
 Step42 implements an exact posterior-score backend for research-only fixed-bin
 duration learning with frozen nuisance parameters. Six new tests pass, including
 native public censored likelihood gradients and a clipped Adam update versus

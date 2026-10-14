@@ -1,0 +1,68 @@
+{
+  "schema": "nhsmm-matched-fixed-bin-score-benchmark-v1",
+  "seed": 401921,
+  "sequences": 4,
+  "steps": 300,
+  "sigma": 2.0,
+  "repetitions": 3,
+  "same_data_initial_density_prior_clipping_adam": true,
+  "gradient_target": "fixed width8 density, last bin anchored0, temperature1, prior1e-6 per age, no smoothing",
+  "source_sha256": {
+    "scripts/compare_adaptive_large_selection.py": "2367218d0bc4bc763ad7e6cc9ec1d1c4bb2ccff1e0f3e50af3938532ef9499f9",
+    "scripts/compare_adaptive_duration_em.py": "c9ab31f1386c29b6d9b2f85a7dd7dca522a615ff7e1b47ce8f10fadffd0862a0",
+    "scripts/compare_adaptive_sample_size.py": "8811fee098ead56d25f19558a38b500b9edc06b8deee30080db56f52311a029c",
+    "scripts/compare_compact_duration_em.py": "435e1d4d29bd02113309b6127da3ac9df874f1e135c152e0b03989e64a9c8eff",
+    "scripts/compare_unlabelled_duration_em.py": "3f7bc5b324a81ec164c7f8e22ae780b360c9738ed090e77bf3f04ca32a5d5fce",
+    "scripts/verify_isolated_trading_hsmm.py": "fb81571aa66138da61245f1a05cf69bc515e799627ef88b1b8b4344aed8e3589",
+    "scripts/verify_unlabelled_trading_hsmm.py": "d743af133a4f195b3624e41e2a3cc010d9d2d7c002bba089aeca5f314b1a3d09",
+    "scripts/diagnose_trading_ground_truth.py": "874f559edf87da75a4215b744bfb1718b392c28981cd5a5ac4be4421e4cb8fa2",
+    "scripts/generate_trading_regime_dataset.py": "55e84791c31dcfb8baeb1861259413ba7262b9b86664764d53845615c5fd2dad",
+    "nhsmm/models/base.py": "3723ddc57abfb32b5227b95a4ce4e6e59c1f4f59b3280f41df3933299835cb6b",
+    "nhsmm/filtering.py": "5fe064090e255a19523582d27a7341499f3c68e1eb0c52e7842d332aa51fc8f5",
+    "nhsmm/distributions/default.py": "58162cae11e0a4537145c6bab8e824652d059f9041f074aebba3c7bec6b60531",
+    "docs/validation/adaptive-large-selection-protocol.json": "a19c25152528f2316170a6638174f18799aaed88d8e1013f70b25530bb060b61",
+    "scripts/adaptive_width_cap.py": "bb302e14ecc9b24ef5327380a617bb88ee5d411c1d6fdc60ceacf5d7c4f14b3d",
+    "scripts/compare_adaptive_width_cap.py": "410887d62dba15008d3399711ec380b5cb334fea9538916e6b2c38b002989da0",
+    "docs/validation/adaptive-width-cap-protocol.json": "50872a69200bc2310ffc296194e908b1acd7024d3e2766a4c4f584240f6aaab5",
+    "scripts/block_mass_smoothing.py": "9244c79c9a9b076ec094fcf4b1ee2beaaa37a99e9631fa0a89d872e106f7a6b7",
+    "scripts/compare_block_mass_smoothing.py": "d77e610620b7240e24ed7c4f5d16aee719f87115e612e6bd543854cf9cc58ff9",
+    "docs/validation/block-mass-smoothing-protocol.json": "685e970b1e7e39fc2ce81340370375e3c8c57c094d91449a0927a29cda3ed522",
+    "scripts/fixed_bin_posterior_score.py": "946a19e087e50cc42ec7e4827dce7e80e42ba638d6e3445e6daa5ffb5ddcd465",
+    "scripts/benchmark_fixed_bin_score.py": "2a3e59655a259db08c283bc8ab2d7e24d936278587395f4ba55b8b9210f473e6"
+  },
+  "software": {
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "torch": "2.14.1+cpu"
+  },
+  "training_sha256": "833758fee012f5588a4560a9e144ca2c7cc007ff81ba59a9300009b5af1287c1",
+  "trials": [
+    {
+      "public_autograd_seconds": 1.0996676859999752,
+      "analytic_score_seconds": 0.058895089000088774,
+      "objective_error": 1.8189894035458565e-12,
+      "gradient_error": 4.463096558993129e-14,
+      "adam_step_error": 3.469446951953614e-18
+    },
+    {
+      "public_autograd_seconds": 1.0579411769999751,
+      "analytic_score_seconds": 0.049635692999800085,
+      "objective_error": 1.8189894035458565e-12,
+      "gradient_error": 4.463096558993129e-14,
+      "adam_step_error": 3.469446951953614e-18
+    },
+    {
+      "public_autograd_seconds": 1.00347544799979,
+      "analytic_score_seconds": 0.04941659299993262,
+      "objective_error": 1.8189894035458565e-12,
+      "gradient_error": 4.463096558993129e-14,
+      "adam_step_error": 3.469446951953614e-18
+    }
+  ],
+  "median_public_autograd_seconds": 1.0579411769999751,
+  "median_analytic_score_seconds": 0.049635692999800085,
+  "oracle": false,
+  "outer_evaluation": false,
+  "limits": "local matched score/backward/clipped Adam timing; setup excluded; only known frozen nuisance and fixed density bins; not production/joint-neural acceleration or statistical recovery",
+  "source_commit": "22a0f4bfb941fd8f30cc5228e160493c235c811d"
+}
