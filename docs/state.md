@@ -4,6 +4,20 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step32-1912-complete
+
+Smoothing experiment seed1912 completes57 actual M-steps: warm3 and27
+per matched fixed-grid arm. All19 source/software/contract/training/outer
+identities, phase/budget/solver certificate/objective/PMF/grid checks, independent
+terminal E-step and outer/public likelihood/gradient/filtering replays and
+byte-preserving completed no-op pass. Both arms share initial PMF, grid and
+observations. Smoothed minus unsmoothed outer LL0.2281040401685459 nats.
+Main report SHA256bb78904407ad2421854d484052a471daae62cb6ef3e17fc0706dfad0a87410d0. Oracle OFF, source140ff55 and
+all declared widths/strengths/budgets/gates unchanged. No production/joint-neural
+or legacy NPZ acceptance follows.
+unsmoothed: TVs[0.07355676669601013, 0.08641623132355288, 0.09008035408903947, 0.06766988698701032], gain0.007734397346692074 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
+smoothed: TVs[0.04234832628750705, 0.06414683287189094, 0.07021739228445997, 0.07326639128710745], gain0.0077660784633821495 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
+
 Step32-1912-checkpoint-smoothed-15
 
 Smoothing experiment seed1912 checkpoint: smoothed at15 updates.
