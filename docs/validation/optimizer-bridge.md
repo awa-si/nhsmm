@@ -1,5 +1,17 @@
 # Optimizer bridge — Step35
 
+## Step50 — bounded runner execution and arithmetic performance
+
+Frozen bbfc8df runner smoke performs six actual EM updates on16x300 observations,
+including exact interruption/resume and three-arm independent numerical replay;
+all gates pass in6.024s. Evidence: results/joint-runner-smoke-native-20261014.json.
+Smoke uses an explicitly reduced budget, not the statistical protocol. Prior to
+any full fit, joint backward arithmetic is changed to equivalent evidence-scaled
+probabilities with finite/conservation guards; the independent old log recursion
+is untouched.23 focused tests pass in2.92s, Ruff/Black pass. The model, seeds,
+initialization, budget and gates are unchanged. Oracle OFF. Optimized-source
+bounded smoke and full frozen study execution remain pending.
+
 ## Step49 — frozen joint statistical runner
 
 The three-arm runner implements30 EM updates per arm from uniform full positive

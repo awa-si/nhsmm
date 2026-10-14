@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step50 completes the actual checkpointed runner smoke at frozen source bbfc8df:
+16x300 observations, two updates per arm (six actual), interrupted/resumed,
+all independent terminal/outer/public numerical checks pass in6.024s. This is
+explicitly reduced execution-only evidence; the statistical protocol is unchanged.
+Before any full statistical fit, the joint backend replaces log backward sums
+with the algebraically equivalent evidence-scaled probability recursion. All23
+focused tests pass again in2.92s; Ruff/Black pass. Independent log E-step and
+native autograd/filter/segment checks retain strict tolerances. Oracle OFF.
+The optimized source must pass its own bounded smoke before frozen270-update fits.
+
 Step49 implements the frozen-protocol three-arm joint Gaussian/duration runner,
 atomic0/every5/final state/history saves, guarded exact resume and byte-preserving
 completed no-op. Independent terminal/outer LL, learned-parameter autograd and

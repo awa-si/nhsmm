@@ -1,5 +1,16 @@
 # Testing and verification
 
+## Step50 — runner execution and scaled-backward preflight
+
+joint-runner-smoke-native-20261014.json records frozen bbfc8df source/software
+hashes,16 training/4 outer sequences x300, six actual updates (two per arm),
+an interrupted exact resume and independent terminal/outer/public checks. All
+three numerical gates pass in6.024s. Recovery gates are not accepted from smoke.
+Before fresh statistical fits, equivalent evidence-scaled backward arithmetic
+replaces log sums in the joint backend.23 focused cases pass again in2.92s;
+Ruff and Black pass. The old log E-step remains an independent owner/reference.
+Optimized-source bounded smoke still required. Oracle OFF; protocol unchanged.
+
 ## Step49 — checkpointed joint runner preflight
 
 23 cases pass in3.42s across test_joint_gaussian_runner, test_joint_gaussian_duration

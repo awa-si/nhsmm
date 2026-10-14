@@ -10,7 +10,6 @@ import numpy as np
 
 from scripts.block_mass_smoothing import smooth_mstep
 from scripts.generate_trading_regime_dataset import BASE_TRANSITION
-from scripts.verify_isolated_trading_hsmm import lse
 
 
 def scores(x, means, variances):
@@ -53,13 +52,11 @@ def chunk_statistics(x, pmf, means, variances, *, return_filter=False):
     survival = np.cumsum(pmf[:, ::-1], axis=1)[:, ::-1]
     hazard = pmf / survival
     continuation = np.pad(survival[:, 1:], ((0, 0), (0, 1))) / survival
-    with np.errstate(divide="ignore"):
-        log_end, log_continue = np.log(hazard), np.log(continuation)
-        log_transition = np.log(BASE_TRANSITION)
     offset = emission.max(2)
     relative = np.exp(emission - offset[:, :, None])
     alpha = np.zeros((batch, steps, states, width))
     log_z = np.empty((batch, steps))
+    scales = np.empty((batch, steps))
     frontier = np.zeros((batch, states, width))
     frontier[:, :, 0] = 0.25
     for t in range(steps):
@@ -73,11 +70,12 @@ def chunk_statistics(x, pmf, means, variances, *, return_filter=False):
         if (normalizer <= 0).any() or not np.isfinite(normalizer).all():
             raise FloatingPointError("impossible/nonfinite Gaussian evidence")
         log_z[:, t] = np.log(normalizer) + offset[:, t]
+        scales[:, t] = normalizer
         frontier /= normalizer[:, None, None]
         alpha[:, t] = frontier
     complete = np.zeros_like(pmf)
     censored = alpha[:, -1].sum(0)
-    beta = np.zeros((batch, states, width))
+    beta = np.ones((batch, states, width))
     occupancy = np.zeros(states)
     first = np.zeros(states)
     second = np.zeros(states)
@@ -92,19 +90,18 @@ def chunk_statistics(x, pmf, means, variances, *, return_filter=False):
 
     accumulate(steps - 1, alpha[:, -1].sum(2))
     for t in range(steps - 2, -1, -1):
-        future = emission[:, t + 1] + beta[:, :, 0]
-        boundary = lse(log_transition[None] + future[:, None, :], 2)
-        with np.errstate(divide="ignore"):
-            log_alpha = np.log(alpha[:, t])
-        events = log_alpha + log_end[None] + boundary[:, :, None] - log_z[:, t + 1, None, None]
-        complete += np.exp(events).sum(0)
-        continuing = np.full_like(beta, -np.inf)
+        future = relative[:, t + 1] * beta[:, :, 0]
+        boundary = future @ BASE_TRANSITION.T
+        ending = hazard[None] * boundary[:, :, None]
+        complete += (alpha[:, t] * ending / scales[:, t + 1, None, None]).sum(0)
+        continuing = np.zeros_like(beta)
         continuing[:, :, :-1] = (
-            log_continue[None, :, :-1] + emission[:, t + 1, :, None] + beta[:, :, 1:]
+            continuation[None, :, :-1] * relative[:, t + 1, :, None] * beta[:, :, 1:]
         )
-        beta = np.logaddexp(log_end[None] + boundary[:, :, None], continuing)
-        beta -= log_z[:, t + 1, None, None]
-        accumulate(t, np.exp(lse(log_alpha + beta, 2)))
+        beta = (ending + continuing) / scales[:, t + 1, None, None]
+        if not np.isfinite(beta).all():
+            raise FloatingPointError("nonfinite scaled Gaussian backward probabilities")
+        accumulate(t, (alpha[:, t] * beta).sum(2))
     expected = complete + pmf * np.cumsum(censored / survival, axis=1)
     if not np.isfinite(expected).all():
         raise FloatingPointError("nonfinite duration statistics")
