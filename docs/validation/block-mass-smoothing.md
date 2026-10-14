@@ -119,3 +119,17 @@ All19 source/software/contract/training/phase/solver/history/PMF/partition and
 shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
 outer/final independent/numerical/recovery gates remain pending. Source140ff55,
 1024 training sequences, fixed33-bin full-age support, oracle OFF.
+
+## Step32-1913-complete
+
+Smoothing experiment seed1913 completes57 actual M-steps: warm3 and27
+per matched fixed-grid arm. All19 source/software/contract/training/outer
+identities, phase/budget/solver certificate/objective/PMF/grid checks, independent
+terminal E-step and outer/public likelihood/gradient/filtering replays and
+byte-preserving completed no-op pass. Both arms share initial PMF, grid and
+observations. Smoothed minus unsmoothed outer LL2.770644116533731 nats.
+Main report SHA256f68c9fd8f4da6d3155a9b39ec7052eaa6b62cbc33f7d56b6beb7f49946946977. Oracle OFF, source140ff55 and
+all declared widths/strengths/budgets/gates unchanged. No production/joint-neural
+or legacy NPZ acceptance follows.
+unsmoothed: TVs[0.08397400323627008, 0.07787619832170425, 0.09948752522398446, 0.07622428975784042], gain0.006373454804447647 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
+smoothed: TVs[0.06500096019116289, 0.06580853715708848, 0.0809680554664712, 0.07777723002743443], gain0.006758266487299554 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
