@@ -1,5 +1,12 @@
 # Optimizer bridge — Step35
 
+Step61-1935-first: immutable checkpoint verified; 20 actual updates saved.
+Completed phases ; active known_chain_reference at20 updates.
+60 source/software/protocol/data/initialization/history/grid/all-five state checks pass.
+Frozen2294c6e, Oracle OFF. Final outer/recovery/public replay remains pending.
+Evidence: validation/results/joint-static-chain-seed1935-checkpoint-first-native-20261014.json.
+
+
 Step62-1934-complete:90 actual updates,30 per arm; independently verified.
 60 source/software/protocol/data/initialization/history/grid/all-five state checks,
 terminal/outer LL, all gradients, segment/filter replay and byte-preserving
