@@ -1,5 +1,26 @@
 # Optimizer bridge — Step35
 
+Step53-1932-complete:90 actual EM updates (30 per arm), independently verified.
+All52 source/software/protocol/data/initialization/history/grid/digest checks,
+terminal/outer/public LL/all gradients/segment and causal filter replay pass.
+Verification adds0 updates; completed resume is byte-preserving. Oracle OFF,
+frozen source ac312d6. Raw report SHA256076112148c9f0a56875d494d051db7671cd16a872ca0c1178f8dc66c620176e2.
+
+| Arm | Duration TVs | Max mean error | Max variance relative error | Outer gain nats/row | Full gate |
+| --- | --- | ---: | ---: | ---: | --- |
+| known_emission_control | 0.085944/0.076398/0.078658/0.074570 | 0.000000 | 0.000000 | 0.006849968 | PASS |
+| estimated_emission_frozen | 0.796726/0.958354/0.895260/0.876619 | 0.922510 | 0.655120 | 0.105160623 | FAIL |
+| estimated_emission_joint | 0.085879/0.076343/0.078509/0.074651 | 0.017221 | 0.012487 | 0.461024426 | PASS |
+
+Joint minus frozen estimated outer LL2562.219381083 nats.
+Each outer gain uses its arm's initial emissions; joint gain includes emission
+learning. Known control is a separate information reference. Exposure post-fit:
+{"completed_per_state":[664,677,916,800],"terminal_censored_per_state":[352,236,356,80]}. No post-outer tuning.
+Evidence: validation/results/joint-gaussian-duration-seed1932-native-20261014.json
+and matching verification report. Scalar/static known transition/initial study;
+no neural/Trading or legacy NPZ acceptance.
+
+
 Step52-1932-joint: verified immutable snapshot; 75 actual updates saved.
 Completed phases known_emission_control,estimated_emission_frozen; active estimated_emission_joint at15 updates.
 All52 source/software/protocol/data/initialization/history/grid/digest checks pass.

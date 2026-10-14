@@ -1,0 +1,191 @@
+{
+  "schema": "nhsmm-joint-gaussian-duration-verification-v1",
+  "verified": true,
+  "seed": 1932,
+  "source_commit": "ac312d6a297d25a1330baf7ff411971c7e16429f",
+  "input_report_sha256": "076112148c9f0a56875d494d051db7671cd16a872ca0c1178f8dc66c620176e2",
+  "source_files": 52,
+  "verification_em_updates": 0,
+  "source_software_contract_data_initialization_history_grid_pass": true,
+  "independent_terminal_outer_public_replay_pass": true,
+  "completed_resume_noop": true,
+  "evaluation": {
+    "heldout_sha256": "002be1324d417bd967d3e1e941575f11101bce3383bdb77ed9a04424218702f6",
+    "arms": {
+      "known_emission_control": {
+        "metrics": {
+          "pmf_tv": [
+            0.08594351942792638,
+            0.0763975643651138,
+            0.07865750397830905,
+            0.07457034323840421
+          ],
+          "mean": [
+            123.74281292470405,
+            99.44000175969569,
+            98.07949590240804,
+            33.573894033882446
+          ],
+          "mean_rmse": 1.7243446160315494,
+          "fine_pmf_gate": true
+        },
+        "post_fit_mean_sort": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "mean_absolute_error": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "variance_relative_error": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "heldout_ll": -15667.623724195522,
+        "initial_heldout_ll": -15716.94349438334,
+        "heldout_gain_nats_per_row": 0.006849968081641388,
+        "terminal_train_ll_error": 0.0,
+        "numerical_check": {
+          "public_ll_error": 9.094947017729282e-13,
+          "segment_ll_error": 9.094947017729282e-13,
+          "duration_gradient_error": 4.496403249731884e-14,
+          "mean_gradient_error": 4.760636329592671e-13,
+          "raw_variance_gradient_error": 5.018208071305708e-13,
+          "public_filter_error": 8.881784197001252e-16,
+          "segment_filter_error": 8.260059303211165e-14
+        },
+        "numerical_gate": true,
+        "statistical_gate": true,
+        "full_gate": true
+      },
+      "estimated_emission_frozen": {
+        "metrics": {
+          "pmf_tv": [
+            0.7967257523539153,
+            0.9583536642200063,
+            0.8952597485126244,
+            0.8766194671576983
+          ],
+          "mean": [
+            31.470198911079017,
+            8.384862345176924,
+            8.314958068893176,
+            8.100333761571498
+          ],
+          "mean_rmse": 79.81454283768888,
+          "fine_pmf_gate": false
+        },
+        "post_fit_mean_sort": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "mean_absolute_error": [
+          0.8866945806501647,
+          0.9225096866591702,
+          0.7909502969776401,
+          0.590974652325734
+        ],
+        "variance_relative_error": [
+          0.5024487397115182,
+          0.6551195593616107,
+          0.6539351175062836,
+          0.3065905764337993
+        ],
+        "heldout_ll": -18229.281365854466,
+        "initial_heldout_ll": -18986.437854995704,
+        "heldout_gain_nats_per_row": 0.10516062349183863,
+        "terminal_train_ll_error": 1.1641532182693481e-10,
+        "numerical_check": {
+          "public_ll_error": 4.547473508864641e-13,
+          "segment_ll_error": 1.3642420526593924e-12,
+          "duration_gradient_error": 4.3520742565306136e-14,
+          "mean_gradient_error": 1.5347723092418164e-12,
+          "raw_variance_gradient_error": 1.2505552149377763e-12,
+          "public_filter_error": 7.771561172376096e-16,
+          "segment_filter_error": 1.6497914145929826e-13
+        },
+        "numerical_gate": true,
+        "statistical_gate": false,
+        "full_gate": false
+      },
+      "estimated_emission_joint": {
+        "metrics": {
+          "pmf_tv": [
+            0.08587885375804355,
+            0.07634302825379581,
+            0.07850936804096198,
+            0.07465128909400287
+          ],
+          "mean": [
+            123.74373419331403,
+            99.42088449193582,
+            98.07317387740201,
+            33.58385643453225
+          ],
+          "mean_rmse": 1.722299352987305,
+          "fine_pmf_gate": true
+        },
+        "post_fit_mean_sort": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "mean_absolute_error": [
+          0.0026828507131382295,
+          0.0019727130726816533,
+          0.008886605008014747,
+          0.017221392087310328
+        ],
+        "variance_relative_error": [
+          0.0010863456574767838,
+          0.012486850321331566,
+          0.0016301722763901738,
+          0.0025363985445459036
+        ],
+        "heldout_ll": -15667.061984771579,
+        "initial_heldout_ll": -18986.437854995704,
+        "heldout_gain_nats_per_row": 0.46102442642001734,
+        "terminal_train_ll_error": 2.3283064365386963e-10,
+        "numerical_check": {
+          "public_ll_error": 4.547473508864641e-13,
+          "segment_ll_error": 4.547473508864641e-13,
+          "duration_gradient_error": 3.697042672001771e-14,
+          "mean_gradient_error": 6.554756737386924e-13,
+          "raw_variance_gradient_error": 4.884981308350689e-13,
+          "public_filter_error": 7.771561172376096e-16,
+          "segment_filter_error": 5.67323965583455e-14
+        },
+        "numerical_gate": true,
+        "statistical_gate": true,
+        "full_gate": true
+      }
+    },
+    "joint_minus_frozen_heldout_ll": 2562.2193810828867,
+    "actual_em_updates": 90,
+    "labels_used_in_learning_or_selection": false,
+    "oracle": false,
+    "post_fit_training_episode_exposure": {
+      "completed_per_state": [
+        664,
+        677,
+        916,
+        800
+      ],
+      "terminal_censored_per_state": [
+        352,
+        236,
+        356,
+        80
+      ]
+    }
+  }
+}
