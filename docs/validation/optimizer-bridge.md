@@ -1,5 +1,7 @@
 # Optimizer bridge — Step35
 
+Step54 supplementary static closure audit verifies54 files against frozen Git\nblob identities and SHA256s, including the52 declared manifest paths plus\nnhsmm/benchmark.py and scripts/validate_trading_regime_usefulness.py. All match\nsource ac312d6; no model, source owner, protocol or report changes. The batch\naggregator joins this SHA-bound audit with all three final proofs. Black/Ruff pass.\nEvidence: validation/results/joint-source-closure-audit-native-20261014.json.\nOracle OFF; final third-seed recovery/replay remains pending.\n
+
 Step52-1932-control: verified immutable snapshot; 25 actual updates saved.
 Completed phases ; active known_emission_control at25 updates.
 All52 source/software/protocol/data/initialization/history/grid/digest checks pass.

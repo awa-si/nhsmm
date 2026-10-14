@@ -7,6 +7,11 @@ from pathlib import Path
 
 
 def summarize(directory):
+    audit_path = directory / "joint-source-closure-audit-native-20261014.json"
+    audit_raw = audit_path.read_bytes()
+    audit = json.loads(audit_raw)
+    if not audit["verified"] or audit["audited_static_closure_files"] != 54:
+        raise ValueError("missing complete source closure audit")
     rows, inputs, reports = [], {}, []
     order = ("known_emission_control", "estimated_emission_frozen", "estimated_emission_joint")
     for seed in (1930, 1931, 1932):
@@ -16,6 +21,11 @@ def summarize(directory):
         raw, proof = path.read_bytes(), proof_path.read_bytes()
         r, v = json.loads(raw), json.loads(proof)
         e = r["evaluation"]
+        if audit["source_commit"] != r["execution"]["source_commit"] or any(
+            audit["files"][path]["sha256"] != sha
+            for path, sha in r["execution"]["source_sha256"].items()
+        ):
+            raise ValueError("supplementary closure audit identity")
         if (
             r["schema"] != "nhsmm-joint-gaussian-duration-v1"
             or v["schema"] != "nhsmm-joint-gaussian-duration-verification-v1"
@@ -79,6 +89,8 @@ def summarize(directory):
         "verified": True,
         "source_commit": reports[0]["execution"]["source_commit"],
         "source_files": 52,
+        "audited_static_closure_files": 54,
+        "closure_audit_sha256": hashlib.sha256(audit_raw).hexdigest(),
         "aggregation_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "seeds": [1930, 1931, 1932],
         "actual_em_updates": 270,
