@@ -1,5 +1,12 @@
 # Testing and verification
 
+Step45-1922-complete
+
+Seed1922 completes57 actual updates (30 EM M-steps,27 Adam steps). All23 source/software/contract/training/outer/phase/history/grid/moment checks and independent terminal/public LL/gradient/filtering replays pass; verification performs0 updates and completed resume is byte-preserving. Frozen source bd8e3f6, oracle OFF. Raw report SHA2560d98e942e65381039e040072cc8f4ad48b40ea381d1d170e1fecbeab9e489d4f.
+fixed_bin_em: TVs[0.09159353053815715,0.10277799092806991,0.08788893329491097,0.07698074681814517], outer gain0.0066303944534992195 nats/row, full gatePASS.
+fixed_bin_adam: TVs[0.08653307346598754,0.1037455118321417,0.09111849928619238,0.07799179374904616], outer gain0.006586748850816851 nats/row, full gatePASS.
+Adam minus EM outer LL-0.3142483393130533 nats. Post-fit completed/censored exposure{"completed_per_state":[661,718,943,845],"terminal_censored_per_state":[352,235,331,106]}. Known-nuisance duration-only evidence; no joint-neural/Trading acceptance. No post-outer tuning.
+
 Step45-1922-fixed_bin_adam-15
 
 Seed1922 verified checkpoint: fixed_bin_adam at15 updates; complete phases warm,fixed_bin_em. All23 source/software/contract/training identities, history/grid/PMF and Adam moment/step guards pass. Final outer/replay/recovery gates remain pending. Frozen source bd8e3f6, oracle OFF. Resume only with exact saved runner source and optimizer state.
