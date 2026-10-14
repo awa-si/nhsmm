@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step49 implements the frozen-protocol three-arm joint Gaussian/duration runner,
+atomic0/every5/final state/history saves, guarded exact resume and byte-preserving
+completed no-op. Independent terminal/outer LL, learned-parameter autograd and
+causal filtering/segment recursion verification are included. All23 focused tests
+pass in3.42s; Ruff passes. Ten runner cases cover exact resumed states, frozen
+emissions, actual public replay, corrupt/resealed checkpoints, headers and budgets.
+Protocol unchanged; Oracle OFF. Source is saved before bounded actual runner
+smoke, which must pass before statistical fits1930/1931/1932 (270 total updates).
+
 Step48 completes the frozen-source joint EM execution smoke:16x300 observations,
 three actual updates in0.782s, augmented objective -12625.720454 to -10379.349808
 with no decrease. Source666013d, both source SHA256s and regenerated training

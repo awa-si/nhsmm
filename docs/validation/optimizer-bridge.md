@@ -1,5 +1,17 @@
 # Optimizer bridge — Step35
 
+## Step49 — frozen joint statistical runner
+
+The three-arm runner implements30 EM updates per arm from uniform full positive
+duration PMFs. Estimated frozen/joint emissions share training-only initialization;
+known emissions are a separate information control. Atomic0/every5/final saves
+contain exact PMF/means/variances/history and state digest. Resume checks fixed
+source/software/protocol/initialization, grid/history and terminal likelihood.
+Independent verification replays terminal/outer LL, all parameter gradients,
+public and segment causal filtering, and completed byte-preserving no-op without
+new updates. 23 focused tests pass (3.42s); Ruff passes. Oracle OFF. Bounded actual
+runner smoke precedes fresh seed1930/1931/1932 fits; no results or gates yet.
+
 ## Step48 — bounded joint execution confirmed
 
 Frozen source666013d:16x300 observations, three actual joint EM updates in0.782s.

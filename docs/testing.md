@@ -1,5 +1,16 @@
 # Testing and verification
 
+## Step49 — checkpointed joint runner preflight
+
+23 cases pass in3.42s across test_joint_gaussian_runner, test_joint_gaussian_duration
+and test_fixed_bin_posterior_score. Ten runner cases include exact interrupted
+versus uninterrupted parameters/history, zero-update terminal resume, frozen
+emissions, all learned-parameter public/segment/filter checks, corrupt digest,
+resealed likelihood corruption, header drift, premature outer evaluation and
+bounded budget/prefix recovery. Ruff passes. Source/software/protocol manifests
+cover native package and research dependencies. Actual bounded runner smoke and
+fresh statistical fits remain pending; protocol unchanged, Oracle OFF.
+
 ## Step48 — actual joint EM smoke
 
 Frozen source666013d executes16x300 training observations, seed401928, three
