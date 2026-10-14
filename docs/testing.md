@@ -2,6 +2,15 @@
 
 The maintained automated contract is the pytest-discovered suite under `tests/`.
 
+Step29 (2026-10-14): native runtime recovery preserves all53 material connector
+identities and reruns44 focused adaptive/width-cap cases successfully in9.07s.
+The closure is reopened once for the observed direct import of
+scripts/validate_trading_regime_usefulness.py. Existing declared CPU dependency
+versions match; no installation is performed. The larger block-mass smoothing
+protocol is predeclared but not executed. Required next checks are the concave
+M-step derivatives/analytic reference, fail-closed solver acceptance and actual
+short censored EM/public numerical smoke, then checkpointed driver/resume.
+
 ## AWA workspace resources
 
 Repository workspace defaults are defined in `workspace.ini`:

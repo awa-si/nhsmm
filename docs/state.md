@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step29 restores the native sparse execution snapshot against a4ace3f. All53
+material files match connector Git blob identities after one evidence-backed
+dependency reopen;44 existing focused tests pass in9.07s at unchanged
+Python3.12.14/NumPy2.5.4/Torch2.14.1+cpu. No dependency installation is needed.
+A fresh fixed-bin block-mass smoothing protocol is frozen before execution:
+seeds1912/1913/1914,1024 training sequences, lambda0 versus log1024, shared
+fixed-grid warm3 plus27 updates per arm. Solver, short-EM integration and
+checkpointed runner verification precede any long fit. Oracle OFF.
+See docs/validation/block-mass-smoothing-protocol.json and block-mass-smoothing.md.
+
 Step28 completes all predeclared width-cap pilot seeds1909/1910/1911.
 Matched256-sequence arms use warm3 and27 M-steps each;171 total M-steps.
 All3 source/software/contract/data/PMF/phase/history/objective and independent
