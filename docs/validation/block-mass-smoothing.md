@@ -65,3 +65,11 @@ required certificate); whitening reached a near-stationary point but its
 4e-8 residual still failed the declared1e-8 gate. The bounded native correction
 passes the original gate. No lambda, width, data budget or recovery threshold
 was changed to make the smoke pass.
+
+## Step32-1912-checkpoint-unsmoothed
+
+Smoothing experiment seed1912 checkpoint: unsmoothed at0 updates.
+All19 source/software/contract/training/phase/solver/history/PMF/partition and
+shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
+outer/final independent/numerical/recovery gates remain pending. Source140ff55,
+1024 training sequences, fixed33-bin full-age support, oracle OFF.

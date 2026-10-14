@@ -4,6 +4,14 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step32-1912-checkpoint-unsmoothed
+
+Smoothing experiment seed1912 checkpoint: unsmoothed at0 updates.
+All19 source/software/contract/training/phase/solver/history/PMF/partition and
+shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
+outer/final independent/numerical/recovery gates remain pending. Source140ff55,
+1024 training sequences, fixed33-bin full-age support, oracle OFF.
+
 Step31 implements the checkpointed matched fixed-bin smoothing runner. All65
 focused cases pass in13.56s (7 new runner cases plus58 existing). Actual
 interrupted/resumed smoothed fits reproduce uninterrupted PMFs exactly;

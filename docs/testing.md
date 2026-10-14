@@ -1697,3 +1697,11 @@ These diagnostics are post-fit only. Within-seed outer LL differences compare
 matched observations; absolute likelihoods do not rank seeds. Next design a
 separate predeclared estimator/large-exposure experiment; do not tune this pilot
 after its outer results.
+
+## Step32-1912-checkpoint-unsmoothed
+
+Smoothing experiment seed1912 checkpoint: unsmoothed at0 updates.
+All19 source/software/contract/training/phase/solver/history/PMF/partition and
+shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
+outer/final independent/numerical/recovery gates remain pending. Source140ff55,
+1024 training sequences, fixed33-bin full-age support, oracle OFF.
