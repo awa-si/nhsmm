@@ -1,5 +1,10 @@
 # Testing and verification
 
+Step37 preflight:11 optimizer-control/actual pilot smoke cases pass in4.46s.
+The smoke uses2x20 rows and one update per arm; all public LL/gradient/filtering
+checks pass with preserved frozen nuisance parameters. Runner Ruff and Black
+checks pass. Pilot protocol is frozen before its fresh outcomes.
+
 Step36 (2026-10-14):179 focused cases pass in12.30s, including actual
 multi-restart/current-initialization optimizer paths, strict config round trips,
 invalid/mutated controls, frozen parameter preservation and public target-score

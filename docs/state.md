@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step37 predeclares an execution-only optimizer bridge pilot on fresh
+seeds1915/1916/1917:4 training and2 outer sequences of60 rows,2 updates each
+for constant-temperature Adam, annealed Adam and unrestricted EM. All arms use
+uniform full duration support and known frozen nuisance parameters. This is
+not equal-compute, convergence or statistical recovery evidence. No arm is
+selected. Source/software/protocol identities and completed-seed checkpoints
+are guarded; labels/true PMFs are evaluated only after fitting. Syntax/static
+and an actual2x20-row one-update smoke pass. Oracle OFF.
+
 Step36: optimizer controls and fixed-target monitoring/restart scoring
 implemented. Default update annealing and fresh restarts remain; constant
 temperature and current-state initialization are explicit opt-ins. Evaluation
