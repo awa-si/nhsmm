@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step63: preregistered all-static study complete, independently verified and batch aggregated.
+270 actual updates across seeds1934/1935/1936; verification adds0 updates; source2294c6e/60 identities.
+Full gates: known_chain_reference3/3, estimated_chain_frozen0/3 (transition only), estimated_chain_joint3/3.
+All nine fits pass duration, emissions, initial, outer-gain and numerical gates; joint outer LL improves3/3.
+CPU:1046 passed,3 CUDA skips,1 legacy NPZ reference explicitly deselected (fixture unavailable).
+Ruff/Black208/compile pass; 209 materialized Git identities and all three source manifests verified.
+Oracle OFF. Static study closed; next boundary is neural context and production optimizer validation.
+Evidence: validation/joint-static-chain-findings.md and results/joint-static-chain-{batch,final-validation}-native-20261014.json.
+
 Step62-1936-complete: seed1936 independently verified after native workspace recovery.
 90 actual EM updates (30 per arm), source2294c6e, 60 source identities and identical software.
 Known-chain reference and joint all-five-group learning pass every gate; frozen chain fails only transition.

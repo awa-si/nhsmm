@@ -1,0 +1,458 @@
+{
+  "schema": "nhsmm-joint-static-chain-final-batch-v1",
+  "verified": true,
+  "source_commit": "2294c6e2ccd9ced0796ae640840c06f811e22601",
+  "source_files": 60,
+  "aggregation_source_sha256": "397671d4289657ae9811a19678cc65d6bbfca969548e107d9347cf59b6fb88ee",
+  "seeds": [
+    1934,
+    1935,
+    1936
+  ],
+  "actual_em_updates": 270,
+  "verification_em_updates": 0,
+  "inputs": {
+    "1934": {
+      "raw_sha256": "4b41d738f064672d57e4dcfbd24c3ca8354a2fef1a15e4fba271f2ab03391480",
+      "proof_sha256": "7e399d478e0b8e32f6a83da58c0766004d38d9c9539ce270c3e27a3c617d6713"
+    },
+    "1935": {
+      "raw_sha256": "7e7e842276030257024c9a9de8f6d63c5b5c5f5765530afac9fc071fcd533251",
+      "proof_sha256": "e8ba821abcc8d1f6358796051ab588123665f758960038a40570bd5de7982815"
+    },
+    "1936": {
+      "raw_sha256": "c2f858e42844790b9e52a984f3749224464e294b429e6b896ab3dab2290ee503",
+      "proof_sha256": "46125e768473edad5aaf354d906ae96e5bf5f8cd7339c09d8c070296e5b8d8d8"
+    }
+  },
+  "rows": [
+    {
+      "seed": 1934,
+      "joint_minus_frozen_heldout_ll": 2.2931961434132972,
+      "post_fit_episode_exposure": {
+        "completed_per_state": [
+          627,
+          731,
+          870,
+          836
+        ],
+        "terminal_censored_per_state": [
+          339,
+          219,
+          378,
+          88
+        ]
+      },
+      "arms": {
+        "known_chain_reference": {
+          "tv": [
+            0.08180892673071749,
+            0.07682178029414888,
+            0.09225179701390482,
+            0.07800354658478999
+          ],
+          "mean_error": [
+            0.011014905739131109,
+            0.007130411929423319,
+            0.010480742632370088,
+            0.005679892419641952
+          ],
+          "variance_relative_error": [
+            0.0006444622621621932,
+            0.00017500076721432833,
+            0.008530429417906493,
+            0.008704548341182061
+          ],
+          "transition_row_tv": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "initial_tv": 0.0,
+          "gain": 0.42744830136360634,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": true,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": true
+        },
+        "estimated_chain_frozen": {
+          "tv": [
+            0.08127403508455613,
+            0.0766418211558774,
+            0.09213820995405961,
+            0.0780018896071978
+          ],
+          "mean_error": [
+            0.01089338948397156,
+            0.007294283166786375,
+            0.010488749333771086,
+            0.005771603893503396
+          ],
+          "variance_relative_error": [
+            0.0007332714746066671,
+            0.00017218081907655058,
+            0.008472075577808269,
+            0.008730851091009129
+          ],
+          "transition_row_tv": [
+            0.2666666666666666,
+            0.18666666666666665,
+            0.09666666666666665,
+            0.05666666666666667
+          ],
+          "initial_tv": 0.0,
+          "gain": 0.42540807021655486,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": false,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": false
+        },
+        "estimated_chain_joint": {
+          "tv": [
+            0.08179614481344283,
+            0.0768621850597444,
+            0.0922405528604808,
+            0.07800388235797744
+          ],
+          "mean_error": [
+            0.01100334389394142,
+            0.007133713111841855,
+            0.010500927316084763,
+            0.005693801741842641
+          ],
+          "variance_relative_error": [
+            0.0006501307771547005,
+            0.0001633812347245911,
+            0.008506355880038674,
+            0.008711544691061945
+          ],
+          "transition_row_tv": [
+            0.0040132198903080896,
+            0.018680145991924288,
+            0.030539813630878154,
+            0.006286275254292678
+          ],
+          "initial_tv": 0.006985225658653699,
+          "gain": 0.42572656968091777,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": true,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": true
+        }
+      }
+    },
+    {
+      "seed": 1935,
+      "joint_minus_frozen_heldout_ll": 9.794568462390089,
+      "post_fit_episode_exposure": {
+        "completed_per_state": [
+          670,
+          677,
+          893,
+          826
+        ],
+        "terminal_censored_per_state": [
+          333,
+          234,
+          356,
+          101
+        ]
+      },
+      "arms": {
+        "known_chain_reference": {
+          "tv": [
+            0.07985464276194906,
+            0.10580055896686566,
+            0.0909256241354584,
+            0.06722998823120324
+          ],
+          "mean_error": [
+            0.011828335525991385,
+            0.001938301290572264,
+            0.00165645899008382,
+            0.005025392593696054
+          ],
+          "variance_relative_error": [
+            0.005685271639187306,
+            0.001924396008814555,
+            0.003920883711566736,
+            0.00957458251189891
+          ],
+          "transition_row_tv": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "initial_tv": 0.0,
+          "gain": 0.44713476995941037,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": true,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": true
+        },
+        "estimated_chain_frozen": {
+          "tv": [
+            0.07991704906517821,
+            0.1056078980234209,
+            0.09088035702471811,
+            0.06737099574735975
+          ],
+          "mean_error": [
+            0.011853900038763854,
+            0.002070997370376082,
+            0.0016538094799929404,
+            0.005213798502702538
+          ],
+          "variance_relative_error": [
+            0.005670074116235213,
+            0.0018736644514281142,
+            0.004006821501944202,
+            0.009634471193482597
+          ],
+          "transition_row_tv": [
+            0.2666666666666666,
+            0.18666666666666665,
+            0.09666666666666665,
+            0.05666666666666667
+          ],
+          "initial_tv": 0.0,
+          "gain": 0.4446342468602903,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": false,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": false
+        },
+        "estimated_chain_joint": {
+          "tv": [
+            0.07985469970558551,
+            0.10577291048102133,
+            0.09090971755812227,
+            0.06723509411546606
+          ],
+          "mean_error": [
+            0.01182412184637549,
+            0.0019422069165466738,
+            0.0016308431610254637,
+            0.0050646617918088666
+          ],
+          "variance_relative_error": [
+            0.005685898211542195,
+            0.0019272404457552073,
+            0.00391764265534067,
+            0.009591548693864027
+          ],
+          "transition_row_tv": [
+            0.004175475646264623,
+            0.017222652228791602,
+            0.022343246011269413,
+            0.025562326381680656
+          ],
+          "initial_tv": 0.022465620535139702,
+          "gain": 0.4459946035911778,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": true,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": true
+        }
+      }
+    },
+    {
+      "seed": 1936,
+      "joint_minus_frozen_heldout_ll": 1.1189974735007127,
+      "post_fit_episode_exposure": {
+        "completed_per_state": [
+          669,
+          688,
+          919,
+          795
+        ],
+        "terminal_censored_per_state": [
+          321,
+          228,
+          396,
+          79
+        ]
+      },
+      "arms": {
+        "known_chain_reference": {
+          "tv": [
+            0.07181819345344977,
+            0.089194702261219,
+            0.09363235216181354,
+            0.07915520888726178
+          ],
+          "mean_error": [
+            0.006935449629449586,
+            0.004327392414917419,
+            0.0012632723217591568,
+            0.029487220906132983
+          ],
+          "variance_relative_error": [
+            0.006887863800519867,
+            0.0008590633052834029,
+            0.0005315498496564208,
+            0.003906944750479369
+          ],
+          "transition_row_tv": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "initial_tv": 0.0,
+          "gain": 0.4759401030871691,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": true,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": true
+        },
+        "estimated_chain_frozen": {
+          "tv": [
+            0.07210866542514976,
+            0.09014868829284586,
+            0.09353850207805864,
+            0.07912074245702282
+          ],
+          "mean_error": [
+            0.006747391557702542,
+            0.004073949348300854,
+            0.0011260960892154337,
+            0.029673367421123586
+          ],
+          "variance_relative_error": [
+            0.007007719346791674,
+            0.0008957238207079055,
+            0.000685494582537971,
+            0.003888723267296612
+          ],
+          "transition_row_tv": [
+            0.2666666666666666,
+            0.18666666666666665,
+            0.09666666666666665,
+            0.05666666666666667
+          ],
+          "initial_tv": 0.0,
+          "gain": 0.4746599608752015,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": false,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": false
+        },
+        "estimated_chain_joint": {
+          "tv": [
+            0.0717883995731734,
+            0.0891555265805418,
+            0.09364143626106315,
+            0.0791528596710379
+          ],
+          "mean_error": [
+            0.006929592653245109,
+            0.004352266839162233,
+            0.0012693473231877306,
+            0.029425188148876735
+          ],
+          "variance_relative_error": [
+            0.006891477269485691,
+            0.0008555773860752236,
+            0.0005102973015848056,
+            0.003932015334367378
+          ],
+          "transition_row_tv": [
+            0.03549273422838983,
+            0.02040809719501263,
+            0.012367243119198984,
+            0.03243500342940095
+          ],
+          "initial_tv": 0.022922688824035184,
+          "gain": 0.4748153771909655,
+          "component_gates": {
+            "duration": true,
+            "mean": true,
+            "variance": true,
+            "transition": true,
+            "initial": true,
+            "outer_gain": true
+          },
+          "full_gate": true
+        }
+      }
+    }
+  ],
+  "full_gate_pass_counts": {
+    "known_chain_reference": 3,
+    "estimated_chain_frozen": 0,
+    "estimated_chain_joint": 3
+  },
+  "component_gate_pass_counts": {
+    "known_chain_reference": {
+      "duration": 3,
+      "mean": 3,
+      "variance": 3,
+      "transition": 3,
+      "initial": 3,
+      "outer_gain": 3
+    },
+    "estimated_chain_frozen": {
+      "duration": 3,
+      "mean": 3,
+      "variance": 3,
+      "transition": 0,
+      "initial": 3,
+      "outer_gain": 3
+    },
+    "estimated_chain_joint": {
+      "duration": 3,
+      "mean": 3,
+      "variance": 3,
+      "transition": 3,
+      "initial": 3,
+      "outer_gain": 3
+    }
+  },
+  "joint_paired_outer_ll_win_count": 3,
+  "all_numerical_replays_and_exact_resume_pass": true,
+  "oracle": false,
+  "limits": "scalar Gaussian, fixed-bin duration, static transition/initial; known-chain control is information reference; bounded EM, not convergence or neural/Trading/legacy NPZ acceptance; no post-outer tuning"
+}
