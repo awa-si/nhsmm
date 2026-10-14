@@ -32,10 +32,16 @@ def finite(value, name):
     return value
 
 
-def audit_seed(raw, proof, seed):
+def audit_seed(raw, proof, seed, *, historical=False):
     """Validate one immutable report and its existing independent replay proof."""
     report = json.loads(raw)
     expected = expected_payload(seed, SOURCE)
+    if historical:
+        frozen = json.loads(
+            Path("docs/validation/block-mass-smoothing-frozen-source.json").read_text()
+        )
+        require(frozen["source_commit"] == SOURCE, "frozen manifest identity")
+        expected["execution"]["source_sha256"] = frozen["source_sha256"]
     for key in ("schema", "seed", "execution", "contract"):
         require(report.get(key) == expected[key], f"seed{seed}: {key} differs")
     require(report["active"] is None, "unfinished active phase")
@@ -112,7 +118,7 @@ def audit_seed(raw, proof, seed):
     return report
 
 
-def audit_batch(directory):
+def audit_batch(directory, *, historical=False):
     reports = []
     hashes = {}
     for seed in SEEDS:
@@ -121,7 +127,7 @@ def audit_batch(directory):
         proof = json.loads(
             (directory / f"{PREFIX}seed{seed}-verification-native-20261014.json").read_text()
         )
-        reports.append(audit_seed(raw, proof, seed))
+        reports.append(audit_seed(raw, proof, seed, historical=historical))
         hashes[str(seed)] = hashlib.sha256(raw).hexdigest()
     for field in ("training_sha256",):
         require(len({r[field] for r in reports}) == 3, "reused training data")
@@ -169,6 +175,7 @@ def audit_batch(directory):
             ):
                 require(row["arms"][key][target] == arm[source], "batch arm mismatch")
     return {
+        "historical_source_manifest": historical,
         "verified_recorded_evidence": True,
         "independent_numerical_replay_performed_by_this_audit": False,
         "seeds": list(SEEDS),
@@ -182,8 +189,13 @@ def audit_batch(directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results", type=Path, default=Path("docs/validation/results"))
+    parser.add_argument(
+        "--historical",
+        action="store_true",
+        help="Validate archived source hashes, not the current implementation; software must still match.",
+    )
     args = parser.parse_args()
-    print(json.dumps(audit_batch(args.results), allow_nan=False))
+    print(json.dumps(audit_batch(args.results, historical=args.historical), allow_nan=False))
 
 
 if __name__ == "__main__":

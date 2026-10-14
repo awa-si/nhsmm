@@ -26,7 +26,7 @@ def encode(report, proof):
 
 
 def test_completed_batch():
-    result = audit_batch(RESULTS)
+    result = audit_batch(RESULTS, historical=True)
     assert result["full_gate_pass_counts"] == {"unsmoothed": 3, "smoothed": 3}
     assert result["smoothed_outer_ll_wins"] == 3
     assert result["independent_numerical_replay_performed_by_this_audit"] is False
@@ -57,14 +57,14 @@ def test_semantic_tampering_even_with_rebound_sha(evidence, mutation):
     mutation(report)
     raw = encode(report, proof)
     with pytest.raises(ValueError):
-        audit_seed(raw, proof, 1912)
+        audit_seed(raw, proof, 1912, historical=True)
 
 
 def test_raw_bytes_tampering(evidence):
     report, proof = evidence
     raw = encode(report, proof)
     with pytest.raises(ValueError, match="SHA"):
-        audit_seed(raw + b"\n", proof, 1912)
+        audit_seed(raw + b"\n", proof, 1912, historical=True)
 
 
 def test_missing_replay_certificate(evidence):
@@ -72,4 +72,4 @@ def test_missing_replay_certificate(evidence):
     raw = encode(report, proof)
     proof["completed_resume_noop"] = False
     with pytest.raises(ValueError, match="replay certificate"):
-        audit_seed(raw, proof, 1912)
+        audit_seed(raw, proof, 1912, historical=True)

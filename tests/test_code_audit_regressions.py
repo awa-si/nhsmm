@@ -170,8 +170,8 @@ def test_convergence_stop_false_runs_full_iteration_budget():
         n_init=1, max_iter=8, convergence_stop=False, plateau_window=2, use_scheduler=False
     )
     m.optimize(torch.zeros(1, 4, 1), cfg=cfg)
-    assert calls[:-1] == list(range(8))
-    assert len(calls) == 9
+    assert calls[:-1] == [j for i in range(8) for j in (i, 0)]
+    assert len(calls) == 17
 
 
 def test_optimize_rejects_duration_tail_structure_change():

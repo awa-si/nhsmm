@@ -208,6 +208,8 @@ def test_restart_scores_use_final_post_step_parameters() -> None:
             loss_bias=cfg.loss_bias,
             it=0,
             max_iter=cfg.max_iter,
+            t_min=cfg.optimizer_target_temperature,
+            t_max=cfg.optimizer_target_temperature,
         )
     assert float(final_ll.item()) == pytest.approx(max(model._restart_scores), rel=1e-6, abs=1e-6)
 

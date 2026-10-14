@@ -1,5 +1,14 @@
 # Testing and verification
 
+Step36 (2026-10-14):179 focused cases pass in12.30s, including actual
+multi-restart/current-initialization optimizer paths, strict config round trips,
+invalid/mutated controls, frozen parameter preservation and public target-score
+equivalence. Affected-file Ruff passes. Prior statistical raw reports remain
+unchanged; `python -m scripts.audit_block_mass_smoothing --historical` uses the
+archived19-file SHA manifest explicitly, never claiming current Core equality.
+Strict auditing without that flag rejects source drift. Historical mode still
+requires matching software, contract, SHA-bound proof and semantic checks.
+
 Step35: two bounded temperature bridge tests verify public/unit-temperature
 loss equivalence, scheduled LL changes at fixed parameters, unchanged state
 tensors and full configured duration support. These are diagnostics, not

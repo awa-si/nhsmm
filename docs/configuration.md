@@ -37,6 +37,26 @@ Unknown keys are rejected. Overrides return a newly validated config and never s
 
 ### Optimization budgets and structural overrides
 
+`optimizer_temperature_mode="annealed"` retains the update-temperature schedule
+from target to0.3 times target. `"constant"` uses the target for every update.
+`optimizer_target_temperature=1.0` is the default; values must be finite and
+strictly positive. Temperature changes distribution probabilities, not only
+optimization step sizes.
+
+Convergence/scheduler monitoring and restart selection now score the fixed
+target objective in eval mode, independently of update annealing/dropout.
+`_optimization_history` separates pre-update scheduled and target likelihoods;
+`_restart_scores` score final post-update snapshots at the recorded
+`_restart_score_temperature`. At target1 these match public eval likelihood.
+The fixed-target monitoring adds one no-gradient forward pass per update.
+This corrects scoring semantics; it can change stopping and restart selection.
+
+`optimizer_initialization="restart"` retains independent fresh initialization.
+Opt-in `"current"` requires `n_init=1` and preserves prepared distributions,
+parameter values and trainability flags. It supports controlled frozen-nuisance
+tests without claiming production/statistical acceptance. Configs are validated
+again before optimization, including mutated or override objects.
+
 `max_iter` is the maximum number of updates per restart. With `convergence_stop=True`, a detected plateau can end a run early; with `convergence_stop=False`, a successful run performs the full configured budget. Convergence monitoring remains active independently of stopping.
 
 An `optimize(..., cfg=...)` override must remain structurally compatible with the constructed model, including `duration_tail`. Changing finite support to D+ or back requires constructing the corresponding model.

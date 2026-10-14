@@ -131,6 +131,9 @@ class ModelConfig:
     lr: float = 1e-2
     tol: float = 1e-4
     max_iter: int = 40
+    optimizer_temperature_mode: Literal["annealed", "constant"] = "annealed"
+    optimizer_target_temperature: float = 1.0
+    optimizer_initialization: Literal["restart", "current"] = "restart"
     transition_refine_steps: int = 0
     transition_refine_lr: float = 3e-2
     loss_bias: float = 1e-3
@@ -168,7 +171,7 @@ class ModelConfig:
         if not 0.0 <= float(self.dropout) < 1.0:
             raise ValueError("dropout must satisfy 0 <= dropout < 1")
 
-        for name in ("min_covar", "lr", "transition_refine_lr"):
+        for name in ("min_covar", "lr", "transition_refine_lr", "optimizer_target_temperature"):
             _require_finite(
                 name,
                 getattr(self, name),
@@ -219,11 +222,15 @@ class ModelConfig:
             },
             "emission_type": {"gaussian", "studentt"},
             "convergence_mode": {"delta", "plateau"},
+            "optimizer_temperature_mode": {"annealed", "constant"},
+            "optimizer_initialization": {"restart", "current"},
         }
         for name, allowed in choices.items():
             value = getattr(self, name)
             if value not in allowed:
                 raise ValueError(f"{name} must be one of {sorted(allowed)}, got {value!r}")
+        if self.optimizer_initialization == "current" and self.n_init != 1:
+            raise ValueError("optimizer_initialization=current requires n_init=1")
 
     def to_dict(self) -> dict[str, Any]:
         """Return the complete resolved model configuration."""

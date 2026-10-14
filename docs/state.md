@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step36: optimizer controls and fixed-target monitoring/restart scoring
+implemented. Default update annealing and fresh restarts remain; constant
+temperature and current-state initialization are explicit opt-ins. Evaluation
+mode scoring removes dropout noise; histories distinguish target vs scheduled
+pre-update objectives and final restart scores. All179 focused regressions pass
+in12.30s. Archived study inputs are untouched and require an explicit historical
+source manifest audit after Core changes. Next: frozen bounded bridge pilot,
+not a large statistical recovery/joint-neural/Trading acceptance run. Oracle OFF.
+
 Step35: bounded public-optimizer temperature diagnostic completed without
 fitting or parameter mutation. At temperature1, `_compute_loss` matches public
 likelihood exactly; default scheduling changes LL at fixed parameters

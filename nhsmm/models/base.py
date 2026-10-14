@@ -1631,6 +1631,19 @@ class NHSMM(nn.Module):
                 parameter.requires_grad_(original_requires_grad[id(parameter)])
             self.train(original_training)
 
+    def _target_training_score(self, X, context, temperature):
+        """Deterministic fixed-temperature score, preserving the training mode."""
+        training = self.training
+        self.eval()
+        try:
+            with torch.no_grad():
+                ll, _ = self._compute_loss(
+                    X, context=context, loss_bias=0.0, it=0, t_min=temperature, t_max=temperature
+                )
+            return ll
+        finally:
+            self.train(training)
+
     def optimize(
         self,
         X: Union[torch.Tensor, List[torch.Tensor]],
@@ -1648,6 +1661,7 @@ class NHSMM(nn.Module):
         self._require_distributions()
 
         cfg = cfg or self.config
+        cfg.__post_init__()
         self._require_generative_context(context)
         self._validate_optimization_config(cfg)
         original_training = self.training
@@ -1674,15 +1688,18 @@ class NHSMM(nn.Module):
             )
 
             self._restart_scores = []
+            self._optimization_history = []
+            self._restart_score_temperature = cfg.optimizer_target_temperature
             best_score = -float("inf")
             for run_idx in range(cfg.n_init):
-                self._initialize_run_state(
-                    run_idx,
-                    observations=observations,
-                    encoder_state=encoder_state,
-                    emission_init_mode=cfg.emission_init_mode,
-                    context=context,
-                )
+                if cfg.optimizer_initialization == "restart":
+                    self._initialize_run_state(
+                        run_idx,
+                        observations=observations,
+                        encoder_state=encoder_state,
+                        emission_init_mode=cfg.emission_init_mode,
+                        context=context,
+                    )
 
                 if cfg.verbose:
                     logger.info(f"\n=== Run {run_idx + 1}/{cfg.n_init} ===")
@@ -1709,10 +1726,34 @@ class NHSMM(nn.Module):
                     self._convergence.attach_scheduler(scheduler)
 
                 prev_ll = None
+                history = []
+                self._optimization_history.append(history)
                 for it in range(cfg.max_iter):
                     self._optimizer.zero_grad()
+                    target = cfg.optimizer_target_temperature
+                    minimum = (
+                        target if cfg.optimizer_temperature_mode == "constant" else 0.3 * target
+                    )
                     ll, loss = self._compute_loss(
-                        X, context=context, loss_bias=cfg.loss_bias, it=it, max_iter=cfg.max_iter
+                        X,
+                        context=context,
+                        loss_bias=cfg.loss_bias,
+                        it=it,
+                        max_iter=cfg.max_iter,
+                        t_min=minimum,
+                        t_max=target,
+                    )
+                    target_ll = self._target_training_score(X, context, target)
+                    history.append(
+                        {
+                            "completed_updates": it,
+                            "scheduled_ll": float(ll.detach()),
+                            "target_ll": float(target_ll.detach()),
+                            "target_temperature": target,
+                            "scheduled_temperature": minimum
+                            + (target - minimum)
+                            / (1 + math.exp((10 / cfg.max_iter) * (it - cfg.max_iter / 2))),
+                        }
                     )
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(params, 5.0)
@@ -1721,12 +1762,14 @@ class NHSMM(nn.Module):
                     if callable(project_tail):
                         project_tail()
 
-                    ll_val = float(ll.item())
+                    ll_val = float(target_ll.item())
                     converged = self._convergence.update(ll_val, it, run_idx)
 
                     if cfg.verbose:
                         delta = ll_val - prev_ll if prev_ll is not None else float("nan")
-                        logger.info(f"[Iter {it:03d}] LL={ll_val:.6f} Δ={delta:.3e}")
+                        logger.info(
+                            f"[Iter {it:03d}] target LL={ll_val:.6f} Δ={delta:.3e}; scheduled LL={float(ll.detach()):.6f}"
+                        )
 
                     if converged and cfg.convergence_stop:
                         if cfg.verbose:
@@ -1738,14 +1781,7 @@ class NHSMM(nn.Module):
                 # Score the restart under the parameters that actually remain
                 # after the final optimizer step. ll_val above is computed before
                 # optimizer.step(), so it is stale with respect to the snapshot.
-                with torch.no_grad():
-                    final_ll, _ = self._compute_loss(
-                        X,
-                        context=context,
-                        loss_bias=cfg.loss_bias,
-                        it=it,
-                        max_iter=cfg.max_iter,
-                    )
+                final_ll = self._target_training_score(X, context, cfg.optimizer_target_temperature)
                 final_ll_val = float(final_ll.item())
                 self._restart_scores.append(final_ll_val)
 
