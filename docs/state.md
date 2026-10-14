@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step44 implements the frozen matched optimizer recovery runner. Atomic0/every5/
+final phase checkpoints preserve exact Adam logits, first/second moments and
+step count; source/config/software/protocol/data/phase guards fail closed.
+Shared fixed-bin EM warm3 initializes both27-update arms; outer/true-law and
+training-label exposure are evaluated only after both fits.35 focused tests
+pass in3.52s including actual mid5/7 Adam interruption/resume and all-phase
+short smoke. Oracle OFF. Next: run all predeclared1922/1923/1924 fits sequentially
+at this frozen runner source, independently verify and checkpoint/doc/push.
+
 Step43 matched score benchmark completes: same4x300 data,uniform fixed-bin
 initial PMF,temperature1,age prior1e-6,clip5,Adam lr0.01,three repetitions.
 Median public Autograd1.057941s vs analytic posterior score0.049636s (21.31x).

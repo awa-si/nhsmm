@@ -1,5 +1,14 @@
 # Testing and verification
 
+Step44 runner preflight:35 focused tests pass in3.52s,including8 new runner
+cases. Exact mid5/7 Adam interruption/resume reproduces PMF within1e-15 and
+moment state/likelihood history exactly. Tampered moments/step/logits and
+source/prefix/premature outer evaluation fail closed. An actual2-sequence
+all-phase smoke verifies shared start and public evaluation. Completed phase
+replay performs no extra optimizer updates. Exact numerical histories and
+optimizer states are saved to JSON; no binary pickle or detached durable-job
+claim. Original fixed-bin statistical protocol is unchanged.
+
 Step43 matched benchmark exits0 on4x300 observations,three repetitions.
 All trials match native public objective within1.818989e-12,gradient within
 4.463097e-14,and clipped Adam step within3.469447e-18. Median analytic score
