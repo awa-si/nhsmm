@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step40 adds opt-in whole-sequence gradient accumulation via positive
+optimizer_batch_size. Sum likelihood gradients, global penalty once, single
+clip/Adam update per full batch; fixed-target scoring also respects chunk size.
+47 accumulation/optimizer/training/verifier focused tests pass. Equivalence
+covers loss/gradients/updates, uneven and empty sequences, external and neural
+context; deterministic tolerances are explicit. Default batch behavior remains.
+Next resource smoke is fixed at fresh seed401919,16x300 observations, chunk4,
+one Adam update with frozen known nuisance parameters and no outer evaluation.
+Prior frozen experiment/raw outcomes remain untouched; Oracle OFF.
+
 Step39: actual4x300 one-step optimizer resource smoke completes successfully
 at source d2d2389a. Constant-temperature/current-initialization Adam preserves
 known frozen nuisance parameters. Optimizer wall time1.795389s, whole-process

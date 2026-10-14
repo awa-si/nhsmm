@@ -1631,15 +1631,51 @@ class NHSMM(nn.Module):
                 parameter.requires_grad_(original_requires_grad[id(parameter)])
             self.train(original_training)
 
-    def _target_training_score(self, X, context, temperature):
+    def _optimization_chunks(self, X, context, batch_size):
+        """Slice whole independent sequences; preserve lengths and aligned context."""
+        if batch_size is None:
+            yield X, context
+            return
+        if torch.is_tensor(X) and X.ndim == 2:
+            X = X.unsqueeze(0)
+        for start in range(0, len(X), batch_size):
+            chunk = X[start : start + batch_size]
+            length = (
+                max(item.shape[0] for item in chunk) if isinstance(chunk, list) else chunk.shape[1]
+            )
+            ctx = None if context is None else context[start : start + batch_size, :length]
+            yield chunk, ctx
+
+    def _backward_training_loss(self, X, context, batch_size, **kwargs):
+        """Accumulate sum-likelihood gradients, applying the global penalty once."""
+        total_ll = self.duration_logits_bias.new_zeros(())
+        total_loss = total_ll.clone()
+        for index, (chunk, ctx) in enumerate(self._optimization_chunks(X, context, batch_size)):
+            options = {**kwargs, "loss_bias": kwargs["loss_bias"] if index == 0 else 0.0}
+            ll, loss = self._compute_loss(chunk, context=ctx, **options)
+            if loss.requires_grad:
+                loss.backward()
+            total_ll = total_ll + ll.detach()
+            total_loss = total_loss + loss.detach()
+        return total_ll, total_loss
+
+    def _target_training_score(self, X, context, temperature, batch_size=None):
         """Deterministic fixed-temperature score, preserving the training mode."""
         training = self.training
         self.eval()
         try:
             with torch.no_grad():
-                ll, _ = self._compute_loss(
-                    X, context=context, loss_bias=0.0, it=0, t_min=temperature, t_max=temperature
-                )
+                ll = self.duration_logits_bias.new_zeros(())
+                for chunk, ctx in self._optimization_chunks(X, context, batch_size):
+                    part, _ = self._compute_loss(
+                        chunk,
+                        context=ctx,
+                        loss_bias=0.0,
+                        it=0,
+                        t_min=temperature,
+                        t_max=temperature,
+                    )
+                    ll = ll + part
             return ll
         finally:
             self.train(training)
@@ -1734,16 +1770,19 @@ class NHSMM(nn.Module):
                     minimum = (
                         target if cfg.optimizer_temperature_mode == "constant" else 0.3 * target
                     )
-                    ll, loss = self._compute_loss(
+                    ll, loss = self._backward_training_loss(
                         X,
                         context=context,
+                        batch_size=cfg.optimizer_batch_size,
                         loss_bias=cfg.loss_bias,
                         it=it,
                         max_iter=cfg.max_iter,
                         t_min=minimum,
                         t_max=target,
                     )
-                    target_ll = self._target_training_score(X, context, target)
+                    target_ll = self._target_training_score(
+                        X, context, target, cfg.optimizer_batch_size
+                    )
                     history.append(
                         {
                             "completed_updates": it,
@@ -1755,7 +1794,6 @@ class NHSMM(nn.Module):
                             / (1 + math.exp((10 / cfg.max_iter) * (it - cfg.max_iter / 2))),
                         }
                     )
-                    loss.backward()
                     torch.nn.utils.clip_grad_norm_(params, 5.0)
                     self._optimizer.step()
                     project_tail = getattr(self.dist.duration, "_project_tail_parameter", None)
@@ -1781,7 +1819,9 @@ class NHSMM(nn.Module):
                 # Score the restart under the parameters that actually remain
                 # after the final optimizer step. ll_val above is computed before
                 # optimizer.step(), so it is stale with respect to the snapshot.
-                final_ll = self._target_training_score(X, context, cfg.optimizer_target_temperature)
+                final_ll = self._target_training_score(
+                    X, context, cfg.optimizer_target_temperature, cfg.optimizer_batch_size
+                )
                 final_ll_val = float(final_ll.item())
                 self._restart_scores.append(final_ll_val)
 

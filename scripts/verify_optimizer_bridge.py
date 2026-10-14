@@ -48,7 +48,7 @@ def close(actual, expected, name):
         require(actual == expected, f"{name}: mismatch")
 
 
-def verify(path):
+def verify(path, *, historical=False):
     torch.set_num_threads(1)
     raw = path.read_bytes()
     report = json.loads(raw)
@@ -65,11 +65,13 @@ def verify(path):
         "software",
     )
     paths = tuple(dict.fromkeys((*SOURCES, str(PROTOCOL), "scripts/compare_optimizer_bridge.py")))
-    require(
-        identity["source_sha256"]
-        == {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths},
-        "source manifest",
-    )
+    current = {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths}
+    expected = current
+    if historical:
+        frozen = json.loads(Path("docs/validation/optimizer-bridge-frozen-source.json").read_text())
+        require(frozen["source_commit"] == SOURCE, "historical source identity")
+        expected = frozen["source_sha256"]
+    require(identity["source_sha256"] == expected, "source manifest")
     require([row["seed"] for row in report["rows"]] == contract["seeds"], "seed prefix")
     summary = []
     for row in report["rows"]:
@@ -168,12 +170,22 @@ def verify(path):
         text=True,
         timeout=30,
     )
-    require(
-        noop.returncode == 0
-        and "completed pilot; no new fitting" in noop.stdout
-        and path.read_bytes() == raw,
-        "completed resume no-op",
-    )
+    source_matches_current = identity["source_sha256"] == current
+    if source_matches_current:
+        require(
+            noop.returncode == 0
+            and "completed pilot; no new fitting" in noop.stdout
+            and path.read_bytes() == raw,
+            "completed resume no-op",
+        )
+    else:
+        require(
+            historical
+            and noop.returncode != 0
+            and "source/software/contract drift" in noop.stderr
+            and path.read_bytes() == raw,
+            "historical resume must reject drift",
+        )
     return {
         "schema": "nhsmm-optimizer-bridge-verification-v1",
         "verified": True,
@@ -183,7 +195,10 @@ def verify(path):
         "actual_pilot_updates": 18,
         "verification_optimizer_updates": 0,
         "independent_terminal_outer_public_replay": True,
-        "completed_resume_noop": True,
+        "completed_resume_noop": source_matches_current,
+        "historical_source_manifest": historical,
+        "replay_source_matches_original": source_matches_current,
+        "replay_source_sha256": current,
         "summary": summary,
         "scope": contract["scope"],
     }
@@ -193,8 +208,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--historical", action="store_true")
     args = parser.parse_args()
-    proof = verify(args.input)
+    proof = verify(args.input, historical=args.historical)
     args.output.write_text(json.dumps(proof, indent=2, allow_nan=False) + "\n")
     print(json.dumps(proof))
 

@@ -37,6 +37,18 @@ Unknown keys are rejected. Overrides return a newly validated config and never s
 
 ### Optimization budgets and structural overrides
 
+`optimizer_batch_size=None` retains a full sequence batch. A positive integer
+enables gradient accumulation over whole independent sequences. Sequence
+likelihood gradients are summed without averaging; the global loss-bias penalty
+is applied once. Gradient clipping and Adam stepping occur once per complete
+training batch. Fixed-target monitoring/restart scoring uses the same chunk
+bound. Uneven final chunks, variable lengths and aligned external context are
+preserved. Chunking does not truncate episodes or change censoring.
+Loss/gradient/update equivalence is tested in deterministic float64 plain models
+and float32 external/neural-context models. Floating-point reduction ordering
+may differ; dropout draws can differ with chunking, so stochastic trajectories
+are not promised to be bit-identical. Defaults remain unchunked.
+
 `optimizer_temperature_mode="annealed"` retains the update-temperature schedule
 from target to0.3 times target. `"constant"` uses the target for every update.
 `optimizer_target_temperature=1.0` is the default; values must be finite and

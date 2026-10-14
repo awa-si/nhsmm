@@ -15,7 +15,7 @@ def test_report_header_tampering_rejected(tmp_path, field, value):
     path = tmp_path / "tampered.json"
     path.write_text(json.dumps(report))
     with pytest.raises(ValueError):
-        verify(path)
+        verify(path, historical=True)
 
 
 def test_changed_source_manifest_rejected(tmp_path):
@@ -24,7 +24,7 @@ def test_changed_source_manifest_rejected(tmp_path):
     path = tmp_path / "tampered.json"
     path.write_text(json.dumps(report))
     with pytest.raises(ValueError, match="source manifest"):
-        verify(path)
+        verify(path, historical=True)
 
 
 def test_rebound_initial_objective_rejected(tmp_path):
@@ -33,4 +33,4 @@ def test_rebound_initial_objective_rejected(tmp_path):
     path = tmp_path / "tampered.json"
     path.write_text(json.dumps(report))
     with pytest.raises(ValueError, match="uniform start"):
-        verify(path)
+        verify(path, historical=True)

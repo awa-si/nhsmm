@@ -1,5 +1,20 @@
 # Testing and verification
 
+Step40:11 new gradient accumulation cases cover strict positive batch-size
+validation, summed loss/gradient equivalence including once-only bias penalty,
+actual2-step Adam agreement, target scores, uneven/empty variable-length chunks,
+external context and causal neural encoder.47 focused cases pass in3.17s;
+affected-file Ruff and py_compile pass. Comparisons use float64 plain models
+and float32 context models with declared numerical tolerances/dropout0.
+Before execution, the next resource smoke is frozen: seed401919,16x300,
+batch4,one constant-temperature Adam update, known frozen nuisance/current
+initialization,lr0.01,no outer evaluation or model selection.
+
+The existing optimizer pilot now requires explicit historical manifest mode
+after Core changes. Historical replay records the current replay source hashes
+and rejects resuming the original fit on changed source; raw original proofs
+remain immutable. It does not claim source equality or a new original no-op.
+
 Step39 actual resource smoke exits0:4x300, one optimizer update,1.795389s;
 whole-process peak581704 KiB, frozen nuisance preserved, terminal target/public/
 reference LL error9.094947017729282e-13. Runner syntax/Ruff/Black pass.

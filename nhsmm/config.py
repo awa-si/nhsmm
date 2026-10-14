@@ -134,6 +134,7 @@ class ModelConfig:
     optimizer_temperature_mode: Literal["annealed", "constant"] = "annealed"
     optimizer_target_temperature: float = 1.0
     optimizer_initialization: Literal["restart", "current"] = "restart"
+    optimizer_batch_size: int | None = None
     transition_refine_steps: int = 0
     transition_refine_lr: float = 3e-2
     loss_bias: float = 1e-3
@@ -161,6 +162,7 @@ class ModelConfig:
 
         _require_optional_int("hidden_dim", self.hidden_dim, minimum=1)
         _require_optional_int("context_dim", self.context_dim, minimum=1)
+        _require_optional_int("optimizer_batch_size", self.optimizer_batch_size, minimum=1)
         if self.seed is not None and (
             isinstance(self.seed, bool) or not isinstance(self.seed, int)
         ):

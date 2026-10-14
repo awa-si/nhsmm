@@ -18,11 +18,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--sequences", type=int, default=4)
+    parser.add_argument("--batch-size", type=int)
+    parser.add_argument("--seed", type=int, default=401918)
     args = parser.parse_args()
     if args.output.exists():
         raise ValueError("existing profile output; refusing overwrite")
+    if args.sequences < 1 or (args.batch_size is not None and args.batch_size < 1):
+        raise ValueError("positive sequence and batch sizes required")
     torch.set_num_threads(1)
-    x, _ = sequences(401918, count=4, steps=300, sigma=2.0)
+    x, _ = sequences(args.seed, count=args.sequences, steps=300, sigma=2.0)
     model = make_model(np.full((4, 260), 1 / 260), sigma=2.0)
     model.dist.duration.logits.requires_grad_(True)
     frozen = {name: p.clone() for name, p in model.named_parameters() if not p.requires_grad}
@@ -37,6 +42,7 @@ def main():
         convergence_stop=False,
         verbose=False,
         loss_bias=0.0,
+        optimizer_batch_size=args.batch_size,
     )
     start = time.perf_counter()
     model.optimize(torch.tensor(x), cfg=cfg)
@@ -48,7 +54,7 @@ def main():
     ):
         raise ValueError("frozen nuisance changed")
     with torch.no_grad():
-        public = float(model.log_likelihood(torch.tensor(x), reduce=True))
+        public = float(model._target_training_score(torch.tensor(x), None, 1.0, args.batch_size))
     ll, _ = aggregate(emission_scores(x), model_law(model).detach().numpy())
     error = max(abs(public - ll), abs(public - model._restart_scores[0]))
     if error > 1e-7:
@@ -65,8 +71,9 @@ def main():
             )
         },
         "training_sha256": hashlib.sha256(x.tobytes()).hexdigest(),
-        "seed": 401918,
-        "training_sequences": 4,
+        "seed": args.seed,
+        "training_sequences": args.sequences,
+        "optimizer_batch_size": args.batch_size,
         "steps": 300,
         "actual_adam_updates": 1,
         "optimizer_seconds": elapsed,
