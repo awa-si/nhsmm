@@ -1,5 +1,12 @@
 # Optimizer bridge — Step35
 
+Step62-1936-complete: seed1936 independently verified after native workspace recovery.
+90 actual EM updates (30 per arm), source2294c6e, 60 source identities and identical software.
+Known-chain reference and joint all-five-group learning pass every gate; frozen chain fails only transition.
+Independent full-training/outer/public gradient/filter replay and completed byte-preserving resume pass;
+verification adds zero fitting updates. Oracle OFF; no post-outer tuning.
+Evidence: validation/results/joint-static-chain-seed1936-native-20261014.json and corresponding verification.
+
 Step61-1936-joint: immutable checkpoint verified; 85 actual updates saved.
 Completed phases known_chain_reference,estimated_chain_frozen; active estimated_chain_joint at25 updates.
 60 source/software/protocol/data/initialization/history/grid/all-five state checks pass.
