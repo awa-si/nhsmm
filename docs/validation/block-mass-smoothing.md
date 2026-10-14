@@ -141,3 +141,11 @@ All19 source/software/contract/training/phase/solver/history/PMF/partition and
 shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
 outer/final independent/numerical/recovery gates remain pending. Source140ff55,
 1024 training sequences, fixed33-bin full-age support, oracle OFF.
+
+## Step32-1914-checkpoint-smoothed-0
+
+Smoothing experiment seed1914 checkpoint: smoothed at0 updates.
+All19 source/software/contract/training/phase/solver/history/PMF/partition and
+shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
+outer/final independent/numerical/recovery gates remain pending. Source140ff55,
+1024 training sequences, fixed33-bin full-age support, oracle OFF.
