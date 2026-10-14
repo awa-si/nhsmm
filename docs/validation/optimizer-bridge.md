@@ -1,9 +1,10 @@
 # Optimizer bridge — Step35
 
-Step52-1930-control20: immutable control-arm20-update snapshot passes frozen
+Step52-1930-control25: immutable control-arm25-update snapshot passes frozen
 ac312d6 source/software/contract/data/initialization/history/grid integrity.
 Oracle OFF; other arms, outer outcomes and final independent replay pending.
 Evidence: results/joint-gaussian-duration-seed1930-checkpoint20-native-20261014.json.
+The historical filename is not the update counter; the verified payload is25.
 
 ## Step51 — full joint study execution gate passed
 

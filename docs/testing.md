@@ -1,11 +1,12 @@
 # Testing and verification
 
-## Step52-1930-control20 — durable partial checkpoint
+## Step52-1930-control25 — durable partial checkpoint
 
-Seed1930 control20 snapshot passes source/software/protocol/training/initialization,
+Seed1930 control25 snapshot passes source/software/protocol/training/initialization,
 history/grid/state checks against frozen ac312d6 (52 source files). Oracle OFF;
 outer and final independent replay pending. Evidence:
 validation/results/joint-gaussian-duration-seed1930-checkpoint20-native-20261014.json.
+The filename reflects the snapshot request; the verified atomic payload is25.
 Batch proof aggregator added (Black/Ruff pass); it requires all three SHA-bound
 final proofs, exact source/contract joins, distinct observations and270 updates.
 
