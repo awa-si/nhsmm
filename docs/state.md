@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step35: bounded public-optimizer temperature diagnostic completed without
+fitting or parameter mutation. At temperature1, `_compute_loss` matches public
+likelihood exactly; default scheduling changes LL at fixed parameters
+(span0.0046303224295911605 on2x40 observations). This proves a target-objective
+distinction, not that annealing causes recovery failure. See
+validation/optimizer-bridge.md for evidence and staged optimizer-control,
+restart-score and parameter-unfreezing boundary. Production defaults and
+completed frozen study remain unchanged; no new long fit started. Oracle OFF.
+
 Step34: reusable read-only evidence auditor added as
 `scripts.audit_block_mass_smoothing`. All three completed seeds and the batch
 pass SHA, frozen source/software/contract, phase/grid/history/solver certificate,

@@ -1,5 +1,12 @@
 # Testing and verification
 
+Step35: two bounded temperature bridge tests verify public/unit-temperature
+loss equivalence, scheduled LL changes at fixed parameters, unchanged state
+tensors and full configured duration support. These are diagnostics, not
+end-to-end optimize or statistical recovery acceptance.
+All81 focused tests pass in9.61s; affected-file Ruff, Black checks and
+py_compile pass. The completed batch audit also passes without fitting.
+
 Step34 (2026-10-14): 79 focused cases pass in9.27s, including14 new
 completed-batch and corruption tests. Ruff passes for both new files.
 `python -m scripts.audit_block_mass_smoothing` verifies all three recorded
