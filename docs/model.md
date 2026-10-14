@@ -327,3 +327,13 @@ See [validation.md](validation.md).
 - [Development state](state.md)
 - [Release](release.md)
 - [Deprecated NHSMM Interfaces reference](https://github.com/awa-si/nhsmm-interfaces)
+
+## Distribution numerical boundaries
+
+Continuous Gaussian/Student-t locations are finite real values, not categorical logits; no categorical score cap is applied to them. Independent Student-t parameters are broadcast before statistics and event reductions. Categorical labels broadcast across sample/batch dimensions; exact zero probabilities retain finite gradients for observed positive-probability classes.
+
+Initial, duration and transition hard masks use exact negative infinity. Categorical logit construction accepts partial impossible support but rejects NaN, positive infinity and rows with no finite mass. Safe survival and sum reductions preserve impossible mass without undefined all-impossible backward paths. An impossible observed event can still have negative-infinite likelihood; numerical safety does not make it possible.
+
+For duration soft_dmax, log_matrix remains the authoritative gated-model path. Generic forward/expected_probs gate semantics are unresolved (audit D07); do not substitute those helpers for gated model duration probabilities.
+
+See `docs/validation/distribution-fixes-20261015.md` for regression coverage and explicit historical-suite limits.

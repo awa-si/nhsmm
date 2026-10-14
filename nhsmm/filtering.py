@@ -28,7 +28,7 @@ class HSMMFilterState:
             raise ValueError(f"log_posterior dimensions must be non-empty, got {value.shape}")
         if torch.isnan(value).any() or torch.isposinf(value).any():
             raise ValueError("log_posterior must not contain NaN or +inf")
-        log_z = torch.logsumexp(value.flatten(1), dim=1)
+        log_z = _safe_logsumexp(value.flatten(1), dim=1)
         if not torch.isfinite(log_z).all():
             raise ValueError("log_posterior must contain finite probability mass per batch item")
 
@@ -45,7 +45,7 @@ class HSMMFilterState:
 
     @property
     def state_log_posterior(self) -> torch.Tensor:
-        return torch.logsumexp(self.log_posterior, dim=-1)
+        return _safe_logsumexp(self.log_posterior, dim=-1)
 
     @property
     def state_posterior(self) -> torch.Tensor:
@@ -53,7 +53,7 @@ class HSMMFilterState:
 
     @property
     def age_posterior(self) -> torch.Tensor:
-        return torch.logsumexp(self.log_posterior, dim=-2).exp()
+        return _safe_logsumexp(self.log_posterior, dim=-2).exp()
 
 
 @dataclass(frozen=True)
@@ -90,7 +90,7 @@ class HSMMFilterTrace:
 
     @property
     def state_posterior(self) -> torch.Tensor:
-        return torch.logsumexp(self.log_posterior, dim=-1).exp()
+        return _safe_logsumexp(self.log_posterior, dim=-1).exp()
 
 
 def _as_batched(tensor: torch.Tensor, ndim: int, name: str) -> torch.Tensor:
@@ -114,6 +114,29 @@ def _safe_logaddexp(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
     return torch.where(both_impossible, torch.full_like(combined, float("-inf")), combined)
 
 
+def _safe_logsumexp(
+    values: torch.Tensor, dim: Union[int, tuple[int, ...]], keepdim: bool = False
+) -> torch.Tensor:
+    """Preserve impossible reductions without undefined all--inf backward."""
+    impossible = torch.isneginf(values).all(dim=dim, keepdim=True)
+    safe = torch.where(impossible, torch.zeros_like(values), values)
+    result = torch.logsumexp(safe, dim=dim, keepdim=True)
+    result = torch.where(impossible, torch.full_like(result, float("-inf")), result)
+    return result if keepdim else result.squeeze(dim)
+
+
+def _duration_log_survival(log_p: torch.Tensor) -> torch.Tensor:
+    """Exact suffix survival scores with a safe backward on zero-mass tails."""
+    if bool(torch.isfinite(log_p).all()):
+        return torch.logcumsumexp(log_p.flip(-1), dim=-1).flip(-1)
+    running = log_p[..., -1]
+    suffixes = [running]
+    for index in range(log_p.shape[-1] - 2, -1, -1):
+        running = _safe_logaddexp(log_p[..., index], running)
+        suffixes.append(running)
+    return torch.stack(list(reversed(suffixes)), dim=-1)
+
+
 def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str) -> None:
     if not isinstance(tensor, torch.Tensor):
         raise TypeError(f"{name} must be a torch.Tensor")
@@ -128,7 +151,7 @@ def _require_compatible(reference: torch.Tensor, tensor: torch.Tensor, name: str
 def _normalize_log_probs(log_values: torch.Tensor, *, dim: int, name: str) -> torch.Tensor:
     if torch.isnan(log_values).any() or torch.isposinf(log_values).any():
         raise ValueError(f"{name} must not contain NaN or +inf")
-    log_z = torch.logsumexp(log_values, dim=dim, keepdim=True)
+    log_z = _safe_logsumexp(log_values, dim=dim, keepdim=True)
     if not torch.isfinite(log_z).all():
         raise ValueError(f"{name} has zero or non-finite probability mass")
     return log_values - log_z
@@ -151,16 +174,18 @@ def _duration_log_hazard_from_log_p(
     """
 
     B, K, D = log_p.shape
-    rev_cumsum = torch.logcumsumexp(log_p.flip(-1), dim=-1).flip(-1)
+    finite_mass = torch.isfinite(log_p)
+    rev_cumsum = _duration_log_survival(log_p)
     log_end = torch.full_like(log_p, float("-inf"))
     valid_survival = torch.isfinite(rev_cumsum)
-    end_values = torch.where(valid_survival, log_p - rev_cumsum, log_end)
-    log_end = torch.where(torch.isfinite(log_p), end_values, log_end)
+    safe_survival = torch.where(valid_survival, rev_cumsum, torch.zeros_like(rev_cumsum))
+    safe_mass = torch.where(finite_mass, log_p, torch.zeros_like(log_p))
+    log_end = torch.where(finite_mass, safe_mass - safe_survival, log_end)
 
     log_continue = torch.full_like(log_end, float("-inf"))
     if D > 1:
         valid_continue = valid_survival[..., :-1] & torch.isfinite(rev_cumsum[..., 1:])
-        continue_values = rev_cumsum[..., 1:] - rev_cumsum[..., :-1]
+        continue_values = safe_survival[..., 1:] - safe_survival[..., :-1]
         log_continue[..., :-1] = torch.where(
             valid_continue,
             continue_values,
@@ -261,7 +286,7 @@ def _filter_step_normalized(
         predicted[..., 1:] = prev[..., :-1] + log_continue[..., :-1]
 
     boundary = prev + log_end
-    predicted[..., 0] = torch.logsumexp(
+    predicted[..., 0] = _safe_logsumexp(
         boundary.unsqueeze(-1) + transition_log_prob,
         dim=(1, 2),
     )
@@ -274,7 +299,7 @@ def _filter_step_normalized(
 
     posterior = predicted + emission_log_prob.unsqueeze(-1)
     flat = posterior.flatten(1)
-    log_z = torch.logsumexp(flat, dim=1, keepdim=True)
+    log_z = _safe_logsumexp(flat, dim=1, keepdim=True)
     posterior = (flat - log_z).reshape_as(posterior)
     return HSMMFilterState._from_normalized_unchecked(posterior)
 
@@ -355,7 +380,7 @@ def next_episode_end_probability(
         raise ValueError(f"log_duration must be {(B, K, D)}, got {log_duration.shape}")
 
     log_end, _ = duration_log_hazard(log_duration, tail_end_probability)
-    result = torch.logsumexp(prev + log_end, dim=(1, 2)).exp()
+    result = _safe_logsumexp(prev + log_end, dim=(1, 2)).exp()
     if not torch.isfinite(result).all():
         raise ValueError("episode-end probability is non-finite")
     return result

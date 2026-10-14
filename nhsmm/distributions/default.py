@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as nnF
 from torch.distributions import Distribution, MultivariateNormal, StudentT
 
-from nhsmm.config import EPS, MIN_LOGITS, MAX_LOGITS, NEG_INF
+from nhsmm.config import EPS, MIN_LOGITS, MAX_LOGITS
 
 
 class Categorical(Distribution):
@@ -25,7 +25,6 @@ class Categorical(Distribution):
         dim=-1,
         validate_args=False,
     ):
-        super().__init__(validate_args=validate_args)
         if (logits is None) == (probs is None):
             raise ValueError("Specify exactly one of logits or probs.")
 
@@ -41,8 +40,10 @@ class Categorical(Distribution):
             raise ValueError("Categorical only supports the last dimension as the category axis")
         self.dim = -1
         if logits is not None:
-            if not torch.isfinite(logits).all():
-                raise ValueError("logits must contain only finite values")
+            if torch.isnan(logits).any() or torch.isposinf(logits).any():
+                raise ValueError("logits must not contain NaN or +inf")
+            if not torch.isfinite(logits).any(dim=-1).all():
+                raise ValueError("logits must retain finite mass on every batch row")
             self._logits = logits
             self._log_probs = nnF.log_softmax(logits, dim=dim)
             self._probs = self._log_probs.exp()
@@ -53,8 +54,17 @@ class Categorical(Distribution):
             if (total <= 0).any():
                 raise ValueError("probs must have positive mass on every batch row")
             self._probs = probs / total
-            self._log_probs = self._probs.log()
+            positive = self._probs > 0
+            safe_probs = torch.where(positive, self._probs, torch.ones_like(self._probs))
+            self._log_probs = torch.where(
+                positive, safe_probs.log(), torch.full_like(safe_probs, float("-inf"))
+            )
             self._logits = self._log_probs
+        super().__init__(
+            batch_shape=self._logits.shape[:-1],
+            event_shape=torch.Size(),
+            validate_args=validate_args,
+        )
 
     @property
     def logits(self):
@@ -105,11 +115,8 @@ class Categorical(Distribution):
         n_states = self._log_probs.shape[-1]
         if ((value < 0) | (value >= n_states)).any():
             raise ValueError(f"categorical observations must be in [0, {n_states - 1}]")
-        log_probs = self._log_probs
-        while log_probs.ndim < value.ndim + 1:
-            log_probs = log_probs.unsqueeze(0)
-        log_probs = log_probs.expand(*value.shape, n_states)
-        return log_probs.gather(-1, value.unsqueeze(-1)).squeeze(-1)
+        value, log_probs = torch.broadcast_tensors(value.unsqueeze(-1), self._log_probs)
+        return log_probs.gather(-1, value[..., :1]).squeeze(-1)
 
     def entropy(self):
         safe_probs = torch.where(self._probs > 0, self._probs, torch.ones_like(self._probs))
@@ -128,9 +135,7 @@ class IndependentStudentT(Distribution):
     }
 
     def __init__(self, loc, scale, df, event_dim=1, validate_args=None):
-        self.loc = loc
-        self.scale = scale
-        self.df = df
+        self.loc, self.scale, self.df = torch.broadcast_tensors(loc, scale, df)
         self.event_dim = event_dim
         shape = torch.broadcast_shapes(self.loc.shape, self.scale.shape, self.df.shape)
         if event_dim < 0 or event_dim > len(shape):
@@ -582,7 +587,7 @@ class Initial(Neural):
         if not bool(mask.any()):
             raise ValueError("initial mask must allow at least one state")
         mask = mask.view((1,) * (logits.ndim - 1) + mask.shape)
-        return logits.masked_fill(~mask, NEG_INF)
+        return logits.masked_fill(~mask, float("-inf"))
 
     def log_matrix(
         self,
@@ -702,7 +707,7 @@ class Duration(Neural):
             mask = mask.view(*((1,) * (logits.ndim - 2)), self.n_states, self.max_duration)
         else:
             raise ValueError("duration mask must have shape [D] or [K,D]")
-        return logits.masked_fill(~mask.expand_as(logits), NEG_INF)
+        return logits.masked_fill(~mask.expand_as(logits), float("-inf"))
 
     @torch.no_grad()
     def _project_tail_parameter(self) -> None:
@@ -891,7 +896,7 @@ class Transition(Neural):
             constraint = constraint & mask
         if not bool(constraint.any(dim=-1).all()):
             raise ValueError("transition support must allow at least one destination per row")
-        return logits.masked_fill(~constraint, NEG_INF)
+        return logits.masked_fill(~constraint, float("-inf"))
 
     def log_matrix(
         self,
@@ -955,6 +960,13 @@ class Emission(Neural):
             self.dof = nn.Parameter(torch.full((n_states,), 5.0))
             self.loc = nn.Parameter(torch.randn(self.n_states, self.n_features) * 0.1)
             self.scale_param = nn.Parameter(torch.full((self.n_states, self.n_features), 0.1))
+
+    def _validate_base(self, base: torch.Tensor) -> torch.Tensor:
+        # Continuous locations are not categorical scores. Finite observations
+        # and locations may have an arbitrary shared translation.
+        if not torch.isfinite(base).all():
+            raise ValueError("emission locations must contain only finite values")
+        return base
 
     @property
     def base(self):

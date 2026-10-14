@@ -12,7 +12,9 @@ from nhsmm.convergence import Convergence
 from nhsmm.encoder import DefaultEncoder
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
 from nhsmm.distributions import Initial, Duration, Transition, Emission
-from nhsmm.filtering import _duration_log_hazard_from_log_p, _safe_logaddexp, duration_log_hazard
+from nhsmm.filtering import (
+    _duration_log_hazard_from_log_p, _safe_logaddexp, _safe_logsumexp, duration_log_hazard,
+)
 from nhsmm.config import DTYPE, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
 
 
@@ -528,7 +530,7 @@ class NHSMM(nn.Module):
         initial_score = initial_logits[valid0, 0] + router.log_probs[valid0, 0]
         initial_frontier = initial_score.new_full((initial_score.shape[0], K, D), float("-inf"))
         initial_frontier[..., 0] = initial_score
-        initial_log_z = torch.logsumexp(initial_frontier.flatten(1), dim=1)
+        initial_log_z = _safe_logsumexp(initial_frontier.flatten(1), dim=1)
         normalized_initial = initial_frontier - initial_log_z[:, None, None]
         frontier[valid0] = normalized_initial
         cumulative_log_z[valid0] = initial_log_z
@@ -548,7 +550,7 @@ class NHSMM(nn.Module):
 
             boundary = previous + log_end[active, t - 1]
             if duration_dependent_transition:
-                new_episode = torch.logsumexp(
+                new_episode = _safe_logsumexp(
                     boundary.unsqueeze(-1) + transition_logits[active, t - 1],
                     dim=(1, 2),
                 )
@@ -556,7 +558,7 @@ class NHSMM(nn.Module):
                 # Match the runtime kernel's reduction order exactly. Expanding
                 # the duration-independent transition over episode age avoids a
                 # different two-stage Float32 logsumexp path in batch forward.
-                new_episode = torch.logsumexp(
+                new_episode = _safe_logsumexp(
                     boundary.unsqueeze(-1) + transition_logits[active, t - 1].unsqueeze(2),
                     dim=(1, 2),
                 )
@@ -572,7 +574,7 @@ class NHSMM(nn.Module):
                     predicted = torch.cat((new_episode.unsqueeze(-1), adv[..., :-1], last), dim=-1)
 
             posterior_score = predicted + router.log_probs[active, t].unsqueeze(-1)
-            step_log_z = torch.logsumexp(posterior_score.flatten(1), dim=1)
+            step_log_z = _safe_logsumexp(posterior_score.flatten(1), dim=1)
             normalized = posterior_score - step_log_z[:, None, None]
             frontier[active] = normalized
             cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
@@ -657,13 +659,13 @@ class NHSMM(nn.Module):
                         prev_t = start - 1
                         prev_alpha = alpha_steps[prev_t].index_select(0, active)
                         if duration_dependent_transition:
-                            predecessor = torch.logsumexp(
+                            predecessor = _safe_logsumexp(
                                 prev_alpha.unsqueeze(-1) + transition_logits[active, prev_t],
                                 dim=(1, 2),
                             )
                         else:
-                            prev_state = torch.logsumexp(prev_alpha, dim=-1)
-                            predecessor = torch.logsumexp(
+                            prev_state = _safe_logsumexp(prev_alpha, dim=-1)
+                            predecessor = _safe_logsumexp(
                                 prev_state.unsqueeze(-1) + transition_logits[active, prev_t],
                                 dim=1,
                             )
@@ -673,7 +675,7 @@ class NHSMM(nn.Module):
                 empty_bucket = router.log_probs.new_full((active.numel(), K), float("-inf"))
                 bucket_values = [
                     (
-                        torch.logsumexp(torch.stack(candidates, dim=0), dim=0)
+                        _safe_logsumexp(torch.stack(candidates, dim=0), dim=0)
                         if candidates
                         else empty_bucket
                     )
@@ -728,15 +730,15 @@ class NHSMM(nn.Module):
                     prev_t = start - 1
                     prev_alpha = alpha[active, prev_t]
                     if self.dist.transition.max_duration is None:
-                        prev_state = torch.logsumexp(prev_alpha, dim=-1)
+                        prev_state = _safe_logsumexp(prev_alpha, dim=-1)
                         trans = transition_logits[active, prev_t]
-                        predecessor = torch.logsumexp(
+                        predecessor = _safe_logsumexp(
                             prev_state.unsqueeze(-1) + trans,
                             dim=1,
                         )
                     else:
                         trans = transition_logits[active, prev_t]
-                        predecessor = torch.logsumexp(
+                        predecessor = _safe_logsumexp(
                             prev_alpha.unsqueeze(-1) + trans,
                             dim=(1, 2),
                         )
@@ -1257,7 +1259,7 @@ class NHSMM(nn.Module):
         valid = lengths > 0
         if valid.any():
             last_alpha = alpha[valid, lengths[valid] - 1]
-            log_likelihoods[valid] = torch.logsumexp(last_alpha.flatten(1), dim=1)
+            log_likelihoods[valid] = _safe_logsumexp(last_alpha.flatten(1), dim=1)
 
         if torch.isposinf(log_likelihoods).any():
             raise ValueError("log_likelihood produced +inf")
@@ -1552,7 +1554,7 @@ class NHSMM(nn.Module):
         valid = lengths > 0
         if valid.any():
             last_alpha = alpha[valid, lengths[valid] - 1]
-            log_likelihoods[valid] = torch.logsumexp(last_alpha.flatten(1), dim=1)
+            log_likelihoods[valid] = _safe_logsumexp(last_alpha.flatten(1), dim=1)
 
         ll = log_likelihoods.sum()
 

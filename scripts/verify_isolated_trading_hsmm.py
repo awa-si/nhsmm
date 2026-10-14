@@ -15,7 +15,7 @@ import torch
 
 from nhsmm import ModelConfig, NHSMM
 from nhsmm.distributions.default import Duration
-from nhsmm.filtering import filter_model_sequence
+from nhsmm.filtering import _duration_log_survival, filter_model_sequence
 from scripts.diagnose_trading_ground_truth import duration_pmf
 from scripts.generate_trading_regime_dataset import BASE_TRANSITION, REGIMES, _duration
 
@@ -126,8 +126,12 @@ def fit_duration(pmf, complete, censored, iterations=1200):
         logp = model.dist.duration.log_matrix(
             T=1, temperature=1, soft_dmax=model.duration_logits_bias
         )[0, 0]
-        logs = torch.logcumsumexp(logp.flip(-1), dim=-1).flip(-1)
-        loss = -((c * logp).sum() + (r * logs).sum()) / (c.sum() + r.sum())
+        logs = _duration_log_survival(logp)
+        # Zero counts contribute exactly zero, including outside hard support.
+        # Multiplying zero by -inf would poison otherwise valid derivatives.
+        loss = -(
+            (c[c > 0] * logp[c > 0]).sum() + (r[r > 0] * logs[r > 0]).sum()
+        ) / (c.sum() + r.sum())
         loss.backward()
         optimizer.step()
         if step in (0, 399, iterations - 1):
