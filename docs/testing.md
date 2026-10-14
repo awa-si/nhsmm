@@ -1,5 +1,15 @@
 # Testing and verification
 
+## Step60 — actual static-chain runner smoke gate passed
+
+Frozen2294c6e source,60 source/protocol files:16 training/4 outer x300, six actual
+updates, exact interruption/resume; independent terminal/outer LL and native
+all-five gradients/public/segment filtering pass for all arms in6.443680595s.
+Evidence: validation/results/static-chain-runner-smoke-native-20261014.json.
+The smoke uses explicitly reduced dimensions/budgets and is not statistical
+recovery acceptance.34 focused cases and static/compile checks pass. Untouched
+three-seed270-update contract may execute, concurrency1, Oracle OFF.
+
 ## Step59 — static-chain study runner preflight
 
 34 cases pass in3.34s across static-chain runner, static-chain posterior and

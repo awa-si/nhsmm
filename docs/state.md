@@ -4,6 +4,14 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step60 passes actual static-chain runner smoke at frozen2294c6e:16 training/
+4 outer sequences x300, six updates, interruption/resume and all three public
+all-five gradient/segment/filter/independent likelihood gates in6.444s. This
+explicitly reduced execution-only contract does not alter statistical protocol.
+60 source/software/protocol identities frozen;34 focused tests/static checks pass.
+Full1934/1935/1936 study may execute270 updates with atomic checkpoints and
+independent final proofs. Oracle OFF; no NPZ fixture dependency or acceptance.
+
 Step59 implements the preregistered static-chain runner and independent final
 replay without changing the protocol or prior source owners. Checkpoints include
 PMF/means/variances/transition/initial probabilities and full monotone history;

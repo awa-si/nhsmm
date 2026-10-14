@@ -1,5 +1,16 @@
 # Optimizer bridge — Step35
 
+## Step60 — full static-chain study execution gate passed
+
+The actual checkpointed runner completes six updates on16 training/4 outer
+sequences x300, interruption/resume and all three independent public/all-five
+gradient/segment/filter/likelihood gates in6.444s. Frozen source2294c6e,60
+source/software/protocol identities,34 focused cases and static/compile checks.
+Raw smoke: results/static-chain-runner-smoke-native-20261014.json. This reduced
+execution contract is not statistical acceptance or a protocol amendment.
+Full1934/1935/1936 study now executes270 updates with unchanged gates and
+independent final proofs. Oracle OFF; original NPZ transport gap remains separate.
+
 ## Step59 — checkpointed all-static recovery runner
 
 The new three-arm runner preserves the declared1934/1935/1936 contract and all
