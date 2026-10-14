@@ -1,5 +1,14 @@
 # Fixed-bin block-mass smoothing
 
+Step34: completed evidence is auditable with
+`python -m scripts.audit_block_mass_smoothing`. This read-only command checks
+raw report hashes, existing independent replay certificates, source/software,
+frozen contract, phase budgets, solver histories, fixed grid, shared warm start,
+gate/gain arithmetic and batch summaries. It does not refit or numerically
+replay the experiments. All three seeds and summaries pass; 14 new tests
+exercise semantic tampering and byte/proof corruption. Frozen source140ff55
+and the original method/protocol/raw outcomes are not altered.
+
 Step31: scripts/compare_block_mass_smoothing.py now owns atomic checkpoints,
 strict phase/source/software/contract/data/solver history guards and bounded
 warm/unsmoothed/smoothed phases. It reuses the existing full-support matched

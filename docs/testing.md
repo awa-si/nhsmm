@@ -1,5 +1,15 @@
 # Testing and verification
 
+Step34 (2026-10-14): 79 focused cases pass in9.27s, including14 new
+completed-batch and corruption tests. Ruff passes for both new files.
+`python -m scripts.audit_block_mass_smoothing` verifies all three recorded
+replay proofs and SHA-bound raw reports without modifying them or fitting.
+The auditor rejects changed source/phase/budget/data/solver/label/gate/numerical
+results even when the test rebinds raw SHA and replay evaluation together.
+It is an internal consistency check, not a cryptographic provenance signature
+or a replacement for independent numerical replay. Exact software and frozen
+source identities are required; another environment fails closed.
+
 The maintained automated contract is the pytest-discovered suite under `tests/`.
 
 Step31 (2026-10-14):65 focused cases pass in13.56s, including7 new runner cases.

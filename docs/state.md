@@ -4,6 +4,16 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step34: reusable read-only evidence auditor added as
+`scripts.audit_block_mass_smoothing`. All three completed seeds and the batch
+pass SHA, frozen source/software/contract, phase/grid/history/solver certificate,
+shared-warm, recorded replay, numerical gate and summary arithmetic checks.
+79 focused tests pass (14 new audit/tamper tests). This audit verifies recorded
+independent replay evidence; it does not rerun numerical likelihood/E-steps.
+Frozen study source140ff55 and all completed outcomes remain unchanged.
+Next: isolate public optimizer behavior before unfreezing nuisance parameters;
+see validation/optimizer-bridge.md. Oracle remains OFF.
+
 Step33 completes the frozen1024-sequence fixed-bin mass-smoothing study on
 fresh seeds1912/1913/1914. Each uses shared warm3 plus27 updates per arm;
 171 total actual M-steps. All19 source/software/contract/data/phase/PMF/grid/
