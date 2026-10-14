@@ -1,5 +1,12 @@
 # Optimizer bridge — Step35
 
+Step52-1931-frozen: verified immutable snapshot; 50 actual updates saved.
+Completed phases known_emission_control; active estimated_emission_frozen at20 updates.
+All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
+Frozen ac312d6, Oracle OFF. Final outer/recovery/public replay remains pending.
+Evidence: validation/results/joint-gaussian-duration-seed1931-checkpoint-frozen-native-20261014.json.
+
+
 Step52-1931-control: verified immutable snapshot; 25 actual updates saved.
 Completed phases ; active known_emission_control at25 updates.
 All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
