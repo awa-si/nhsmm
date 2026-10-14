@@ -1,5 +1,15 @@
 # Testing and verification
 
+## Step59 — static-chain study runner preflight
+
+34 cases pass in3.34s across static-chain runner, static-chain posterior and
+prior Gaussian runner tests.14 new cases cover exact all-five parameter resume,
+terminal zero-update no-op, frozen chain and public replay, seven corrupt-state
+variants, resealed likelihood/chain drift, source/header/early-outer guards and
+budget/prefix recovery. Ruff/Black/compilation pass.60 source/protocol dependencies
+are frozen before actual runner smoke and the untouched270-update protocol.
+Oracle OFF. No new full statistical fit has started; original NPZ gap unaffected.
+
 ## Step58 — broad current validation with one explicit reference gap
 
 At f48c411, all code/tests and material references are resolved:208 Git/SHA256

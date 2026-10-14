@@ -4,6 +4,15 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step59 implements the preregistered static-chain runner and independent final
+replay without changing the protocol or prior source owners. Checkpoints include
+PMF/means/variances/transition/initial probabilities and full monotone history;
+exact five-group resume, frozen-chain guards and terminal replay are tested.
+34 focused cases pass in3.34s (14 new runner cases), Ruff/Black/compilation pass.
+60 dependency/protocol source paths are frozen before bounded actual runner smoke.
+Next: smoke gate, then270 updates on1934/1935/1936 with separate component gates.
+Oracle OFF; legacy binary-reference gap remains separate from this synthetic study.
+
 Step58 broad validation at f48c411: complete code/test scope materialized and
 208 file identities verified (124 missing code/tests plus two JSON references
 restored). Available CPU suite passes1032 cases in41.50s, with3 CUDA skips and

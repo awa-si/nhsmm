@@ -1,5 +1,16 @@
 # Optimizer bridge — Step35
 
+## Step59 — checkpointed all-static recovery runner
+
+The new three-arm runner preserves the declared1934/1935/1936 contract and all
+prior owners. It learns Gaussian/duration parameters in every arm; only the
+joint arm also learns transition/initial probabilities. Checkpoints retain all
+five groups and guarded history; outer recovery aligns both transition axes and
+initial probabilities consistently after fitting. Every duration/emission/chain/
+outer/numerical gate is reported separately.34 focused cases pass in3.34s,
+Ruff/Black/compile pass.60 dependency/protocol files frozen for actual smoke,
+then270 updates and independent zero-update proofs. Oracle OFF. No NPZ dependency.
+
 ## Step58 — broad implementation and evidence validation
 
 Current f48c411 CPU scope passes1032 tests after canonical JSON fixture recovery;
