@@ -4,6 +4,13 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step61-1935-frozen: immutable checkpoint verified; 60 actual updates saved.
+Completed phases known_chain_reference,estimated_chain_frozen; active estimated_chain_joint at0 updates.
+60 source/software/protocol/data/initialization/history/grid/all-five state checks pass.
+Frozen2294c6e, Oracle OFF. Final outer/recovery/public replay remains pending.
+Evidence: validation/results/joint-static-chain-seed1935-checkpoint-frozen-native-20261014.json.
+
+
 Step61-1935-first: immutable checkpoint verified; 20 actual updates saved.
 Completed phases ; active known_chain_reference at20 updates.
 60 source/software/protocol/data/initialization/history/grid/all-five state checks pass.
