@@ -4,6 +4,20 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step58 broad validation at f48c411: complete code/test scope materialized and
+208 file identities verified (124 missing code/tests plus two JSON references
+restored). Available CPU suite passes1032 cases in41.50s, with3 CUDA skips and
+one explicitly excluded unavailable binary-reference case. Initial full run:
+1031 pass,2 missing-fixture failures,3 skips; restoring JSON references resolves
+the compact-runner failure. Ruff, Black(all203 Python files) and compileall pass.
+New all-static smoke independently replayed on all16 terminal sequences and
+public all-five gradients/segment/filtering;58 source hashes and data match.
+Existing Gaussian and optimizer batch/proof joins and source identities pass.
+Legacy NPZ transport remains blocked; candidate reconstruction differs from
+the expected Git/SHA256 identity and was not substituted. No numerical drift
+is inferred from archive bytes alone. Oracle OFF. New chain statistical fits
+remain unexecuted. Evidence: validation/results/all-validation-native-20261014.json.
+
 Step57 confirms actual all-static EM execution at frozen source7ffc718:
 16x300 observations, three updates jointly learning duration, Gaussian mean/
 variance, transition and initial probabilities in2.208s. Objective increases

@@ -1,5 +1,20 @@
 # Optimizer bridge — Step35
 
+## Step58 — broad implementation and evidence validation
+
+Current f48c411 CPU scope passes1032 tests after canonical JSON fixture recovery;
+3 CUDA cases skip and1 original binary-reference case remains explicitly blocked.
+Ruff/Black(all203 Python files)/compileall pass;208 file Git/SHA256 identities
+match. All-static EM smoke is independently replayed at its learned parameters:
+full16-sequence terminal LL error0, all five public gradient groups and causal/
+segment filtering within gates;58 source hashes and data identities match.
+Existing Gaussian and optimizer batch proofs rejoin exactly with unchanged
+original source identities. No new fitting is performed. The unavailable NPZ
+candidate reconstruction does not match the canonical artifact hash and is not
+used as a fixture; this is not evidence of numerical drift by itself. Raw audit:
+results/all-validation-native-20261014.json. Oracle OFF. Statistical chain
+recovery1934/1935/1936 still needs its checkpointed runner and final study proofs.
+
 ## Step57 — all five parameter groups execute correctly
 
 Frozen7ffc718 actual smoke learns Gaussian means/variances, fixed-bin durations,

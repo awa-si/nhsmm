@@ -1,5 +1,27 @@
 # Testing and verification
 
+## Step58 — broad current validation with one explicit reference gap
+
+At f48c411, all code/tests and material references are resolved:208 Git/SHA256
+identities verified.124 missing code/test files and two canonical JSON study
+fixtures are restored from the frozen GitHub ref. Initial full suite is
+1031 passed,2 FileNotFoundError failures,3 CUDA-only skips (42.27s). Restoring
+Step13/14 JSON resolves the compact-runner case (targeted pass1.25s). Final
+available suite is1032 passed,3 CUDA skips,1 explicitly deselected legacy NPZ
+reference test in41.50s. No tests or model source were altered to mask the gap.
+Ruff across nhsmm/tests/scripts, Black(all203 Python files) and compileall pass.
+The all-static smoke's58 hashes/data/counters and independent full16-sequence
+terminal likelihood replay pass (error0); current native all-five gradients,
+LL and segment/filtering pass. Gaussian and fixed-bin optimizer raw/proof/batch
+SHA joins and all original source hashes match; no extra fit updates occur.
+The NPZ content endpoint is empty and both blob routes reject binary decoding.
+An isolated60000-row candidate archive differs from both expected Git SHA and
+manifest SHA256; it is not materialized as the reference or accepted as proof.
+This mismatch does not determine numerical drift versus archive/runtime changes.
+Evidence: validation/results/all-validation-native-20261014.json and
+validation/results/legacy-reference-reproduction-native-20261014.json.
+Oracle OFF; no new chain statistical recovery, neural/Trading or GPU acceptance.
+
 ## Step57 — actual all-static EM smoke verified
 
 Frozen7ffc718 source,58 hashed source/protocol files:16x300 observations seed401937,
