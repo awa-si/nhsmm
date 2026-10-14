@@ -1,5 +1,26 @@
 # Optimizer bridge — Step35
 
+Step62-1934-complete:90 actual updates,30 per arm; independently verified.
+60 source/software/protocol/data/initialization/history/grid/all-five state checks,
+terminal/outer LL, all gradients, segment/filter replay and byte-preserving
+completed resume pass. Verification adds0 updates. Frozen2294c6e, Oracle OFF.
+Raw report SHA2564b41d738f064672d57e4dcfbd24c3ca8354a2fef1a15e4fba271f2ab03391480.
+
+| Arm | Max duration TV | Max transition row TV | Initial TV | Outer gain nats/row | Full gate |
+| --- | ---: | ---: | ---: | ---: | --- |
+| known_chain_reference | 0.092252 | 0.000000 | 0.000000 | 0.427448301 | PASS |
+| estimated_chain_frozen | 0.092138 | 0.266667 | 0.000000 | 0.425408070 | FAIL |
+| estimated_chain_joint | 0.092241 | 0.030540 | 0.006985 | 0.425726570 | PASS |
+
+Per-component gates: {"known_chain_reference":{"duration":true,"mean":true,"variance":true,"transition":true,"initial":true,"outer_gain":true},"estimated_chain_frozen":{"duration":true,"mean":true,"variance":true,"transition":false,"initial":true,"outer_gain":true},"estimated_chain_joint":{"duration":true,"mean":true,"variance":true,"transition":true,"initial":true,"outer_gain":true}}.
+Joint minus frozen outer LL2.293196143 nats.
+Every arm learns emissions/durations; each gain uses its complete initial model,
+including emission learning. Known reference changes chain information. Exposure:
+{"completed_per_state":[627,731,870,836],"terminal_censored_per_state":[339,219,378,88]}. No post-outer tuning.
+Evidence: validation/results/joint-static-chain-seed1934-native-20261014.json and matching proof.
+Scalar/static study; no neural/Trading/legacy NPZ or convergence acceptance.
+
+
 Step61-1934-joint: immutable checkpoint verified; 80 actual updates saved.
 Completed phases known_chain_reference,estimated_chain_frozen; active estimated_chain_joint at20 updates.
 60 source/software/protocol/data/initialization/history/grid/all-five state checks pass.
