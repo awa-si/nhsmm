@@ -4,6 +4,19 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step38 completes independent verification of the optimizer bridge pilot.
+All nine terminal models pass training/outer/public LL, gradient and filtering
+replays;21 source identities and regenerated data hashes match,18 actual pilot
+updates,0 verification updates, completed resume is byte-preserving. Statistical
+recovery is0/3 for each arm. These2-update runs are execution diagnostics only.
+Ground-truth post-fit audit: no completed bull/bear training episodes in any
+seed; true P(duration>60) is0.983017/0.773030 for bull/bear. A60-row shortcut
+cannot substitute for the prior300-row larger-exposure recovery study.
+Next: measure memory/time on a300-row actual optimizer smoke, then predeclare
+a longer sufficient-exposure duration-only optimizer study before freeing
+nuisance/neural parameters. Preserve all current outcomes; do not tune this
+pilot after evaluation. Oracle remains OFF.
+
 Step37 predeclares an execution-only optimizer bridge pilot on fresh
 seeds1915/1916/1917:4 training and2 outer sequences of60 rows,2 updates each
 for constant-temperature Adam, annealed Adam and unrestricted EM. All arms use

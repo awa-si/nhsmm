@@ -1,0 +1,203 @@
+"""Independent terminal/data/public numerical replay; no optimizer updates."""
+
+import argparse
+import hashlib
+import json
+import platform
+import subprocess
+import sys
+from pathlib import Path
+
+import numpy as np
+import torch
+
+from scripts.compare_block_mass_smoothing import SOURCES
+from scripts.compare_compact_duration_em import public_check
+from scripts.compare_optimizer_bridge import PROTOCOL
+from scripts.compare_unlabelled_duration_em import (
+    aggregate,
+    emission_scores,
+    metrics,
+    posterior_gradient_check,
+)
+from scripts.verify_isolated_trading_hsmm import make_model, sequences, true_law
+
+SOURCE = "21428b6f0537944355fc5449259b3de4c31855bd"
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def close(actual, expected, name):
+    if isinstance(actual, dict):
+        require(actual.keys() == expected.keys(), f"{name}: keys")
+        for key in actual:
+            close(actual[key], expected[key], f"{name}.{key}")
+    elif isinstance(actual, list):
+        require(len(actual) == len(expected), f"{name}: length")
+        for a, b in zip(actual, expected, strict=True):
+            close(a, b, name)
+    elif isinstance(actual, (int, float)) and not isinstance(actual, bool):
+        require(
+            np.isfinite(actual) and np.isfinite(expected) and abs(actual - expected) <= 1e-7,
+            f"{name}: numerical mismatch",
+        )
+    else:
+        require(actual == expected, f"{name}: mismatch")
+
+
+def verify(path):
+    torch.set_num_threads(1)
+    raw = path.read_bytes()
+    report = json.loads(raw)
+    contract = json.loads(PROTOCOL.read_text())
+    require(report["schema"] == "nhsmm-optimizer-bridge-pilot-v1", "schema")
+    require(
+        report["contract"] == contract and report["complete"] is True, "incomplete/changed contract"
+    )
+    identity = report["execution"]
+    require(identity["source_commit"] == SOURCE, "source commit")
+    require(
+        (identity["python"], identity["numpy"], identity["torch"])
+        == (platform.python_version(), np.__version__, torch.__version__),
+        "software",
+    )
+    paths = tuple(dict.fromkeys((*SOURCES, str(PROTOCOL), "scripts/compare_optimizer_bridge.py")))
+    require(
+        identity["source_sha256"]
+        == {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths},
+        "source manifest",
+    )
+    require([row["seed"] for row in report["rows"]] == contract["seeds"], "seed prefix")
+    summary = []
+    for row in report["rows"]:
+        seed = row["seed"]
+        x, _ = sequences(seed + 400000, count=4, steps=60, sigma=2.0)
+        outer, labels = sequences(seed + 500000, count=2, steps=60, sigma=2.0)
+        require(
+            row["training_sha256"] == hashlib.sha256(x.tobytes()).hexdigest(), "training identity"
+        )
+        require(
+            row["outer_sha256"] == hashlib.sha256(outer.tobytes()).hexdigest(), "outer identity"
+        )
+        require(
+            row["labels_used_in_learning_or_selection"] is False
+            and row["numerical_checks_pass"] is True,
+            "labels/numerical status",
+        )
+        require(list(row["arms"]) == contract["arms"], "arms")
+        initial = np.full((4, 260), 1 / 260)
+        baseline, _ = aggregate(emission_scores(outer), initial)
+        initial_ll, _ = aggregate(emission_scores(x), initial)
+        result = {"seed": seed, "arms": {}}
+        for key, arm in row["arms"].items():
+            p = np.asarray(arm["pmf"])
+            require(
+                p.shape == (4, 260) and np.isfinite(p).all() and (p > 0).all(), "full positive PMF"
+            )
+            require(np.max(np.abs(p.sum(1) - 1)) <= 1e-12, "PMF normalization")
+            history = arm["history"]
+            if key == "em":
+                require([h["completed_updates"] for h in history] == [0, 1, 2], "EM budget")
+                close(history[0]["ll"], initial_ll, "EM uniform start")
+                terminal_ll, _ = aggregate(emission_scores(x), p)
+                close(history[-1]["ll"], terminal_ll, "EM terminal")
+                require(
+                    all(b["ll"] >= a["ll"] - 1e-6 for a, b in zip(history, history[1:])),
+                    "EM monotonicity",
+                )
+            else:
+                require([h["completed_updates"] for h in history] == [0, 1], "Adam budget")
+                require(arm["frozen_nuisance_preserved"] is True, "frozen certificate")
+                close(history[0]["target_ll"], initial_ll, "Adam uniform start")
+                for h in history:
+                    i = h["completed_updates"]
+                    temperature = (
+                        1.0 if key == "constant" else 0.3 + 0.7 / (1 + np.exp(5 * (i - 1)))
+                    )
+                    close(h["scheduled_temperature"], temperature, "scheduled temperature")
+                    close(h["target_temperature"], 1.0, "target temperature")
+                    require(
+                        np.isfinite(h["scheduled_ll"]) and np.isfinite(h["target_ll"]),
+                        "history finite",
+                    )
+                model = make_model(p, sigma=2.0)
+                with torch.no_grad():
+                    public = float(model.log_likelihood(torch.tensor(x), reduce=True))
+                terminal_ll, _ = aggregate(emission_scores(x), p)
+                close(public, terminal_ll, "public training replay")
+                close(arm["final_target_ll"], public, "restart/public target")
+                require(0 <= arm["public_reference_ll_error"] <= 1e-7, "recorded public error")
+            ll, _ = aggregate(emission_scores(outer), p)
+            close(arm["heldout_ll"], ll, "outer LL")
+            gain = (ll - baseline) / 120
+            close(arm["gain_nats_per_row"], gain, "outer gain")
+            measured = metrics(p, true_law())
+            close(arm["metrics"], measured, "metrics")
+            gradient = posterior_gradient_check(outer, p, support=np.ones_like(p, dtype=bool))
+            filtering = public_check(p, outer, labels, support=np.ones_like(p, dtype=bool))
+            close(arm["gradient_check"], gradient, "gradient replay")
+            close(arm["public_recursion"], filtering, "filter replay")
+            require(
+                max(gradient.values()) <= 1e-7
+                and filtering["ll_error"] <= 1e-7
+                and filtering["maximum_state_probability_error"] <= 1e-8,
+                "numerical gate",
+            )
+            result["arms"][key] = {
+                "gain": gain,
+                "pmf_tv": measured["pmf_tv"],
+                "full_recovery_gate": max(measured["pmf_tv"]) <= 0.12 and gain > 0,
+            }
+        summary.append(result)
+        print(f"seed{seed} independent terminal/outer replay passed", flush=True)
+    noop = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "scripts.compare_optimizer_bridge",
+            "--source-commit",
+            SOURCE,
+            "--output",
+            str(path),
+            "--resume",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    require(
+        noop.returncode == 0
+        and "completed pilot; no new fitting" in noop.stdout
+        and path.read_bytes() == raw,
+        "completed resume no-op",
+    )
+    return {
+        "schema": "nhsmm-optimizer-bridge-verification-v1",
+        "verified": True,
+        "source_commit": SOURCE,
+        "input_sha256": hashlib.sha256(raw).hexdigest(),
+        "source_files": len(paths),
+        "actual_pilot_updates": 18,
+        "verification_optimizer_updates": 0,
+        "independent_terminal_outer_public_replay": True,
+        "completed_resume_noop": True,
+        "summary": summary,
+        "scope": contract["scope"],
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    proof = verify(args.input)
+    args.output.write_text(json.dumps(proof, indent=2, allow_nan=False) + "\n")
+    print(json.dumps(proof))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,15 @@
 # Testing and verification
 
+Step38: `scripts.verify_optimizer_bridge` independently replays all nine saved
+terminal training and held-out models, public LL/gradient/filter checks,
+initial uniform target objective, budgets, data/source/software identities and
+completed CLI no-op. Pilot report SHA256:
+0beab47bbee4cb1afe2a7ac9260dd7dfc5e45fcd5553cb44db35e26f62e9dfa1.
+The verification adds0 optimizer updates.105 focused bridge/config/training
+cases pass in3.07s, including4 new corrupted-header/source/objective tests.
+Verifier Ruff and Black checks pass. This is numerical/execution acceptance,
+not a statistical recovery or shared-neural acceptance result.
+
 Step37 preflight:11 optimizer-control/actual pilot smoke cases pass in4.46s.
 The smoke uses2x20 rows and one update per arm; all public LL/gradient/filtering
 checks pass with preserved frozen nuisance parameters. Runner Ruff and Black

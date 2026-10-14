@@ -1,5 +1,51 @@
 # Optimizer bridge — Step35
 
+## Step38 — pilot complete and independently verified
+
+Source21428b6f, fresh seeds1915/1916/1917,4 training and2 outer sequences of60
+rows, sigma2,2 updates per arm,18 total updates. All21 source identities and
+data hashes, terminal training/public target likelihoods, independent outer
+LL/gradient/filter replays and byte-preserving completed CLI no-op pass.
+The verifier performs0 fitting updates and validates saved endpoints; it does
+not reproduce the optimizer trajectory. Frozen nuisance preservation is
+checked during the fits and its certificate is checked during verification.
+
+| Seed | Constant Adam gain/row | Annealed Adam gain/row | EM gain/row |
+| --- | ---: | ---: | ---: |
+| 1915 | +0.000148862 | +0.000148224 | +0.003463649 |
+| 1916 | +0.000114517 | +0.000114034 | -0.094563277 |
+| 1917 | +0.000077814 | +0.000077500 | +0.002064989 |
+
+All three arms fail every seed's full recovery gate (TV<=0.12 in each state
+and positive outer gain). Constant Adam has a slightly larger outer gain than
+annealed Adam on these three runs, but the tiny budget/sample does not establish
+statistical superiority, convergence, equal compute, or a cause of earlier
+recovery failures. No arm or hyperparameter is selected from these outcomes.
+
+### Post-fit ground-truth exposure audit
+
+Training labels are used only after completed fits to count observed completed
+episodes, treating each final run as censored.
+
+| Seed | Completed bull/bear/range/chaotic | Terminal-censored bull/bear/range/chaotic |
+| --- | --- | --- |
+| 1915 | 0/0/1/1 | 2/1/1/0 |
+| 1916 | 0/0/1/0 | 2/1/1/0 |
+| 1917 | 0/0/1/0 | 2/1/1/0 |
+
+Under the configured ground truth, P(duration>60) is
+[0.9830170255,0.7730295881,0.5688167179,0.0888006994].
+These short sequences provide very little completed-episode evidence for long
+durations. Censoring is handled by the likelihood; correct censoring does not
+create missing information. These counts do not prove mathematical
+non-identifiability, but make the2-step pilot unsuitable for recovery claims.
+
+Next execution gate: measure a300-row actual public optimizer smoke before
+allocating a larger-exposure study. Then freeze fresh data/budgets/target model
+family and optimizer comparisons before outcomes; compare matching duration
+families and report actual compute. Free emissions/transitions/initial and
+neural context only after duration-only validation. Oracle remains OFF.
+
 The completed fixed-grid study is accepted only for duration learning with
 known nuisance parameters. Both unsmoothed and smoothed arms pass on3/3 seeds;
 smoothing improves matched outer LL on3/3 seeds, but does not improve every

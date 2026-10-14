@@ -1,0 +1,119 @@
+{
+  "schema": "nhsmm-optimizer-bridge-verification-v1",
+  "verified": true,
+  "source_commit": "21428b6f0537944355fc5449259b3de4c31855bd",
+  "input_sha256": "0beab47bbee4cb1afe2a7ac9260dd7dfc5e45fcd5553cb44db35e26f62e9dfa1",
+  "source_files": 21,
+  "actual_pilot_updates": 18,
+  "verification_optimizer_updates": 0,
+  "independent_terminal_outer_public_replay": true,
+  "completed_resume_noop": true,
+  "summary": [
+    {
+      "seed": 1915,
+      "arms": {
+        "constant": {
+          "gain": 0.0001488615154085456,
+          "pmf_tv": [
+            0.4437918073829026,
+            0.4086098195047624,
+            0.46145377691062417,
+            0.7156814607405524
+          ],
+          "full_recovery_gate": false
+        },
+        "annealed": {
+          "gain": 0.00014822425641796143,
+          "pmf_tv": [
+            0.4438072470146325,
+            0.4086117400564562,
+            0.46145462647204627,
+            0.7156844331525274
+          ],
+          "full_recovery_gate": false
+        },
+        "em": {
+          "gain": 0.003463648959079535,
+          "pmf_tv": [
+            0.36323256463824605,
+            0.43208172904639414,
+            0.7266004110263528,
+            0.9554082891362893
+          ],
+          "full_recovery_gate": false
+        }
+      }
+    },
+    {
+      "seed": 1916,
+      "arms": {
+        "constant": {
+          "gain": 0.00011451665142108899,
+          "pmf_tv": [
+            0.44379179242335376,
+            0.4086946885212265,
+            0.4614638596727567,
+            0.7163944725908629
+          ],
+          "full_recovery_gate": false
+        },
+        "annealed": {
+          "gain": 0.00011403424649453579,
+          "pmf_tv": [
+            0.44380718775647493,
+            0.40869296693093565,
+            0.46149519501464703,
+            0.7163940649361598
+          ],
+          "full_recovery_gate": false
+        },
+        "em": {
+          "gain": -0.09456327742922828,
+          "pmf_tv": [
+            0.3603350895905631,
+            0.4337151553964042,
+            0.7013329099090992,
+            0.9999971153027168
+          ],
+          "full_recovery_gate": false
+        }
+      }
+    },
+    {
+      "seed": 1917,
+      "arms": {
+        "constant": {
+          "gain": 7.781419955819047e-05,
+          "pmf_tv": [
+            0.44379182712314824,
+            0.40635394155454585,
+            0.46080162498670035,
+            0.7163944476273341
+          ],
+          "full_recovery_gate": false
+        },
+        "annealed": {
+          "gain": 7.750025646373615e-05,
+          "pmf_tv": [
+            0.44380718554788445,
+            0.4063617830185313,
+            0.46082222944371903,
+            0.7163940763632461
+          ],
+          "full_recovery_gate": false
+        },
+        "em": {
+          "gain": 0.0020649889632456584,
+          "pmf_tv": [
+            0.3519512958938078,
+            0.35788476426094085,
+            0.6535185628732973,
+            0.999999822274171
+          ],
+          "full_recovery_gate": false
+        }
+      }
+    }
+  ],
+  "scope": "execution/objective bridge only; 2 Adam steps vs2 EM M-steps are not equal-compute or convergence/recovery evidence"
+}
