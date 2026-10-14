@@ -4,6 +4,12 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step52-1930-estimated_emission_joint-20: verified immutable snapshot,
+completed phases known_emission_control,estimated_emission_frozen; active estimated_emission_joint at20 updates.
+All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
+Frozen ac312d6, Oracle OFF. Final outer/recovery/public replay remains pending.
+Evidence: validation/results/joint-gaussian-duration-seed1930-checkpoint-joint-native-20261014.json.
+
 Step52-1930-estimated_emission_frozen-20: verified immutable snapshot,
 completed phases known_emission_control; active estimated_emission_frozen at20 updates.
 All52 source/software/protocol/data/initialization/history/grid/digest checks pass.
