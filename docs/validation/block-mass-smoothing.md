@@ -103,3 +103,11 @@ all declared widths/strengths/budgets/gates unchanged. No production/joint-neura
 or legacy NPZ acceptance follows.
 unsmoothed: TVs[0.07355676669601013, 0.08641623132355288, 0.09008035408903947, 0.06766988698701032], gain0.007734397346692074 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
 smoothed: TVs[0.04234832628750705, 0.06414683287189094, 0.07021739228445997, 0.07326639128710745], gain0.0077660784633821495 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
+
+## Step32-1913-checkpoint-unsmoothed-27
+
+Smoothing experiment seed1913 checkpoint: unsmoothed at27 updates.
+All19 source/software/contract/training/phase/solver/history/PMF/partition and
+shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
+outer/final independent/numerical/recovery gates remain pending. Source140ff55,
+1024 training sequences, fixed33-bin full-age support, oracle OFF.
