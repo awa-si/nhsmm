@@ -1,5 +1,18 @@
 # Testing and verification
 
+## Step55 — complete joint recovery batch independently verified
+
+All three seeds finish270 actual updates; independent verification adds0.
+Full gates: known control3/3, estimated frozen0/3, estimated joint3/3. All nine
+full-training terminal/24-sequence outer LL replays, two-sequence public all-
+gradient/filter/segment checks, monotone histories and completed no-ops pass.
+52-file execution manifests plus54-file frozen Git/SHA256 closure audit join;
+all raw reports/proofs are SHA-bound. Source ac312d6, Oracle OFF, protocol unchanged.
+23 focused tests and static/compile checks passed before fits; both bounded
+runner smokes passed. Results: validation/results/joint-gaussian-duration-batch-native-20261014.json.
+Interpretation and limits: validation/joint-gaussian-duration-findings.md.
+No production/neural/Trading or legacy dataset acceptance.
+
 Step53-1932-complete:90 actual EM updates (30 per arm), independently verified.
 All52 source/software/protocol/data/initialization/history/grid/digest checks,
 terminal/outer/public LL/all gradients/segment and causal filter replay pass.

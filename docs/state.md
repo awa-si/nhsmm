@@ -4,6 +4,19 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step55 completes and independently verifies the joint Gaussian/duration batch:
+seeds1930/1931/1932,270 actual EM updates,0 verification updates. Full gates:
+known control3/3, estimated frozen0/3, estimated joint3/3. All nine numerical
+replays, monotone histories and byte-preserving completed resumes pass. Raw
+reports/proofs and54-file static closure audit are SHA-bound; frozen ac312d6,
+Oracle OFF, protocol unchanged. Joint beats frozen outer LL on3/3 seeds.
+Joint max TV0.100770, mean error0.017221, variance relative error0.016725.
+Bad fixed observation-initialized emissions can destroy duration recovery even
+with correct recursion; learning emissions restores it in this controlled study.
+See validation/joint-gaussian-duration-findings.md and the batch evidence.
+Next: separately free transition/initial parameters before neural context.
+No production default change, Trading/neural/legacy NPZ or convergence acceptance.
+
 Step53-1932-complete:90 actual EM updates (30 per arm), independently verified.
 All52 source/software/protocol/data/initialization/history/grid/digest checks,
 terminal/outer/public LL/all gradients/segment and causal filter replay pass.

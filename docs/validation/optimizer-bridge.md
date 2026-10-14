@@ -1,5 +1,20 @@
 # Optimizer bridge — Step35
 
+## Step55 — joint scalar Gaussian/duration recovery established
+
+All270 preregistered EM updates and independent zero-update proofs complete.
+Known control3/3 and estimated joint3/3 pass full gates; estimated frozen0/3.
+All nine numerical gates pass. Joint beats frozen outer LL on all three seeds;
+max joint TV0.100770, mean error0.017221, relative variance error0.016725.
+The matched-arm comparison isolates freeing emissions: bad fixed emission
+parameters induce failed duration recovery while correct likelihood/gradients
+still improve. Detailed mechanism, baseline semantics and limitations are in
+joint-gaussian-duration-findings.md. SHA-bound evidence:
+results/joint-gaussian-duration-batch-native-20261014.json.52 execution-source
+files and54 static-closure files verified at frozen ac312d6; protocol unchanged,
+Oracle OFF. Next separate boundary: learn transition/initial, then neural context.
+This research EM success is not production/Trading/neural/legacy NPZ acceptance.
+
 Step53-1932-complete:90 actual EM updates (30 per arm), independently verified.
 All52 source/software/protocol/data/initialization/history/grid/digest checks,
 terminal/outer/public LL/all gradients/segment and causal filter replay pass.
