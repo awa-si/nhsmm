@@ -4,6 +4,21 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step46 completes all frozen matched fixed-bin optimizer recovery seeds1922/1923/1924.
+Each uses1024x300 training and24 outer sequences, shared EM warm3 and27 updates
+per matched arm. Total171 updates (90 EM M-steps,81 Adam steps); verification
+adds0 updates. All23 source/software/contract/data/history/grid/Adam-moment checks,
+independent terminal/public LL/gradient/filtering replays and completed no-ops pass.
+EM3/3 and Adam3/3 pass per-state TV<=0.12 and positive heldout gain. EM has a
+slightly higher outer LL on3/3 seeds; this bounded27-update result is not an
+equal-compute or global convergence claim. Both optimization methods recover
+durations in this known-nuisance fixed-family study. Oracle OFF, source bd8e3f6;
+all raw reports/proofs are SHA-bound. No protocol tuning follows outer outcomes.
+Next: separately validate learning emission parameters alongside durations,
+then transition/initial parameters and neural context. Keep representation,
+initialization, exposure and optimizer effects separate. Current evidence does
+not establish joint-neural/Trading or legacy NPZ acceptance.
+
 Step45-1924-complete
 
 Seed1924 completes57 actual updates (30 EM M-steps,27 Adam steps). All23 source/software/contract/training/outer/phase/history/grid/moment checks and independent terminal/public LL/gradient/filtering replays pass; verification performs0 updates and completed resume is byte-preserving. Frozen source bd8e3f6, oracle OFF. Raw report SHA256ebf0c46646848c378bbcec2a563f84dcd62c0ba1c59dd958dcf6f87441440d47.

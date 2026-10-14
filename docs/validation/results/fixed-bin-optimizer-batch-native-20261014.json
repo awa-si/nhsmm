@@ -1,0 +1,168 @@
+{
+  "schema": "nhsmm-fixed-bin-optimizer-final-batch-v1",
+  "verified": true,
+  "source_commit": "bd8e3f6023f288a1287ee05e8b9b7b8f6af760a6",
+  "source_files": 23,
+  "seeds": [
+    1922,
+    1923,
+    1924
+  ],
+  "actual_updates": 171,
+  "actual_em_msteps": 90,
+  "actual_adam_updates": 81,
+  "verification_optimizer_updates": 0,
+  "inputs": {
+    "1922": {
+      "raw_sha256": "0d98e942e65381039e040072cc8f4ad48b40ea381d1d170e1fecbeab9e489d4f",
+      "proof_sha256": "26b520341a817aa16f6fb627e8c6b9d99af7f9e6481592bdd3c2a1606032cc61"
+    },
+    "1923": {
+      "raw_sha256": "adb0e8b5411d401bfd412634bece6867e44efa979b5da2e09932e8481111d612",
+      "proof_sha256": "3564239ba098ec8336bb0ac9531169d5a3a5b17bb50d9e16450d5477579093ec"
+    },
+    "1924": {
+      "raw_sha256": "ebf0c46646848c378bbcec2a563f84dcd62c0ba1c59dd958dcf6f87441440d47",
+      "proof_sha256": "3a2a25d27d7291bed3c4020afeb15537817a594782e45a8b7f841e64f72a9b29"
+    }
+  },
+  "rows": [
+    {
+      "seed": 1922,
+      "adam_minus_em_outer_ll": -0.3142483393130533,
+      "adam_minus_em_final_training_objective": -12.716737196780741,
+      "post_fit_episode_exposure": {
+        "completed_per_state": [
+          661,
+          718,
+          943,
+          845
+        ],
+        "terminal_censored_per_state": [
+          352,
+          235,
+          331,
+          106
+        ]
+      },
+      "arms": {
+        "fixed_bin_em": {
+          "tv": [
+            0.09159353053815715,
+            0.10277799092806991,
+            0.08788893329491097,
+            0.07698074681814517
+          ],
+          "gain": 0.0066303944534992195,
+          "full_gate": true,
+          "final_training_objective": -666579.9860196292
+        },
+        "fixed_bin_adam": {
+          "tv": [
+            0.08653307346598754,
+            0.1037455118321417,
+            0.09111849928619238,
+            0.07799179374904616
+          ],
+          "gain": 0.006586748850816851,
+          "full_gate": true,
+          "final_training_objective": -666592.702756826
+        }
+      }
+    },
+    {
+      "seed": 1923,
+      "adam_minus_em_outer_ll": -0.09372703120607184,
+      "adam_minus_em_final_training_objective": -12.854601546772756,
+      "post_fit_episode_exposure": {
+        "completed_per_state": [
+          686,
+          660,
+          877,
+          836
+        ],
+        "terminal_censored_per_state": [
+          332,
+          217,
+          370,
+          105
+        ]
+      },
+      "arms": {
+        "fixed_bin_em": {
+          "tv": [
+            0.0752702945870401,
+            0.08676611376649788,
+            0.07820326789831794,
+            0.06409483572621358
+          ],
+          "gain": 0.006388082791065951,
+          "full_gate": true,
+          "final_training_objective": -667019.2718628729
+        },
+        "fixed_bin_adam": {
+          "tv": [
+            0.07277652286599537,
+            0.08839222894485098,
+            0.08098915628330385,
+            0.06502311069380386
+          ],
+          "gain": 0.0063750651478428864,
+          "full_gate": true,
+          "final_training_objective": -667032.1264644196
+        }
+      }
+    },
+    {
+      "seed": 1924,
+      "adam_minus_em_outer_ll": -0.3709912636077206,
+      "adam_minus_em_final_training_objective": -12.448160310741514,
+      "post_fit_episode_exposure": {
+        "completed_per_state": [
+          657,
+          689,
+          876,
+          819
+        ],
+        "terminal_censored_per_state": [
+          354,
+          209,
+          372,
+          89
+        ]
+      },
+      "arms": {
+        "fixed_bin_em": {
+          "tv": [
+            0.06714753861712444,
+            0.09143066816603171,
+            0.08480119802051986,
+            0.07992104750851454
+          ],
+          "gain": 0.008825199756440472,
+          "full_gate": true,
+          "final_training_objective": -666906.7134035008
+        },
+        "fixed_bin_adam": {
+          "tv": [
+            0.06301651551817443,
+            0.09165226525236805,
+            0.08769441043826888,
+            0.07999485259912463
+          ],
+          "gain": 0.00877367319205051,
+          "full_gate": true,
+          "final_training_objective": -666919.1615638116
+        }
+      }
+    }
+  ],
+  "full_gate_pass_counts": {
+    "fixed_bin_em": 3,
+    "fixed_bin_adam": 3
+  },
+  "adam_paired_outer_ll_win_count": 0,
+  "all_numerical_replays_and_exact_resume_pass": true,
+  "oracle": false,
+  "limits": "matched fixed duration families and data, bounded27-update optimizers after shared warm3; not equal compute or convergence guarantees; known nuisance only, no joint-neural/Trading or legacy dataset acceptance; no post-outer tuning"
+}

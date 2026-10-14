@@ -1,5 +1,39 @@
 # Testing and verification
 
+## Step46 — matched recovery batch complete
+
+Step46 completes all frozen matched fixed-bin optimizer recovery seeds1922/1923/1924.
+Each uses1024x300 training and24 outer sequences, shared EM warm3 and27 updates
+per matched arm. Total171 updates (90 EM M-steps,81 Adam steps); verification
+adds0 updates. All23 source/software/contract/data/history/grid/Adam-moment checks,
+independent terminal/public LL/gradient/filtering replays and completed no-ops pass.
+EM3/3 and Adam3/3 pass per-state TV<=0.12 and positive heldout gain. EM has a
+slightly higher outer LL on3/3 seeds; this bounded27-update result is not an
+equal-compute or global convergence claim. Both optimization methods recover
+durations in this known-nuisance fixed-family study. Oracle OFF, source bd8e3f6;
+all raw reports/proofs are SHA-bound. No protocol tuning follows outer outcomes.
+Next: separately validate learning emission parameters alongside durations,
+then transition/initial parameters and neural context. Keep representation,
+initialization, exposure and optimizer effects separate. Current evidence does
+not establish joint-neural/Trading or legacy NPZ acceptance.
+
+| Seed | Arm | TV bull/bear/range/chaotic | Outer gain nats/row | Gate |
+| --- | --- | --- | ---: | --- |
+| 1922 | fixed_bin_em | 0.091594/0.102778/0.087889/0.076981 | 0.006630394 | PASS |
+| 1922 | fixed_bin_adam | 0.086533/0.103746/0.091118/0.077992 | 0.006586749 | PASS |
+| 1923 | fixed_bin_em | 0.075270/0.086766/0.078203/0.064095 | 0.006388083 | PASS |
+| 1923 | fixed_bin_adam | 0.072777/0.088392/0.080989/0.065023 | 0.006375065 | PASS |
+| 1924 | fixed_bin_em | 0.067148/0.091431/0.084801/0.079921 | 0.008825200 | PASS |
+| 1924 | fixed_bin_adam | 0.063017/0.091652/0.087694/0.079995 | 0.008773673 | PASS |
+
+Seed1922: Adam minus EM outer LL-0.314248339 nats; final training objective difference-12.716737197 nats; completed episodes661/718/943/845.
+Seed1923: Adam minus EM outer LL-0.093727031 nats; final training objective difference-12.854601547 nats; completed episodes686/660/877/836.
+Seed1924: Adam minus EM outer LL-0.370991264 nats; final training objective difference-12.448160311 nats; completed episodes657/689/876/819.
+
+Evidence: validation/results/fixed-bin-optimizer-batch-native-20261014.json.
+The21.31x score benchmark is a separate matched local frozen-nuisance timing,
+not a measured end-to-end speedup of this full study or the neural optimizer.
+
 Step45-1924-complete
 
 Seed1924 completes57 actual updates (30 EM M-steps,27 Adam steps). All23 source/software/contract/training/outer/phase/history/grid/moment checks and independent terminal/public LL/gradient/filtering replays pass; verification performs0 updates and completed resume is byte-preserving. Frozen source bd8e3f6, oracle OFF. Raw report SHA256ebf0c46646848c378bbcec2a563f84dcd62c0ba1c59dd958dcf6f87441440d47.
