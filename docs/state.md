@@ -4,6 +4,12 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step52-1930-control20: seed1930 known_emission_control at20 actual updates,
+immutable snapshot verified against52 frozen source/software/protocol files,
+training hash, observation initialization, model/history/grid and state digest.
+Source ac312d6, Oracle OFF. Other arms and final outer/recovery replay pending.
+Snapshot: validation/results/joint-gaussian-duration-seed1930-checkpoint20-native-20261014.json.
+
 Step51 passes optimized-source ac312d6 actual runner smoke:16x300, six updates,
 interrupted/resumed, all three independent numerical gates pass in4.602s.52
 source/software/protocol files are frozen. Independent log-duration-only E-step

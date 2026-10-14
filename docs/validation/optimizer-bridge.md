@@ -1,5 +1,10 @@
 # Optimizer bridge — Step35
 
+Step52-1930-control20: immutable control-arm20-update snapshot passes frozen
+ac312d6 source/software/contract/data/initialization/history/grid integrity.
+Oracle OFF; other arms, outer outcomes and final independent replay pending.
+Evidence: results/joint-gaussian-duration-seed1930-checkpoint20-native-20261014.json.
+
 ## Step51 — full joint study execution gate passed
 
 Source ac312d6 freezes52 source/software/protocol files. Optimized16x300 runner
