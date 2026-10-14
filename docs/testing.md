@@ -1,5 +1,18 @@
 # Testing and verification
 
+## Step57 — actual all-static EM smoke verified
+
+Frozen7ffc718 source,58 hashed source/protocol files:16x300 observations seed401937,
+three actual updates in2.208083699s. Augmented objectives:
+-13164.073645702, -10558.368266181, -10397.454856719, -10366.226227340.
+Public LL/all-five-group gradient checks<=1.37e-12; public/segment filtering
+<=1.01e-13. Independent old-log E-step on all16 terminal sequences reproduces
+LL/objective with error0. Source hashes, regenerated data SHA256, update counters,
+finite monotone objectives and positive structural laws verified.17 focused
+tests/Ruff/Black/compilation pass. Raw evidence:
+validation/results/joint-static-chain-smoke-native-20261014.json. Oracle OFF;
+no outer evaluation, statistical recovery, neural or Trading acceptance.
+
 ## Step56 — all-static chain preflight
 
 17 focused cases pass in2.16s: ten new test_joint_static_chain cases plus seven

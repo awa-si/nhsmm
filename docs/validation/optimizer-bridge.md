@@ -1,5 +1,18 @@
 # Optimizer bridge — Step35
 
+## Step57 — all five parameter groups execute correctly
+
+Frozen7ffc718 actual smoke learns Gaussian means/variances, fixed-bin durations,
+static transition and initial laws together: three updates on16x300 in2.208s.
+Augmented marginal objective rises -13164.073646 to -10366.226227. Native LL/all
+five gradient groups and independent segment/filter recursion agree within
+declared tolerances. Old-log terminal likelihood/objective replay on all16
+sequences has error0;58 source/protocol hashes and regenerated data match.
+Evidence: results/joint-static-chain-smoke-native-20261014.json. Oracle OFF;
+17 focused tests and static checks pass. This is execution evidence, not a
+statistical chain-recovery result. The preregistered1934/1935/1936 study still
+needs its checkpointed runner and independent final proofs before neural context.
+
 ## Step56 — transition and initial probabilities can now learn
 
 Separate joint_static_chain owner extends soft Gaussian/duration statistics

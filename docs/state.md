@@ -4,6 +4,18 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step57 confirms actual all-static EM execution at frozen source7ffc718:
+16x300 observations, three updates jointly learning duration, Gaussian mean/
+variance, transition and initial probabilities in2.208s. Objective increases
+from -13164.073646 to -10366.226227. All public gradient/LL/segment/filter checks
+pass; independent old-log terminal LL replay on all16 sequences has error0.
+58 source/software/protocol hashes and regenerated data/counters verified.
+Oracle OFF, full positive duration/allowed-chain support retained; no outer
+evaluation or statistical acceptance. Evidence: validation/results/
+joint-static-chain-smoke-native-20261014.json.17 focused tests pass.
+Next: checkpointed three-arm runner and independent final replay for the
+predeclared1934/1935/1936 statistical study. No neural/Trading acceptance.
+
 Step56 adds a separate all-static chain EM research owner: soft expected
 boundary transition counts and initial-state posteriors, alongside Gaussian
 and censored full-age duration statistics. The endpoint has no outgoing event;
