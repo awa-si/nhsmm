@@ -1,5 +1,15 @@
 # Testing and verification
 
+Step38 final affected-scope join:184 tests pass in8.38s. This is the complete
+materialized focused suite, not a new claim that the full historical package
+suite was rerun.
+
+Step39 resource preflight is fixed before execution: fresh training seed401918,
+4x300 observations, sigma2, uniform full ages1..260, one constant-temperature
+Adam step at lr0.01 with known frozen nuisance/current initialization. Measure
+whole-process Linux peak RSS and optimizer wall time; replay terminal public,
+reference and restart-target LL. No outer data/labels/recovery selection.
+
 Step38: `scripts.verify_optimizer_bridge` independently replays all nine saved
 terminal training and held-out models, public LL/gradient/filter checks,
 initial uniform target objective, budgets, data/source/software identities and
