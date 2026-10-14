@@ -1,5 +1,9 @@
 # Optimizer bridge — Step35
 
+Step45-1922-fixed_bin_em-5
+
+Seed1922 verified checkpoint: fixed_bin_em at5 updates; complete phases warm. All23 source/software/contract/training identities, history/grid/PMF and Adam moment/step guards pass. Final outer/replay/recovery gates remain pending. Frozen source bd8e3f6, oracle OFF. Resume only with exact saved runner source and optimizer state.
+
 ## Steps42–43 — exact posterior score and matched timing
 
 For known fixed emissions/transitions/initial parameters at temperature1,

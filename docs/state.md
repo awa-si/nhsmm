@@ -4,6 +4,10 @@ Current package readiness and next package-level boundary. Detailed model semant
 
 ## Stepwise repair — current checkpoint
 
+Step45-1922-fixed_bin_em-5
+
+Seed1922 verified checkpoint: fixed_bin_em at5 updates; complete phases warm. All23 source/software/contract/training identities, history/grid/PMF and Adam moment/step guards pass. Final outer/replay/recovery gates remain pending. Frozen source bd8e3f6, oracle OFF. Resume only with exact saved runner source and optimizer state.
+
 Step44 implements the frozen matched optimizer recovery runner. Atomic0/every5/
 final phase checkpoints preserve exact Adam logits, first/second moments and
 step count; source/config/software/protocol/data/phase guards fail closed.
