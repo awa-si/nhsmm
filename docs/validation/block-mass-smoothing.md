@@ -157,3 +157,47 @@ All19 source/software/contract/training/phase/solver/history/PMF/partition and
 shared-warm continuity checks pass. Exact saved snapshot is recovery evidence;
 outer/final independent/numerical/recovery gates remain pending. Source140ff55,
 1024 training sequences, fixed33-bin full-age support, oracle OFF.
+
+## Step32-1914-complete
+
+Smoothing experiment seed1914 completes57 actual M-steps: warm3 and27
+per matched fixed-grid arm. All19 source/software/contract/training/outer
+identities, phase/budget/solver certificate/objective/PMF/grid checks, independent
+terminal E-step and outer/public likelihood/gradient/filtering replays and
+byte-preserving completed no-op pass. Both arms share initial PMF, grid and
+observations. Smoothed minus unsmoothed outer LL0.9852910083482129 nats.
+Main report SHA256d5627e3d41f6ae8f8cbc4cb9bd568f200651895ad5be9d6822019b8a02bb32ed. Oracle OFF, source140ff55 and
+all declared widths/strengths/budgets/gates unchanged. No production/joint-neural
+or legacy NPZ acceptance follows.
+unsmoothed: TVs[0.06919848404346655, 0.07300840871324542, 0.08506009178729296, 0.07246084814552528], gain0.0077787162453354436 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
+smoothed: TVs[0.050312707755095235, 0.05431712146335517, 0.06936374964602543, 0.06923090398431361], gain0.007915562218717141 nats/row, full gatePASS, fixed-partition TV lower bounds[0.02422778085700007, 0.025163683254851587, 0.05228327082775793, 0.05424085851097055].
+
+## Step33 — all matched larger-exposure seeds complete
+
+Step33 completes the frozen1024-sequence fixed-bin mass-smoothing study on
+fresh seeds1912/1913/1914. Each uses shared warm3 plus27 updates per arm;
+171 total actual M-steps. All19 source/software/contract/data/phase/PMF/grid/
+solver certificate/objective checks and independent terminal/outer/public
+numerical/noop replays pass. Full gates: unsmoothed 3/3;
+smoothed 3/3. Smoothing wins matched outer LL on3/3 seeds.
+All raw reports are SHA-bound. Oracle OFF, source140ff55 and all predeclared
+grids/strengths/budgets/gates unchanged. No production/joint-neural/Trading or
+legacy NPZ acceptance is implied; the previous256 adaptive pilot is not a
+paired sample-size control. Evidence: results/block-mass-smoothing-batch-native-20261014.json.
+
+| Seed | Arm | PMF TV bull/bear/range/chaotic | Outer gain nats/row | Full gate |
+| --- | --- | --- | ---: | --- |
+| 1912 | unsmoothed | 0.073557/0.086416/0.090080/0.067670 | +0.007734397 | PASS |
+| 1912 | smoothed | 0.042348/0.064147/0.070217/0.073266 | +0.007766078 | PASS |
+| 1913 | unsmoothed | 0.083974/0.077876/0.099488/0.076224 | +0.006373455 | PASS |
+| 1913 | smoothed | 0.065001/0.065809/0.080968/0.077777 | +0.006758266 | PASS |
+| 1914 | unsmoothed | 0.069198/0.073008/0.085060/0.072461 | +0.007778716 | PASS |
+| 1914 | smoothed | 0.050313/0.054317/0.069364/0.069231 | +0.007915562 | PASS |
+
+Seed1912: smoothed minus unsmoothed outer LL+0.228104040 nats.
+Seed1913: smoothed minus unsmoothed outer LL+2.770644117 nats.
+Seed1914: smoothed minus unsmoothed outer LL+0.985291008 nats.
+
+
+
+Within-seed LL differences compare identical held-out observations, not cross-seed absolute LL rankings. A feasible forward-KL projection below0.12 is a normalized mass-allocation witness, not a minimum-TV solution. All partition diagnostics are post-fit only. No new strengths/seeds/budgets are selected after these results.

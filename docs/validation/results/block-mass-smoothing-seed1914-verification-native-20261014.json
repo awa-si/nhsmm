@@ -1,0 +1,130 @@
+{
+  "schema": "nhsmm-block-mass-smoothing-final-verification-v1",
+  "verified": true,
+  "seed": 1914,
+  "source_commit": "140ff55271b84b11798be5bd36afafa1ebc77a34",
+  "source_hashes": 19,
+  "input_report": "docs/validation/results/block-mass-smoothing-seed1914-native-20261014.json",
+  "input_report_sha256": "d5627e3d41f6ae8f8cbc4cb9bd568f200651895ad5be9d6822019b8a02bb32ed",
+  "source_contract_software_training_outer_replayed": true,
+  "matched_initial_pmf_partitions_budgets": true,
+  "terminal_fits_replayed_without_msteps": true,
+  "all_solver_certificates_pass": true,
+  "numerical_checks_pass": true,
+  "completed_resume_noop": true,
+  "evaluation": {
+    "heldout_sha256": "6a931a350520e60a56dd22c9b4eb6a41ff6eb52ee98c9b9c8ce2640f2ea3d42a",
+    "uniform_heldout_ll": -15732.253484348083,
+    "arms": {
+      "unsmoothed": {
+        "metrics": {
+          "pmf_tv": [
+            0.06919848404346655,
+            0.07300840871324542,
+            0.08506009178729296,
+            0.07246084814552528
+          ],
+          "mean": [
+            121.41073912723026,
+            100.64384579472026,
+            97.80918267748461,
+            33.8158679298115
+          ],
+          "mean_rmse": 2.069181398768321,
+          "fine_pmf_gate": true
+        },
+        "heldout_ll": -15676.246727381667,
+        "heldout_gain_nats_per_row": 0.0077787162453354436,
+        "full_gate": true,
+        "blocks": [
+          33,
+          33,
+          33,
+          33
+        ],
+        "learned_partition_tv_lower_bound": [
+          0.02422778085700007,
+          0.025163683254851587,
+          0.05228327082775793,
+          0.05424085851097055
+        ],
+        "forward_kl_projection_tv": [
+          0.025318176640863298,
+          0.02989483470240341,
+          0.053042351403458955,
+          0.05652726226725767
+        ],
+        "gradient_check": {
+          "maximum_all_logit_gradient_error": 5.140332604014475e-14,
+          "public_ll_error": 4.547473508864641e-13,
+          "segment_reference_ll_error": 4.092726157978177e-12
+        },
+        "public_recursion": {
+          "public_ll": -1296.1964163966481,
+          "independent_ll": -1296.1964163966477,
+          "ll_error": 4.547473508864641e-13,
+          "maximum_state_probability_error": 8.149037000748649e-14,
+          "accuracy": 0.985,
+          "uncertain_rows_max_probability_below_0_99": 107,
+          "rows": 600
+        }
+      },
+      "smoothed": {
+        "metrics": {
+          "pmf_tv": [
+            0.050312707755095235,
+            0.05431712146335517,
+            0.06936374964602543,
+            0.06923090398431361
+          ],
+          "mean": [
+            121.4040972365956,
+            100.65388847144169,
+            97.73704819889079,
+            33.714234769019015
+          ],
+          "mean_rmse": 2.101239718642794,
+          "fine_pmf_gate": true
+        },
+        "heldout_ll": -15675.26143637332,
+        "heldout_gain_nats_per_row": 0.007915562218717141,
+        "full_gate": true,
+        "blocks": [
+          33,
+          33,
+          33,
+          33
+        ],
+        "learned_partition_tv_lower_bound": [
+          0.02422778085700007,
+          0.025163683254851587,
+          0.05228327082775793,
+          0.05424085851097055
+        ],
+        "forward_kl_projection_tv": [
+          0.025318176640863298,
+          0.02989483470240341,
+          0.053042351403458955,
+          0.05652726226725767
+        ],
+        "gradient_check": {
+          "maximum_all_logit_gradient_error": 4.54081217071689e-14,
+          "public_ll_error": 4.547473508864641e-13,
+          "segment_reference_ll_error": 4.092726157978177e-12
+        },
+        "public_recursion": {
+          "public_ll": -1296.2185434522414,
+          "independent_ll": -1296.2185434522405,
+          "ll_error": 9.094947017729282e-13,
+          "maximum_state_probability_error": 5.595524044110789e-14,
+          "accuracy": 0.985,
+          "uncertain_rows_max_probability_below_0_99": 106,
+          "rows": 600
+        }
+      }
+    },
+    "smoothed_minus_unsmoothed_heldout_ll": 0.9852910083482129,
+    "actual_msteps": 57,
+    "labels_used_in_learning_or_selection": false
+  }
+}

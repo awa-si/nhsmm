@@ -1,0 +1,233 @@
+{
+  "schema": "nhsmm-block-mass-smoothing-final-batch-v1",
+  "source_commit": "140ff55271b84b11798be5bd36afafa1ebc77a34",
+  "seeds": [
+    1912,
+    1913,
+    1914
+  ],
+  "training_sequences_per_seed": 1024,
+  "inputs": {
+    "1912": {
+      "path": "docs/validation/results/block-mass-smoothing-seed1912-native-20261014.json",
+      "sha256": "bb78904407ad2421854d484052a471daae62cb6ef3e17fc0706dfad0a87410d0",
+      "verification_path": "docs/validation/results/block-mass-smoothing-seed1912-verification-native-20261014.json"
+    },
+    "1913": {
+      "path": "docs/validation/results/block-mass-smoothing-seed1913-native-20261014.json",
+      "sha256": "f68c9fd8f4da6d3155a9b39ec7052eaa6b62cbc33f7d56b6beb7f49946946977",
+      "verification_path": "docs/validation/results/block-mass-smoothing-seed1913-verification-native-20261014.json"
+    },
+    "1914": {
+      "path": "docs/validation/results/block-mass-smoothing-seed1914-native-20261014.json",
+      "sha256": "d5627e3d41f6ae8f8cbc4cb9bd568f200651895ad5be9d6822019b8a02bb32ed",
+      "verification_path": "docs/validation/results/block-mass-smoothing-seed1914-verification-native-20261014.json"
+    }
+  },
+  "matched_initial_pmf_partitions_data_budgets": true,
+  "distinct_seed_training_outer_data": true,
+  "source_software_contract_equivalent": true,
+  "actual_msteps": 171,
+  "all_numerical_and_solver_checks_pass": true,
+  "full_gate_pass_counts": {
+    "unsmoothed": 3,
+    "smoothed": 3
+  },
+  "smoothed_paired_outer_ll_win_count": 3,
+  "rows": [
+    {
+      "seed": 1912,
+      "paired_outer_ll_difference": 0.2281040401685459,
+      "arms": {
+        "unsmoothed": {
+          "pmf_tv": [
+            0.07355676669601013,
+            0.08641623132355288,
+            0.09008035408903947,
+            0.06766988698701032
+          ],
+          "mean_rmse": 1.0445240137725489,
+          "gain": 0.007734397346692074,
+          "full_gate": true,
+          "learned_partition_tv_lower_bound": [
+            0.02422778085700007,
+            0.025163683254851587,
+            0.05228327082775793,
+            0.05424085851097055
+          ],
+          "forward_kl_projection_tv": [
+            0.025318176640863298,
+            0.02989483470240341,
+            0.053042351403458955,
+            0.05652726226725767
+          ],
+          "post_fit_diagnosis": {
+            "bull": "passes",
+            "bear": "passes",
+            "range": "passes",
+            "chaotic": "passes"
+          }
+        },
+        "smoothed": {
+          "pmf_tv": [
+            0.04234832628750705,
+            0.06414683287189094,
+            0.07021739228445997,
+            0.07326639128710745
+          ],
+          "mean_rmse": 1.0012354749707566,
+          "gain": 0.0077660784633821495,
+          "full_gate": true,
+          "learned_partition_tv_lower_bound": [
+            0.02422778085700007,
+            0.025163683254851587,
+            0.05228327082775793,
+            0.05424085851097055
+          ],
+          "forward_kl_projection_tv": [
+            0.025318176640863298,
+            0.02989483470240341,
+            0.053042351403458955,
+            0.05652726226725767
+          ],
+          "post_fit_diagnosis": {
+            "bull": "passes",
+            "bear": "passes",
+            "range": "passes",
+            "chaotic": "passes"
+          }
+        }
+      }
+    },
+    {
+      "seed": 1913,
+      "paired_outer_ll_difference": 2.770644116533731,
+      "arms": {
+        "unsmoothed": {
+          "pmf_tv": [
+            0.08397400323627008,
+            0.07787619832170425,
+            0.09948752522398446,
+            0.07622428975784042
+          ],
+          "mean_rmse": 0.9833239158582295,
+          "gain": 0.006373454804447647,
+          "full_gate": true,
+          "learned_partition_tv_lower_bound": [
+            0.02422778085700007,
+            0.025163683254851587,
+            0.05228327082775793,
+            0.05424085851097055
+          ],
+          "forward_kl_projection_tv": [
+            0.025318176640863298,
+            0.02989483470240341,
+            0.053042351403458955,
+            0.05652726226725767
+          ],
+          "post_fit_diagnosis": {
+            "bull": "passes",
+            "bear": "passes",
+            "range": "passes",
+            "chaotic": "passes"
+          }
+        },
+        "smoothed": {
+          "pmf_tv": [
+            0.06500096019116289,
+            0.06580853715708848,
+            0.0809680554664712,
+            0.07777723002743443
+          ],
+          "mean_rmse": 0.9484749498213084,
+          "gain": 0.006758266487299554,
+          "full_gate": true,
+          "learned_partition_tv_lower_bound": [
+            0.02422778085700007,
+            0.025163683254851587,
+            0.05228327082775793,
+            0.05424085851097055
+          ],
+          "forward_kl_projection_tv": [
+            0.025318176640863298,
+            0.02989483470240341,
+            0.053042351403458955,
+            0.05652726226725767
+          ],
+          "post_fit_diagnosis": {
+            "bull": "passes",
+            "bear": "passes",
+            "range": "passes",
+            "chaotic": "passes"
+          }
+        }
+      }
+    },
+    {
+      "seed": 1914,
+      "paired_outer_ll_difference": 0.9852910083482129,
+      "arms": {
+        "unsmoothed": {
+          "pmf_tv": [
+            0.06919848404346655,
+            0.07300840871324542,
+            0.08506009178729296,
+            0.07246084814552528
+          ],
+          "mean_rmse": 2.069181398768321,
+          "gain": 0.0077787162453354436,
+          "full_gate": true,
+          "learned_partition_tv_lower_bound": [
+            0.02422778085700007,
+            0.025163683254851587,
+            0.05228327082775793,
+            0.05424085851097055
+          ],
+          "forward_kl_projection_tv": [
+            0.025318176640863298,
+            0.02989483470240341,
+            0.053042351403458955,
+            0.05652726226725767
+          ],
+          "post_fit_diagnosis": {
+            "bull": "passes",
+            "bear": "passes",
+            "range": "passes",
+            "chaotic": "passes"
+          }
+        },
+        "smoothed": {
+          "pmf_tv": [
+            0.050312707755095235,
+            0.05431712146335517,
+            0.06936374964602543,
+            0.06923090398431361
+          ],
+          "mean_rmse": 2.101239718642794,
+          "gain": 0.007915562218717141,
+          "full_gate": true,
+          "learned_partition_tv_lower_bound": [
+            0.02422778085700007,
+            0.025163683254851587,
+            0.05228327082775793,
+            0.05424085851097055
+          ],
+          "forward_kl_projection_tv": [
+            0.025318176640863298,
+            0.02989483470240341,
+            0.053042351403458955,
+            0.05652726226725767
+          ],
+          "post_fit_diagnosis": {
+            "bull": "passes",
+            "bear": "passes",
+            "range": "passes",
+            "chaotic": "passes"
+          }
+        }
+      }
+    }
+  ],
+  "oracle_support": false,
+  "limits": "Fresh matched fixed-grid larger-exposure experiment, not a paired sample-size comparison with old adaptive256 pilot. Known frozen nuisance parameters; no production/joint-neural/Trading or legacy NPZ acceptance. No post-outer tuning."
+}
