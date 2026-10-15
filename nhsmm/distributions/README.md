@@ -69,7 +69,7 @@ This file establishes the representation convention. Forward, Viterbi, filtering
 
 Masked durations have exact zero support (`-inf` log probability before normalization).
 
-`soft_dmax` belongs to `Duration`: it multiplicatively gates duration support before normalization and may be global `[D]` or state-dependent `[K,D]`.
+`soft_dmax` belongs to `Duration`: it multiplicatively gates duration support before normalization and may be global `[D]` or state-dependent `[K,D]`. The same explicit gate is honored by `log_matrix`, `expected_probs`, `forward` (scores or `return_dist=True`) and `log_prob`. Its weight is `sigmoid(soft_dmax).clamp_min(EPS)`, applied after temperature and hard masks; temperature does not rescale the gate. Generic helpers retain their batch/context shapes, while `log_matrix` pads to at least four dimensions. The separate D+ tail hazard is unchanged.
 
 ### Transition
 

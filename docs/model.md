@@ -334,6 +334,6 @@ Continuous Gaussian/Student-t locations are finite real values, not categorical 
 
 Initial, duration and transition hard masks use exact negative infinity. Categorical logit construction accepts partial impossible support but rejects NaN, positive infinity and rows with no finite mass. Safe survival and sum reductions preserve impossible mass without undefined all-impossible backward paths. An impossible observed event can still have negative-infinite likelihood; numerical safety does not make it possible.
 
-For duration soft_dmax, log_matrix remains the authoritative gated-model path. Generic forward/expected_probs gate semantics are unresolved (audit D07); do not substitute those helpers for gated model duration probabilities.
+Duration soft_dmax is applied consistently by log_matrix, expected_probs, forward (scores or return_dist=True) and log_prob when supplied with the same arguments. The [D] or [K,D] gate sigmoid(soft_dmax).clamp_min(EPS) is applied after temperature and hard masks, before normalization. Helpers preserve their native batch/context shapes; log_matrix retains its padded shape and T expansion. The D+ tail hazard remains separate. Audit D07 is resolved; see validation/duration-soft-gate-20261015.md.
 
 See `docs/validation/distribution-fixes-20261015.md` for regression coverage and explicit historical-suite limits.

@@ -735,6 +735,32 @@ class Duration(Neural):
             torch.where(tail > 1.0, torch.ones_like(tail), tail),
         )
 
+    def _modulate(
+        self,
+        context: Optional[torch.Tensor] = None,
+        temperature: Optional[float] = None,
+        timestep: Optional[int] = None,
+        **kwargs,
+    ) -> torch.Tensor:
+        mod = super()._modulate(
+            context=context, temperature=temperature, timestep=timestep, **kwargs
+        )
+        # Gate after temperature and hard constraints, matching model likelihoods.
+        soft_dmax = kwargs.get("soft_dmax", None)
+        if soft_dmax is not None:
+            gate = torch.sigmoid(soft_dmax).clamp_min(EPS)
+            if gate.ndim == 1:
+                if gate.shape[0] != self.max_duration:
+                    raise ValueError("soft_dmax [D] must match max_duration")
+                mod = mod + gate.log()
+            elif gate.ndim == 2:
+                if gate.shape != (self.n_states, self.max_duration):
+                    raise ValueError("soft_dmax [K,D] must match n_states and max_duration")
+                mod = mod + gate.log()
+            else:
+                raise ValueError("soft_dmax must have shape [D] or [K, D]")
+        return mod
+
     def log_matrix(
         self,
         context: Optional[torch.Tensor] = None,
@@ -744,19 +770,6 @@ class Duration(Neural):
         **kwargs,
     ) -> torch.Tensor:
         mod = self._modulate(context=context, temperature=temperature, timestep=timestep, **kwargs)
-        soft_dmax = kwargs.get("soft_dmax", None)
-        if soft_dmax is not None:
-            gate = torch.sigmoid(soft_dmax).clamp_min(EPS)
-            if gate.ndim == 1:
-                if gate.shape[0] != self.max_duration:
-                    raise ValueError("soft_dmax [D] must match max_duration")
-                mod = mod + gate.log().view(1, 1, 1, -1)
-            elif gate.ndim == 2:
-                if gate.shape != (self.n_states, self.max_duration):
-                    raise ValueError("soft_dmax [K,D] must match n_states and max_duration")
-                mod = mod + gate.log().view(1, 1, *gate.shape)
-            else:
-                raise ValueError("soft_dmax must have shape [D] or [K, D]")
         logp = nnF.log_softmax(mod, dim=-1)
         while logp.ndim < 4:
             logp = logp.unsqueeze(0)
