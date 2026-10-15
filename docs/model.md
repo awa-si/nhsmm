@@ -53,6 +53,27 @@ model.initialize_distributions()
 
 A model intended for streaming use must be causal.
 
+## Training ownership
+
+NHSMM.optimize(X, context=None, cfg=None) remains the public fitting entry point
+and returns the same model. It delegates orchestration to nhsmm/training.py:
+optimizer/scheduler construction, independent restarts, convergence, score/history
+ordering and selection of the final best restart. Model-specific initialization,
+objective evaluation, chunking, parameter snapshots and optional transition
+refinement remain model helpers. Host trainers, including the planned Qlib
+wrapper, call the public optimize method.
+
+The move preserves the existing update protocol: history entries contain
+pre-update scores, completed_updates counts the preceding main Adam updates,
+and each entry is followed by one clipped/projected update. Final restart scoring
+happens after that run's last update; selection restores the winning snapshot
+when multiple restarts run. Optional transition refinement follows selection.
+Existing histories/optimizer diagnostics, subclass hooks, caller train/eval mode,
+config defaults and artifact/state_dict keys retain their contracts. Exceptions
+restore mode but do not roll back completed parameter updates.
+
+See [training extraction evidence](validation/v3-training-20261015.md).
+
 ## Duration-tail training
 
 The optional D+ tail stores its per-state end hazard directly as a probability. Joint optimization projects this parameter into [EPS, 1] after each optimizer update, before restart scoring and snapshots. This prevents an update beyond the feasible domain from entering the zero-gradient region of the inference clamp. The exact h_tail=1 finite-support boundary and artifact parameter representation are preserved. The inference clamp remains a guard for externally supplied parameters.
@@ -296,8 +317,8 @@ downstream representation
 The dependency direction is one-way: host adapters may depend on the public `nhsmm` package API; `nhsmm` must not depend on host/framework packages. For NautilusTrader, the active adapter owner is `awa-si/nautilus@main/adapter/nhsmm`.
 
 Microsoft Qlib research mapping is implemented in the maintained host's
-[`adapter/qlib`](https://github.com/awa-si/nautilus/tree/dev/qlib-nhsmm/adapter/qlib)
-development branch. It consumes trusted causal artifacts and the public streaming
+[`adapter/qlib`](https://github.com/awa-si/nautilus/tree/main/adapter/qlib)
+main branch. It consumes trusted causal artifacts and the public streaming
 runtime, isolates instrument state, and builds real Qlib datasets with explicit
 label-maturity purging. Fit-cutoff/observation-schema provenance and walk-forward
 state alignment remain caller obligations. Qlib is an optional host dependency;

@@ -1,0 +1,165 @@
+{
+  "date": "2026-10-15",
+  "branch": "v3",
+  "baseline_remote_commit": "0dd6af47e5c55430f926ce8ff64f9537303286d4",
+  "baseline_tree": "5108b98e379eb1a51eec0ad01387c3ee62845731",
+  "workspace_id": "366c5b46ed8b49cbb3f61e8ea641da47",
+  "ast_body_equivalent": true,
+  "focused": {
+    "passed": 47,
+    "seconds": 22.58,
+    "job_id": "37046dc47aa3483c9c9d42f460ef93dc"
+  },
+  "full": {
+    "passed": 1215,
+    "skipped": 3,
+    "deselected": 5,
+    "seconds": 191.98,
+    "job_id": "0a5aec5546db49c9a52ceaa890ab9548",
+    "warning": "Pytest cache could not write the read-only worktree; result logs and JUnit XML were saved."
+  },
+  "installed": {
+    "passed": 47,
+    "seconds": 13.95,
+    "pip_check": "No broken requirements found.",
+    "job_id": "8116509f340642dbace5598dcaf0d851"
+  },
+  "parity": {
+    "baseline_remote_commit": "0dd6af47e5c55430f926ce8ff64f9537303286d4",
+    "baseline_source_sha256": "10f4ca09722d06423ed1bd3361ec268316f9fdb39ccc0882a9f86e78e4c705da",
+    "candidate_source_sha256": "33e4f5507a27eacf9ce986f88038c0ed4b88e1d82f80c2fbc7a840d5ca1fd30c",
+    "training_source_sha256": "fb652532da7cbaa1ebb8e7445b9bfbf9c0c19f633107c3708632f915cb72e17e",
+    "torch": "2.14.1+cpu",
+    "threads": 1,
+    "exact_tolerance": 0,
+    "cases": [
+      {
+        "scenario": "restart_constant",
+        "exact_match": true,
+        "state_sha256": "418173c512ab740e8f0f4ac8fe0a4eb5609094ef583ad755ec17f1557fb15dd8",
+        "actual_main_updates": 6,
+        "refinement_updates": 0,
+        "restart_scores": [
+          -33.64036560058594,
+          -34.12144088745117
+        ],
+        "baseline_seconds": 2.2161729061044753,
+        "candidate_seconds": 0.19774785498157144
+      },
+      {
+        "scenario": "restart_annealed_scheduler",
+        "exact_match": true,
+        "state_sha256": "68c248732cd828a6ea6689a30c77c643160aeb35bfa786889c581eecd245fbe8",
+        "actual_main_updates": 6,
+        "refinement_updates": 0,
+        "restart_scores": [
+          -33.643333435058594,
+          -34.12364196777344
+        ],
+        "baseline_seconds": 0.178085349034518,
+        "candidate_seconds": 0.1955410148948431
+      },
+      {
+        "scenario": "neural_dropout",
+        "exact_match": true,
+        "state_sha256": "1443d5b1534b1328045fe6150cd22eaf8360113badd9e1948605e4cc13280f7c",
+        "actual_main_updates": 6,
+        "refinement_updates": 0,
+        "restart_scores": [
+          -32.81645584106445,
+          -32.20746994018555
+        ],
+        "baseline_seconds": 0.31680320063605905,
+        "candidate_seconds": 0.3872361029498279
+      },
+      {
+        "scenario": "external_refinement",
+        "exact_match": true,
+        "state_sha256": "4b9c949b4abacac0da031ea8e2a230cbf8b8a400de9a7a484cd47b42d9afa78d",
+        "actual_main_updates": 6,
+        "refinement_updates": 2,
+        "restart_scores": [
+          -33.81650924682617,
+          -33.55522537231445
+        ],
+        "baseline_seconds": 0.31028994219377637,
+        "candidate_seconds": 0.27943851379677653
+      },
+      {
+        "scenario": "tail_chunk_empty",
+        "exact_match": true,
+        "state_sha256": "60fce6da9d8c326d0ea207ab88bfc5cf0a8dfa0980c80471a41a42d12f24d803",
+        "actual_main_updates": 6,
+        "refinement_updates": 0,
+        "restart_scores": [
+          -33.80112075805664,
+          -34.343772888183594
+        ],
+        "baseline_seconds": 0.3059349828399718,
+        "candidate_seconds": 0.34950726199895144
+      },
+      {
+        "scenario": "noncausal_segments",
+        "exact_match": true,
+        "state_sha256": "9d7c879698804e43c1e7241f0abb42806f8bdd49ef8b1a0821c7a24a2b22d55f",
+        "actual_main_updates": 6,
+        "refinement_updates": 0,
+        "restart_scores": [
+          -35.114715576171875,
+          -35.63722610473633
+        ],
+        "baseline_seconds": 0.28534492990002036,
+        "candidate_seconds": 0.17035542707890272
+      },
+      {
+        "scenario": "warm_frozen",
+        "exact_match": true,
+        "state_sha256": "3f1a3e8fd54a2637f3049b0096b9a099d4ad60e1263b3f48547a2ca8d38a31f3",
+        "actual_main_updates": 3,
+        "refinement_updates": 0,
+        "restart_scores": [
+          -38.723365121550685
+        ],
+        "baseline_seconds": 0.07587989419698715,
+        "candidate_seconds": 0.07156039960682392
+      },
+      {
+        "scenario": "early_stop",
+        "exact_match": true,
+        "state_sha256": "3edc82e9bae9e06f005506cfc184c0606884d0e1794dcdf202ec8cd19ab7a453",
+        "actual_main_updates": 4,
+        "refinement_updates": 0,
+        "restart_scores": [
+          -33.86465835571289,
+          -34.35894775390625
+        ],
+        "baseline_seconds": 0.13246187986806035,
+        "candidate_seconds": 0.1190659673884511
+      }
+    ]
+  },
+  "historical_exclusions": [
+    "tests/test_block_mass_smoothing_audit.py::test_completed_batch",
+    "tests/test_block_mass_smoothing_audit.py::test_raw_bytes_tampering",
+    "tests/test_block_mass_smoothing_audit.py::test_missing_replay_certificate",
+    "tests/test_optimizer_bridge_verification.py::test_changed_source_manifest_rejected",
+    "tests/test_optimizer_bridge_verification.py::test_rebound_initial_objective_rejected"
+  ],
+  "oracle": "OFF",
+  "holdout": "untouched",
+  "limits": [
+    "No controlled performance benchmark or speedup claim",
+    "No new market-data fit, outer-holdout evaluation or GPU validation",
+    "Qlib training wrapper remains the next host batch"
+  ],
+  "host": {
+    "repository": "awa-si/nautilus",
+    "commit": "e527734bab719038ec3820014f7c9743e4cfca93",
+    "passed": 54,
+    "skipped": 1,
+    "warnings": 23,
+    "seconds": 37.82,
+    "job_id": "ecc21d2612be4814839f07052bdf2853",
+    "warning_detail": "22 existing NumPy/pandas deprecations plus one read-only pytest-cache warning; MLflow artifacts use a writable work directory."
+  }
+}
