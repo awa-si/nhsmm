@@ -1,5 +1,51 @@
 # Testing and verification
 
+## Current V3 verification — 2026-10-15
+
+The current core gate is the complete suite, with no deselection list:
+
+```bash
+python -m pytest -q
+```
+
+Observed: 1242 passed, 3 CUDA-only skips, zero deselections. The previously excluded
+five historical execution-identity cases are resolved. Fifteen installed-snapshot
+regressions and 84 optional Nautilus/Qlib/NHSMM/GBM-Qlib host tests also pass;
+the host has one isolated no-GBM-profile skip because GBM is installed.
+
+Historical evidence audits and new numerical replays are distinct operations.
+The recorded Python 3.12.14 identity remains unchanged; this validation uses
+Python 3.14.7. A metadata audit compares original source/software identity,
+report/proof bytes and certificates against the Git-anchored historical evidence
+index. It does not establish a fresh numerical replay under today's runtime.
+The numerical optimizer verifier retains its software equality guard.
+
+```bash
+python -m scripts.audit_block_mass_smoothing --historical
+python -m scripts.verify_optimizer_bridge --historical --audit-only \
+  --input docs/validation/results/optimizer-bridge-pilot-native-20261014.json \
+  --output new-audit.json
+```
+
+The explicit optimizer audit mode requires a fresh output path. Never re-seal or
+overwrite an old report/proof to make it match current software. For an actual
+numerical replay, omit --audit-only and use the matching pinned source/software;
+keep its new evidence separate and correctly attributed.
+
+The two optimizer tests about historical manifest/initial-objective tampering
+use the archive audit API. Separate tests prove that this API invokes no
+sequence generation/public/gradient replay and that verify still rejects
+software drift. Original report/proof bytes, the smoothing batch, and all model
+reference/causality/numerical tests remain protected.
+
+See [config/context evidence](validation/v3-config-context-20261015.md) and
+[historical cleanup/final validation](validation/v3-historical-cleanup-20261015.md).
+Earlier dated checkpoint numbers below describe their original runs; they do
+not override this current execution command or relax maintained math contracts.
+Oracle remains OFF; the frozen late holdout is not rescored.
+
+---
+
 Step63: preregistered all-static study complete, independently verified and batch aggregated.
 270 actual updates across seeds1934/1935/1936; verification adds0 updates; source2294c6e/60 identities.
 Full gates: known_chain_reference3/3, estimated_chain_frozen0/3 (transition only), estimated_chain_joint3/3.

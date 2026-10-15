@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-15",
+  "branch": "v3",
+  "config_context_commit": "d80e09c6c9d4a96d024dd93202af43d09e2da2ef",
+  "archive_anchor_commit": "fbfc4f9e508ca2ae3bf59e2effb105faa308f6df",
+  "archive_files_verified": 9,
+  "old_evidence_modified": false,
+  "environment": {
+    "unchanged_archived_files": 9,
+    "python": "3.14.7",
+    "numpy": "2.5.4",
+    "torch": "2.14.1+cpu"
+  },
+  "core": {
+    "passed": 1242,
+    "skipped": 3,
+    "deselected": 0,
+    "seconds": 204.26,
+    "command": "python -m pytest -q -o cache_dir=/work/artifacts/cc-cache",
+    "job_id": "32570fa705d04a5d8745c3547c72cf12"
+  },
+  "historical_focused": {
+    "passed": 23,
+    "seconds": 7.1,
+    "job_id": "d69145c15bf641feaded40c6023bc84f"
+  },
+  "host": {
+    "passed": 84,
+    "skipped": 1,
+    "warnings": 102,
+    "seconds": 58.11,
+    "job_id": "82d9d5ace20948469697c38f4f3b0ec5",
+    "repository_commit": "dc27b8d00d5672409ec762e2f0e642d7ad0b0c2b"
+  },
+  "installed": {
+    "passed": 15,
+    "seconds": 9.22,
+    "pip_check": "clean",
+    "job_id": "93dd9a39fc004fa0bd9ab2f4591ab8f3"
+  },
+  "numerical_replay_of_historical_study_performed": false,
+  "fit_updates_in_metadata_audits": 0,
+  "exact_before_after_replays": 8,
+  "oracle": "OFF",
+  "holdout": "unchanged",
+  "historical_final_focused": {
+    "passed": 23,
+    "seconds": 4.77,
+    "job_id": "c86eba18a8f546098849daeed7f0029d"
+  }
+}

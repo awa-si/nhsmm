@@ -73,3 +73,25 @@ def test_missing_replay_certificate(evidence):
     proof["completed_resume_noop"] = False
     with pytest.raises(ValueError, match="replay certificate"):
         audit_seed(raw, proof, 1912, historical=True)
+
+
+def test_resealed_unregistered_report_change_is_not_historical_evidence(evidence):
+    report, proof = evidence
+    report["unregistered_note"] = "a new document is not the original evidence"
+    raw = encode(report, proof)
+    with pytest.raises(ValueError, match="historical raw SHA"):
+        audit_seed(raw, proof, 1912, historical=True)
+
+
+def test_sealed_original_proof_bytes_are_checked(tmp_path, monkeypatch):
+    import scripts.historical_evidence as module
+
+    reference = module.historical_record("smoothing")["reports"]["1912"]
+    raw = Path(reference["path"]).read_bytes()
+    proof_raw = Path(reference["proof_path"]).read_bytes()
+    copied = tmp_path / reference["proof_path"]
+    copied.parent.mkdir(parents=True)
+    copied.write_bytes(proof_raw + b"changed")
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    with pytest.raises(ValueError, match="historical proof SHA"):
+        module.check_archived_bytes(raw, reference)

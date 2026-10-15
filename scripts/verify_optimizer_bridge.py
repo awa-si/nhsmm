@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from scripts.historical_evidence import check_archived_bytes, historical_record
 from scripts.compare_block_mass_smoothing import SOURCES
 from scripts.compare_compact_duration_em import public_check
 from scripts.compare_optimizer_bridge import PROTOCOL
@@ -46,6 +47,55 @@ def close(actual, expected, name):
         )
     else:
         require(actual == expected, f"{name}: mismatch")
+
+
+def audit(path):
+    """Audit a registered historical report and its sealed proof without replay.
+
+    Recorded software is compared with the Git-anchored evidence index, never
+    claimed to be the current interpreter. Numerical replay remains verify().
+    """
+    raw = path.read_bytes()
+    report = json.loads(raw)
+    frozen = historical_record("optimizer")
+    require(report.get("schema") == frozen["schema"], "schema")
+    require(
+        report.get("complete") is True and report.get("contract") == frozen["contract"],
+        "incomplete/changed contract",
+    )
+    identity = report["execution"]
+    require(identity.get("source_commit") == SOURCE, "source commit")
+    require(
+        identity.get("source_sha256") == frozen["execution"]["source_sha256"], "source manifest"
+    )
+    require(identity == frozen["execution"], "recorded software/execution identity")
+    require([row["seed"] for row in report["rows"]] == frozen["contract"]["seeds"], "seed prefix")
+    for row in report["rows"]:
+        require(list(row["arms"]) == frozen["contract"]["arms"], "arms")
+        initial = frozen["initial_ll_by_seed"][str(row["seed"])]
+        for key, arm in row["arms"].items():
+            field = "ll" if key == "em" else "target_ll"
+            close(arm["history"][0][field], initial, "recorded uniform start")
+    proof = check_archived_bytes(raw, frozen["reports"]["pilot"])
+    require(proof.get("verified") is True, "original verification certificate")
+    require(proof.get("source_commit") == SOURCE, "original proof source")
+    require(
+        proof.get("input_sha256") == hashlib.sha256(raw).hexdigest(), "original proof input SHA"
+    )
+    require(proof.get("verification_optimizer_updates") == 0, "original verification updates")
+    require(
+        proof.get("independent_terminal_outer_public_replay") is True, "original replay certificate"
+    )
+    return {
+        "schema": "nhsmm-optimizer-bridge-historical-audit-v1",
+        "verified_historical_record": True,
+        "input_sha256": hashlib.sha256(raw).hexdigest(),
+        "recorded_execution": identity,
+        "recorded_summary": proof["summary"],
+        "verification_optimizer_updates": 0,
+        "independent_terminal_outer_public_replay": False,
+        "scope": "read-only metadata/byte/certificate audit; no new numerical replay",
+    }
 
 
 def verify(path, *, historical=False):
@@ -209,8 +259,15 @@ def main():
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--historical", action="store_true")
+    parser.add_argument(
+        "--audit-only",
+        action="store_true",
+        help="audit registered historical bytes/certificates without replay",
+    )
     args = parser.parse_args()
-    proof = verify(args.input, historical=args.historical)
+    if args.audit_only and (not args.historical or args.output.exists()):
+        parser.error("--audit-only requires --historical and a new output path")
+    proof = audit(args.input) if args.audit_only else verify(args.input, historical=args.historical)
     args.output.write_text(json.dumps(proof, indent=2, allow_nan=False) + "\n")
     print(json.dumps(proof))
 

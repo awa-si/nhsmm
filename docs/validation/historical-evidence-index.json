@@ -1,0 +1,211 @@
+{
+  "schema": "nhsmm-historical-evidence-index-v1",
+  "anchor_commit": "fbfc4f9e508ca2ae3bf59e2effb105faa308f6df",
+  "records": {
+    "smoothing": {
+      "schema": "nhsmm-block-mass-smoothing-v1",
+      "execution": {
+        "source_commit": "140ff55271b84b11798be5bd36afafa1ebc77a34",
+        "runtime": "openai-native-workspace",
+        "python": "3.12.14",
+        "numpy": "2.5.4",
+        "torch": "2.14.1+cpu",
+        "source_sha256": {
+          "scripts/compare_adaptive_large_selection.py": "2367218d0bc4bc763ad7e6cc9ec1d1c4bb2ccff1e0f3e50af3938532ef9499f9",
+          "scripts/compare_adaptive_duration_em.py": "c9ab31f1386c29b6d9b2f85a7dd7dca522a615ff7e1b47ce8f10fadffd0862a0",
+          "scripts/compare_adaptive_sample_size.py": "8811fee098ead56d25f19558a38b500b9edc06b8deee30080db56f52311a029c",
+          "scripts/compare_compact_duration_em.py": "435e1d4d29bd02113309b6127da3ac9df874f1e135c152e0b03989e64a9c8eff",
+          "scripts/compare_unlabelled_duration_em.py": "3f7bc5b324a81ec164c7f8e22ae780b360c9738ed090e77bf3f04ca32a5d5fce",
+          "scripts/verify_isolated_trading_hsmm.py": "fb81571aa66138da61245f1a05cf69bc515e799627ef88b1b8b4344aed8e3589",
+          "scripts/verify_unlabelled_trading_hsmm.py": "d743af133a4f195b3624e41e2a3cc010d9d2d7c002bba089aeca5f314b1a3d09",
+          "scripts/diagnose_trading_ground_truth.py": "874f559edf87da75a4215b744bfb1718b392c28981cd5a5ac4be4421e4cb8fa2",
+          "scripts/generate_trading_regime_dataset.py": "55e84791c31dcfb8baeb1861259413ba7262b9b86664764d53845615c5fd2dad",
+          "nhsmm/models/base.py": "b3af2af42a60da0e476ace580e07ae521a15b38cf1e7e524d689d4157f6cbb43",
+          "nhsmm/filtering.py": "5fe064090e255a19523582d27a7341499f3c68e1eb0c52e7842d332aa51fc8f5",
+          "nhsmm/distributions/default.py": "58162cae11e0a4537145c6bab8e824652d059f9041f074aebba3c7bec6b60531",
+          "docs/validation/adaptive-large-selection-protocol.json": "a19c25152528f2316170a6638174f18799aaed88d8e1013f70b25530bb060b61",
+          "scripts/adaptive_width_cap.py": "bb302e14ecc9b24ef5327380a617bb88ee5d411c1d6fdc60ceacf5d7c4f14b3d",
+          "scripts/compare_adaptive_width_cap.py": "410887d62dba15008d3399711ec380b5cb334fea9538916e6b2c38b002989da0",
+          "docs/validation/adaptive-width-cap-protocol.json": "50872a69200bc2310ffc296194e908b1acd7024d3e2766a4c4f584240f6aaab5",
+          "scripts/block_mass_smoothing.py": "9244c79c9a9b076ec094fcf4b1ee2beaaa37a99e9631fa0a89d872e106f7a6b7",
+          "scripts/compare_block_mass_smoothing.py": "d77e610620b7240e24ed7c4f5d16aee719f87115e612e6bd543854cf9cc58ff9",
+          "docs/validation/block-mass-smoothing-protocol.json": "685e970b1e7e39fc2ce81340370375e3c8c57c094d91449a0927a29cda3ed522"
+        }
+      },
+      "contract": {
+        "schema": "nhsmm-block-mass-smoothing-protocol-v1",
+        "status": "predeclared_not_executed",
+        "audit_base": "a4ace3f42cf6e892ae832bb5dcb6386c953c9243",
+        "seeds": [
+          1912,
+          1913,
+          1914
+        ],
+        "data": {
+          "training_sequences": 1024,
+          "outer_sequences": 24,
+          "steps": 300,
+          "sigma": 2,
+          "training_seed_offset": 400000,
+          "outer_seed_offset": 500000
+        },
+        "method": {
+          "support": "configured ages1..260 in every state, positive full support; oracle OFF",
+          "known_nuisance_parameters": true,
+          "partition": "fixed consecutive width8 bins from index0; final bin indices256..259 has width4",
+          "pseudocount_per_age": 0.000001,
+          "warm_updates": 3,
+          "penalized_updates_per_arm": 27,
+          "arms": {
+            "unsmoothed": "lambda0",
+            "smoothed": "lambda=log(training sequence count)"
+          },
+          "selection": "none; evaluate both predeclared arms",
+          "initialization": "same PMF from shared3-update unsmoothed fixed-bin EM",
+          "density_parameterization": "log p_age=z_bin-logsumexp(z_bin+log bin_width)",
+          "curvature": "difference between adjacent log-density slopes at bin centers; center distances normalized by8; no wrap or endpoint pseudo-neighbors",
+          "objective": "marginal LL + pseudocount*sum(log PMF) - lambda/2*sum((curvature operator times log bin density)^2)",
+          "mstep": "concave augmented count log-density objective; existing Torch float64 LBFGS with strong Wolfe and initial negative-Hessian coordinate whitening; last log-density anchored to0; lambda0 exact analytic block masses",
+          "solver_max_iterations": 1000,
+          "solver_max_evaluations": 2000,
+          "solver_newton_polish_max_iterations": 3,
+          "solver_polish_budget": "native analytic-Hessian solve; corrections consume the same1000-iteration budget; reject Q-decreasing or nonfinite corrections; final original-coordinate certificate unchanged",
+          "solver_acceptance": "finite positive normalized PMF, maximum anchored-gradient residual divided by each state's augmented count total<=1e-8, no Q decrease beyond1e-7; fail closed otherwise",
+          "em_acceptance": "monotonic fixed-arm penalized marginal objective within1e-6"
+        },
+        "budget": {
+          "actual_msteps_per_seed": 57,
+          "total_actual_msteps": 171,
+          "compute_concurrency": 1
+        },
+        "gates": {
+          "each_state_pmf_tv_at_most": 0.12,
+          "heldout_gain_nats_per_row_strictly_greater_than": 0,
+          "numerical": "existing public LL/gradient<=1e-7 and filtering<=1e-8"
+        },
+        "integrity": [
+          "frozen source/software/protocol/training/outer hashes",
+          "atomic checkpoints0/every5/final and guarded source/phase/budget resume",
+          "same fixed partitions/initial PMFs/training/outer data and budgets within seeds",
+          "outer observations and true PMFs available only after both fits",
+          "post-fit normalized projection and median-based partition lower-bound diagnostics"
+        ],
+        "primary_comparison": "all per-seed PMF TVs/full gates and matched outer LL differences; no arm chosen after evaluation",
+        "limitations": [
+          "larger-exposure comparison, not paired with old256-sequence seeds",
+          "fixed grid differs from prior adaptive width-cap partitions; new unsmoothed control isolates smoothing within this study",
+          "smoothing may bias clipped boundaries or endpoint atoms",
+          "numerical stationarity certificate is not a statistical recovery guarantee",
+          "no post-outer tuning of lambda/grid/budgets",
+          "known nuisance synthetic test; no production/joint-neural/Trading or legacy NPZ acceptance"
+        ]
+      },
+      "reports": {
+        "1912": {
+          "path": "docs/validation/results/block-mass-smoothing-seed1912-native-20261014.json",
+          "sha256": "bb78904407ad2421854d484052a471daae62cb6ef3e17fc0706dfad0a87410d0",
+          "blob_sha1": "99b9dfb7ac53bea1b614fe664e373734f2faec94",
+          "proof_path": "docs/validation/results/block-mass-smoothing-seed1912-verification-native-20261014.json",
+          "proof_sha256": "4b409cde1461bc4d7f0e5f95ef885c105c3b4227939407217f130486f18c1b2c",
+          "proof_blob_sha1": "244af292e18154220430f6ea32a5f7691cb9c1c4"
+        },
+        "1913": {
+          "path": "docs/validation/results/block-mass-smoothing-seed1913-native-20261014.json",
+          "sha256": "f68c9fd8f4da6d3155a9b39ec7052eaa6b62cbc33f7d56b6beb7f49946946977",
+          "blob_sha1": "b1e3e28f181b7df52cad17b9011d195f04f3abac",
+          "proof_path": "docs/validation/results/block-mass-smoothing-seed1913-verification-native-20261014.json",
+          "proof_sha256": "0a28d9ce439c5a2d1cd0f414994c9ef26843bfd6698867e1c8595bd1c185c992",
+          "proof_blob_sha1": "3616f265007ac2efc6db81921427e028d172b2c2"
+        },
+        "1914": {
+          "path": "docs/validation/results/block-mass-smoothing-seed1914-native-20261014.json",
+          "sha256": "d5627e3d41f6ae8f8cbc4cb9bd568f200651895ad5be9d6822019b8a02bb32ed",
+          "blob_sha1": "4cd34a5e9d4858df951a675b522661b1e29da451",
+          "proof_path": "docs/validation/results/block-mass-smoothing-seed1914-verification-native-20261014.json",
+          "proof_sha256": "f58458bedade57d12bb55f557363f9cc6fdf552d6b679fabeb37e319a12628c1",
+          "proof_blob_sha1": "a245e95bc96df15ec59b254e2ae18c0fa8bdcb53"
+        }
+      },
+      "batch": {
+        "path": "docs/validation/results/block-mass-smoothing-batch-native-20261014.json",
+        "sha256": "d5cfda1527734ecab61eee98cf2f5363b8cb98b52cbdd46b6b7ec5dc015eec08",
+        "blob_sha1": "5d8caadfa770bb30966bf5e413febeb422380423"
+      }
+    },
+    "optimizer": {
+      "schema": "nhsmm-optimizer-bridge-pilot-v1",
+      "execution": {
+        "source_commit": "21428b6f0537944355fc5449259b3de4c31855bd",
+        "python": "3.12.14",
+        "numpy": "2.5.4",
+        "torch": "2.14.1+cpu",
+        "source_sha256": {
+          "scripts/compare_adaptive_large_selection.py": "2367218d0bc4bc763ad7e6cc9ec1d1c4bb2ccff1e0f3e50af3938532ef9499f9",
+          "scripts/compare_adaptive_duration_em.py": "c9ab31f1386c29b6d9b2f85a7dd7dca522a615ff7e1b47ce8f10fadffd0862a0",
+          "scripts/compare_adaptive_sample_size.py": "8811fee098ead56d25f19558a38b500b9edc06b8deee30080db56f52311a029c",
+          "scripts/compare_compact_duration_em.py": "435e1d4d29bd02113309b6127da3ac9df874f1e135c152e0b03989e64a9c8eff",
+          "scripts/compare_unlabelled_duration_em.py": "3f7bc5b324a81ec164c7f8e22ae780b360c9738ed090e77bf3f04ca32a5d5fce",
+          "scripts/verify_isolated_trading_hsmm.py": "fb81571aa66138da61245f1a05cf69bc515e799627ef88b1b8b4344aed8e3589",
+          "scripts/verify_unlabelled_trading_hsmm.py": "d743af133a4f195b3624e41e2a3cc010d9d2d7c002bba089aeca5f314b1a3d09",
+          "scripts/diagnose_trading_ground_truth.py": "874f559edf87da75a4215b744bfb1718b392c28981cd5a5ac4be4421e4cb8fa2",
+          "scripts/generate_trading_regime_dataset.py": "55e84791c31dcfb8baeb1861259413ba7262b9b86664764d53845615c5fd2dad",
+          "nhsmm/models/base.py": "cdb9bab08ce4f67abc2db80a46f572eef61835be83538fca1d3c222ef99e7fde",
+          "nhsmm/filtering.py": "5fe064090e255a19523582d27a7341499f3c68e1eb0c52e7842d332aa51fc8f5",
+          "nhsmm/distributions/default.py": "58162cae11e0a4537145c6bab8e824652d059f9041f074aebba3c7bec6b60531",
+          "docs/validation/adaptive-large-selection-protocol.json": "a19c25152528f2316170a6638174f18799aaed88d8e1013f70b25530bb060b61",
+          "scripts/adaptive_width_cap.py": "bb302e14ecc9b24ef5327380a617bb88ee5d411c1d6fdc60ceacf5d7c4f14b3d",
+          "scripts/compare_adaptive_width_cap.py": "410887d62dba15008d3399711ec380b5cb334fea9538916e6b2c38b002989da0",
+          "docs/validation/adaptive-width-cap-protocol.json": "50872a69200bc2310ffc296194e908b1acd7024d3e2766a4c4f584240f6aaab5",
+          "scripts/block_mass_smoothing.py": "9244c79c9a9b076ec094fcf4b1ee2beaaa37a99e9631fa0a89d872e106f7a6b7",
+          "scripts/compare_block_mass_smoothing.py": "d77e610620b7240e24ed7c4f5d16aee719f87115e612e6bd543854cf9cc58ff9",
+          "docs/validation/block-mass-smoothing-protocol.json": "685e970b1e7e39fc2ce81340370375e3c8c57c094d91449a0927a29cda3ed522",
+          "docs/validation/optimizer-bridge-protocol.json": "fa696653adc27bb32ef246a00eb40b205179d1110a57a136eeefabec30d1961d",
+          "scripts/compare_optimizer_bridge.py": "da8202a86e199852b1f2617dcac42b9b174a94f0495870c48de82bdddafe0cd3"
+        }
+      },
+      "contract": {
+        "schema": "nhsmm-optimizer-bridge-pilot-protocol-v1",
+        "seeds": [
+          1915,
+          1916,
+          1917
+        ],
+        "training_sequences": 4,
+        "outer_sequences": 2,
+        "steps": 60,
+        "sigma": 2,
+        "updates_per_arm": 2,
+        "adam_lr": 0.01,
+        "arms": [
+          "constant",
+          "annealed",
+          "em"
+        ],
+        "support": "all configured ages1..260, uniform initial PMF, no true-law mask",
+        "nuisance": "known frozen emission/transition/initial/bias; only duration logits trainable",
+        "selection": "none; all arms reported; outer/truth scored only after all arms finish",
+        "target_temperature": 1,
+        "initialization": "current, n_init1, no scheduler or early stopping, loss_bias0",
+        "numerical_gate": "public gradient and LL errors<=1e-7; filtering error<=1e-8",
+        "scope": "execution/objective bridge only; 2 Adam steps vs2 EM M-steps are not equal-compute or convergence/recovery evidence",
+        "compute_concurrency": 1,
+        "oracle": false
+      },
+      "reports": {
+        "pilot": {
+          "path": "docs/validation/results/optimizer-bridge-pilot-native-20261014.json",
+          "sha256": "0beab47bbee4cb1afe2a7ac9260dd7dfc5e45fcd5553cb44db35e26f62e9dfa1",
+          "blob_sha1": "a734e8046d9a1062acc0981ff2c1e321d27bb629",
+          "proof_path": "docs/validation/results/optimizer-bridge-verification-native-20261014.json",
+          "proof_sha256": "8c897be6e92e2b0c22204c74f89c2937e9d1b6dbc0645d67abdabbf7a7568302",
+          "proof_blob_sha1": "08e3aa1f28d1c042fcd30a412debe683bab4918b"
+        }
+      },
+      "initial_ll_by_seed": {
+        "1915": -537.4526814630641,
+        "1916": -530.1549218292968,
+        "1917": -514.02812273873
+      }
+    }
+  }
+}

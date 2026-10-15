@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
+from scripts.historical_evidence import check_archived_bytes, historical_record
 from scripts.adaptive_width_cap import validate_state
 from scripts.block_mass_smoothing import geometry, marginal_objective
 from scripts.compare_block_mass_smoothing import ORDER, check_history, expected_payload
@@ -35,13 +36,18 @@ def finite(value, name):
 def audit_seed(raw, proof, seed, *, historical=False):
     """Validate one immutable report and its existing independent replay proof."""
     report = json.loads(raw)
-    expected = expected_payload(seed, SOURCE)
     if historical:
-        frozen = json.loads(
-            Path("docs/validation/block-mass-smoothing-frozen-source.json").read_text()
-        )
-        require(frozen["source_commit"] == SOURCE, "frozen manifest identity")
-        expected["execution"]["source_sha256"] = frozen["source_sha256"]
+        frozen = historical_record("smoothing")
+        require(frozen["execution"]["source_commit"] == SOURCE, "frozen manifest identity")
+        require(str(seed) in frozen["reports"], "seed outside frozen protocol")
+        expected = {
+            "schema": frozen["schema"],
+            "seed": seed,
+            "execution": frozen["execution"],
+            "contract": frozen["contract"],
+        }
+    else:
+        expected = expected_payload(seed, SOURCE)
     for key in ("schema", "seed", "execution", "contract"):
         require(report.get(key) == expected[key], f"seed{seed}: {key} differs")
     require(report["active"] is None, "unfinished active phase")
@@ -115,6 +121,8 @@ def audit_seed(raw, proof, seed, *, historical=False):
         <= 1e-7,
         "paired LL arithmetic",
     )
+    if historical:
+        check_archived_bytes(raw, frozen["reports"][str(seed)], proof=proof)
     return report
 
 
@@ -132,7 +140,8 @@ def audit_batch(directory, *, historical=False):
     for field in ("training_sha256",):
         require(len({r[field] for r in reports}) == 3, "reused training data")
     require(len({r["evaluation"]["heldout_sha256"] for r in reports}) == 3, "reused outer data")
-    batch = json.loads((directory / f"{PREFIX}batch-native-20261014.json").read_text())
+    batch_raw = (directory / f"{PREFIX}batch-native-20261014.json").read_bytes()
+    batch = json.loads(batch_raw)
     require(batch["schema"] == "nhsmm-block-mass-smoothing-final-batch-v1", "batch schema")
     require(batch["source_commit"] == SOURCE and batch["seeds"] == list(SEEDS), "batch identity")
     require(
@@ -174,6 +183,8 @@ def audit_batch(directory, *, historical=False):
                 ("forward_kl_projection_tv", "forward_kl_projection_tv"),
             ):
                 require(row["arms"][key][target] == arm[source], "batch arm mismatch")
+    if historical:
+        check_archived_bytes(batch_raw, historical_record("smoothing")["batch"])
     return {
         "historical_source_manifest": historical,
         "verified_recorded_evidence": True,
@@ -192,7 +203,7 @@ def main():
     parser.add_argument(
         "--historical",
         action="store_true",
-        help="Validate archived source hashes, not the current implementation; software must still match.",
+        help="Audit recorded source/software identities and sealed bytes; no numerical replay.",
     )
     args = parser.parse_args()
     print(json.dumps(audit_batch(args.results, historical=args.historical), allow_nan=False))
