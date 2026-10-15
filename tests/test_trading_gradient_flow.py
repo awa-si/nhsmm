@@ -59,3 +59,25 @@ def test_duration_summary_uses_model_dimensions_and_gate():
             soft_dmax=model.duration_logits_bias
         ).exp().detach().numpy()[0, 0], rtol=1e-6,
     )
+
+
+def test_training_reconstruction_restores_flags_and_preserves_weights(tmp_path):
+    import torch
+    from nhsmm import ModelConfig, NHSMM, save_artifact
+    from scripts.diagnose_trading_gradient_flow import gradient_summary, training_model
+
+    original = NHSMM(ModelConfig(n_states=4, n_features=5, max_duration=64,
+                                 duration_tail=True, causal=True, verbose=False), device="cpu")
+    original.initialize_distributions()
+    path = save_artifact(original, tmp_path / "model.pt")
+    restored = training_model(path)
+    for name, parameter in restored.named_parameters():
+        assert parameter.requires_grad == dict(original.named_parameters())[name].requires_grad
+    for name, tensor in restored.state_dict().items():
+        torch.testing.assert_close(tensor, original.state_dict()[name], rtol=0, atol=0)
+    with pytest.raises(RuntimeError, match="missing expected training gradient"):
+        gradient_summary(restored)
+    restored.log_likelihood(torch.randn(1, 8, 5), reduce=True).backward()
+    assert set(gradient_summary(restored)["groups"]) >= {
+        "duration", "duration_gate", "tail_hazard", "emission", "transition", "initial",
+    }

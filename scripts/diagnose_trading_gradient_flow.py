@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from nhsmm import load_artifact
+from nhsmm import NHSMM, load_artifact
 from scripts.diagnose_model_conform_duration import duration_mean
 
 DATA_SHA = "370e6e9e87e52d779ea208111eeb2e03b0bf21f8b7e88859fcc8c19ac2739fb4"
@@ -56,6 +56,14 @@ def observations(data, protocol, split, smoke=False):
     return torch.tensor((raw - mean) / std)
 
 
+def training_model(artifact):
+    admitted = load_artifact(artifact, device="cpu", require_causal=True)
+    model = NHSMM(admitted.config, device="cpu")
+    model.initialize_distributions()
+    model.load_state_dict(admitted.state_dict(), strict=True)
+    return model
+
+
 @torch.no_grad()
 def duration_law(model):
     pmf = model.dist.duration.expected_probs(soft_dmax=model.duration_logits_bias)
@@ -90,6 +98,11 @@ def gradient_summary(model):
             "nonzero_elements": 0 if grad is None else int(torch.count_nonzero(grad)),
         })
         row["squared_norm"] += norm2
+    required = {"duration", "duration_gate", "tail_hazard", "emission", "transition", "initial"}
+    if not required.issubset(rows):
+        raise RuntimeError("missing expected trainable groups")
+    if any(not p["gradient_present"] for row in rows.values() for p in row["parameters"]):
+        raise RuntimeError("missing expected training gradient")
     total2 = sum(row["squared_norm"] for row in rows.values())
     scale = min(1.0, 5.0 / (math.sqrt(total2) + 1e-6))
     for row in rows.values():
@@ -111,7 +124,7 @@ def run(args):
     with np.load(args.dataset, allow_pickle=False) as data:
         train = observations(data, protocol, "train", args.smoke)
         valid = observations(data, protocol, "valid", args.smoke)
-    model = load_artifact(args.artifact, device="cpu", require_causal=True)
+    model = training_model(args.artifact)
     model.eval()
     before = {name: tensor.clone() for name, tensor in model.state_dict().items()}
     cfg = model.config
