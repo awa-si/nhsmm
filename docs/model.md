@@ -245,6 +245,15 @@ state = runtime.step(
 
 External context requires `ModelConfig.context_dim`; its dimensionality must equal `model.context_dim`. An internal encoder is not required. Variable-length external-context lists are validated against `context_dim` independently of the observation feature width.
 
+External context accepts [H], shared [T,H], batch-static [B,1,H],
+[B,T,H], or one [T_i,H] tensor per independent observation sequence. Ragged lists
+are checked against the observation mask's original lengths, then padded with
+zero context. Model construction prepares observations once and passes the same
+validated mask to context alignment. Padding contributes no likelihood or context
+gradient. Empty external-context sequences retain canonical shape [B,1,H] with
+zero canonical context and neutral empty likelihood; this does not change positive-
+length context timing.
+
 External context remains the caller's responsibility for every step in that runtime session.
 
 ## Runtime reset

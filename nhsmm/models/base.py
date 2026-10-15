@@ -11,7 +11,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 from nhsmm.training import optimize_model
 from nhsmm.encoder import DefaultEncoder
-from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
+from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, _align_sequence_context
 from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.filtering import (
     _causal_filter_step,
@@ -291,65 +291,21 @@ class NHSMM(nn.Module):
         self,
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]],
+        *,
+        mask: Optional[torch.Tensor] = None,
     ) -> Optional[torch.Tensor]:
         if context is None:
             return None
         if self.context_dim is None:
             raise ValueError("external context requires ModelConfig.context_dim to be configured")
-
-        X_tensor = self._ensure_tensor(X)
-        B, T, _ = X_tensor.shape
-        context_dim = int(self.context_dim)
-        if isinstance(context, list):
-            if len(context) != B:
-                raise ValueError(
-                    f"context list length {len(context)} does not match batch size {B}"
-                )
-            expected_lengths = (
-                [int(torch.as_tensor(item).shape[0]) for item in X]
-                if isinstance(X, list)
-                else [T] * B
-            )
-            context_tensors = []
-            for index, (item, expected_length) in enumerate(zip(context, expected_lengths)):
-                item_tensor = torch.as_tensor(
-                    item,
-                    device=X_tensor.device,
-                    dtype=X_tensor.dtype,
-                )
-                if item_tensor.ndim != 2:
-                    raise ValueError(
-                        "context list entries must be [T,H] tensors; "
-                        f"entry {index} has shape {tuple(item_tensor.shape)}"
-                    )
-                if item_tensor.shape[0] != expected_length:
-                    raise ValueError(
-                        f"context sequence {index} length {item_tensor.shape[0]} "
-                        f"does not match observation length {expected_length}"
-                    )
-                if item_tensor.shape[1] != context_dim:
-                    raise ValueError(
-                        f"context sequence {index} feature dimension {item_tensor.shape[1]} "
-                        f"does not match expected context_dim {context_dim}"
-                    )
-                if not torch.isfinite(item_tensor).all():
-                    raise ValueError(f"context sequence {index} must contain only finite values")
-                context_tensors.append(item_tensor)
-            context = (
-                pad_sequence(context_tensors, batch_first=True, padding_value=0.0)
-                if context_tensors
-                else X_tensor.new_empty((0, T, context_dim))
-            )
-        elif not torch.is_tensor(context):
-            raise TypeError(f"Unsupported context type: {type(context)}")
-
-        return align_context_tensor(
+        if mask is None:
+            X, mask = self._ensure_tensor(X, return_mask=True)
+        return _align_sequence_context(
             context,
-            batch_size=B,
-            timesteps=T,
-            context_dim=context_dim,
-            device=X_tensor.device,
-            dtype=X_tensor.dtype,
+            lengths=mask.sum(dim=1),
+            timesteps=X.shape[1],
+            context_dim=int(self.context_dim),
+            prototype=X,
         )
 
     def _build_sequence_set(
@@ -358,8 +314,8 @@ class NHSMM(nn.Module):
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
     ) -> SequenceSet:
         self._require_distributions()
-        context = self._align_external_context(X, context)
         X, mask = self._ensure_tensor(X, return_mask=True)
+        context = self._align_external_context(X, context, mask=mask)
         B, T, F = X.shape
         if F != self.config.n_features:
             raise ValueError(
@@ -380,7 +336,9 @@ class NHSMM(nn.Module):
                     canonical = context_tensor.new_zeros((B, 1, context_tensor.shape[-1]))
         else:
             context_tensor = context
-            canonical = context_tensor[:, :1]
+            canonical = (
+                context_tensor[:, :1] if T else X.new_zeros((B, 1, context_tensor.shape[-1]))
+            )
 
         K = self.config.n_states
         emission_context = context_tensor if context_tensor.shape[-1] > 0 else None

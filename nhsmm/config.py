@@ -70,16 +70,23 @@ def _require_bool(name: str, value: Any) -> None:
 
 def _reject_unknown(cls: type[Any], payload: Mapping[str, Any]) -> None:
     allowed = {item.name for item in fields(cls)}
-    unknown = sorted(set(payload) - allowed)
+    unknown = sorted(set(payload) - allowed, key=repr)
     if unknown:
         raise ValueError(f"unknown {cls.__name__} fields: {unknown}")
 
 
-def _strict_dataclass_from_dict(cls: type[Any], payload: Mapping[str, Any]) -> Any:
+def _strict_dataclass_from_dict(
+    cls: type[Any], payload: Mapping[str, Any], *, strict: bool = True
+) -> Any:
     if not isinstance(payload, Mapping):
         raise TypeError(f"{cls.__name__} payload must be a mapping")
-    _reject_unknown(cls, payload)
-    return cls(**dict(payload))
+    if strict:
+        _reject_unknown(cls, payload)
+        values = dict(payload)
+    else:
+        allowed = {item.name for item in fields(cls)}
+        values = {key: value for key, value in payload.items() if key in allowed}
+    return cls(**values)
 
 
 @dataclass
@@ -231,7 +238,7 @@ class ModelConfig:
         }
         for name, allowed in choices.items():
             value = getattr(self, name)
-            if value not in allowed:
+            if not isinstance(value, str) or value not in allowed:
                 raise ValueError(f"{name} must be one of {sorted(allowed)}, got {value!r}")
         if self.optimizer_initialization == "current" and self.n_init != 1:
             raise ValueError("optimizer_initialization=current requires n_init=1")
@@ -250,16 +257,7 @@ class ModelConfig:
     ) -> "ModelConfig":
         """Construct a validated config from a mapping."""
 
-        if not isinstance(payload, Mapping):
-            raise TypeError("ModelConfig payload must be a mapping")
-        values = dict(payload)
-        allowed = {item.name for item in fields(cls)}
-        unknown = sorted(set(values) - allowed)
-        if strict and unknown:
-            raise ValueError(f"unknown ModelConfig fields: {unknown}")
-        for name in unknown:
-            values.pop(name, None)
-        return cls(**values)
+        return _strict_dataclass_from_dict(cls, payload, strict=strict)
 
     def with_overrides(self, **overrides: Any) -> "ModelConfig":
         """Return a validated copy with explicit tuning overrides."""

@@ -63,6 +63,59 @@ def align_context_tensor(
     )
 
 
+def _align_sequence_context(
+    context: torch.Tensor | list[torch.Tensor],
+    *,
+    lengths: torch.Tensor,
+    timesteps: int,
+    context_dim: int,
+    prototype: torch.Tensor,
+) -> torch.Tensor:
+    """Align external context against already validated observation lengths."""
+    B, T = len(lengths), timesteps
+    if isinstance(context, list):
+        if len(context) != B:
+            raise ValueError(f"context list length {len(context)} does not match batch size {B}")
+        tensors = []
+        for index, (item, expected_length) in enumerate(
+            zip(context, lengths.tolist(), strict=True)
+        ):
+            tensor = torch.as_tensor(item, device=prototype.device, dtype=prototype.dtype)
+            if tensor.ndim != 2:
+                raise ValueError(
+                    "context list entries must be [T,H] tensors; "
+                    f"entry {index} has shape {tuple(tensor.shape)}"
+                )
+            if tensor.shape[0] != expected_length:
+                raise ValueError(
+                    f"context sequence {index} length {tensor.shape[0]} "
+                    f"does not match observation length {expected_length}"
+                )
+            if tensor.shape[1] != context_dim:
+                raise ValueError(
+                    f"context sequence {index} feature dimension {tensor.shape[1]} "
+                    f"does not match expected context_dim {context_dim}"
+                )
+            if not torch.isfinite(tensor).all():
+                raise ValueError(f"context sequence {index} must contain only finite values")
+            tensors.append(tensor)
+        context = (
+            pad_sequence(tensors, batch_first=True, padding_value=0.0)
+            if tensors
+            else prototype.new_empty((0, T, context_dim))
+        )
+    elif not torch.is_tensor(context):
+        raise TypeError(f"Unsupported context type: {type(context)}")
+    return align_context_tensor(
+        context,
+        batch_size=B,
+        timesteps=T,
+        context_dim=context_dim,
+        device=prototype.device,
+        dtype=prototype.dtype,
+    )
+
+
 @dataclass
 class SequenceSet:
     """Container for batched sequences with optional contexts and log probabilities."""
