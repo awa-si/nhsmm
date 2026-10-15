@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import operator
 from typing import Any, Callable, Iterable, Optional
 
 from .alignment import emission_centers
@@ -42,25 +43,18 @@ def split_fit_context_evidence(
     function deliberately does not call ``NHSMM.optimize`` itself, keeping training
     policy outside validation and preserving the core model API.
     """
-    n = len(observations)
-    if len(context) != n:
-        raise ValueError("observations and context must have equal first-axis length")
-    if n < 2:
-        raise ValueError("at least two independent training units are required")
-
-    split = n // 2 if split_index is None else int(split_index)
-    if split <= 0 or split >= n:
-        raise ValueError("split_index must leave both replicas non-empty")
-
-    xa, ca = _slice(observations, 0, split), _slice(context, 0, split)
-    xb, cb = _slice(observations, split, n), _slice(context, split, n)
-    model_a = fit_model(xa, ca, 0)
-    model_b = fit_model(xb, cb, 1)
+    model_a, model_b, grid, split, n = _fit_disjoint_replicas(
+        observations,
+        context,
+        fit_model=fit_model,
+        evidence_contexts=evidence_contexts,
+        split_index=split_index,
+    )
 
     evidence = evaluate_context_replication(
         model_a,
         model_b,
-        evidence_contexts,
+        grid,
         effect_matrix=effect_matrix,
         config=config,
         centers=centers,
@@ -70,3 +64,38 @@ def split_fit_context_evidence(
         split_index=split,
         replica_sizes=(split, n - split),
     )
+
+
+def _fit_disjoint_replicas(
+    observations: Any,
+    context: Any,
+    *,
+    fit_model: Callable[[Any, Any, int], Any],
+    evidence_contexts: Iterable[Any],
+    split_index: Optional[int],
+) -> tuple[Any, Any, list[Any], int, int]:
+    n = len(observations)
+    if len(context) != n:
+        raise ValueError("observations and context must have equal first-axis length")
+    if n < 2:
+        raise ValueError("at least two independent training units are required")
+    if split_index is None:
+        split = n // 2
+    else:
+        if isinstance(split_index, bool):
+            raise ValueError("split_index must be an integer")
+        try:
+            split = operator.index(split_index)
+        except TypeError as exc:
+            raise ValueError("split_index must be an integer") from exc
+    if split <= 0 or split >= n:
+        raise ValueError("split_index must leave both replicas non-empty")
+    grid = list(evidence_contexts)
+    if len(grid) < 2:
+        raise ValueError("contexts must contain at least two grid points")
+
+    model_a = fit_model(_slice(observations, 0, split), _slice(context, 0, split), 0)
+    model_b = fit_model(_slice(observations, split, n), _slice(context, split, n), 1)
+    if model_a is model_b:
+        raise ValueError("fit_model must return distinct fitted model instances")
+    return model_a, model_b, grid, split, n

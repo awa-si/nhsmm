@@ -2,6 +2,49 @@
 
 `nhsmm.validation` provides domain-neutral evidence checks for learned context effects. Validation is deliberately separate from `NHSMM.optimize()`: training policy stays with the caller, while validation tests whether a fitted context effect reproduces across independent fits.
 
+## Validation contract and limitations
+
+Context probes consume one scalar/vector in the fitted component-context space;
+they do not encode an observation sequence. A probe temporarily uses evaluation
+mode and restores every PyTorch submodule's original mode, including after an
+exception. Transition probes require exactly B=T=1; additional batch/time rows
+are rejected rather than discarded.
+
+Transition-like callbacks may return non-negative row weights; validation
+normalizes them stably. Negative/non-finite weights and empty support are invalid.
+With exclude_self_transitions=True, selection measures the destination law
+conditional on changing state, removing and renormalizing the diagonal. Thus a
+two-state chain has no varying destination choice under this policy; self-renewal
+or duration effects must be assessed separately. With False, all transition mass
+is included. State-effect amplitudes retain the component's units.
+
+Selection requires strictly positive amplitude in both replicas and the explicit
+configured amplitude/correlation thresholds. Constant effects cannot be selected
+even with zero thresholds. Correlation is scale-independent Pearson correlation;
+constant/singleton vectors return zero, empty/non-vector inputs are rejected.
+Callback outputs are captured immediately, so a reused scratch buffer cannot
+overwrite earlier grid points.
+
+Split-fit validates an integer split index and a grid of at least two contexts
+before calling either fit, and requires two distinct returned model instances.
+It splits the first axis as supplied: slicing does not establish statistical
+independence, remove overlapping windows, purge adjacent labels, or prevent a
+callback from sharing weights/data. The caller owns chronological partitioning,
+training-only preprocessing, independent fitting state/seeds, and a predeclared
+context grid. Reusing a model object is rejected, but hidden sharing is not
+detectable here.
+
+Emission-center alignment is a permutation diagnostic; indistinguishable centers
+can make the assignment ambiguous. These checks are descriptive replication
+evidence, not a p-value, calibrated false-positive rate, causal-effect estimate,
+or held-out predictive/trading acceptance. Snapshot Viterbi/health summaries are
+retrospective and are not causal filtered signals. Setting require_same_model=False
+does not align independently fitted state labels; occupancy L1 then has no
+state-semantic interpretation without caller-established alignment.
+
+See [V3 validation audit](validation/v3-validation-path-20261015.md) for defects,
+regression evidence and the unchanged research boundary.
+
 ## Canonical public API
 
 For normal application code, use the component-normalized facade exported directly from `nhsmm`:
@@ -65,10 +108,10 @@ Thresholds are always explicit policy. Amplitude units are component-specific an
 
 Shared validation semantics are:
 
-- two independent fits on disjoint training units;
+- two distinct fitted replicas on disjoint first-axis slices; independence is caller-established;
 - latent-state alignment from learned emission centers only;
 - comparison on an explicit context evidence grid;
-- selection requires both replicated direction and replicated effect size;
+- selection requires positive effect size and the caller's explicit correlation/amplitude thresholds;
 - no latent truth labels are needed;
 - no domain-specific labels or trading assumptions are used.
 

@@ -7,6 +7,8 @@ from typing import Any, Optional, Union
 
 import torch
 
+from ._inference import _evaluation_mode
+
 from nhsmm.config import ModelHealthThresholds
 from nhsmm.diagnostics import ModelHealthReport, evaluate_model_health
 
@@ -162,9 +164,7 @@ def evaluate_validation_snapshot(
     if getattr(model, "dist", None) is None:
         raise RuntimeError("model distributions are not initialized")
 
-    original_training = bool(model.training)
-    try:
-        model.eval()
+    with _evaluation_mode(model):
         with torch.inference_mode():
             input_tensor, input_mask = model._ensure_tensor(X, return_mask=True)
             if input_mask is None or int(input_mask.sum().item()) == 0:
@@ -226,8 +226,6 @@ def evaluate_validation_snapshot(
                 mean_run_length=mean_run_length,
                 health=health,
             )
-    finally:
-        model.train(original_training)
 
 
 def compare_validation_snapshots(

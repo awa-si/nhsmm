@@ -14,9 +14,17 @@ def finite_correlation(a: Any, b: Any) -> float:
         raise ValueError("correlation inputs must have equal shape")
     if not np.isfinite(a).all() or not np.isfinite(b).all():
         raise ValueError("correlation inputs must contain only finite values")
-    if np.std(a) < 1e-12 or np.std(b) < 1e-12:
+    if a.ndim != 1 or a.size == 0:
+        raise ValueError("correlation inputs must be non-empty one-dimensional vectors")
+    # Scale before centering: finite values can overflow variance/subtraction.
+    a = a / max(float(np.max(np.abs(a))), np.finfo(np.float64).tiny)
+    b = b / max(float(np.max(np.abs(b))), np.finfo(np.float64).tiny)
+    a = a - a.mean()
+    b = b - b.mean()
+    norm_a, norm_b = np.linalg.norm(a), np.linalg.norm(b)
+    if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
-    return float(np.corrcoef(a, b)[0, 1])
+    return float(np.clip(np.dot(a / norm_a, b / norm_b), -1.0, 1.0))
 
 
 @dataclass(frozen=True)
@@ -25,6 +33,16 @@ class StateAlignment:
 
     candidate_to_reference: tuple[int, ...]
     cost: float
+
+    def __post_init__(self) -> None:
+        permutation = self.candidate_to_reference
+        if any(
+            isinstance(x, (bool, np.bool_)) or not isinstance(x, (int, np.integer))
+            for x in permutation
+        ) or sorted(permutation) != list(range(len(permutation))):
+            raise ValueError("state alignment must be a permutation of 0..K-1")
+        if not np.isfinite(self.cost) or self.cost < 0.0:
+            raise ValueError("state alignment cost must be finite and non-negative")
 
     @property
     def reference_to_candidate(self) -> tuple[int, ...]:
@@ -45,6 +63,8 @@ def _hungarian(cost: np.ndarray) -> np.ndarray:
     if not np.isfinite(cost).all():
         raise ValueError("cost must contain only finite values")
 
+    # Bound intermediate potentials even for finite costs near float64 limits.
+    cost = cost / max(float(np.max(np.abs(cost))), 1.0)
     u = np.zeros(n + 1, dtype=np.float64)
     v = np.zeros(n + 1, dtype=np.float64)
     p = np.zeros(n + 1, dtype=np.int64)
@@ -97,10 +117,16 @@ def align_state_centers(reference: Any, candidate: Any) -> StateAlignment:
     cand = np.asarray(candidate, dtype=np.float64)
     if ref.ndim != 2 or cand.ndim != 2 or ref.shape != cand.shape:
         raise ValueError("reference and candidate centers must have equal shape [K, F]")
+    if 0 in ref.shape:
+        raise ValueError("state centers must have non-empty shape [K, F]")
     if not np.isfinite(ref).all() or not np.isfinite(cand).all():
         raise ValueError("state centers must be finite")
 
-    cost = ((cand[:, None, :] - ref[None, :, :]) ** 2).sum(axis=-1)
+    try:
+        with np.errstate(over="raise", invalid="raise"):
+            cost = ((cand[:, None, :] - ref[None, :, :]) ** 2).sum(axis=-1)
+    except FloatingPointError as exc:
+        raise ValueError("state centers must yield finite squared distances") from exc
     permutation = _hungarian(cost)
     total_cost = float(cost[np.arange(cost.shape[0]), permutation].sum())
     return StateAlignment(tuple(int(x) for x in permutation), total_cost)

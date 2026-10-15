@@ -1,0 +1,84 @@
+{
+  "schema": "nhsmm-v3-validation-path-audit-v1",
+  "branch": "v3",
+  "base_commit": "0a5dbd43d5db5a87fe8d11af67f712a45780f86d",
+  "new_regression_cases": 44,
+  "baseline": {
+    "initial": {
+      "job": "6d9f6951086c45369e1aa70535822320",
+      "failed": 38,
+      "passed": 1
+    },
+    "scratch_buffer": {
+      "job": "ac3068f2787a44dcb445d97ea0d58e99",
+      "failed": 2,
+      "passed": 2
+    },
+    "direction_overflow": {
+      "job": "f4d88632f47c4046aff1087b72370922",
+      "reproduced": "FloatingPointError: overflow encountered in multiply"
+    }
+  },
+  "intermediate_full": {
+    "job": "e208f83a431243f0a5bdf05dcdcca75d",
+    "passed": 1285,
+    "skipped": 3,
+    "deselected": 0,
+    "seconds": 229.53
+  },
+  "focused": {
+    "job": "656f4f9839644e25b05aeb4ac3e96b73",
+    "passed": 74,
+    "warnings_as_errors": true,
+    "seconds": 9.06
+  },
+  "host_and_installed": {
+    "job": "36c4e2160a144780898c51744966ca69",
+    "host_passed": 84,
+    "host_skipped": 1,
+    "host_warnings": 102,
+    "host_seconds": 45,
+    "installed_passed": 44,
+    "installed_seconds": 5.71,
+    "installed_warnings_as_errors": true,
+    "pip_check": "No broken requirements found."
+  },
+  "source_install_sha256": {
+    "nhsmm/validation/split_fit.py": "fd7e203e4c7cd08415601b3dbaedd19158c2a597a6f13ae6009f763898e8c1d8",
+    "nhsmm/validation/nhsmm.py": "0419f7767c1c601f3e55046d11e43933c3f7368821185ad5375b2570d5f5a3e2",
+    "nhsmm/validation/api.py": "e46fedcaf20e00fe09f467e699441dc226f67989ea125ebef2fd2866de47b2ab",
+    "nhsmm/validation/state_effect.py": "27140ffb83d1387745840be497e006f4e6a27e214f33197ffb0670dea617f03e",
+    "nhsmm/validation/_inference.py": "814c068aa53f1caaecf69d7f7ba75ef48af4a5b56e022b8dcd46ff8c5b71febe",
+    "nhsmm/validation/context_evidence.py": "e39c4735a7e5bdb8b6667052c3ac085065206fa9dd36a66e9026fc6d4b229fda",
+    "nhsmm/validation/alignment.py": "ff5916fd7a440428af8d0478d9722b943f61b764ac1182f989a16d88f1a9b663",
+    "nhsmm/validation/__init__.py": "e3095192983b2120f8a516509dd45db897a50856d9630d2c5bb8a07b0165ab3e",
+    "nhsmm/validation/snapshot.py": "8e5b36270497a090741bba7e4ff631917703378182b416e9b7583544798230c8"
+  },
+  "static_checks": [
+    "Python compileall",
+    "Ruff",
+    "Black",
+    "git diff --check"
+  ],
+  "execution": {
+    "image": "localhost/workspace:py",
+    "device": "cpu",
+    "broad_gate_omp_threads": 2,
+    "broad_gate_mkl_threads": 2
+  },
+  "boundaries": {
+    "oracle": "OFF",
+    "old_holdout": "unchanged; not rescored",
+    "original_evidence": "unchanged",
+    "new_model_quality_claim": false,
+    "calibrated_statistical_test": false,
+    "independence_established_by_slicing": false
+  },
+  "final_full": {
+    "job": "c783278356b24dbe86f94d9bd402123d",
+    "passed": 1286,
+    "skipped": 3,
+    "deselected": 0,
+    "seconds": 218.43
+  }
+}

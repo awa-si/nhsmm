@@ -27,6 +27,8 @@ class ContextEvidenceConfig:
     exclude_self_transitions: bool = True
 
     def __post_init__(self) -> None:
+        if not isinstance(self.exclude_self_transitions, (bool, np.bool_)):
+            raise ValueError("exclude_self_transitions must be boolean")
         if not np.isfinite(self.replication_corr_min):
             raise ValueError("replication_corr_min must be finite")
         if not -1.0 <= self.replication_corr_min <= 1.0:
@@ -48,15 +50,24 @@ class ContextEvidence:
     n_contexts: int
 
 
+def _normalize_mass(matrix: np.ndarray) -> np.ndarray:
+    if not np.isfinite(matrix).all():
+        raise ValueError("transition mass must contain only finite values")
+    if np.any(matrix < 0.0):
+        raise ValueError("transition mass must be non-negative")
+    scale = matrix.max(axis=-1, keepdims=True)
+    if np.any(scale <= 0.0):
+        raise ValueError("each state must retain positive off-diagonal mass or row mass")
+    scaled = matrix / scale
+    return scaled / scaled.sum(axis=-1, keepdims=True)
+
+
 def _conditional_change(matrix: np.ndarray) -> np.ndarray:
     q = np.asarray(matrix, dtype=np.float64).copy()
     if q.ndim != 2 or q.shape[0] != q.shape[1]:
         raise ValueError("effect matrices must be square [K, K]")
     np.fill_diagonal(q, 0.0)
-    rows = q.sum(axis=1, keepdims=True)
-    if np.any(rows <= 0.0):
-        raise ValueError("each state must retain positive off-diagonal mass")
-    return q / rows
+    return _normalize_mass(q)
 
 
 def _effect_vector(matrices: np.ndarray, *, exclude_self: bool) -> tuple[np.ndarray, float]:
@@ -70,14 +81,14 @@ def _effect_vector(matrices: np.ndarray, *, exclude_self: bool) -> tuple[np.ndar
     if not np.isfinite(matrices).all():
         raise ValueError("context effect matrices must contain only finite values")
 
+    if np.any(matrices < 0.0):
+        raise ValueError("transition mass must be non-negative")
+
     if exclude_self:
         matrices = np.stack([_conditional_change(m) for m in matrices])
         mask = ~np.eye(matrices.shape[1], dtype=bool)
     else:
-        rows = matrices.sum(axis=-1)
-        if np.any(rows <= 0.0):
-            raise ValueError("matrix rows must have positive mass")
-        matrices = matrices / rows[..., None]
+        matrices = _normalize_mass(matrices)
         mask = np.ones((matrices.shape[1], matrices.shape[2]), dtype=bool)
 
     values = matrices[:, mask]
@@ -108,7 +119,7 @@ def evaluate_context_replication(
     mats_a = []
     mats_b = []
     for context in grid:
-        a = np.asarray(effect_matrix(model_a, context), dtype=np.float64)
+        a = np.array(effect_matrix(model_a, context), dtype=np.float64, copy=True)
         b = reorder_square_matrix(effect_matrix(model_b, context), alignment)
         if a.shape != b.shape:
             raise ValueError("replica effect matrices must have equal shape")
@@ -119,10 +130,14 @@ def evaluate_context_replication(
     vec_b, amp_b = _effect_vector(np.stack(mats_b), exclude_self=config.exclude_self_transitions)
     replication_corr = finite_correlation(vec_a, vec_b)
     nz = (np.abs(vec_a) > 1e-4) & (np.abs(vec_b) > 1e-4)
-    agreement = float(((vec_a[nz] * vec_b[nz]) > 0.0).mean()) if np.any(nz) else 0.0
+    agreement = (
+        float((np.signbit(vec_a[nz]) == np.signbit(vec_b[nz])).mean()) if np.any(nz) else 0.0
+    )
     amp_min = min(amp_a, amp_b)
     selected = (
-        replication_corr >= config.replication_corr_min and amp_min >= config.min_replica_amplitude
+        amp_min > 0.0
+        and replication_corr >= config.replication_corr_min
+        and amp_min >= config.min_replica_amplitude
     )
     return ContextEvidence(
         selected=bool(selected),

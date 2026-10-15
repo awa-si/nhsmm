@@ -5,10 +5,12 @@ from typing import Any, Callable, Iterable, Optional
 import numpy as np
 import torch
 
+from ._inference import _evaluation_mode
+
 from .alignment import StateAlignment, align_state_centers, emission_centers, finite_correlation
 from .context_evidence import ContextEvidence, ContextEvidenceConfig
 from .nhsmm import _context_tensor
-from .split_fit import SplitFitEvidence, _slice
+from .split_fit import SplitFitEvidence, _fit_disjoint_replicas
 
 
 def _reorder_state_axis(value: Any, alignment: StateAlignment) -> np.ndarray:
@@ -24,8 +26,8 @@ def _effect_vector(tensors: list[np.ndarray]) -> tuple[np.ndarray, float]:
     if len(tensors) < 2:
         raise ValueError("at least two context grid points are required")
     shape = tensors[0].shape
-    if not shape or shape[0] == 0:
-        raise ValueError("state effect tensors must contain at least one state")
+    if not shape or tensors[0].size == 0:
+        raise ValueError("state effect tensors must have non-empty state and effect axes")
     for tensor in tensors:
         if tensor.shape != shape:
             raise ValueError("state effect tensors must have equal shape across contexts")
@@ -63,7 +65,7 @@ def evaluate_state_context_replication(
     effects_a: list[np.ndarray] = []
     effects_b: list[np.ndarray] = []
     for context in grid:
-        a = np.asarray(effect_tensor(model_a, context), dtype=np.float64)
+        a = np.array(effect_tensor(model_a, context), dtype=np.float64, copy=True)
         b = _reorder_state_axis(effect_tensor(model_b, context), alignment)
         if a.shape != b.shape:
             raise ValueError("replica state effect tensors must have equal shape")
@@ -74,10 +76,14 @@ def evaluate_state_context_replication(
     vec_b, amp_b = _effect_vector(effects_b)
     replication_corr = finite_correlation(vec_a, vec_b)
     nz = (np.abs(vec_a) > 1e-4) & (np.abs(vec_b) > 1e-4)
-    agreement = float(((vec_a[nz] * vec_b[nz]) > 0.0).mean()) if np.any(nz) else 0.0
+    agreement = (
+        float((np.signbit(vec_a[nz]) == np.signbit(vec_b[nz])).mean()) if np.any(nz) else 0.0
+    )
     amp_min = min(amp_a, amp_b)
     selected = (
-        replication_corr >= config.replication_corr_min and amp_min >= config.min_replica_amplitude
+        amp_min > 0.0
+        and replication_corr >= config.replication_corr_min
+        and amp_min >= config.min_replica_amplitude
     )
     return ContextEvidence(
         selected=bool(selected),
@@ -102,21 +108,17 @@ def split_fit_state_context_evidence(
     split_index: Optional[int] = None,
 ) -> SplitFitEvidence:
     """Split-fit wrapper for arbitrary state-indexed context effects."""
-    n = len(observations)
-    if len(context) != n:
-        raise ValueError("observations and context must have equal first-axis length")
-    if n < 2:
-        raise ValueError("at least two independent training units are required")
-    split = n // 2 if split_index is None else int(split_index)
-    if split <= 0 or split >= n:
-        raise ValueError("split_index must leave both replicas non-empty")
-
-    model_a = fit_model(_slice(observations, 0, split), _slice(context, 0, split), 0)
-    model_b = fit_model(_slice(observations, split, n), _slice(context, split, n), 1)
+    model_a, model_b, grid, split, n = _fit_disjoint_replicas(
+        observations,
+        context,
+        fit_model=fit_model,
+        evidence_contexts=evidence_contexts,
+        split_index=split_index,
+    )
     evidence = evaluate_state_context_replication(
         model_a,
         model_b,
-        evidence_contexts,
+        grid,
         effect_tensor=effect_tensor,
         config=config,
         centers=centers,
@@ -131,10 +133,7 @@ def duration_context_tensor(model: Any, context: Any) -> np.ndarray:
     except AttributeError as exc:
         raise TypeError("model must expose dist.duration") from exc
     ctx = _context_tensor(model, context)
-    was_training = bool(getattr(model, "training", False))
-    if hasattr(model, "eval"):
-        model.eval()
-    try:
+    with _evaluation_mode(model):
         with torch.inference_mode():
             value = duration.log_matrix(
                 context=ctx,
@@ -148,9 +147,6 @@ def duration_context_tensor(model: Any, context: Any) -> np.ndarray:
             if value.shape[2] <= 0 or value.shape[3] <= 0:
                 raise ValueError("duration log_matrix must contain positive K and D dimensions")
             out = value[0, 0].detach().cpu().numpy().astype(np.float64, copy=False)
-    finally:
-        if hasattr(model, "train"):
-            model.train(was_training)
     if not np.isfinite(out).all():
         raise ValueError("duration context tensor contains non-finite values")
     if not np.allclose(out.sum(axis=-1), 1.0, atol=1e-6, rtol=1e-6):
@@ -165,19 +161,13 @@ def emission_context_tensor(model: Any, context: Any) -> np.ndarray:
     except AttributeError as exc:
         raise TypeError("model must expose dist.emission") from exc
     ctx = _context_tensor(model, context)
-    was_training = bool(getattr(model, "training", False))
-    if hasattr(model, "eval"):
-        model.eval()
-    try:
+    with _evaluation_mode(model):
         with torch.inference_mode():
             dist = emission.forward(context=ctx, return_dist=True)
             value = dist.mean
             while value.ndim > 2 and value.shape[0] == 1:
                 value = value[0]
             out = value.detach().cpu().numpy().astype(np.float64, copy=False)
-    finally:
-        if hasattr(model, "train"):
-            model.train(was_training)
     if out.ndim != 2 or out.shape[0] <= 0 or out.shape[1] <= 0:
         raise ValueError("emission context tensor must have non-empty shape [K,F]")
     if not np.isfinite(out).all():
@@ -192,18 +182,12 @@ def initial_context_tensor(model: Any, context: Any) -> np.ndarray:
     except AttributeError as exc:
         raise TypeError("model must expose dist.initial") from exc
     ctx = _context_tensor(model, context)
-    was_training = bool(getattr(model, "training", False))
-    if hasattr(model, "eval"):
-        model.eval()
-    try:
+    with _evaluation_mode(model):
         with torch.inference_mode():
             value = initial.expected_probs(context=ctx)
             while value.ndim > 1 and value.shape[0] == 1:
                 value = value[0]
             out = value.detach().cpu().numpy().astype(np.float64, copy=False)
-    finally:
-        if hasattr(model, "train"):
-            model.train(was_training)
     if out.ndim != 1 or out.shape[0] <= 0:
         raise ValueError("initial context tensor must have non-empty shape [K]")
     if not np.isfinite(out).all():

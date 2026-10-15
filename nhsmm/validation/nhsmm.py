@@ -5,6 +5,8 @@ from typing import Any, Callable, Iterable, Optional
 import numpy as np
 import torch
 
+from ._inference import _evaluation_mode
+
 from .context_evidence import ContextEvidence, ContextEvidenceConfig, evaluate_context_replication
 from .split_fit import SplitFitEvidence, split_fit_context_evidence
 
@@ -51,12 +53,17 @@ def transition_context_matrix(model: Any, context: Any) -> np.ndarray:
         raise TypeError("model must expose dist.duration and dist.transition") from exc
 
     ctx = _context_tensor(model, context)
-    was_training = bool(getattr(model, "training", False))
-    if hasattr(model, "eval"):
-        model.eval()
-    try:
+    with _evaluation_mode(model):
         with torch.inference_mode():
             transition_p = transition.log_matrix(context=ctx, T=1).exp()
+            if transition_p.ndim not in (4, 5):
+                raise ValueError("transition log_matrix must return [B,T,K,K] or [B,T,K,D,K]")
+            if transition_p.shape[:2] != (1, 1):
+                raise ValueError("transition evidence evaluation expects B=T=1")
+            if transition_p.shape[2] <= 0 or transition_p.shape[-1] != transition_p.shape[2]:
+                raise ValueError("transition state dimensions must be non-empty and square")
+            if transition_p.ndim == 5 and transition_p.shape[3] <= 0:
+                raise ValueError("transition duration dimension must be positive")
             if transition_p.ndim == 5:
                 bias = getattr(model, "duration_logits_bias", None)
                 duration_p = duration.log_matrix(
@@ -73,9 +80,6 @@ def transition_context_matrix(model: Any, context: Any) -> np.ndarray:
                 matrix = transition_p[0, 0]
             else:
                 raise ValueError("transition log_matrix must return [B,T,K,K] or [B,T,K,D,K]")
-    finally:
-        if hasattr(model, "train"):
-            model.train(was_training)
 
     out = matrix.detach().cpu().numpy().astype(np.float64, copy=False)
     if out.ndim != 2 or out.shape[0] != out.shape[1]:

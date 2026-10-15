@@ -8,10 +8,16 @@ The current core gate is the complete suite, with no deselection list:
 python -m pytest -q
 ```
 
-Observed: 1242 passed, 3 CUDA-only skips, zero deselections. The previously excluded
-five historical execution-identity cases are resolved. Fifteen installed-snapshot
-regressions and 84 optional Nautilus/Qlib/NHSMM/GBM-Qlib host tests also pass;
-the host has one isolated no-GBM-profile skip because GBM is installed.
+After the validation-path audit: 1286 passed, 3 CUDA-only skips and zero
+deselections. The 74-test focused gate treats warnings as errors. All 44 new
+regressions pass against the installed package; pip check is clean. The final
+Nautilus/Qlib/NHSMM/GBM-Qlib host suite passes 84 tests, with one isolated
+no-GBM-profile skip because GBM is installed, and 102 existing warnings.
+
+See [validation-path evidence](validation/v3-validation-path-20261015.md).
+The prior config/context installation checkpoint passed 15 tests; it remains
+a dated result rather than the current validation-path installation gate.
+The five historical execution-identity exclusions remain resolved.
 
 Historical evidence audits and new numerical replays are distinct operations.
 The recorded Python 3.12.14 identity remains unchanged; this validation uses
