@@ -166,7 +166,7 @@ The external-vs-non-external mode is fixed on the first successful step and cann
 
 ## Causal Float32 recursion
 
-The causal batch forward recursion propagates a normalized `(state, age)` frontier at each timestep and carries cumulative log evidence separately. This preserves the public unnormalized `alpha`/log-likelihood semantics while avoiding repeated propagation of a growing sequence-level log offset in Float32. Model-bound filtering and runtime use the same normalized recursion semantics; the public `filter_step()` still validates and normalizes arbitrary caller-provided scores.
+The causal batch forward recursion propagates a normalized `(state, age)` frontier at each timestep and carries cumulative log evidence separately. This preserves the public unnormalized `alpha`/log-likelihood semantics while avoiding repeated propagation of a growing sequence-level log offset in Float32. Batch forward, model-bound filtering and runtime share one internal initialization and state-age update, returning a normalized log posterior plus incremental observation log evidence. The batch path keeps its precomputed duration hazards and active-length masks; streaming supplies the previously available boundary scores. The public `filter_step()` still validates and normalizes arbitrary caller-provided scores. Internal evidence assumes canonical normalized priors and boundary distributions; the public initializer retains its score-input contract and does not expose the internal normalizer. The shared implementation is checked against independent path enumeration, not merely by comparing its callers.
 
 ## No internal context — default
 

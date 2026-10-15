@@ -13,7 +13,11 @@ from nhsmm.encoder import DefaultEncoder
 from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, align_context_tensor
 from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.filtering import (
-    _duration_log_hazard_from_log_p, _safe_logaddexp, _safe_logsumexp, duration_log_hazard,
+    _causal_filter_step,
+    _duration_log_hazard_from_log_p,
+    _initialize_causal_frontier,
+    _safe_logsumexp,
+    duration_log_hazard,
 )
 from nhsmm.config import DTYPE, logger, NEG_INF, ModelConfig
 
@@ -531,13 +535,9 @@ class NHSMM(nn.Module):
         cumulative_log_z = alpha.new_zeros(B)
 
         valid0 = X.lengths > 0
-        initial_score = initial_logits[valid0, 0] + router.log_probs[valid0, 0]
-        initial_frontier = initial_score.new_full((initial_score.shape[0], K, D), float("-inf"))
-        initial_frontier[..., 0] = initial_score
-        initial_log_z = _safe_logsumexp(initial_frontier.flatten(1), dim=1)
-        if not torch.isfinite(initial_log_z).all():
-            raise ValueError("causal initial evidence must be finite and have positive mass")
-        normalized_initial = initial_frontier - initial_log_z[:, None, None]
+        normalized_initial, initial_log_z = _initialize_causal_frontier(
+            initial_logits[valid0, 0], router.log_probs[valid0, 0], D
+        )
         frontier[valid0] = normalized_initial
         cumulative_log_z[valid0] = initial_log_z
         alpha[valid0, 0] = normalized_initial + initial_log_z[:, None, None]
@@ -548,42 +548,17 @@ class NHSMM(nn.Module):
                 break
             active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
 
-            previous = frontier[active]
-            predicted = previous.new_full((active.numel(), K, D), float("-inf"))
-
-            if D > 1:
-                predicted[..., 1:] = previous[..., :-1] + log_continue[active, t - 1, :, :-1]
-
-            boundary = previous + log_end[active, t - 1]
-            if duration_dependent_transition:
-                new_episode = _safe_logsumexp(
-                    boundary.unsqueeze(-1) + transition_logits[active, t - 1],
-                    dim=(1, 2),
-                )
-            else:
-                # Match the runtime kernel's reduction order exactly. Expanding
-                # the duration-independent transition over episode age avoids a
-                # different two-stage Float32 logsumexp path in batch forward.
-                new_episode = _safe_logsumexp(
-                    boundary.unsqueeze(-1) + transition_logits[active, t - 1].unsqueeze(2),
-                    dim=(1, 2),
-                )
-            predicted[..., 0] = new_episode
-
-            if tail_end_probability is not None:
-                tc = previous[..., -1] + log_continue[active, t - 1, :, -1]
-                if D == 1:
-                    predicted = _safe_logaddexp(new_episode, tc).unsqueeze(-1)
-                else:
-                    adv = previous[..., :-1] + log_continue[active, t - 1, :, :-1]
-                    last = _safe_logaddexp(adv[..., -1], tc).unsqueeze(-1)
-                    predicted = torch.cat((new_episode.unsqueeze(-1), adv[..., :-1], last), dim=-1)
-
-            posterior_score = predicted + router.log_probs[active, t].unsqueeze(-1)
-            step_log_z = _safe_logsumexp(posterior_score.flatten(1), dim=1)
-            if not torch.isfinite(step_log_z).all():
-                raise ValueError("causal step evidence must be finite and have positive mass")
-            normalized = posterior_score - step_log_z[:, None, None]
+            transition = transition_logits[active, t - 1]
+            if not duration_dependent_transition:
+                transition = transition.unsqueeze(2)
+            normalized, step_log_z = _causal_filter_step(
+                frontier[active],
+                router.log_probs[active, t],
+                log_end[active, t - 1],
+                log_continue[active, t - 1],
+                transition,
+                tail_enabled=tail_end_probability is not None,
+            )
             frontier[active] = normalized
             cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
             alpha[active, t] = normalized + cumulative_log_z[active, None, None]

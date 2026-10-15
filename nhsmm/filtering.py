@@ -168,12 +168,64 @@ def _normalize_log_probs(log_values: torch.Tensor, *, dim: int, name: str) -> to
     return log_values - log_z
 
 
-def _normalize_filter_posterior(log_values: torch.Tensor) -> torch.Tensor:
+def _normalize_causal_frontier(
+    log_values: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return normalized [B,K,D] log mass and incremental [B] log evidence."""
     flat = log_values.flatten(1)
-    normalized = _normalize_log_probs(flat, dim=1, name="filter posterior")
-    # Recenter before the final subtraction: large finite emission offsets
-    # otherwise leave a material Float32 normalization residual.
-    return torch.log_softmax(normalized, dim=1).reshape_as(log_values)
+    log_evidence = _safe_logsumexp(flat, dim=1)
+    if not torch.isfinite(log_evidence).all():
+        raise ValueError("causal evidence has zero or non-finite probability mass")
+    return torch.log_softmax(flat, dim=1).reshape_as(log_values), log_evidence
+
+
+def _initialize_causal_frontier(
+    log_initial: torch.Tensor,
+    emission_log_prob: torch.Tensor,
+    max_duration: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Initialize age one; the first emission contributes to prefix evidence."""
+    B, K = log_initial.shape
+    scores = log_initial.new_full((B, K, max_duration), float("-inf"))
+    scores[..., 0] = log_initial + emission_log_prob
+    return _normalize_causal_frontier(scores)
+
+
+def _causal_filter_step(
+    previous: torch.Tensor,
+    emission_log_prob: torch.Tensor,
+    log_end: torch.Tensor,
+    log_continue: torch.Tensor,
+    transition_log_prob: torch.Tensor,
+    *,
+    tail_enabled: bool,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """One causal state-age update shared by forward and streaming.
+
+    Inputs are canonical model scores with [B,K,D] frontiers/hazards and
+    [B,K,D,K] transitions, or [B,K,1,K] for age-independent transitions.
+    Boundary propagation uses the previous information set; the new emission
+    is applied afterward. The final age bucket is D+ only when tail_enabled.
+    """
+    D = previous.shape[-1]
+    continuation = previous[..., :-1] + log_continue[..., :-1]
+    new_episode = _safe_logsumexp(
+        (previous + log_end).unsqueeze(-1) + transition_log_prob,
+        dim=(1, 2),
+    )
+    if tail_enabled:
+        tail_continuation = previous[..., -1] + log_continue[..., -1]
+        if D == 1:
+            predicted = _safe_logaddexp(new_episode, tail_continuation).unsqueeze(-1)
+        else:
+            last = _safe_logaddexp(continuation[..., -1], tail_continuation)
+            predicted = torch.cat(
+                (new_episode.unsqueeze(-1), continuation[..., :-1], last.unsqueeze(-1)),
+                dim=-1,
+            )
+    else:
+        predicted = torch.cat((new_episode.unsqueeze(-1), continuation), dim=-1)
+    return _normalize_causal_frontier(predicted + emission_log_prob.unsqueeze(-1))
 
 
 def _duration_log_hazard_from_log_p(
@@ -270,10 +322,8 @@ def initialize_filter(
     if torch.isnan(emission_log_prob).any() or torch.isposinf(emission_log_prob).any():
         raise ValueError("emission_log_prob must not contain NaN or +inf")
 
-    B, K = log_initial.shape
-    posterior = log_initial.new_full((B, K, max_duration), float("-inf"))
-    posterior[..., 0] = log_initial + emission_log_prob
-    return HSMMFilterState(_normalize_filter_posterior(posterior))
+    posterior, _ = _initialize_causal_frontier(log_initial, emission_log_prob, max_duration)
+    return HSMMFilterState(posterior)
 
 
 def _filter_step_normalized(
@@ -290,32 +340,15 @@ def _filter_step_normalized(
     ``filter_step`` remains the validated path for arbitrary external scores.
     """
 
-    prev = previous.log_posterior
-    B, K, D = prev.shape
     log_end, log_continue = _duration_log_hazard_from_log_p(log_duration, tail_end_probability)
-
-    predicted = prev.new_full((B, K, D), float("-inf"))
-    if D > 1:
-        predicted[..., 1:] = prev[..., :-1] + log_continue[..., :-1]
-
-    boundary = prev + log_end
-    predicted[..., 0] = _safe_logsumexp(
-        boundary.unsqueeze(-1) + transition_log_prob,
-        dim=(1, 2),
+    posterior, _ = _causal_filter_step(
+        previous.log_posterior,
+        emission_log_prob,
+        log_end,
+        log_continue,
+        transition_log_prob,
+        tail_enabled=tail_end_probability is not None,
     )
-    if tail_end_probability is not None:
-        tail_continuation = prev[..., -1] + log_continue[..., -1]
-        if D == 1:
-            predicted[..., 0] = _safe_logaddexp(predicted[..., 0], tail_continuation)
-        else:
-            predicted[..., -1] = _safe_logaddexp(predicted[..., -1], tail_continuation)
-
-    posterior = predicted + emission_log_prob.unsqueeze(-1)
-    flat = posterior.flatten(1)
-    log_z = _safe_logsumexp(flat, dim=1, keepdim=True)
-    if not torch.isfinite(log_z).all():
-        raise ValueError("filter posterior has zero or non-finite probability mass")
-    posterior = torch.log_softmax(flat, dim=1).reshape_as(posterior)
     return HSMMFilterState._from_normalized_unchecked(posterior)
 
 

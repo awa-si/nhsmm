@@ -1,0 +1,90 @@
+{
+  "schema": "nhsmm-v3-causal-frontier-v1",
+  "base_commit": "fceb4781a574fc3e14f9cb7a49cd614e97f35c69",
+  "status": "verified",
+  "branch": "v3",
+  "oracle": "off",
+  "holdout_rescored": false,
+  "new_research_training_updates": 0,
+  "implementation": {
+    "owner": "nhsmm/filtering.py",
+    "consumers": [
+      "NHSMM._forward_causal_hazard",
+      "initialize_filter",
+      "_filter_step_normalized"
+    ],
+    "artifact_schema_changed": false,
+    "public_api_changed": false
+  },
+  "checks": {
+    "new_independent_cases": 22,
+    "focused": {
+      "passed": 474,
+      "seconds": 42.96,
+      "job": "d33725be3a094a3490e090a66b60d533"
+    },
+    "installed": {
+      "passed": 22,
+      "seconds": 5.38,
+      "job": "142b5ffa513643e390841becc35170f4"
+    },
+    "full": {
+      "passed": 1211,
+      "cuda_skips": 3,
+      "historical_deselections": 5,
+      "seconds": 200.07,
+      "job": "a8b9a9c53e284cfd890762380889eb21"
+    },
+    "host": {
+      "repository": "awa-si/nautilus",
+      "head": "e527734bab719038ec3820014f7c9743e4cfca93",
+      "passed": 54,
+      "skipped": 1,
+      "warnings": 22,
+      "seconds": 21.34,
+      "job": "eb7fb04dae6c46abba4d24db944ed2f3",
+      "cwd": "/work/artifacts/v3-causal-20261015/host"
+    },
+    "static": "AST/Ruff/Black(new tests)/git diff passed",
+    "pip_check": "No broken requirements found."
+  },
+  "runtime": {
+    "baseline": {
+      "phase": "v3_baseline",
+      "torch": "2.14.1+cpu",
+      "threads": 1,
+      "K": 4,
+      "F": 5,
+      "D": 64,
+      "warmup": 32,
+      "steps": 256,
+      "repeats": 3,
+      "mean_us": 2561.9495572916667,
+      "p50_us": 1833.5990000000002,
+      "p95_us": 3361.573
+    },
+    "candidate": {
+      "phase": "v3_candidate",
+      "torch": "2.14.1+cpu",
+      "threads": 1,
+      "K": 4,
+      "F": 5,
+      "D": 64,
+      "warmup": 32,
+      "steps": 256,
+      "repeats": 3,
+      "mean_us": 2098.326890625,
+      "p50_us": 1753.8835,
+      "p95_us": 3342.16
+    },
+    "max_probability_delta": 0,
+    "same_support": true
+  },
+  "limits": [
+    "CUDA unverified",
+    "Five historical execution identity tests explicitly deselected",
+    "Initial host recorder attempt failed due to read-only cwd; same tests passed from /work",
+    "Bounded runtime case is not a general performance guarantee",
+    "No new Qlib training adapter implemented in this core batch"
+  ]
+}
