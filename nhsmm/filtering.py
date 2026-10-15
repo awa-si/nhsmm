@@ -31,6 +31,9 @@ class HSMMFilterState:
         log_z = _safe_logsumexp(value.flatten(1), dim=1)
         if not torch.isfinite(log_z).all():
             raise ValueError("log_posterior must contain finite probability mass per batch item")
+        tolerance = max(1e-12, 8 * torch.finfo(value.dtype).eps)
+        if not torch.allclose(log_z, torch.zeros_like(log_z), atol=tolerance, rtol=0.0):
+            raise ValueError("log_posterior must be normalized per batch item")
 
     @classmethod
     def _from_normalized_unchecked(
@@ -87,6 +90,14 @@ class HSMMFilterTrace:
             raise ValueError("lengths must be on the same device as log_posterior")
         if (lengths < 0).any() or (lengths > value.shape[1]).any():
             raise ValueError("lengths contain values outside the trace time dimension")
+        if value.shape[-2] < 1 or value.shape[-1] < 1:
+            raise ValueError("trace state and age dimensions must be non-empty")
+        valid = torch.arange(value.shape[1], device=value.device).unsqueeze(0) < lengths.unsqueeze(1)
+        valid_rows = value[valid]
+        if valid_rows.shape[0]:
+            HSMMFilterState(valid_rows)
+        if not torch.isneginf(value[~valid]).all():
+            raise ValueError("trace padding must contain only -inf")
 
     @property
     def state_posterior(self) -> torch.Tensor:
@@ -160,7 +171,9 @@ def _normalize_log_probs(log_values: torch.Tensor, *, dim: int, name: str) -> to
 def _normalize_filter_posterior(log_values: torch.Tensor) -> torch.Tensor:
     flat = log_values.flatten(1)
     normalized = _normalize_log_probs(flat, dim=1, name="filter posterior")
-    return normalized.reshape_as(log_values)
+    # Recenter before the final subtraction: large finite emission offsets
+    # otherwise leave a material Float32 normalization residual.
+    return torch.log_softmax(normalized, dim=1).reshape_as(log_values)
 
 
 def _duration_log_hazard_from_log_p(
@@ -300,7 +313,9 @@ def _filter_step_normalized(
     posterior = predicted + emission_log_prob.unsqueeze(-1)
     flat = posterior.flatten(1)
     log_z = _safe_logsumexp(flat, dim=1, keepdim=True)
-    posterior = (flat - log_z).reshape_as(posterior)
+    if not torch.isfinite(log_z).all():
+        raise ValueError("filter posterior has zero or non-finite probability mass")
+    posterior = torch.log_softmax(flat, dim=1).reshape_as(posterior)
     return HSMMFilterState._from_normalized_unchecked(posterior)
 
 

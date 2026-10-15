@@ -1,0 +1,93 @@
+{
+  "source_base_commit": "cf97f6162459b494fc9de43355d4a146e2b91553",
+  "executable_baseline": "da657e6385c1d83f318ebc2fed231416dbd184e4",
+  "status": "resolved",
+  "resolved_findings": [
+    "F01",
+    "C01",
+    "F02",
+    "F03",
+    "C03",
+    "G02",
+    "G03",
+    "G01"
+  ],
+  "oracle": "off",
+  "holdout_rescored": false,
+  "research_training_updates": 0,
+  "tests": {
+    "baseline_new_cases": {
+      "failed": 31,
+      "passed": 13
+    },
+    "final_new_cases": 48,
+    "focused": {
+      "passed": 213,
+      "seconds": 8.75
+    },
+    "applicable_full": {
+      "passed": 1189,
+      "skipped": 3,
+      "deselected": 5,
+      "seconds": 184.08,
+      "explicit_deselections": [
+        "tests/test_block_mass_smoothing_audit.py::test_completed_batch",
+        "tests/test_block_mass_smoothing_audit.py::test_raw_bytes_tampering",
+        "tests/test_block_mass_smoothing_audit.py::test_missing_replay_certificate",
+        "tests/test_optimizer_bridge_verification.py::test_changed_source_manifest_rejected",
+        "tests/test_optimizer_bridge_verification.py::test_rebound_initial_objective_rejected"
+      ]
+    },
+    "job_id": "634fef074e4f40e188fb85e1f4c36718",
+    "unrestricted_historical_suite_green": false,
+    "installed": {
+      "passed": 48,
+      "seconds": 5.08,
+      "job_id": "8e89ece1a746457596baede0651114ed"
+    }
+  },
+  "runtime": {
+    "baseline": {
+      "phase": "baseline",
+      "torch": "2.14.1+cpu",
+      "threads": 1,
+      "K": 4,
+      "F": 5,
+      "D": 64,
+      "warmup": 32,
+      "steps": 256,
+      "repeats": 3,
+      "mean_us": 2324.40758203125,
+      "p50_us": 1842.4245,
+      "p95_us": 4492.606
+    },
+    "candidate": {
+      "phase": "candidate_final",
+      "torch": "2.14.1+cpu",
+      "threads": 1,
+      "K": 4,
+      "F": 5,
+      "D": 64,
+      "warmup": 32,
+      "steps": 256,
+      "repeats": 3,
+      "mean_us": 2046.4128776041666,
+      "p50_us": 1821.6309999999999,
+      "p95_us": 2968.341
+    },
+    "max_probability_delta": 2.085468906662391e-7,
+    "same_support": true
+  },
+  "static_checks": {
+    "ruff_changed_files": "passed",
+    "black_new_regression": "passed",
+    "git_diff_check": "passed"
+  },
+  "limitations": [
+    "CUDA execution unverified",
+    "Five historical execution identity tests explicitly excluded",
+    "Short runtime measurement is not general performance acceptance",
+    "Float32 normalization parity is numerical, not bitwise"
+  ],
+  "pip_check": "No broken requirements found."
+}

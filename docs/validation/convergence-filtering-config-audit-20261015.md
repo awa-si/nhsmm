@@ -1,6 +1,8 @@
 # Convergence, filtering and configuration audit — 2026-10-15
 
-Status: audit complete; findings open. Production code unchanged.
+Status: historical audit of da657e6; all eight findings resolved by the subsequent
+[repair batch](convergence-filtering-config-fixes-20261015.md). The findings below
+record the original audited behavior.
 
 ## Source and scope
 

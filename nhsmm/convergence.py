@@ -7,7 +7,7 @@ import torch
 from threading import Lock
 from typing import List, Optional, Protocol, Literal
 
-from nhsmm.config import DTYPE, EPS, logger
+from nhsmm.config import EPS, logger
 
 
 class CallbackFn(Protocol):
@@ -94,10 +94,12 @@ class Convergence:
 
         # tracking arrays
         shape = (max_iter + 1, n_init)
-        self.scores = torch.full(shape, float("nan"), dtype=DTYPE)
+        # Scalar objective bookkeeping must not quantize Python/Float64 scores
+        # to the model's default parameter dtype before stopping decisions.
+        self.scores = torch.full(shape, float("nan"), dtype=torch.float64)
         self.deltas = torch.full_like(self.scores, float("nan"))
         self.rel_deltas = torch.full_like(self.scores, float("nan"))
-        self.best_scores = torch.full((n_init,), float("-inf"), dtype=DTYPE)
+        self.best_scores = torch.full((n_init,), float("-inf"), dtype=torch.float64)
         self.best_iters = torch.full((n_init,), -1, dtype=torch.int32)
         self.converged_flags = torch.zeros(n_init, dtype=torch.bool)
         self.stop_training = False
@@ -257,14 +259,14 @@ class Convergence:
             "plateau_window": self.plateau_window,
             "plateau_tol": self.plateau_tol,
             "scores": self._tensor_to_list(self.scores),
-            "best_scores": self.best_scores.tolist(),
+            "best_scores": self._tensor_to_list(self.best_scores),
             "best_iters": self.best_iters.tolist(),
             "converged": self.converged_flags.tolist(),
         }
         with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, allow_nan=False)
 
     @staticmethod
     def _tensor_to_list(t: torch.Tensor) -> list:
         arr = t.cpu().numpy()
-        return [[float(x) if np.isfinite(x) else None for x in row] for row in arr]
+        return np.where(np.isfinite(arr), arr, None).tolist()

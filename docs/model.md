@@ -369,3 +369,34 @@ that requirement before it initializes a restart or changes any weights.
 
 The seven 2026-10-15 model audit findings and their regression evidence are
 tracked in [the repair checkpoint](validation/models-fixes-20261015.md).
+
+## Filtering validation and convergence bookkeeping
+
+Public HSMMFilterState construction requires normalized mass per batch item.
+The absolute tolerance in log mass is max(1e-12, 8 * finfo(dtype).eps), with no
+relative tolerance. HSMMFilterTrace validates valid rows by the same rule and
+requires padding to contain only negative infinity. Empty batch/time dimensions
+remain valid for traces; state and age dimensions must be positive.
+
+A filter update with zero or non-finite observation evidence raises ValueError
+before producing a state. Large finite emission offsets are normalized using
+PyTorch log_softmax to avoid a residual caused by subtracting a large Float32 log
+normalizer. These checks preserve impossible support; no replacement posterior is
+invented. The public state container is frozen, but its Tensor storage remains
+mutable: forecast APIs retain their defensive validation.
+
+Convergence histories, score deltas and best scores use Float64 bookkeeping,
+independent of model parameter dtype. Export produces strict JSON and represents
+unobserved best scores and score-history entries as null. Plateau still uses its
+exact rolling window; automatic patience applies to delta mode. The stop_training
+request remains latched until reset.
+
+ModelConfig.seed follows the PyTorch integer range [-2**63, 2**64 - 1], including
+valid negative seeds. ValidationConfig seeds follow the validation runner's
+legacy NumPy seed range [0, 2**32 - 1]; derived evaluation seeds must be
+non-negative and may exceed that legacy range because evaluation generation uses
+default_rng. Validation schema_version must be an integer excluding bool.
+Scenario names must be non-empty strings; from_dict does not coerce or merge
+different identifiers.
+
+Repair evidence: [convergence/filter/config fixes](validation/convergence-filtering-config-fixes-20261015.md).

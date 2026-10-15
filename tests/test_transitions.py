@@ -111,7 +111,9 @@ def test_transition_end_probability_matches_existing_hazard() -> None:
 
 
 def test_transition_forecast_rejects_unnormalized_filter_state() -> None:
-    state = HSMMFilterState(torch.zeros(1, 2, 2, dtype=torch.float64))
+    state = HSMMFilterState(torch.full((1, 2, 2), 0.25, dtype=torch.float64).log())
+    # Tensor contents remain mutable: retain the forecast's defensive check.
+    state.log_posterior.zero_()
     duration = torch.zeros(1, 2, 2, dtype=torch.float64)
     transition = torch.zeros(1, 2, 2, 2, dtype=torch.float64)
 

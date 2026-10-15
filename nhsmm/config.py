@@ -164,9 +164,11 @@ class ModelConfig:
         _require_optional_int("context_dim", self.context_dim, minimum=1)
         _require_optional_int("optimizer_batch_size", self.optimizer_batch_size, minimum=1)
         if self.seed is not None and (
-            isinstance(self.seed, bool) or not isinstance(self.seed, int)
+            isinstance(self.seed, bool)
+            or not isinstance(self.seed, int)
+            or not -(2**63) <= self.seed < 2**64
         ):
-            raise ValueError("seed must be None or an integer")
+            raise ValueError("seed must be None or an integer in [-2**63, 2**64 - 1]")
 
         _require_finite("pad_value", self.pad_value)
         _require_finite("dropout", self.dropout)
@@ -488,6 +490,7 @@ class ValidationConfig:
     )
 
     def __post_init__(self) -> None:
+        _require_int("schema_version", self.schema_version, minimum=1)
         if self.schema_version != VALIDATION_CONFIG_SCHEMA_VERSION:
             raise ValueError(
                 "unsupported validation config schema_version "
@@ -497,12 +500,16 @@ class ValidationConfig:
             raise ValueError("seeds must be a non-empty tuple")
         if any(isinstance(seed, bool) or not isinstance(seed, int) for seed in self.seeds):
             raise ValueError("all seeds must be integers")
+        if any(seed < 0 or seed >= 2**32 for seed in self.seeds):
+            raise ValueError("validation seeds must be in [0, 2**32 - 1]")
         if len(set(self.seeds)) != len(self.seeds):
             raise ValueError("seeds must be unique")
         _require_int("boundary_tolerance", self.boundary_tolerance, minimum=0)
 
         if not isinstance(self.data, ValidationDataConfig):
             raise TypeError("data must be ValidationDataConfig")
+        if any(seed + self.data.oos_seed_offset < 0 for seed in self.seeds):
+            raise ValueError("derived evaluation seeds must be non-negative")
         if not isinstance(self.model, ModelConfig):
             raise TypeError("model must be ModelConfig")
         if not isinstance(self.health, ModelHealthThresholds):
@@ -561,8 +568,10 @@ class ValidationConfig:
             scenarios = values["scenarios"]
             if not isinstance(scenarios, Mapping):
                 raise TypeError("scenarios must be a mapping")
+            if any(not isinstance(name, str) or not name.strip() for name in scenarios):
+                raise ValueError("scenario names must be non-empty strings")
             values["scenarios"] = {
-                str(name): ValidationScenarioConfig.from_dict(config)
+                name: ValidationScenarioConfig.from_dict(config)
                 for name, config in scenarios.items()
             }
         return cls(**values)
