@@ -36,7 +36,6 @@ SOURCES = tuple(
             "nhsmm/inference.py",
             "nhsmm/distributions/__init__.py",
             "nhsmm/artifact.py",
-            "nhsmm/data.py",
             "nhsmm/convergence.py",
             "nhsmm/diagnostics.py",
             "nhsmm/runtime.py",

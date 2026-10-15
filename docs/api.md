@@ -46,3 +46,25 @@ for dense/ragged, external/internal context, noncausal and initialized inputs.
 Failed fits still propagate errors. No model equation, training budget,
 artifact format, oracle setting or frozen holdout was changed.
 Log: /work/checkpoints/api-core-full-20261015.log.
+
+## Core slimming migration
+
+The unused nhsmm.data toy generator/SequenceDataset and its self-tests are
+removed; maintained model/reference fixtures use their existing generators.
+CPU benchmarking is source-checkout tooling:
+python -m scripts.benchmark_runtime ARTIFACT --steps 512 --warmup 64.
+Its implementation and regression test are retained; nhsmm.benchmark and the
+benchmark_cpu_runtime root export are removed.
+
+Convergence no longer accepts callbacks or early_stop, exports JSON, reports
+any_converged, or maintains an unused global stop_training flag. Training still
+uses the same delta/plateau predicates, scheduler and convergence_stop policy.
+Use optimization_summary and the Qlib/MLflow recorder for completed-fit telemetry.
+Unused ContextRouter get_* / select_features helpers, its write-only shape cache
+and SequenceSet.total_timesteps are removed. Direct tensor fields remain canonical.
+No compatibility aliases restore these retired surfaces.
+
+Prospective research source lists no longer hash the removed, unused data/
+benchmark modules. Archived protocols/reports/proofs and their historical source
+identities remain unchanged; restoring their pinned source is still required for
+a historical numerical replay. Oracle remains off and the holdout is not rescored.

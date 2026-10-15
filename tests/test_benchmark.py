@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from nhsmm import ModelConfig, NHSMM, prepare_inference
-from nhsmm.benchmark import benchmark_cpu_runtime
+from scripts.benchmark_runtime import benchmark_cpu_runtime
 
 
 def test_cpu_benchmark_reports_bounded_incremental_state() -> None:

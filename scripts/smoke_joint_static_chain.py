@@ -56,7 +56,6 @@ def main():
         raise ValueError("public all-parameter numerical smoke failed")
     sources = (
         *PRIOR_SOURCES,
-        "nhsmm/benchmark.py",
         "scripts/validate_trading_regime_usefulness.py",
         "scripts/joint_static_chain.py",
         "scripts/static_chain_check.py",

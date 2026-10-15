@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from typing import Optional, Literal, Tuple, Callable, Dict, Sequence, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import contextlib
 import inspect
 
@@ -265,10 +265,6 @@ class SequenceSet:
         return self.sequences.shape[0]
 
     @property
-    def total_timesteps(self) -> int:
-        return int(self.lengths.sum())
-
-    @property
     def feature_dim(self) -> int:
         return self.sequences.shape[2]
 
@@ -338,7 +334,6 @@ class ContextRouter:
     names: Optional[list[str]] = None
     mask: Optional[torch.Tensor] = None
     log_probs: Optional[torch.Tensor] = None
-    _cache: Dict[str, int] = field(default_factory=dict, init=False)
 
     def __post_init__(self):
         if self.canonical.ndim != 3 or self.canonical.shape[1] != 1:
@@ -376,7 +371,6 @@ class ContextRouter:
                     "log_probs batch/time dimensions must match context: "
                     f"{tuple(self.log_probs.shape[:2])} != {(B, T)}"
                 )
-        self._cache.update({"B": B, "T": T, "H": H})
 
     @classmethod
     def from_tensor(
@@ -421,31 +415,6 @@ class ContextRouter:
             mask=mask,
             log_probs=log_probs,
             names=names,
-        )
-
-    def get_context(self):
-        return self.context
-
-    def get_canonical(self):
-        return self.canonical
-
-    def get_feature_names(self):
-        return self.names
-
-    def get_log_probs(self):
-        return self.log_probs
-
-    def get_mask(self):
-        return self.mask
-
-    def select_features(self, keys: list[str]) -> "ContextRouter":
-        idx = torch.tensor([self.names.index(k) for k in keys], device=self.context.device)
-        return ContextRouter(
-            canonical=self.canonical[:, :, idx],
-            context=self.context[:, :, idx],
-            names=keys,
-            mask=self.mask,
-            log_probs=self.log_probs,
         )
 
     def select(self, indices: torch.Tensor | list[int]) -> "ContextRouter":

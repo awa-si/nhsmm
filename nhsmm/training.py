@@ -55,7 +55,6 @@ def optimize_model(
             max_iter=cfg.max_iter,
             mode=cfg.convergence_mode,
             plateau_tol=cfg.plateau_tol,
-            early_stop=cfg.convergence_stop,
             plateau_window=cfg.plateau_window,
             patience=max(1, cfg.plateau_window // 2),
             verbose=cfg.verbose,

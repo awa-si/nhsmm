@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import math
 
 import numpy as np
@@ -129,28 +128,11 @@ def test_delta_recognizes_identical_python_float_scores():
     assert monitor.deltas[1:3, 0].tolist() == [0.0, 0.0]
 
 
-def test_callback_and_best_score_preserve_input_precision():
-    received = []
-    monitor = Convergence(1, 4, callbacks=[lambda *args: received.append(args[3])], verbose=False)
+def test_scores_and_best_score_preserve_fractional_input_precision():
+    monitor = Convergence(1, 4, verbose=False)
     monitor.update(100000000.1, 0, 0)
-    assert received == [100000000.1]
+    assert float(monitor.scores[0, 0]) == 100000000.1
     assert float(monitor.best_scores[0]) == 100000000.1
-
-
-@pytest.mark.parametrize("partial", [False, True])
-def test_convergence_export_is_strict_json_before_all_restarts_finish(tmp_path, partial):
-    monitor = Convergence(2, 4, verbose=False)
-    if partial:
-        monitor.update(1.0, 0, 0)
-    path = tmp_path / "convergence.json"
-    monitor.export(str(path))
-
-    def reject_constant(value):
-        raise ValueError(value)
-
-    payload = json.loads(path.read_text(), parse_constant=reject_constant)
-    assert payload["best_scores"] == ([1.0, None] if partial else [None, None])
-    assert payload["scores"][0] == ([1.0, None] if partial else [None, None])
 
 
 @pytest.mark.parametrize("version", [True, 1.0, "1"])

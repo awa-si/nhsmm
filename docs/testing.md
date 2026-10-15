@@ -1,5 +1,18 @@
 # Testing and verification
 
+## Stripped core verification — 2026-10-15
+
+Current core gate: **1302 passed, three CUDA-only skips, zero warnings and no
+deselections**. The earlier 1315 cases lose only 13 unused toy-data cases and
+two retired JSON-export cases, and gain two absent-module boundary checks.
+All model, distribution, context, reference, causality and artifact tests remain.
+
+Exact before/after replay matches 96 convergence updates and eight whole-model
+fits, including parameters, gradients, likelihoods and actual update summaries.
+Affected unchanged host integration: 169 passed plus five subtests, one existing
+GBM-profile skip and 170 existing warnings. The CPU benchmark lives in the CLI.
+See [strip audit and package verification](validation/v3-core-strip-20261015.md).
+
 ## Model preparation follow-up — 2026-10-15
 
 After removing duplicate public likelihood preparation: **1307 passed, three
@@ -10,7 +23,7 @@ Unchanged host adapter/Qlib suite: 85 passed, one profile skip, 117 warnings.
 Ruff, new-test Black, pip check and diff checks pass.
 See [model preparation audit](validation/v3-model-preparation-20261015.md).
 
-## Current V3 verification — 2026-10-15
+## Earlier V3 verification — 2026-10-15
 
 The core gate remains the complete suite with no deselection list:
 

@@ -55,13 +55,19 @@ A model intended for streaming use must be causal.
 
 ## Training ownership
 
-NHSMM.optimize(X, context=None, cfg=None) remains the public fitting entry point
-and returns the same model. It delegates orchestration to nhsmm/training.py:
+NHSMM.fit(X, context=None, cfg=None) initializes distributions when needed and
+delegates to the public optimize method; both return the same model. Qlib's
+NHSMMModel calls fit. Optimization orchestration lives in nhsmm/training.py:
 optimizer/scheduler construction, independent restarts, convergence, score/history
 ordering and selection of the final best restart. Model-specific initialization,
 objective evaluation, chunking, parameter snapshots and optional transition
-refinement remain model helpers. Host trainers, including the planned Qlib
-wrapper, call the public optimize method.
+refinement remain model helpers. Configuration and actual update telemetry remain
+public through ModelConfig and optimization_summary.
+
+Convergence owns scalar score/delta bookkeeping, stopping predicates and optional
+LR-aware patience; the training loop owns the actual convergence_stop decision.
+The unused second stop_training flag, callback execution/locks and JSON export
+are removed. Research persistence belongs to the host recorder/MLflow boundary.
 
 The move preserves the existing update protocol: history entries contain
 pre-update scores, completed_updates counts the preceding main Adam updates,

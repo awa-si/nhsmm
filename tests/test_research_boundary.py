@@ -80,3 +80,8 @@ assert not hasattr(nhsmm, "ConfigTuner")
         check=True,
     )
     assert importlib.util.find_spec("nhsmm.tuning") is None
+
+
+@pytest.mark.parametrize("module", ["nhsmm.data", "nhsmm.benchmark"])
+def test_test_only_data_and_benchmark_are_not_shipped_core_modules(module):
+    assert importlib.util.find_spec(module) is None

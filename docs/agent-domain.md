@@ -16,7 +16,6 @@ repository_map:
 - distributions: nhsmm/distributions/
 - model_core: nhsmm/models/base.py
 - convergence: nhsmm/convergence.py
-- data: nhsmm/data.py
 - diagnostics: nhsmm/diagnostics.py
 - runtime: nhsmm/runtime.py
 - artifacts: nhsmm/artifact.py

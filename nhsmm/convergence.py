@@ -1,26 +1,10 @@
 from __future__ import annotations
-import json
 import math
 
-import numpy as np
 import torch
-from threading import Lock
-from typing import List, Optional, Protocol, Literal
+from typing import Optional, Literal
 
 from nhsmm.config import EPS, logger
-
-
-class CallbackFn(Protocol):
-    def __call__(
-        self,
-        monitor: "Convergence",
-        iteration: int,
-        init_idx: int,
-        score: float,
-        delta_abs: float,
-        delta_rel: float,
-        converged: bool,
-    ) -> None: ...
 
 
 class Convergence:
@@ -45,11 +29,9 @@ class Convergence:
         plateau_window: int = 5,
         plateau_tol: float = 1e-4,
         mode: Literal["delta", "plateau"] = "delta",
-        callbacks: Optional[List[CallbackFn]] = None,
         patience_max: Optional[int] = None,
         patience_scale: float = 1.0,
         auto_patience: bool = True,
-        early_stop: bool = True,
         verbose: bool = True,
     ):
         if n_init < 1:
@@ -81,8 +63,6 @@ class Convergence:
         self.patience = patience
         self.plateau_tol = plateau_tol
         self.plateau_window = plateau_window
-        self.callbacks = callbacks or []
-        self.early_stop = early_stop
         self.verbose = verbose
 
         # auto patience
@@ -102,8 +82,6 @@ class Convergence:
         self.best_scores = torch.full((n_init,), float("-inf"), dtype=torch.float64)
         self.best_iters = torch.full((n_init,), -1, dtype=torch.int32)
         self.converged_flags = torch.zeros(n_init, dtype=torch.bool)
-        self.stop_training = False
-        self._lock = Lock()
 
     def attach_scheduler(self, scheduler) -> None:
         """Attach a ReduceLROnPlateau-style scheduler for LR-aware patience scaling."""
@@ -138,7 +116,6 @@ class Convergence:
         self.best_scores.fill_(float("-inf"))
         self.best_iters.fill_(-1)
         self.converged_flags.zero_()
-        self.stop_training = False
 
     def update(self, score: float | torch.Tensor, iteration: int, init_idx: int) -> bool:
         """Record a new score and check convergence."""
@@ -156,12 +133,8 @@ class Convergence:
         if self.scheduler is not None:
             self.scheduler.step(score_val)
 
-        self._run_callbacks(iteration, init_idx, converged)
         if self.verbose:
             self._log(iteration, init_idx, converged)
-
-        if self.early_stop and self.converged_flags.all():
-            self.stop_training = True
 
         return converged
 
@@ -215,58 +188,17 @@ class Convergence:
         self.converged_flags[i] = ok
         return ok
 
-    # -------------------- Callbacks / logging --------------------
-
-    def _run_callbacks(self, it: int, i: int, converged: bool) -> None:
-        if not self.callbacks:
-            return
-        with self._lock:
-            s = float(self.scores[it, i])
-            da = float(self.deltas[it, i]) if torch.isfinite(self.deltas[it, i]) else float("nan")
-            dr = (
-                float(self.rel_deltas[it, i])
-                if torch.isfinite(self.rel_deltas[it, i])
-                else float("nan")
-            )
-            for fn in self.callbacks:
-                try:
-                    fn(self, it, i, s, da, dr, converged)
-                except Exception as e:
-                    logger.warning(f"[Callback Error] {fn}: {e}")
+    # -------------------- Logging --------------------
 
     def _log(self, it: int, i: int, converged: bool) -> None:
         logger.info(
-            f"[Init {i+1:02d}] Iter {it:03d} | "
+            f"[Init {i + 1:02d}] Iter {it:03d} | "
             f"Score {self.scores[it, i]:.6f} | "
             f"Δ {self.deltas[it, i]:.2e}" + (" ✓" if converged else "")
         )
 
-    # -------------------- Properties / export --------------------
+    # -------------------- Status --------------------
 
     @property
     def all_converged(self) -> bool:
         return bool(self.converged_flags.all())
-
-    @property
-    def any_converged(self) -> bool:
-        return bool(self.converged_flags.any())
-
-    def export(self, path: str) -> None:
-        data = {
-            "mode": self.mode,
-            "tol": self.tol,
-            "rel_tol": self.rel_tol,
-            "plateau_window": self.plateau_window,
-            "plateau_tol": self.plateau_tol,
-            "scores": self._tensor_to_list(self.scores),
-            "best_scores": self._tensor_to_list(self.best_scores),
-            "best_iters": self.best_iters.tolist(),
-            "converged": self.converged_flags.tolist(),
-        }
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2, allow_nan=False)
-
-    @staticmethod
-    def _tensor_to_list(t: torch.Tensor) -> list:
-        arr = t.cpu().numpy()
-        return np.where(np.isfinite(arr), arr, None).tolist()
