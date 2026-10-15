@@ -18,7 +18,7 @@ NHSMM provides the model/core runtime layer:
 - model artifacts and inference loading;
 - context-effect validation utilities;
 - reproducible model-health and validation snapshots;
-- strict configuration contracts and a reusable configuration tuner.
+- strict configuration contracts.
 
 Domain/framework integration is intentionally kept outside this repository.
 
@@ -65,8 +65,10 @@ model.initialize_distributions()
 ```
 
 `ModelConfig` is the runtime/training configuration contract. Validation policy is
-kept separately in `ValidationConfig`; systematic search is provided by
-`ConfigTuner`. See [`docs/configuration.md`](docs/configuration.md).
+kept separately in `ValidationConfig`. Use each configuration's `with_overrides`
+method for strict updates. Experiment candidates, training tasks and recording
+belong in the optional Nautilus Qlib host. See
+[`docs/configuration.md`](docs/configuration.md).
 
 ## Architecture
 
@@ -96,7 +98,6 @@ nhsmm/
 ├── transitions.py     # transition forecasts
 ├── artifact.py        # model artifact IO
 ├── diagnostics.py     # model-health diagnostics
-├── tuning.py          # validated configuration search
 ├── distributions/     # probabilistic components
 ├── models/            # model and training implementation
 └── validation/        # context-effect validation API

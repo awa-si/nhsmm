@@ -18,7 +18,6 @@ repository_map:
 - convergence: nhsmm/convergence.py
 - data: nhsmm/data.py
 - diagnostics: nhsmm/diagnostics.py
-- tuning: nhsmm/tuning.py
 - runtime: nhsmm/runtime.py
 - artifacts: nhsmm/artifact.py
 - validation: nhsmm/validation/
@@ -31,9 +30,11 @@ configuration_contract:
 - model_training: ModelConfig
 - health: ModelHealthThresholds
 - validation: ValidationConfig|ValidationDataConfig|ValidationScenarioConfig
-- tuning_interface: nhsmm/tuning.py|ConfigTuner
+- config_updates: ModelConfig.with_overrides|ValidationConfig.with_overrides
+- experiment_search_owner: awa-si/nautilus/adapter/qlib
+- core_search_scheduler_or_winner_selection: prohibited
 - tuning_objective_is_caller_policy: true
-- unknown_config_or_tuning_paths: reject
+- unknown_config_fields_or_cli_override_paths: reject
 - scenario_names_have_hidden_semantics: false
 
 construction_contract:

@@ -40,7 +40,6 @@ SOURCES = tuple(
             "nhsmm/convergence.py",
             "nhsmm/diagnostics.py",
             "nhsmm/runtime.py",
-            "nhsmm/tuning.py",
             "nhsmm/encoder.py",
             "nhsmm/validation/split_fit.py",
             "nhsmm/validation/alignment.py",

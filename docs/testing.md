@@ -2,22 +2,27 @@
 
 ## Current V3 verification — 2026-10-15
 
-The current core gate is the complete suite, with no deselection list:
+The core gate remains the complete suite with no deselection list:
 
 ```bash
 python -m pytest -q
 ```
 
-After the validation-path audit: 1286 passed, 3 CUDA-only skips and zero
-deselections. The 74-test focused gate treats warnings as errors. All 44 new
-regressions pass against the installed package; pip check is clean. The final
-Nautilus/Qlib/NHSMM/GBM-Qlib host suite passes 84 tests, with one isolated
-no-GBM-profile skip because GBM is installed, and 102 existing warnings.
+After the Qlib/core slimming batch: 1285 passed, three CUDA-only skips, zero
+deselections. Nine retired tuner cases (eight API cases and one grid-consumption
+regression) are replaced by eight research-boundary/configuration cases. No model
+mathematics, causal/reference test or historical evidence assertion was removed.
 
-See [validation-path evidence](validation/v3-validation-path-20261015.md).
-The prior config/context installation checkpoint passed 15 tests; it remains
-a dated result rather than the current validation-path installation gate.
-The five historical execution-identity exclusions remain resolved.
+The focused core gate passes 73 tests; the synchronized installed checkout passes
+eight boundary regressions with warnings treated as errors, and pip check is clean.
+The host suite passes 85 tests, one isolated no-GBM-profile skip and 117 warnings.
+This includes two genuine native Qlib TrainerR candidate fits, recorder completion,
+model reload and validation snapshots; fit/record test-segment access is rejected.
+
+See [slimming/migration evidence](validation/v3-qlib-slimming-20261015.md).
+The earlier [validation-path audit](validation/v3-validation-path-20261015.md)
+passed 1286 tests before tuner removal; its 74 focused and 44 installed cases
+remain their dated results. The five historical exclusions remain resolved.
 
 Historical evidence audits and new numerical replays are distinct operations.
 The recorded Python 3.12.14 identity remains unchanged; this validation uses

@@ -179,24 +179,3 @@ def test_optimize_rejects_duration_tail_structure_change():
     cfg = m.config.with_overrides(duration_tail=True, n_init=1, max_iter=1)
     with pytest.raises(ValueError, match="duration_tail"):
         m.optimize(torch.zeros(1, 4, 1), cfg=cfg)
-
-
-def test_grid_trial_limit_bounds_cartesian_consumption(monkeypatch):
-    import itertools
-    import nhsmm.tuning as tuning
-
-    original = itertools.product
-    consumed = []
-
-    def counting_product(*args):
-        for value in original(*args):
-            consumed.append(value)
-            yield value
-
-    monkeypatch.setattr(tuning.itertools, "product", counting_product)
-    tuner = tuning.ConfigTuner(
-        ModelConfig(n_states=2, n_features=1),
-        {"max_iter": tuning.Choice([1, 2, 3]), "lr": tuning.Choice([0.1, 0.2, 0.3])},
-    )
-    assert len(tuner.candidates(trials=1)) == 1
-    assert len(consumed) == 1

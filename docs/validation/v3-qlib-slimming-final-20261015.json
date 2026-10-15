@@ -1,0 +1,86 @@
+{
+  "schema": "nhsmm-qlib-slimming-v1",
+  "core_base": "48b49f284674dc9460027c9742ec82050d5894d2",
+  "host_base": "dc27b8d00d5672409ec762e2f0e642d7ad0b0c2b",
+  "package_python_lines": {
+    "before": 9266,
+    "after": 8912,
+    "removed": 354
+  },
+  "deleted_core_files": [
+    "nhsmm/tuning.py",
+    "tests/test_tuning.py"
+  ],
+  "removed_public_exports": [
+    "Choice",
+    "IntRange",
+    "FloatRange",
+    "ConfigTuner",
+    "TuneEvaluation",
+    "TuneTrial",
+    "TuneReport",
+    "apply_config_overrides"
+  ],
+  "core_full": {
+    "job": "67778659631248b2b42acf2986c30215",
+    "passed": 1285,
+    "cuda_skips": 3,
+    "deselected": 0,
+    "seconds": 237.07
+  },
+  "core_focused": {
+    "job": "f6956a97ad884e9db97d867495a9e1e1",
+    "passed": 73,
+    "seconds": 16.55,
+    "pytest_read_only_cache_warnings": 2
+  },
+  "installed": {
+    "job": "82770260ff914323bf26b85c4a554895",
+    "passed": 8,
+    "warnings_as_errors": true,
+    "checkout": "/work/env/src/nhsmm",
+    "pip_check": "clean",
+    "seconds": 7.98,
+    "source_install_byte_equality": true,
+    "synchronized_paths": [
+      "nhsmm/__init__.py",
+      "scripts/validate_learning_prediction.py",
+      "scripts/compare_joint_gaussian_duration.py"
+    ],
+    "retired_tuner_absent": true
+  },
+  "host": {
+    "job": "46e7e34166464778bf7d317ba6efb0ec",
+    "passed": 85,
+    "profile_skips": 1,
+    "warnings": 117,
+    "seconds": 71.75,
+    "record_source_install_byte_equality": true
+  },
+  "native_qlib_task_gate": {
+    "smoke_job": "d17951ceffad427eb80a74c7cb6baf21",
+    "candidates": 2,
+    "seeds": [
+      73,
+      74
+    ],
+    "main_updates_per_candidate": 1,
+    "evaluation_segment": "valid",
+    "model_record_test_access": "rejected by guard",
+    "implementation": "native TrainerR"
+  },
+  "test_scope_change": {
+    "retired_tuner_cases": 9,
+    "new_boundary_cases": 8,
+    "no_math_or_causal_cases_removed": true
+  },
+  "boundaries": {
+    "model_math": "unchanged",
+    "optimizer_and_restarts": "core-owned, unchanged",
+    "artifact_schema": "unchanged",
+    "oracle": "OFF",
+    "old_holdout": "unchanged; not rescored",
+    "historical_evidence": "unchanged",
+    "model_quality_claim": false
+  }
+}
