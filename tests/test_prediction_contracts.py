@@ -79,7 +79,7 @@ def test_external_context_is_not_applied_twice_in_public_likelihood() -> None:
     assert torch.allclose(actual, expected, atol=1e-6, rtol=1e-6)
 
 
-def test_log_likelihood_empty_sequence_returns_negative_infinity() -> None:
+def test_log_likelihood_empty_sequence_is_neutral() -> None:
     config = ModelConfig(
         n_states=2,
         n_features=2,
@@ -94,7 +94,7 @@ def test_log_likelihood_empty_sequence_returns_negative_infinity() -> None:
     result = model.log_likelihood(torch.empty(1, 0, 2), reduce=False)
 
     assert result.shape == (1,)
-    assert result.item() < -1e30
+    assert result.item() == 0.0
 
 
 def test_public_prediction_requires_initialized_distributions() -> None:

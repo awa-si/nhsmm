@@ -1,5 +1,7 @@
 # Audit of nhsmm/models — 2026-10-15
 
+Resolution checkpoint: M01–M07 are repaired in [models-fixes-20261015.md](models-fixes-20261015.md). The findings, source identities and reproducer below remain historical evidence for the audited baseline.
+
 Seven reproduced findings: one P1 and six P2. No model fixes are applied in this
 checkpoint. Further learning experiments remain paused pending the correctness
 repairs and their required verification.

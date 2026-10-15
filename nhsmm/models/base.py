@@ -15,7 +15,7 @@ from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.filtering import (
     _duration_log_hazard_from_log_p, _safe_logaddexp, _safe_logsumexp, duration_log_hazard,
 )
-from nhsmm.config import DTYPE, logger, MIN_LOGITS, MAX_LOGITS, NEG_INF, ModelConfig
+from nhsmm.config import DTYPE, logger, NEG_INF, ModelConfig
 
 
 class DistributionSet(nn.Module):
@@ -237,7 +237,7 @@ class NHSMM(nn.Module):
             self.dist = DistributionSet(config=self.config)
 
         try:
-            self.dist.to(device=self.device, dtype=DTYPE)
+            self.dist.to(device=self.duration_logits_bias.device, dtype=self.duration_logits_bias.dtype)
             self.dist.initialize(context, jitter)
         except Exception as err:
             raise RuntimeError(f"Failed to initialize NHSMM PDFs: {err}") from err
@@ -366,7 +366,11 @@ class NHSMM(nn.Module):
                 context_tensor = X.new_zeros((B, T, 0))
                 canonical = X.new_zeros((B, 1, 0))
             else:
-                context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
+                if B == 0 or T == 0:
+                    context_tensor = X.new_zeros((B, T, self.context_dim))
+                    canonical = X.new_zeros((B, 1, self.context_dim))
+                else:
+                    context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
                 if self.config.causal:
                     canonical = context_tensor.new_zeros((B, 1, context_tensor.shape[-1]))
         else:
@@ -531,6 +535,8 @@ class NHSMM(nn.Module):
         initial_frontier = initial_score.new_full((initial_score.shape[0], K, D), float("-inf"))
         initial_frontier[..., 0] = initial_score
         initial_log_z = _safe_logsumexp(initial_frontier.flatten(1), dim=1)
+        if not torch.isfinite(initial_log_z).all():
+            raise ValueError("causal initial evidence must be finite and have positive mass")
         normalized_initial = initial_frontier - initial_log_z[:, None, None]
         frontier[valid0] = normalized_initial
         cumulative_log_z[valid0] = initial_log_z
@@ -575,6 +581,8 @@ class NHSMM(nn.Module):
 
             posterior_score = predicted + router.log_probs[active, t].unsqueeze(-1)
             step_log_z = _safe_logsumexp(posterior_score.flatten(1), dim=1)
+            if not torch.isfinite(step_log_z).all():
+                raise ValueError("causal step evidence must be finite and have positive mass")
             normalized = posterior_score - step_log_z[:, None, None]
             frontier[active] = normalized
             cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
@@ -600,6 +608,9 @@ class NHSMM(nn.Module):
             if timestep is not None:
                 raise ValueError("timestep is not supported by the full causal forward recursion")
             return self._forward_causal_hazard(X, router, temperature=temperature)
+        if router.log_probs.shape[1] == 0:
+            B, _, K = router.log_probs.shape
+            return router.log_probs.new_empty((B, 0, K, self.dist.duration.max_duration))
 
         Dmax = self.dist.duration.max_duration
         B, T, K = router.log_probs.shape[:3]
@@ -643,9 +654,7 @@ class NHSMM(nn.Module):
                 for duration in range(1, t + 2):
                     start = t - duration + 1
                     bucket = min(duration, Dmax) - 1
-                    emit_sum = (cumsum_emit[active, t + 1] - cumsum_emit[active, start]).clamp(
-                        min=MIN_LOGITS, max=MAX_LOGITS
-                    )
+                    emit_sum = cumsum_emit[active, t + 1] - cumsum_emit[active, start]
                     segment_score = (
                         self._segment_duration_log_score(
                             duration_logits[active, t], duration, tail_end_probability
@@ -702,7 +711,6 @@ class NHSMM(nn.Module):
 
         cumsum_expand = cumsum_emit.unsqueeze(-1).expand(B, T + 1, K, Dmax)
         emit_sums = cumsum_expand.gather(1, end_idx) - cumsum_expand.gather(1, start_idx)
-        emit_sums = emit_sums.clamp(min=MIN_LOGITS, max=MAX_LOGITS)
 
         alpha = router.log_probs.new_full((B, T, K, Dmax), float("-inf"))
         valid0 = X.lengths > 0
@@ -756,6 +764,13 @@ class NHSMM(nn.Module):
         length_mask = torch.arange(T, device=device).unsqueeze(0) < X.lengths.unsqueeze(1)
         alpha = alpha.masked_fill(~length_mask.unsqueeze(-1).unsqueeze(-1), NEG_INF)
         return alpha
+
+    @staticmethod
+    def _viterbi_terminal_index(score: torch.Tensor) -> int:
+        value, index = score.reshape(-1).max(dim=0)
+        if not torch.isfinite(value):
+            raise ValueError("no finite Viterbi path exists under the model support")
+        return int(index.item())
 
     def _viterbi_causal_hazard(
         self,
@@ -858,7 +873,7 @@ class NHSMM(nn.Module):
                     prev_state[t, :, 0] = boundary_prev_state
                     prev_age[t, :, 0] = boundary_prev_age
 
-            flat_index = int(score[L - 1].reshape(-1).argmax().item())
+            flat_index = self._viterbi_terminal_index(score[L - 1])
             state = flat_index // D
             age = flat_index % D
             path = torch.empty(L, dtype=torch.long, device=score.device)
@@ -967,7 +982,7 @@ class NHSMM(nn.Module):
                             segment_length[t, :, bucket],
                         )
 
-                flat_index = int(score[L - 1].reshape(-1).argmax().item())
+                flat_index = self._viterbi_terminal_index(score[L - 1])
                 state = flat_index // Dmax
                 bucket = flat_index % Dmax
                 segments = []
@@ -1034,7 +1049,7 @@ class NHSMM(nn.Module):
                     )
 
             t = L - 1
-            state = int(V[t].argmax())
+            state = self._viterbi_terminal_index(V[t])
             segments = []
             while t >= 0:
                 duration = int(best_dur[t, state].item())
@@ -1141,7 +1156,7 @@ class NHSMM(nn.Module):
                         prev_state[t, :, duration_index] = flat_index // Dmax
                         prev_duration[t, :, duration_index] = flat_index % Dmax
 
-                flat_index = int(score[L - 1].reshape(-1).argmax().item())
+                flat_index = self._viterbi_terminal_index(score[L - 1])
                 state = flat_index // Dmax
                 duration_index = flat_index % Dmax
                 segments = []
@@ -1215,7 +1230,7 @@ class NHSMM(nn.Module):
                 best_dur[t] = best_duration_t
 
             t = L - 1
-            state = int(V[t].argmax())
+            state = self._viterbi_terminal_index(V[t])
             segments = []
             while t >= 0:
                 d = int(best_dur[t, state])
@@ -1247,15 +1262,11 @@ class NHSMM(nn.Module):
         self._require_generative_context(context)
         X_tensor, mask = self._ensure_tensor(X, return_mask=True)
         B = X_tensor.shape[0]
-        if X_tensor.shape[1] == 0:
-            result = X_tensor.new_full((B,), NEG_INF)
-            return result.sum() if reduce else result
-
         seq_set = self._build_sequence_set(X, context=context)
         alpha = self.forward(seq_set)
 
         lengths = seq_set.lengths
-        log_likelihoods = alpha.new_full((B,), NEG_INF)
+        log_likelihoods = alpha.new_zeros(B)
         valid = lengths > 0
         if valid.any():
             last_alpha = alpha[valid, lengths[valid] - 1]
@@ -1263,11 +1274,8 @@ class NHSMM(nn.Module):
 
         if torch.isposinf(log_likelihoods).any():
             raise ValueError("log_likelihood produced +inf")
-        log_likelihoods = torch.where(
-            torch.isnan(log_likelihoods),
-            log_likelihoods.new_full((), NEG_INF),
-            log_likelihoods,
-        )
+        if torch.isnan(log_likelihoods).any():
+            raise ValueError("log_likelihood produced NaN")
         return log_likelihoods.sum() if reduce else log_likelihoods
 
     def predict(
@@ -1277,37 +1285,30 @@ class NHSMM(nn.Module):
         mode: Literal["viterbi", "log_likelihood"] = "viterbi",
         verbose: bool = True,
     ) -> torch.Tensor | list[torch.Tensor]:
+        if mode == "log_likelihood":
+            return self.log_likelihood(X, context=context, reduce=False)
+        if mode != "viterbi":
+            raise ValueError(f"Unsupported decoding mode '{mode}'")
 
         X_tensor = self._ensure_tensor(X)
         B, T, F = X_tensor.shape
-
         if B == 0 or T == 0:
             return [torch.empty(0, dtype=torch.long, device=X_tensor.device) for _ in range(B)]
-
         if verbose:
             logger.info(f"[Predict] Sequences: {B}, max_len: {T}")
 
         seq_set = self._build_sequence_set(X, context=context)
         router = ContextRouter.from_tensor(seq_set)
-
-        if mode == "viterbi":
-            results = [torch.empty(0, dtype=torch.long, device=X_tensor.device) for _ in range(B)]
-            nonzero_idx = torch.nonzero(seq_set.lengths, as_tuple=False).squeeze(-1)
-
-            if len(nonzero_idx) > 0:
-                seq_set_nz = seq_set.select(nonzero_idx)
-                router_nz = router.select(nonzero_idx)
-                decoded_paths = self._viterbi(seq_set_nz, context=router_nz)
-
-                for i, path in zip(nonzero_idx.tolist(), decoded_paths):
-                    length = int(seq_set.lengths[i].item())
-                    results[i] = path[:length].to(dtype=torch.long)
-            return results
-
-        if mode == "log_likelihood":
-            return self.log_likelihood(X, context=context, reduce=False)
-
-        raise ValueError(f"Unsupported decoding mode '{mode}'")
+        results = [torch.empty(0, dtype=torch.long, device=X_tensor.device) for _ in range(B)]
+        nonzero_idx = torch.nonzero(seq_set.lengths, as_tuple=False).squeeze(-1)
+        if len(nonzero_idx) > 0:
+            seq_set_nz = seq_set.select(nonzero_idx)
+            router_nz = router.select(nonzero_idx)
+            decoded_paths = self._viterbi(seq_set_nz, context=router_nz)
+            for i, path in zip(nonzero_idx.tolist(), decoded_paths):
+                length = int(seq_set.lengths[i].item())
+                results[i] = path[:length].to(dtype=torch.long)
+        return results
 
     def decode(
         self,
@@ -1334,13 +1335,14 @@ class NHSMM(nn.Module):
             return (None, None) if return_mask else None
 
         device = self.duration_logits_bias.device
+        dtype = self.duration_logits_bias.dtype
 
         if torch.is_tensor(X):
             if X.ndim == 2:
                 X = X.unsqueeze(0)
             elif X.ndim != 3:
                 raise ValueError(f"Unsupported X shape {X.shape}")
-            X = X.to(device=device, dtype=DTYPE)
+            X = X.to(device=device, dtype=dtype)
             if not torch.isfinite(X).all():
                 raise ValueError("observations must contain only finite values")
             mask = torch.ones(X.shape[:2], dtype=torch.bool, device=device)
@@ -1349,12 +1351,12 @@ class NHSMM(nn.Module):
         if isinstance(X, list):
             if not X:
                 if return_mask:
-                    return torch.empty(0, 0, 0, device=device), torch.empty(
+                    return torch.empty(0, 0, self.config.n_features, device=device, dtype=dtype), torch.empty(
                         0, 0, dtype=torch.bool, device=device
                     )
-                return torch.empty(0, 0, 0, device=device)
+                return torch.empty(0, 0, self.config.n_features, device=device, dtype=dtype)
 
-            X_tensors = [torch.as_tensor(x, device=device, dtype=DTYPE) for x in X]
+            X_tensors = [torch.as_tensor(x, device=device, dtype=dtype) for x in X]
             for index, item in enumerate(X_tensors):
                 if item.ndim != 2:
                     raise ValueError(
@@ -1388,7 +1390,11 @@ class NHSMM(nn.Module):
         if isinstance(X, list):
             if not X:
                 raise ValueError("X must contain at least one sequence")
-            rows = [torch.as_tensor(item, device=self.device, dtype=DTYPE) for item in X]
+            rows = [
+                torch.as_tensor(item, device=self.duration_logits_bias.device,
+                                dtype=self.duration_logits_bias.dtype)
+                for item in X
+            ]
             return torch.cat(rows, dim=0)
         raise TypeError(f"Unsupported type: {type(X)}")
 
@@ -1440,7 +1446,9 @@ class NHSMM(nn.Module):
         self, observations: torch.Tensor, *, cluster_variance: bool = False
     ) -> None:
         emission = self.dist.emission
-        observations = observations.to(device=self.device, dtype=DTYPE)
+        observations = observations.to(
+            device=self.duration_logits_bias.device, dtype=self.duration_logits_bias.dtype
+        )
         centers = self._kmeans_centers(observations, self.config.n_states)
         if emission.emission_type == "gaussian":
             emission.mu.copy_(centers)
@@ -1477,7 +1485,9 @@ class NHSMM(nn.Module):
         context: Optional[torch.Tensor] = None,
     ) -> None:
         """Initialize one optimization run without warm-starting from another run."""
-        self.dist = self.dist.fresh().to(device=self.device, dtype=DTYPE)
+        self.dist = self.dist.fresh().to(
+            device=self.duration_logits_bias.device, dtype=self.duration_logits_bias.dtype
+        )
         self.dist.train(self.training)
 
         # Base distribution parameters are initialized independently of
@@ -1550,7 +1560,7 @@ class NHSMM(nn.Module):
         alpha = self.forward(seq_set, temperature=temperature)
         lengths = seq_set.lengths
 
-        log_likelihoods = alpha.new_full((len(seq_set.sequences),), NEG_INF)
+        log_likelihoods = alpha.new_zeros(len(seq_set.sequences))
         valid = lengths > 0
         if valid.any():
             last_alpha = alpha[valid, lengths[valid] - 1]
@@ -1702,10 +1712,18 @@ class NHSMM(nn.Module):
         cfg.__post_init__()
         self._require_generative_context(context)
         self._validate_optimization_config(cfg)
+        if cfg.transition_refine_steps > 0 and context is None:
+            raise ValueError("transition_refine_steps > 0 requires explicit external context")
         original_training = self.training
         self.train()
         try:
             observations = self._training_observations(X)
+            if observations.ndim != 2 or observations.shape[-1] != self.config.n_features:
+                raise ValueError("training observations must have the configured feature dimension")
+            if observations.shape[0] == 0:
+                raise ValueError("training requires at least one observation")
+            if not torch.isfinite(observations).all():
+                raise ValueError("training observations must contain only finite values")
             context = self._align_external_context(X, context)
 
             self._convergence = Convergence(
@@ -1835,10 +1853,6 @@ class NHSMM(nn.Module):
                 self._restore_best_params()
 
             if cfg.transition_refine_steps > 0:
-                if context is None:
-                    raise ValueError(
-                        "transition_refine_steps > 0 requires explicit external context"
-                    )
                 self._refine_transition_likelihood(
                     X,
                     context,

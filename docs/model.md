@@ -337,3 +337,35 @@ Initial, duration and transition hard masks use exact negative infinity. Categor
 Duration soft_dmax is applied consistently by log_matrix, expected_probs, forward (scores or return_dist=True) and log_prob when supplied with the same arguments. The [D] or [K,D] gate sigmoid(soft_dmax).clamp_min(EPS) is applied after temperature and hard masks, before normalization. Helpers preserve their native batch/context shapes; log_matrix retains its padded shape and T expansion. The D+ tail hazard remains separate. Audit D07 is resolved; see validation/duration-soft-gate-20261015.md.
 
 See `docs/validation/distribution-fixes-20261015.md` for regression coverage and explicit historical-suite limits.
+
+
+## Empty inputs, support errors and model dtype
+
+For supported generative likelihood modes, an empty observation sequence has
+probability one and log-likelihood zero. Empty entries are neutral in summed
+training scores; a completely empty training dataset is rejected before any
+restart initialization or optimizer update. An empty batch returns an empty
+likelihood tensor, with reduced sum zero. Full forward returns [B,0,K,D] for
+zero timesteps. Viterbi prediction returns one empty path per sequence;
+predict(mode="log_likelihood") always returns the likelihood tensor. Invalid
+prediction modes and unsupported causal timestep arguments are still rejected.
+
+Causal forward checks finite, positive evidence before normalization and raises
+ValueError when the active observations have no possible path. The public
+likelihood wrapper raises on NaN instead of hiding it behind a finite sentinel.
+Noncausal completed-segment likelihood may legitimately be negative infinity
+when no complete terminal path exists; Viterbi raises ValueError when no finite
+terminal MAP path exists. These checks do not assign mass to impossible events.
+
+Observation conversion, distribution initialization and training restarts use
+the live model parameter dtype/device. This includes Float64 models with an
+internal encoder. Continuous segment emission sums retain their actual density
+values and gradients instead of categorical score caps. Neither the artifact
+schema nor the separate causal-prefix/noncausal-completed-segment semantics is
+changed.
+
+Transition refinement requires explicit external context. The optimizer checks
+that requirement before it initializes a restart or changes any weights.
+
+The seven 2026-10-15 model audit findings and their regression evidence are
+tracked in [the repair checkpoint](validation/models-fixes-20261015.md).
