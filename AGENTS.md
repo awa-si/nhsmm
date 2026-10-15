@@ -7,7 +7,7 @@
 **Scope:** AI role, mathematical/probabilistic reasoning priorities, source routing and completion gates  
 **Status:** Canonical  
 **Repository:** `awa-si/nhsmm`  
-**Branch:** `develop`  
+**Branch:** `v3`
 **Mode:** normative machine directives  
 **AI Instruction:** Apply this file as the repository-specific AI layer after applicable Admin/project control layers; load `docs/agent-domain.md`, `docs/model.md`, `docs/testing.md` or other helpers only when material, and keep substantive probabilistic/model/API/testing contracts in their canonical owners.
 
@@ -15,7 +15,7 @@
 
 scope: repository_agent
 repository: awa-si/nhsmm
-branch: develop
+branch: v3
 mode: normative_machine_directives
 
 agent_content_policy:
@@ -44,7 +44,7 @@ source_resolution:
 
 startup:
 - read: AGENTS.md
-- then_if_material: docs/agent-domain.md|docs/model.md|docs/testing.md|README.md
+- then_if_material: docs/v3.md|docs/agent-domain.md|docs/model.md|docs/testing.md|README.md
 - inspect_current_target_and_material_dependencies_before_change: true
 - load_only_material_helpers: true
 
