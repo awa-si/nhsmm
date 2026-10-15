@@ -1637,6 +1637,22 @@ class NHSMM(nn.Module):
             raise RuntimeError("No completed optimization summary available")
         return deepcopy(summary)
 
+    def fit(
+        self,
+        X: Union[torch.Tensor, List[torch.Tensor]],
+        context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
+        cfg: Optional[ModelConfig] = None,
+    ) -> "NHSMM":
+        """Initialize if necessary, optimize whole sequences, and return this model.
+
+        Uses the same optimizer/restarts as optimize(). Existing distribution
+        factories are retained. This does not switch to eval/frozen inference,
+        infer sequence boundaries, or accept independent-row sample weights.
+        """
+        if self.dist is None:
+            self.initialize_distributions()
+        return self.optimize(X, context=context, cfg=cfg)
+
     def optimize(
         self,
         X: Union[torch.Tensor, List[torch.Tensor]],

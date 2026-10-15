@@ -59,7 +59,8 @@ config = ModelConfig(
 )
 
 model = NHSMM(config=config)
-model.initialize_distributions()
+# Train dense/ragged sequences through the public initialization + optimizer path:
+# model.fit(sequences)
 
 # ContextEncoder is opt-in; the default model has no internal encoder.
 ```
@@ -69,6 +70,8 @@ kept separately in `ValidationConfig`. Use each configuration's `with_overrides`
 method for strict updates. Experiment candidates, training tasks and recording
 belong in the optional Nautilus Qlib host. See
 [`docs/configuration.md`](docs/configuration.md).
+
+See [the compact model lifecycle](docs/api.md) for fit, artifacts and causal streaming.
 
 ## Architecture
 
@@ -191,7 +194,7 @@ nhsmm public runtime API
 NHSMM core
 ```
 
-For NautilusTrader, the active integration owner is `awa-si/nautilus@main/adapters/nhsmm`.
+For NautilusTrader, the active integration owner is `awa-si/nautilus@main/adapter/nhsmm`.
 Other hosts should likewise keep framework-specific mapping and lifecycle code outside this core package.
 
 The core package does not contain trading policy, medical/research workflow policy, execution logic, or other domain decisions.
