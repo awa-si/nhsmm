@@ -35,6 +35,7 @@ def optimize_model(
     model._validate_optimization_config(cfg)
     if cfg.transition_refine_steps > 0 and context is None:
         raise ValueError("transition_refine_steps > 0 requires explicit external context")
+    model._optimization_summary = None
     original_training = model.training
     model.train()
     try:
@@ -68,6 +69,7 @@ def optimize_model(
         model._optimization_history = []
         model._restart_score_temperature = cfg.optimizer_target_temperature
         best_score = -float("inf")
+        completed_updates = [0] * cfg.n_init
         for run_idx in range(cfg.n_init):
             if cfg.optimizer_initialization == "restart":
                 model._initialize_run_state(
@@ -135,6 +137,7 @@ def optimize_model(
                 )
                 torch.nn.utils.clip_grad_norm_(params, 5.0)
                 model._optimizer.step()
+                completed_updates[run_idx] += 1
                 project_tail = getattr(model.dist.duration, "_project_tail_parameter", None)
                 if callable(project_tail):
                     project_tail()
@@ -179,6 +182,15 @@ def optimize_model(
                 lr=cfg.transition_refine_lr,
             )
 
+        model._optimization_summary = {
+            "schema": "nhsmm-optimization-v1",
+            "main_updates_per_run": completed_updates,
+            "main_updates": sum(completed_updates),
+            "transition_refinement_updates": cfg.transition_refine_steps,
+            "selected_run": max(range(cfg.n_init), key=model._restart_scores.__getitem__),
+            "restart_score_temperature": cfg.optimizer_target_temperature,
+            "post_main_restart_scores": model._restart_scores.copy(),
+        }
         return model
     finally:
         model.train(original_training)

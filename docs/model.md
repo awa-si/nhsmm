@@ -74,6 +74,21 @@ restore mode but do not roll back completed parameter updates.
 
 See [training extraction evidence](validation/v3-training-20261015.md).
 
+### Completed optimization telemetry
+
+`model.optimization_summary()` returns an independent dictionary after a
+successful optimize call. It reports observed main Adam updates per restart and
+in total, the selected restart, fixed restart-score temperature, post-main-update
+restart scores and completed optional transition-refinement updates. A new
+optimization attempt invalidates the previous summary before changing training
+state; a partial/failed fit publishes no completed summary. Main-update counters
+increment after optimizer.step succeeds. Refinement counts are published only
+after the refinement completes. The summary is not part of inference artifacts
+or state_dict, and changing the returned dictionary cannot mutate model telemetry.
+
+Host trainers should use this public boundary instead of private histories.
+See [validation](validation/v3-optimization-summary-20261015.md).
+
 ## Duration-tail training
 
 The optional D+ tail stores its per-state end hazard directly as a probability. Joint optimization projects this parameter into [EPS, 1] after each optimizer update, before restart scoring and snapshots. This prevents an update beyond the feasible domain from entering the zero-gradient region of the inference clamp. The exact h_tail=1 finite-support boundary and artifact parameter representation are preserved. The inference clamp remains a guard for externally supplied parameters.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import replace
+from copy import deepcopy
 from typing import Optional, List, Tuple, Any, Literal, Dict, Union
 import math
 
@@ -1666,6 +1667,18 @@ class NHSMM(nn.Module):
             return ll
         finally:
             self.train(training)
+
+    def optimization_summary(self) -> dict:
+        """Return independent telemetry from the last completed optimization.
+
+        A new optimization attempt invalidates the previous summary before it
+        changes training state. Partial/failed fits never publish a completed
+        summary. This telemetry is not stored in inference artifacts.
+        """
+        summary = getattr(self, "_optimization_summary", None)
+        if summary is None:
+            raise RuntimeError("No completed optimization summary available")
+        return deepcopy(summary)
 
     def optimize(
         self,
