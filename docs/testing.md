@@ -1,5 +1,15 @@
 # Testing and verification
 
+## Model preparation follow-up — 2026-10-15
+
+After removing duplicate public likelihood preparation: **1307 passed, three
+CUDA-only skips, zero deselections**. The 22 added cases verify terminal evidence,
+gradients, empty inputs and a single preparation pass. Focused preparation/context:
+37 passed. Installed package: 22 passed with warnings treated as errors.
+Unchanged host adapter/Qlib suite: 85 passed, one profile skip, 117 warnings.
+Ruff, new-test Black, pip check and diff checks pass.
+See [model preparation audit](validation/v3-model-preparation-20261015.md).
+
 ## Current V3 verification — 2026-10-15
 
 The core gate remains the complete suite with no deselection list:

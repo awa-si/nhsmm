@@ -1194,9 +1194,8 @@ class NHSMM(nn.Module):
     ) -> torch.Tensor:
         self._require_distributions()
         self._require_generative_context(context)
-        X_tensor, mask = self._ensure_tensor(X, return_mask=True)
-        B = X_tensor.shape[0]
         seq_set = self._build_sequence_set(X, context=context)
+        B = seq_set.sequences.shape[0]
         alpha = self.forward(seq_set)
 
         lengths = seq_set.lengths
