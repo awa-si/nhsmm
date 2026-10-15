@@ -40,3 +40,22 @@ def test_observation_loader_rejects_nonfinite_scaler():
     data = {name: np.zeros(480) for name in FEATURES}
     with pytest.raises(ValueError, match="scale"):
         observations(data, p, "train")
+
+def test_duration_summary_uses_model_dimensions_and_gate():
+    import torch
+    from nhsmm import ModelConfig, NHSMM
+    from scripts.diagnose_trading_gradient_flow import duration_law
+
+    model = NHSMM(ModelConfig(n_states=4, n_features=5, max_duration=64,
+                              duration_tail=True, causal=True, verbose=False), device="cpu")
+    model.initialize_distributions()
+    with torch.no_grad():
+        model.duration_logits_bias[:, 0] = -4.0
+    pmf, hazard = duration_law(model)
+    assert pmf.shape == (4, 64)
+    assert hazard.shape == (4,)
+    np.testing.assert_allclose(
+        pmf, model.dist.duration.log_matrix(
+            soft_dmax=model.duration_logits_bias
+        ).exp().detach().numpy()[0, 0], rtol=1e-6,
+    )

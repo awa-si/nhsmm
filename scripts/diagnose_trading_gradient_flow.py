@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 from nhsmm import load_artifact
-from scripts.diagnose_model_conform_duration import duration_mean, law
+from scripts.diagnose_model_conform_duration import duration_mean
 
 DATA_SHA = "370e6e9e87e52d779ea208111eeb2e03b0bf21f8b7e88859fcc8c19ac2739fb4"
 MODEL_SHA = "925bc1d35721d031d5385e9fa52ffc381eb789e1abfe225d18468878f6b2130b"
@@ -54,6 +54,15 @@ def observations(data, protocol, split, smoke=False):
     if not np.isfinite(std).all() or (std <= 0).any() or not np.isfinite(raw).all():
         raise ValueError("invalid observations or scale")
     return torch.tensor((raw - mean) / std)
+
+
+@torch.no_grad()
+def duration_law(model):
+    pmf = model.dist.duration.expected_probs(soft_dmax=model.duration_logits_bias)
+    hazard = model.dist.duration.tail_probability()
+    if hazard is None:
+        hazard = torch.ones(model.config.n_states, dtype=pmf.dtype, device=pmf.device)
+    return pmf.cpu().numpy(), hazard.cpu().numpy()
 
 
 def group(name):
@@ -121,7 +130,7 @@ def run(args):
             "valid_ll_per_row": float(valid_ll) / valid.shape[:2].numel(),
             "loss_including_penalty": float(loss), **gradient_summary(model),
         }
-    pmf, hazard = law(model)
+    pmf, hazard = duration_law(model)
     assert all(torch.equal(value, before[name]) for name, value in model.state_dict().items())
     payload = {
         "schema": "trading-gradient-flow-v1", "smoke": args.smoke,
