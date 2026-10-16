@@ -269,4 +269,4 @@ A gate does not pass because later gates are green. Any failure returns work to 
 
 ## Post-core continuation
 
-Gates 0–10 end the package-core correctness milestone. Real-market mechanism and utility hypotheses continue separately as Gates 11–14 in [market-hypothesis-gates.md](market-hypothesis-gates.md). Results from those gates may accept or reject trading-usefulness hypotheses, but they do not retroactively serve as evidence for mathematical correctness.
+Gates 0–10 end the package-core correctness milestone. Real-market mechanism and utility hypotheses continue separately as Gates 11–14 in [market-hypothesis-gates.md](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/market-hypothesis-gates.md). Results from those gates may accept or reject trading-usefulness hypotheses, but they do not retroactively serve as evidence for mathematical correctness.

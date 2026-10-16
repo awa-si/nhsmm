@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import pytest
 import torch
 
 from nhsmm import HSMMFilterRuntime, ModelConfig, NHSMM
-from nhsmm.config import ValidationConfig, ValidationDataConfig
 from nhsmm.convergence import Convergence
 from nhsmm.filtering import (
     HSMMFilterState,
@@ -135,32 +133,6 @@ def test_scores_and_best_score_preserve_fractional_input_precision():
     assert float(monitor.best_scores[0]) == 100000000.1
 
 
-@pytest.mark.parametrize("version", [True, 1.0, "1"])
-def test_schema_version_requires_integer_type(version):
-    with pytest.raises(ValueError, match="schema_version"):
-        ValidationConfig.from_dict({"schema_version": version})
-
-
-@pytest.mark.parametrize(
-    "scenarios",
-    [
-        {1: {"separation": 1.0}, "1": {"separation": 2.0}},
-        {None: {"separation": 1.0}},
-        {" ": {"separation": 1.0}},
-    ],
-)
-def test_scenario_mapping_names_are_validated_without_coercion(scenarios):
-    with pytest.raises(ValueError, match="scenario names"):
-        ValidationConfig.from_dict({"scenarios": scenarios})
-
-
-def test_config_roundtrip_preserves_distinct_string_scenario_names():
-    payload = {"scenarios": {"1": {"separation": 1.0}, "01": {"separation": 2.0}}}
-    config = ValidationConfig.from_dict(payload)
-    assert set(config.scenarios) == {"1", "01"}
-    assert ValidationConfig.from_dict(config.to_dict()).to_dict() == config.to_dict()
-
-
 @pytest.mark.parametrize("seed", [-(2**63) - 1, 2**64])
 def test_model_config_rejects_seeds_outside_torch_domain(seed):
     with pytest.raises(ValueError, match="seed"):
@@ -172,28 +144,6 @@ def test_model_seed_domain_matches_torch_including_negative_seeds(seed):
     config = ModelConfig(n_states=1, n_features=1, seed=seed)
     model = NHSMM(config, device="cpu")
     assert model.config.seed == seed
-
-
-@pytest.mark.parametrize("seed", [-1, 2**32])
-def test_validation_seed_rejects_values_outside_legacy_numpy_domain(seed):
-    with pytest.raises(ValueError, match="seeds"):
-        ValidationConfig(seeds=(seed,))
-
-
-def test_validation_checks_derived_evaluation_seed():
-    with pytest.raises(ValueError, match="evaluation seeds"):
-        ValidationConfig(seeds=(0,), data=ValidationDataConfig(oos_seed_offset=-1))
-
-
-def test_validation_accepts_consumer_boundaries_and_large_evaluation_seed():
-    config = ValidationConfig(
-        seeds=(0, 2**32 - 1), data=ValidationDataConfig(oos_seed_offset=2**80)
-    )
-    for seed in config.seeds:
-        np.random.RandomState(seed)
-        np.random.default_rng(seed + config.data.oos_seed_offset)
-    restored = ValidationConfig.from_dict(config.to_dict())
-    assert restored.to_dict() == config.to_dict()
 
 
 @pytest.mark.parametrize("offset", [-1e4, -1e7])

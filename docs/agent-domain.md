@@ -20,7 +20,8 @@ repository_map:
 - runtime: nhsmm/runtime.py
 - artifacts: nhsmm/artifact.py
 - validation: nhsmm/validation/
-- experiments_consumers: scripts/
+- experiments_consumers: awa-si/nautilus/adapter/qlib
+- retained_control_tooling: scripts/
 - tests: tests/
 - public_exports: nhsmm/__init__.py|package___init__.py_files
 
@@ -28,13 +29,13 @@ configuration_contract:
 - ownership: nhsmm/config.py
 - model_training: ModelConfig
 - health: ModelHealthThresholds
-- validation: ValidationConfig|ValidationDataConfig|ValidationScenarioConfig
-- config_updates: ModelConfig.with_overrides|ValidationConfig.with_overrides
+- validation: ModelHealthThresholds|ContextEvidenceConfig
+- config_updates: ModelConfig.with_overrides|ModelHealthThresholds.with_overrides
 - experiment_search_owner: awa-si/nautilus/adapter/qlib
 - core_search_scheduler_or_winner_selection: prohibited
 - tuning_objective_is_caller_policy: true
 - unknown_config_fields_or_cli_override_paths: reject
-- scenario_names_have_hidden_semantics: false
+- standalone_scenario_configuration: retired
 
 construction_contract:
 - canonical_config: ModelConfig

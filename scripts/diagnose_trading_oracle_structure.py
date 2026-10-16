@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 import numpy as np
-from generate_trading_regime_dataset import REGIMES, BASE_TRANSITION
+from scripts.generate_trading_regime_dataset import REGIMES, BASE_TRANSITION
 
 
 def run(path):

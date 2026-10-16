@@ -66,8 +66,9 @@ model = NHSMM(config=config)
 ```
 
 `ModelConfig` is the runtime/training configuration contract. Validation policy is
-kept separately in `ValidationConfig`. Use each configuration's `with_overrides`
-method for strict updates. Experiment candidates, training tasks and recording
+owned by the host ML stack. Use `ModelConfig.with_overrides` for strict
+model updates; `ModelHealthThresholds` and `ContextEvidenceConfig` remain explicit
+core diagnostic policies. Experiment candidates, training tasks and recording
 belong in the optional Nautilus Qlib host. See
 [`docs/configuration.md`](docs/configuration.md).
 
@@ -91,7 +92,7 @@ Main package areas:
 
 ```text
 nhsmm/
-├── config.py          # model, health, and validation configuration contracts
+├── config.py          # model and health configuration contracts
 ├── context.py         # context routing and sequence containers
 ├── encoder.py         # neural context encoder
 ├── filtering.py       # filter-state semantics
@@ -285,7 +286,8 @@ Tests live under `tests/`.
 - [`docs/testing.md`](docs/testing.md) — verification policy
 - [`docs/state.md`](docs/state.md) — development-state record
 - [`docs/release.md`](docs/release.md) — packaging/release process
-- [`awa-si/nhsmm-interfaces`](https://github.com/awa-si/nhsmm-interfaces) — integration contracts and adapters
+- [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/adapter/qlib) — active research and integration
+- [`docs/ml-stack-cleanup.md`](docs/ml-stack-cleanup.md) — retired research surfaces and evidence
 
 Validation documents describe controlled package behavior, not downstream domain performance.
 

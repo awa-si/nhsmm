@@ -59,39 +59,3 @@ def test_cluster_variance_singleton_uses_actual_global_variance(monkeypatch):
         F.softplus(model.dist.emission.log_var), expected, rtol=1e-6, atol=1e-6
     )
     assert np.isfinite(model.dist.emission.log_prob(observations[None]).detach().numpy()).all()
-
-
-def test_emission_weight_probe_preserves_causal_prefixes_and_parameters():
-    from nhsmm.filtering import filter_model_sequence
-    from scripts.diagnose_trading_emission_weight import emission_weight, WEIGHTS
-
-    torch.manual_seed(1729)
-    model = NHSMM(
-        ModelConfig(
-            n_states=2,
-            n_features=1,
-            max_duration=4,
-            causal=True,
-            duration_tail=True,
-            dropout=0.0,
-            verbose=False,
-        ),
-        device="cpu",
-    )
-    model.initialize_distributions()
-    model.eval()
-    x = torch.randn(1, 9, 1)
-    before = {k: v.clone() for k, v in model.state_dict().items()}
-    original = model._build_sequence_set
-    reference = filter_model_sequence(model, x).state_posterior
-    for weight in WEIGHTS:
-        with emission_weight(model, weight):
-            full = filter_model_sequence(model, x).state_posterior
-            prefix = filter_model_sequence(model, x[:, :5]).state_posterior
-            torch.testing.assert_close(full[:, :5], prefix)
-            torch.testing.assert_close(full.sum(-1), torch.ones(1, 9))
-            if weight == 1:
-                torch.testing.assert_close(full, reference)
-        assert model._build_sequence_set == original
-    for key, value in before.items():
-        torch.testing.assert_close(model.state_dict()[key], value, rtol=0, atol=0)

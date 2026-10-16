@@ -1,6 +1,7 @@
 # Configuration contract
 
-All public configuration types are defined in `nhsmm/config.py`. Validation modules may re-export them, but configuration ownership is centralized.
+ModelConfig and ModelHealthThresholds are defined in `nhsmm/config.py`.
+ContextEvidenceConfig belongs to `nhsmm.validation`.
 
 NHSMM separates model/training configuration from validation policy.
 
@@ -77,138 +78,17 @@ An `optimize(..., cfg=...)` override must remain structurally compatible with th
 
 `emission_init_mode="kmeans_cluster_variance"` initializes Gaussian means from training-observation kmeans and actual variances from within-cluster population variances. Targets are clipped to [0.05, 5] in training-observation units; clusters with fewer than two members use the global population variance. Gaussian variance is `softplus(log_var)`, so this initializer stores the stable inverse-softplus of each target. It requires Gaussian emissions. The package default remains `spread`; the existing means-only `kmeans` mode retains its scale initialization.
 
-## ValidationConfig
+## Health and context evidence
 
-`ValidationConfig` is a separate public contract for controlled learning/prediction validation. Validation policy is intentionally not stored in `ModelConfig`.
+`ModelHealthThresholds` defines explicit health thresholds used by core diagnostics
+and validation snapshots. It supports strict `from_dict` and `with_overrides`.
+`ContextEvidenceConfig` defines the explicit amplitude/correlation thresholds
+for component-context replication. These are model diagnostics, not research task
+or dataset configuration.
 
-The contract is versioned with `schema_version=1` and contains:
-
-- `model`: a complete `ModelConfig` template;
-- `data`: synthetic acceptance dataset dimensions and duration-generation policy;
-- `seeds`: reproducibility seeds;
-- `boundary_tolerance`: tolerated boundary timing error in timesteps;
-- `health`: model-health/collapse thresholds used by direct diagnostics and validation snapshots;
-- `scenarios`: named signal regimes and their learning/usefulness acceptance thresholds.
-
-Example:
-
-```python
-from nhsmm import ValidationConfig
-
-config = ValidationConfig().with_overrides(
-    model={
-        "max_iter": 60,
-        "lr": 0.005,
-    },
-    data={
-        "steps": 240,
-        "n_train": 12,
-    },
-    boundary_tolerance=2,
-    health={
-        "max_state_occupancy": 0.85,
-    },
-    scenarios={
-        "weak": {
-            "min_median_boundary_f1_tolerance": 0.50,
-            "max_collapse_fraction": 0.25,
-        },
-    },
-)
-
-config.to_json("validation.json")
-```
-
-A saved JSON contract can be loaded with:
-
-```python
-config = ValidationConfig.from_json("validation.json")
-```
-
-Unknown fields, invalid value ranges, incompatible dimensions, unsupported schema versions, and contradictory scenario policies fail closed.
-
-## Scenario policy
-
-Each `ValidationScenarioConfig` defines signal separation plus explicit acceptance policy. No scenario name has hidden semantics.
-
-Learning thresholds can include minimum OOS state accuracy, accuracy gain, held-out likelihood gain, maximum null OOS accuracy, and maximum absolute null ARI.
-
-Usefulness thresholds can include exact boundary F1, tolerated-boundary F1, run-length relative error, transition-matrix MAE, occupancy L1 error, posterior ECE, and collapse policy.
-
-`usefulness_required=False` explicitly marks a negative control such as the null-signal scenario.
-
-## CLI tuning
-
-The maintained acceptance harness accepts either a complete JSON config or strict dotted overrides:
-
-```bash
-python scripts/validate_learning_prediction.py \
-  --config validation.json \
-  --scenario moderate \
-  --set model.max_iter=80 \
-  --set model.lr=0.003 \
-  --set data.steps=240 \
-  --set health.max_state_occupancy=0.85 \
-  --set boundary_tolerance=2 \
-  --set scenario.moderate.max_median_ece=0.15 \
-  --output /tmp/validation.json
-```
-
-Values after `=` are parsed as JSON when possible, so numbers, booleans, `null`, arrays, and quoted strings retain their types.
-
-To materialize the fully resolved contract:
-
-```bash
-python scripts/validate_learning_prediction.py \
-  --set model.max_iter=80 \
-  --dump-config /tmp/resolved-validation-config.json \
-  --scenario moderate
-```
-
-The output report embeds the full resolved `validation_config`, making each acceptance result reproducible from its exact configuration.
-
-
-## Configuration updates and experiment ownership
-
-V3 removes the package's custom ConfigTuner, search domains and Tune* reports.
-The removed exports are Choice, IntRange, FloatRange, ConfigTuner,
-TuneEvaluation, TuneTrial, TuneReport and apply_config_overrides. There is no
-compatibility shim or Qlib dependency in the model package.
-
-Use the existing strict configuration methods:
-
-```python
-from nhsmm import ModelConfig, ValidationConfig
-
-base = ModelConfig(n_states=3, n_features=2)
-candidate = base.with_overrides(lr=0.003, max_iter=80)
-
-policy = ValidationConfig().with_overrides(
-    model={"lr": 0.003, "max_iter": 80},
-    data={"steps": 240},
-    health={"max_state_occupancy": 0.85},
-    scenarios={"moderate": {"max_median_ece": 0.15}},
-    boundary_tolerance=2,
-    seeds=(1, 2, 3),
-)
-```
-
-Both methods return validated copies and reject unknown fields. The synthetic
-validation CLI retains its documented --set paths; parsing those command-line
-paths is local to the script and does not require a core search framework.
-
-Integrated experiment orchestration is owned by
-[awa-si/nautilus adapter/qlib](https://github.com/awa-si/nautilus/tree/main/adapter/qlib):
-declare Qlib model/dataset/record tasks, execute them with native TrainerR,
-and inspect the resulting Recorder artifacts/metrics. Explicit candidate lists
-may use standard-library itertools.product or a separately seeded random
-generator. No custom tuner or automatic winner selector is added to the host.
-
-NHSMM still owns optimize, configuration validation, artifact IO and general
-model-health/validation snapshots. Standalone synthetic mathematical acceptance
-tests remain here. Qlib owns task execution and tracking; chronological folds,
-train-only preprocessing, trusted source/data identities and the validation-only
-selection policy remain caller responsibilities. Reserve test for the
-preregistered final evaluation.
-
-See [slimming evidence](validation/v3-qlib-slimming-20261015.md) for the migration.
+The former ValidationConfig, ValidationDataConfig, ValidationScenarioConfig and
+VALIDATION_CONFIG_SCHEMA_VERSION are removed with their standalone synthetic
+acceptance CLI. They are not model/runtime contracts and have no compatibility
+aliases. Declare data, chronological splits, candidates and recording in the
+[Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/adapter/qlib).
+The core retains model-owned initialization, optimization/restarts and fit telemetry.

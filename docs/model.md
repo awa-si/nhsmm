@@ -78,7 +78,7 @@ Existing histories/optimizer diagnostics, subclass hooks, caller train/eval mode
 config defaults and artifact/state_dict keys retain their contracts. Exceptions
 restore mode but do not roll back completed parameter updates.
 
-See [training extraction evidence](validation/v3-training-20261015.md).
+See [training extraction evidence](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/v3-training-20261015.md).
 
 ### Completed optimization telemetry
 
@@ -93,7 +93,7 @@ after the refinement completes. The summary is not part of inference artifacts
 or state_dict, and changing the returned dictionary cannot mutate model telemetry.
 
 Host trainers should use this public boundary instead of private histories.
-See [validation](validation/v3-optimization-summary-20261015.md).
+See [validation](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/v3-optimization-summary-20261015.md).
 
 ## Duration-tail training
 
@@ -419,7 +419,7 @@ Transition refinement requires explicit external context. The optimizer checks
 that requirement before it initializes a restart or changes any weights.
 
 The seven 2026-10-15 model audit findings and their regression evidence are
-tracked in [the repair checkpoint](validation/models-fixes-20261015.md).
+tracked in [the repair checkpoint](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/models-fixes-20261015.md).
 
 ## Filtering validation and convergence bookkeeping
 
@@ -450,4 +450,4 @@ default_rng. Validation schema_version must be an integer excluding bool.
 Scenario names must be non-empty strings; from_dict does not coerce or merge
 different identifiers.
 
-Repair evidence: [convergence/filter/config fixes](validation/convergence-filtering-config-fixes-20261015.md).
+Repair evidence: [convergence/filter/config fixes](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/convergence-filtering-config-fixes-20261015.md).

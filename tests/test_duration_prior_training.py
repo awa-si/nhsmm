@@ -1,47 +1,8 @@
-import numpy as np
 import pytest
 import torch
 
 from nhsmm import ModelConfig, NHSMM
 from nhsmm.config import EPS
-from scripts.diagnose_trading_duration_prior import (
-    DurationPilotNHSMM,
-    geometric_duration_mass,
-)
-
-
-@pytest.mark.parametrize("duration,mean", [(1, 2), (4, 8), (64, 128)])
-def test_geometric_bucket_preserves_survival_and_constant_hazard(duration, mean):
-    p, h = geometric_duration_mass(duration, mean)
-    assert p.sum() == pytest.approx(1)
-    for age in range(1, duration):
-        assert p[age - 1] / p[age - 1 :].sum() == pytest.approx(h)
-    assert p[-1] == pytest.approx((1 - h) ** (duration - 1))
-
-
-def test_duration_pilot_injects_prior_after_each_fresh_restart():
-    cfg = ModelConfig(
-        n_states=2,
-        n_features=1,
-        max_duration=4,
-        duration_tail=True,
-        emission_init_mode="kmeans_cluster_variance",
-        verbose=False,
-    )
-    model = DurationPilotNHSMM(cfg, device="cpu")
-    model.duration_pilot_init = "geometric128"
-    model.initialize_distributions()
-    x = torch.linspace(-1, 1, 12)[:, None]
-    old = model.dist.duration
-    p, h = geometric_duration_mass(4, 128)
-    for restart in range(2):
-        model._initialize_run_state(restart, observations=x)
-        assert model.dist.duration is not old
-        old = model.dist.duration
-        np.testing.assert_allclose(
-            model.dist.duration.logits.detach().softmax(-1), np.broadcast_to(p, (2, 4)), rtol=1e-6
-        )
-        assert torch.all(model.dist.duration.tail_probability() == h)
 
 
 @pytest.mark.parametrize("initial,direction", [(1 / 128, 1.0), (1.0, -1.0)])
