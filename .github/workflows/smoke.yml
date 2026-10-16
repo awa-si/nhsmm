@@ -71,11 +71,30 @@ jobs:
           print("causal", model.config.causal)
           PY
 
+      - name: Require private test-owner access
+        env:
+          ML_STACK_TESTS_READ_TOKEN: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$ML_STACK_TESTS_READ_TOKEN" ]; then
+            echo "::error::Set ML_STACK_TESTS_READ_TOKEN with read access to awa-si/nautilus."
+            exit 1
+          fi
+
+      - name: Checkout canonical model tests
+        uses: actions/checkout@v7
+        with:
+          repository: awa-si/nautilus
+          token: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
+          ref: c07bb12374bbfb3a8a5aec419112290ef5b60d80
+          path: ml-stack
+
       - name: Pytest suite
+        working-directory: ml-stack
         shell: bash
         run: |
           set -o pipefail
-          python -m pytest -q 2>&1 | tee smoke-logs/pytest.txt
+          python -m pytest -q tests/ml_stack/nhsmm 2>&1 | tee ../smoke-logs/pytest.txt
 
       - name: CPU runtime benchmark
         shell: bash

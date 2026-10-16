@@ -268,15 +268,14 @@ Artifacts and runtime integration should use public exports rather than internal
 
 ```bash
 pip install -e ".[dev]"
-pytest -q
-ruff check nhsmm tests scripts
-black --check nhsmm tests scripts
+ruff check nhsmm scripts
+black --check nhsmm scripts
 ```
 
 CPU-only hosts should use `python scripts/install_cpu_dev.py` inside an
 activated virtual environment before running the same checks.
 
-Tests live under `tests/`.
+Model and mathematics tests are maintained in the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/c07bb12374bbfb3a8a5aec419112290ef5b60d80/tests/ml_stack/nhsmm). Run them from that checkout with this source installed editable; see [docs/testing.md](docs/testing.md).
 
 ## Documentation
 

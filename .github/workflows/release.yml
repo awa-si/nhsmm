@@ -30,10 +30,29 @@ jobs:
           cache: pip
 
       - name: Install package and test dependencies
-        run: python -m pip install -e ".[test]"
+        run: python -m pip install -e . pytest
+
+      - name: Require private test-owner access
+        env:
+          ML_STACK_TESTS_READ_TOKEN: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$ML_STACK_TESTS_READ_TOKEN" ]; then
+            echo "::error::Set ML_STACK_TESTS_READ_TOKEN with read access to awa-si/nautilus."
+            exit 1
+          fi
+
+      - name: Checkout canonical model tests
+        uses: actions/checkout@v7
+        with:
+          repository: awa-si/nautilus
+          token: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
+          ref: c07bb12374bbfb3a8a5aec419112290ef5b60d80
+          path: ml-stack
 
       - name: Run full test suite
-        run: pytest -q
+        working-directory: ml-stack
+        run: python -m pytest -q tests/ml_stack/nhsmm
 
   build:
     name: Build and verify distributions
@@ -93,12 +112,9 @@ jobs:
           from importlib.metadata import version
 
           from nhsmm import (
-              Choice,
-              ConfigTuner,
               ContextEvidenceConfig,
               ModelConfig,
               NHSMM,
-              ValidationConfig,
               context_effect,
               evaluate_context_effect_replication,
               split_fit_context_effect_evidence,
@@ -125,14 +141,7 @@ jobs:
           assert evaluate_context_effect_replication
           assert split_fit_context_effect_evidence
 
-          validation = ValidationConfig()
-          tuner = ConfigTuner(
-              validation,
-              {"model.max_iter": Choice([20, 40])},
-          )
-          candidates = tuner.candidates(strategy="grid")
-          if len(candidates) != 2:
-              raise RuntimeError("public tuner API smoke failed")
+          assert cfg.with_overrides(max_iter=20).max_iter == 20
           print("nhsmm", version("nhsmm"))
           print("public_api", "ok")
           PY

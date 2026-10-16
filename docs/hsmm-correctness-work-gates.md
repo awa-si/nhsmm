@@ -25,16 +25,16 @@ Required decisions and fixtures:
 
 ## Gate 1 — Independent exhaustive path oracle
 
-**Goal:** implement a deliberately slow mathematical oracle under `tests/reference/`.
+**Goal:** implement a deliberately slow mathematical oracle under `tests/ml_stack/nhsmm/reference/`.
 
 Planned files:
 
 ```text
-tests/reference/__init__.py
-tests/reference/hsmm_exact.py
-tests/reference/test_exact_likelihood.py
-tests/reference/test_exact_filtering.py
-tests/reference/test_exact_viterbi.py
+tests/ml_stack/nhsmm/reference/__init__.py
+tests/ml_stack/nhsmm/reference/hsmm_exact.py
+tests/ml_stack/nhsmm/reference/test_exact_likelihood.py
+tests/ml_stack/nhsmm/reference/test_exact_filtering.py
+tests/ml_stack/nhsmm/reference/test_exact_viterbi.py
 ```
 
 `hsmm_exact.py` must enumerate valid latent episode/state paths directly from raw initial, duration, transition, and emission log probabilities. It must not call production inference helpers listed in `testing.md`.
@@ -52,7 +52,7 @@ The oracle must expose enough information to compute independently:
 
 **Acceptance:** oracle results match manually calculated tiny fixtures from Gate 0.
 
-**Current status:** complete. `tests/reference/hsmm_exact.py` independently enumerates causal state-age paths and non-causal segment paths, exposes likelihood, prefix evidence, joint/state/age posterior derivation, episode-end probability, and MAP outputs, and is guarded by a test forbidding imports from `nhsmm`. Hand-check fixtures cover `K=1/D=1`, deterministic duration two, self-transition age reset, impossible support, a manual two-timestep segment likelihood, and the duration-dependent MAP counterexample.
+**Current status:** complete. `tests/ml_stack/nhsmm/reference/hsmm_exact.py` independently enumerates causal state-age paths and non-causal segment paths, exposes likelihood, prefix evidence, joint/state/age posterior derivation, episode-end probability, and MAP outputs, and is guarded by a test forbidding imports from `nhsmm`. Hand-check fixtures cover `K=1/D=1`, deterministic duration two, self-transition age reset, impossible support, a manual two-timestep segment likelihood, and the duration-dependent MAP counterexample.
 
 **Stop condition:** oracle and manual fixture disagree.
 
@@ -215,7 +215,7 @@ Float64 establishes the tight mathematical-reference baseline. Float32 limits mu
 
 **Acceptance:** bounds are documented in tests or `testing.md`, remain below the level at which state/MAP/boundary semantics change, and long-sequence recursion remains stable.
 
-**Current status:** complete. Deterministic precision probes measured Float64 maxima of approximately `1.8e-15` likelihood error, `1.5e-14` finite log-posterior error, and `<3.0e-15` posterior-marginal probability error. The corresponding Float32 maxima were approximately `1.7e-6`, `5.8e-6`, and `<8.1e-7`. Over 128-step Float32 sequences, causal batch-vs-filter/runtime maxima were approximately `1.15e-5` in finite log posterior and `<7.4e-6` in joint/state/age probabilities. Regression bounds in `tests/reference/test_numerical_precision_envelope.py` retain measured headroom (`3e-6` likelihood, `1e-5` short log posterior, `2e-5` long log posterior, and `<=1e-5` probability errors) while remaining well below `1e-4`. Extreme-logit cases additionally require Float32 to preserve dominant state/age decisions whenever the Float64 reference winner margin exceeds `1e-4`.
+**Current status:** complete. Deterministic precision probes measured Float64 maxima of approximately `1.8e-15` likelihood error, `1.5e-14` finite log-posterior error, and `<3.0e-15` posterior-marginal probability error. The corresponding Float32 maxima were approximately `1.7e-6`, `5.8e-6`, and `<8.1e-7`. Over 128-step Float32 sequences, causal batch-vs-filter/runtime maxima were approximately `1.15e-5` in finite log posterior and `<7.4e-6` in joint/state/age probabilities. Regression bounds in `tests/ml_stack/nhsmm/reference/test_numerical_precision_envelope.py` retain measured headroom (`3e-6` likelihood, `1e-5` short log posterior, `2e-5` long log posterior, and `<=1e-5` probability errors) while remaining well below `1e-4`. Extreme-logit cases additionally require Float32 to preserve dominant state/age decisions whenever the Float64 reference winner margin exceeds `1e-4`.
 
 ## Gate 9 — Statistical recovery remains separate
 
@@ -244,7 +244,7 @@ Required final checks:
 ruff check nhsmm tests scripts
 black --check nhsmm tests scripts
 git diff --check
-pytest -q
+python -m pytest -q tests/ml_stack/nhsmm
 ```
 
 Before declaring the milestone complete, review that:
@@ -270,3 +270,6 @@ A gate does not pass because later gates are green. Any failure returns work to 
 ## Post-core continuation
 
 Gates 0–10 end the package-core correctness milestone. Real-market mechanism and utility hypotheses continue separately as Gates 11–14 in [market-hypothesis-gates.md](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/market-hypothesis-gates.md). Results from those gates may accept or reject trading-usefulness hypotheses, but they do not retroactively serve as evidence for mathematical correctness.
+
+Current test execution lives in the Nautilus checkout; see [testing.md](testing.md).
+Historical verification counts above retain their original source/runtime context.

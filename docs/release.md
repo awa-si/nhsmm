@@ -69,7 +69,7 @@ No long-lived PyPI API token is required once Trusted Publishing is configured.
 Before creating a release tag:
 
 1. Use a complete checkout of the intended release commit.
-2. Run the complete discovered pytest suite.
+2. Run the canonical tests/ml_stack/nhsmm suite from the pinned Nautilus test-owner checkout, against this editable core source.
 3. Confirm the release commit contains the desired public API and documentation.
 4. Confirm `git status` is clean in the release checkout.
 5. Confirm the chosen version is new on PyPI.
@@ -100,7 +100,7 @@ Pushing the tag starts `.github/workflows/release.yml`.
 
 The tag-triggered workflow:
 
-1. runs the complete pytest suite on Python 3.12;
+1. runs the canonical external NHSMM pytest suite on Python 3.12, pinned by immutable test-owner SHA;
 2. checks out full Git history/tags for `setuptools_scm`;
 3. builds sdist + wheel;
 4. runs `twine check`;
@@ -144,3 +144,17 @@ PyPI release files are immutable: never reuse a version that has already been up
 ## TestPyPI
 
 TestPyPI is optional. The production workflow intentionally publishes only to PyPI after package validation. If a TestPyPI rehearsal is needed, use a separate temporary/manual workflow rather than weakening the production release job.
+
+## Test-owner migration — 2026-10-16
+
+The repository no longer contains a tests/ tree or a [test] package extra.
+The smoke and release test jobs check out the pinned [canonical suite](https://github.com/awa-si/nautilus/tree/c07bb12374bbfb3a8a5aec419112290ef5b60d80/tests/ml_stack/nhsmm).
+Installed-package smoke uses current ModelConfig/context APIs; removed
+ValidationConfig/search examples are not restored for release checks. The
+2026-09-28 dry-run above is historical evidence, not evidence for this change.
+
+The test-owner repository is private. GitHub jobs require the symbolic secret
+ML_STACK_TESTS_READ_TOKEN with read-only access to awa-si/nautilus. The default
+core-repository token cannot authorize that checkout. Jobs fail closed before
+checkout if the secret is absent. Secret provisioning and hosted execution
+are not verified by local migration checks. Never commit the token value.

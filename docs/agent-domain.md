@@ -22,7 +22,7 @@ repository_map:
 - validation: nhsmm/validation/
 - experiments_consumers: awa-si/nautilus/adapter/qlib
 - retained_control_tooling: scripts/
-- tests: tests/
+- tests: awa-si/nautilus@main/tests/ml_stack/nhsmm (canonical external owner)
 - public_exports: nhsmm/__init__.py|package___init__.py_files
 
 configuration_contract:
@@ -123,3 +123,6 @@ data_boundary:
 - synthetic_sequence_helpers: allowed
 - framework_specific_mapping: prohibited
 - synthetic_data_helpers_only: true
+
+Current test execution lives in the Nautilus checkout; see [testing.md](testing.md).
+Historical verification counts above retain their original source/runtime context.
