@@ -47,7 +47,7 @@ jobs:
         with:
           repository: awa-si/nautilus
           token: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
-          ref: c07bb12374bbfb3a8a5aec419112290ef5b60d80
+          ref: 54c16d00c0814a1d6512ce723ddbe04641905bd3
           path: ml-stack
 
       - name: Run full test suite
@@ -111,14 +111,8 @@ jobs:
           /tmp/nhsmm-release-venv/bin/python - <<'PY'
           from importlib.metadata import version
 
-          from nhsmm import (
-              ContextEvidenceConfig,
-              ModelConfig,
-              NHSMM,
-              context_effect,
-              evaluate_context_effect_replication,
-              split_fit_context_effect_evidence,
-          )
+          import nhsmm
+          from nhsmm import ModelConfig, NHSMM, HSMMFilterRuntime, load_artifact, save_artifact
 
           cfg = ModelConfig(
               n_states=3,
@@ -132,14 +126,10 @@ jobs:
           )
           model = NHSMM(cfg, device="cpu")
           model.initialize_distributions()
-          for component in ("initial", "duration", "emission", "transition"):
-              effect = context_effect(model, [0.0, 0.0], component=component)
-              if not getattr(effect, "shape", None):
-                  raise RuntimeError(f"empty public context effect for {component}")
-
-          assert ContextEvidenceConfig
-          assert evaluate_context_effect_replication
-          assert split_fit_context_effect_evidence
+          assert HSMMFilterRuntime
+          assert load_artifact and save_artifact
+          assert not hasattr(nhsmm, "ModelHealthThresholds")
+          assert not hasattr(nhsmm, "evaluate_context_effect_replication")
 
           assert cfg.with_overrides(max_iter=20).max_iter == 20
           print("nhsmm", version("nhsmm"))

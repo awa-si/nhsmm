@@ -86,7 +86,7 @@ jobs:
         with:
           repository: awa-si/nautilus
           token: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
-          ref: c07bb12374bbfb3a8a5aec419112290ef5b60d80
+          ref: 54c16d00c0814a1d6512ce723ddbe04641905bd3
           path: ml-stack
 
       - name: Pytest suite
@@ -97,6 +97,7 @@ jobs:
           python -m pytest -q tests/ml_stack/nhsmm 2>&1 | tee ../smoke-logs/pytest.txt
 
       - name: CPU runtime benchmark
+        working-directory: ml-stack
         shell: bash
         run: |
           set -o pipefail
@@ -116,8 +117,8 @@ jobs:
           model.eval()
           save_artifact(model, "/tmp/nhsmm-smoke-model.pt")
           PY
-          python scripts/benchmark_runtime.py /tmp/nhsmm-smoke-model.pt --steps 128 --warmup 16 --batch-size 1 \
-            | tee smoke-logs/runtime-benchmark.json
+          python -m adapter.qlib.nhsmm_research.benchmark_runtime /tmp/nhsmm-smoke-model.pt --steps 128 --warmup 16 --batch-size 1 \
+            | tee ../smoke-logs/runtime-benchmark.json
 
       - name: Collect repository state
         if: always()

@@ -16,21 +16,21 @@ repository_map:
 - distributions: nhsmm/distributions/
 - model_core: nhsmm/models/base.py
 - convergence: nhsmm/convergence.py
-- diagnostics: nhsmm/diagnostics.py
+- diagnostics: awa-si/nautilus/adapter/qlib/nhsmm_validation/diagnostics.py
 - runtime: nhsmm/runtime.py
 - artifacts: nhsmm/artifact.py
-- validation: nhsmm/validation/
+- validation: awa-si/nautilus/adapter/qlib/nhsmm_validation/
 - experiments_consumers: awa-si/nautilus/adapter/qlib
-- retained_control_tooling: scripts/
+- retained_control_tooling: awa-si/nautilus/adapter/qlib/nhsmm_research/
 - tests: awa-si/nautilus@main/tests/ml_stack/nhsmm (canonical external owner)
 - public_exports: nhsmm/__init__.py|package___init__.py_files
 
 configuration_contract:
 - ownership: nhsmm/config.py
 - model_training: ModelConfig
-- health: ModelHealthThresholds
-- validation: ModelHealthThresholds|ContextEvidenceConfig
-- config_updates: ModelConfig.with_overrides|ModelHealthThresholds.with_overrides
+- health: host_owned_ModelHealthThresholds
+- validation: host_owned_ModelHealthThresholds|ContextEvidenceConfig
+- config_updates: ModelConfig.with_overrides
 - experiment_search_owner: awa-si/nautilus/adapter/qlib
 - core_search_scheduler_or_winner_selection: prohibited
 - tuning_objective_is_caller_policy: true

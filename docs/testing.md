@@ -1,9 +1,9 @@
 # Model verification
 
 Canonical model, mathematical reference, distribution, training, runtime, artifact
-and validation-snapshot tests have migrated to the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/c07bb12374bbfb3a8a5aec419112290ef5b60d80/tests/ml_stack/nhsmm).
+and validation-snapshot tests have migrated to the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/tests/ml_stack/nhsmm).
 There is no duplicate tests/ tree in this model package. Model implementation
-and public validation APIs remain here; this core never imports the host.
+remain here; this core never imports the host.
 
 Install this source checkout editable in the research environment, then run from
 Nautilus:
@@ -19,11 +19,10 @@ all surviving core behavior tests are retained. Run the full model suite for
 changes to shared inference, distributions, context, configuration or artifacts.
 Do not hide failures with deselections or changed tolerances; report CUDA skips.
 
-Oracle stays OFF by default and opt-in. Its eight control helper scripts, frozen
-data/reference/trading-regimes-v1 bytes and two input reports remain here. The
-host tests resolve these fixtures from the imported editable source and restore
-cwd after the compact CLI test. Restricted support requires --support-mode oracle.
-No long Oracle experiment or frozen holdout scoring is introduced.
+Oracle/benchmark helpers now live in Nautilus adapter.qlib.nhsmm_research.
+Frozen fixtures/input reports live in tests/ml_stack/fixtures/nhsmm. Tests no
+longer require research files in this core checkout. Run CLIs from Nautilus
+with python -m and the new module name. Oracle remains OFF and opt-in.
 
 Local core static checks remain ruff check nhsmm scripts and
 black --check nhsmm scripts. Smoke/release CI checks out the pinned external

@@ -1,7 +1,7 @@
 # Configuration contract
 
-ModelConfig and ModelHealthThresholds are defined in `nhsmm/config.py`.
-ContextEvidenceConfig belongs to `nhsmm.validation`.
+ModelConfig is defined in nhsmm/config.py. ModelHealthThresholds and
+ContextEvidenceConfig belong to Nautilus adapter.qlib.nhsmm_validation.
 
 NHSMM separates model/training configuration from validation policy.
 
@@ -80,15 +80,5 @@ An `optimize(..., cfg=...)` override must remain structurally compatible with th
 
 ## Health and context evidence
 
-`ModelHealthThresholds` defines explicit health thresholds used by core diagnostics
-and validation snapshots. It supports strict `from_dict` and `with_overrides`.
-`ContextEvidenceConfig` defines the explicit amplitude/correlation thresholds
-for component-context replication. These are model diagnostics, not research task
-or dataset configuration.
-
-The former ValidationConfig, ValidationDataConfig, ValidationScenarioConfig and
-VALIDATION_CONFIG_SCHEMA_VERSION are removed with their standalone synthetic
-acceptance CLI. They are not model/runtime contracts and have no compatibility
-aliases. Declare data, chronological splits, candidates and recording in the
-[Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/adapter/qlib).
-The core retains model-owned initialization, optimization/restarts and fit telemetry.
+Health thresholds and context-evidence policy now live in Nautilus
+adapter.qlib.nhsmm_validation; they are no longer exported by NHSMM.

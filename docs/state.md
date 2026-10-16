@@ -1,3 +1,5 @@
+Current ownership: [ML-stack extraction](ml-stack-extraction.md). Historical checkpoints below retain their original source/runtime context.
+
 # Development state
 
 NHSMM is the model/runtime core of the Nautilus Qlib/RD-Agent/MLflow research

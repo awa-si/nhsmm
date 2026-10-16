@@ -16,8 +16,6 @@ NHSMM provides the model/core runtime layer:
 - causal streaming filtering;
 - retrospective/batch inference;
 - model artifacts and inference loading;
-- context-effect validation utilities;
-- reproducible model-health and validation snapshots;
 - strict configuration contracts.
 
 Domain/framework integration is intentionally kept outside this repository.
@@ -31,7 +29,7 @@ pip install nhsmm
 Development install:
 
 ```bash
-git clone https://github.com/awa-si/nhsmm.git
+git clone --branch v3 https://github.com/awa-si/nhsmm.git
 cd nhsmm
 pip install -e ".[dev]"
 ```
@@ -67,8 +65,8 @@ model = NHSMM(config=config)
 
 `ModelConfig` is the runtime/training configuration contract. Validation policy is
 owned by the host ML stack. Use `ModelConfig.with_overrides` for strict
-model updates; `ModelHealthThresholds` and `ContextEvidenceConfig` remain explicit
-core diagnostic policies. Experiment candidates, training tasks and recording
+model updates. Health/context validation policy now lives in Nautilus
+adapter.qlib.nhsmm_validation. Experiment candidates, training tasks and recording
 belong in the optional Nautilus Qlib host. See
 [`docs/configuration.md`](docs/configuration.md).
 
@@ -92,7 +90,7 @@ Main package areas:
 
 ```text
 nhsmm/
-├── config.py          # model and health configuration contracts
+├── config.py          # model configuration contract
 ├── context.py         # context routing and sequence containers
 ├── encoder.py         # neural context encoder
 ├── filtering.py       # filter-state semantics
@@ -101,10 +99,8 @@ nhsmm/
 ├── survival.py        # survival forecasts
 ├── transitions.py     # transition forecasts
 ├── artifact.py        # model artifact IO
-├── diagnostics.py     # model-health diagnostics
 ├── distributions/     # probabilistic components
 ├── models/            # model and training implementation
-└── validation/        # context-effect validation API
 ```
 
 ## Public streaming runtime
@@ -202,9 +198,9 @@ The core package does not contain trading policy, medical/research workflow poli
 
 ### Cross-repository contract
 
-`awa-si/nhsmm` is the source of truth for model/runtime behavior, artifacts, filtering, forecasting, and context-effect validation. Active host repositories own their mapping and lifecycle integration. The deprecated `nhsmm-interfaces` repository remains a public reference for historical adapter contracts and walk-forward patterns.
+`awa-si/nhsmm` is the source of truth for model/runtime behavior, artifacts, filtering and forecasting. Active host repositories own their mapping and lifecycle integration. The deprecated `nhsmm-interfaces` repository remains a public reference for historical adapter contracts and walk-forward patterns.
 
-Host adapters must consume this package through public exports such as `HSMMFilterRuntime`, `load_artifact`, and the documented validation surface; they must not depend on model internals. Conversely, framework-specific adapter code does not belong in this core repository.
+Host adapters must consume this package through public exports such as `HSMMFilterRuntime`, `load_artifact`, and ModelConfig; they must not depend on model internals. Conversely, framework-specific adapter code does not belong in this core repository.
 
 ## Causal and retrospective paths
 
@@ -222,12 +218,12 @@ Retrospective/non-causal inference is a separate path and must not be interprete
 
 See [`docs/model.md`](docs/model.md).
 
-## Validation API
+## Host validation API
 
 The public context-effect facade is component-based:
 
 ```python
-from nhsmm import (
+from adapter.qlib.nhsmm_validation import (
     context_effect,
     evaluate_context_effect_replication,
     split_fit_context_effect_evidence,
@@ -242,11 +238,11 @@ initial | duration | emission | transition
 
 Validation is separate from model optimization. Evidence thresholds are caller policy rather than universal package defaults.
 
-For reproducible Train/OOS evidence, the package also exposes
+For reproducible Train/OOS evidence, the host also exposes
 `evaluate_validation_snapshot(...)`, `compare_validation_snapshots(...)`, and
 `evaluate_model_health(...)`.
 
-See [`docs/validation.md`](docs/validation.md).
+See [`docs/validation.md`](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md).
 
 ## Artifacts and inference
 
@@ -275,13 +271,13 @@ black --check nhsmm scripts
 CPU-only hosts should use `python scripts/install_cpu_dev.py` inside an
 activated virtual environment before running the same checks.
 
-Model and mathematics tests are maintained in the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/c07bb12374bbfb3a8a5aec419112290ef5b60d80/tests/ml_stack/nhsmm). Run them from that checkout with this source installed editable; see [docs/testing.md](docs/testing.md).
+Model and mathematics tests are maintained in the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/tests/ml_stack/nhsmm). Run them from that checkout with this source installed editable; see [docs/testing.md](docs/testing.md).
 
 ## Documentation
 
 - [`docs/model.md`](docs/model.md) — model and runtime contract
 - [`docs/configuration.md`](docs/configuration.md) — configuration contracts
-- [`docs/validation.md`](docs/validation.md) — validation API
+- [`docs/validation.md`](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md) — validation API
 - [`docs/testing.md`](docs/testing.md) — verification policy
 - [`docs/state.md`](docs/state.md) — development-state record
 - [`docs/release.md`](docs/release.md) — packaging/release process

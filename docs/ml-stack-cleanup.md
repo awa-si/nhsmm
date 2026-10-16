@@ -1,3 +1,5 @@
+Historical checkpoint below; subsequent [extraction](ml-stack-extraction.md) supersedes retained health/validation/tool/data ownership statements.
+
 # ML-stack ownership cleanup — 2026-10-16
 
 Research orchestration is centralized in

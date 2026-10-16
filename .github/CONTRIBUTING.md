@@ -5,7 +5,7 @@ NHSMM is pre-1.0 research software. Changes should preserve the documented proba
 ## Development setup
 
 ```bash
-git clone https://github.com/awa-si/nhsmm.git
+git clone --branch v3 https://github.com/awa-si/nhsmm.git
 cd nhsmm
 python -m pip install -e ".[dev]"
 ```
@@ -17,9 +17,10 @@ The package requires Python 3.12+ according to `pyproject.toml`. Repository smok
 Start with the smallest test set that covers the change. Run the full suite when shared model, inference, runtime, distribution, configuration, or validation behavior is affected.
 
 ```bash
-python -m pytest -q
-ruff check nhsmm tests scripts
-black --check nhsmm tests scripts
+ruff check nhsmm scripts
+black --check nhsmm scripts
+# From Nautilus with this core installed editable:
+python -m pytest -q tests/ml_stack/nhsmm
 ```
 
 Only report checks that were actually run. If a check is intentionally omitted, note that in the pull request.

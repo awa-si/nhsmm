@@ -148,7 +148,7 @@ TestPyPI is optional. The production workflow intentionally publishes only to Py
 ## Test-owner migration — 2026-10-16
 
 The repository no longer contains a tests/ tree or a [test] package extra.
-The smoke and release test jobs check out the pinned [canonical suite](https://github.com/awa-si/nautilus/tree/c07bb12374bbfb3a8a5aec419112290ef5b60d80/tests/ml_stack/nhsmm).
+The smoke and release test jobs check out the pinned [canonical suite](https://github.com/awa-si/nautilus/tree/main/tests/ml_stack/nhsmm).
 Installed-package smoke uses current ModelConfig/context APIs; removed
 ValidationConfig/search examples are not restored for release checks. The
 2026-09-28 dry-run above is historical evidence, not evidence for this change.

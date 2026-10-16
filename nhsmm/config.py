@@ -46,14 +46,6 @@ def _require_finite(
         raise ValueError(f"{name} must be finite and {operator} {minimum}")
 
 
-def _require_probability(name: str, value: float | None) -> None:
-    if value is None:
-        return
-    _require_finite(name, value)
-    if not 0.0 <= float(value) <= 1.0:
-        raise ValueError(f"{name} must be None or finite in [0,1]")
-
-
 def _require_bool(name: str, value: Any) -> None:
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be a bool")
@@ -253,45 +245,5 @@ class ModelConfig:
     def with_overrides(self, **overrides: Any) -> "ModelConfig":
         """Return a validated copy with explicit tuning overrides."""
 
-        _reject_unknown(type(self), overrides)
-        return replace(self, **overrides)
-
-
-@dataclass(frozen=True)
-class ModelHealthThresholds:
-    """Thresholds used to classify fitted-model degeneration."""
-
-    min_effective_states: float = 2.0
-    max_state_occupancy: float = 0.80
-    min_viterbi_states: int = 2
-    min_state_occupancy: float = 0.01
-    max_duration_peak: float = 0.95
-    max_transition_peak: float = 0.95
-
-    def __post_init__(self) -> None:
-        _require_finite(
-            "min_effective_states",
-            self.min_effective_states,
-            minimum=0.0,
-            minimum_inclusive=False,
-        )
-        _require_probability("max_state_occupancy", self.max_state_occupancy)
-        if self.max_state_occupancy <= 0.0:
-            raise ValueError("max_state_occupancy must be in (0,1]")
-        _require_int("min_viterbi_states", self.min_viterbi_states, minimum=1)
-        _require_probability("min_state_occupancy", self.min_state_occupancy)
-        if self.min_state_occupancy >= 1.0:
-            raise ValueError("min_state_occupancy must be in [0,1)")
-        for name in ("max_duration_peak", "max_transition_peak"):
-            value = getattr(self, name)
-            _require_probability(name, value)
-            if value <= 0.0:
-                raise ValueError(f"{name} must be in (0,1]")
-
-    @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "ModelHealthThresholds":
-        return _strict_dataclass_from_dict(cls, payload)
-
-    def with_overrides(self, **overrides: Any) -> "ModelHealthThresholds":
         _reject_unknown(type(self), overrides)
         return replace(self, **overrides)

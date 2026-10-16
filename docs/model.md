@@ -236,7 +236,7 @@ This removes emission self-conditioning. The former normalization counterexample
 
 Noncausal internal encoders retain retrospective forward/decode scores. Public generative log_likelihood and optimize reject them when no external context is supplied: lagging a bidirectional encoder does not remove future dependence. Encoderless noncausal models remain supported.
 
-Artifacts use version 2 and declare internal_context_timing as predictive_past, retrospective_scores, or none. Version 1 encoder artifacts are rejected with retraining guidance because old observation-row timing cannot be silently reinterpreted. Version 1 encoderless artifacts remain loadable. Raw state_dict files carry no timing version: callers must establish provenance and retrain old encoder weights before predictive use. See [repair evidence](validation.md#predictive-neural-repair--2026-10-12).
+Artifacts use version 2 and declare internal_context_timing as predictive_past, retrospective_scores, or none. Version 1 encoder artifacts are rejected with retraining guidance because old observation-row timing cannot be silently reinterpreted. Version 1 encoderless artifacts remain loadable. Raw state_dict files carry no timing version: callers must establish provenance and retrain old encoder weights before predictive use. See [repair evidence](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md#predictive-neural-repair--2026-10-12).
 
 ## External context
 
@@ -366,14 +366,14 @@ The core repository should not absorb:
 
 ## Validation boundary
 
-Context-effect validation remains separate from model training and runtime integration.
+Context-effect validation now lives in Nautilus adapter.qlib.nhsmm_validation, separate from core training and runtime integration.
 
-See [validation.md](validation.md).
+See [validation.md](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md).
 
 ## Related documentation
 
 - [README](../README.md)
-- [Validation API](validation.md)
+- [Validation API](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md)
 - [Testing](testing.md)
 - [Development state](state.md)
 - [Release](release.md)

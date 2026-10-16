@@ -51,8 +51,8 @@ Log: /work/checkpoints/api-core-full-20261015.log.
 
 The unused nhsmm.data toy generator/SequenceDataset and its self-tests are
 removed; maintained model/reference fixtures use their existing generators.
-CPU benchmarking is source-checkout tooling:
-python -m scripts.benchmark_runtime ARTIFACT --steps 512 --warmup 64.
+CPU benchmarking is host tooling, run from Nautilus:
+python -m adapter.qlib.nhsmm_research.benchmark_runtime ARTIFACT --steps 512 --warmup 64.
 Its implementation and regression test are retained; nhsmm.benchmark and the
 benchmark_cpu_runtime root export are removed.
 
