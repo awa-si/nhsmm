@@ -1,12 +1,7 @@
-Current ownership: [ML-stack extraction](ml-stack-extraction.md). Historical checkpoints below retain their original source/runtime context.
+# Current development state
 
-# Development state
-
-NHSMM is the model/runtime core of the Nautilus Qlib/RD-Agent/MLflow research
-stack. Maintained API: [api.md](api.md). Verification: [testing.md](testing.md).
-Current cleanup and evidence: [ml-stack-cleanup.md](ml-stack-cleanup.md).
-
-The old standalone experiment runners, synthetic scenario configuration and
-report trees are retired. Oracle controls and frozen data remain available,
-disabled by default. Historical results belong to their original pinned sources
-and do not describe current model quality. See [v3.md](v3.md) for ownership.
+Default and active branch: v3. This tree owns model mathematics, training,
+causal filtering/forecasting, configuration and core artifacts.
+Health/context evaluation and research tooling belong to Nautilus.
+Use docs/testing.md for verification and docs/model.md for model/runtime contracts.
+Current source and tests define behavior; older branches are not documentation sources.

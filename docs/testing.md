@@ -3,7 +3,7 @@
 Canonical model, mathematical reference, distribution, training, runtime, artifact
 and validation-snapshot tests have migrated to the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/tests/ml_stack/nhsmm).
 There is no duplicate tests/ tree in this model package. Model implementation
-remain here; this core never imports the host.
+remains here; this core never imports the host.
 
 Install this source checkout editable in the research environment, then run from
 Nautilus:

@@ -123,6 +123,3 @@ data_boundary:
 - synthetic_sequence_helpers: allowed
 - framework_specific_mapping: prohibited
 - synthetic_data_helpers_only: true
-
-Current test execution lives in the Nautilus checkout; see [testing.md](testing.md).
-Historical verification counts above retain their original source/runtime context.

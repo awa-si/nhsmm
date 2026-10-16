@@ -8,6 +8,8 @@ PyTorch implementation of context-aware hidden semi-Markov models with explicit 
 
 ## Scope
 
+Default and supported development branch: v3.
+
 NHSMM provides the model/core runtime layer:
 
 - explicit-duration hidden semi-Markov inference;
@@ -176,9 +178,6 @@ A runtime session must remain in the selected mode until reset.
 
 ## Interfaces and adapters
 
-Domain-facing integration is owned by each maintained host repository. The public
-[awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces) repository is deprecated and retained as reference/history only.
-
 The dependency boundary remains:
 
 ```text
@@ -197,8 +196,6 @@ Other hosts should likewise keep framework-specific mapping and lifecycle code o
 The core package does not contain trading policy, medical/research workflow policy, execution logic, or other domain decisions.
 
 ### Cross-repository contract
-
-`awa-si/nhsmm` is the source of truth for model/runtime behavior, artifacts, filtering and forecasting. Active host repositories own their mapping and lifecycle integration. The deprecated `nhsmm-interfaces` repository remains a public reference for historical adapter contracts and walk-forward patterns.
 
 Host adapters must consume this package through public exports such as `HSMMFilterRuntime`, `load_artifact`, and ModelConfig; they must not depend on model internals. Conversely, framework-specific adapter code does not belong in this core repository.
 
@@ -282,7 +279,6 @@ Model and mathematics tests are maintained in the [Nautilus ML stack](https://gi
 - [`docs/state.md`](docs/state.md) — development-state record
 - [`docs/release.md`](docs/release.md) — packaging/release process
 - [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/adapter/qlib) — active research and integration
-- [`docs/ml-stack-cleanup.md`](docs/ml-stack-cleanup.md) — retired research surfaces and evidence
 
 Validation documents describe controlled package behavior, not downstream domain performance.
 

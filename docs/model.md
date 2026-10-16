@@ -2,8 +2,6 @@
 
 This document describes the core model/runtime boundary of `nhsmm`.
 
-Domain/framework integration belongs in the maintained host repository. `awa-si/nhsmm-interfaces` is deprecated and retained as public reference/history only.
-
 ## Model
 
 The NHSMM separates four probabilistic components:
@@ -78,8 +76,6 @@ Existing histories/optimizer diagnostics, subclass hooks, caller train/eval mode
 config defaults and artifact/state_dict keys retain their contracts. Exceptions
 restore mode but do not roll back completed parameter updates.
 
-See [training extraction evidence](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/v3-training-20261015.md).
-
 ### Completed optimization telemetry
 
 `model.optimization_summary()` returns an independent dictionary after a
@@ -91,9 +87,6 @@ state; a partial/failed fit publishes no completed summary. Main-update counters
 increment after optimizer.step succeeds. Refinement counts are published only
 after the refinement completes. The summary is not part of inference artifacts
 or state_dict, and changing the returned dictionary cannot mutate model telemetry.
-
-Host trainers should use this public boundary instead of private histories.
-See [validation](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/v3-optimization-summary-20261015.md).
 
 ## Duration-tail training
 
@@ -354,8 +347,6 @@ label-maturity purging. Fit-cutoff/observation-schema provenance and walk-forwar
 state alignment remain caller obligations. Qlib is an optional host dependency;
 it does not replace NHSMM inference or become a model-core dependency.
 
-The deprecated [awa-si/nhsmm-interfaces](https://github.com/awa-si/nhsmm-interfaces) repository remains available as public reference/history for earlier adapter and walk-forward contracts.
-
 The core repository should not absorb:
 
 - Nautilus/Freqtrade strategy semantics;
@@ -372,22 +363,13 @@ See [validation.md](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/n
 
 ## Related documentation
 
-- [README](../README.md)
-- [Validation API](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md)
-- [Testing](testing.md)
-- [Development state](state.md)
-- [Release](release.md)
-- [Deprecated NHSMM Interfaces reference](https://github.com/awa-si/nhsmm-interfaces)
-
 ## Distribution numerical boundaries
 
 Continuous Gaussian/Student-t locations are finite real values, not categorical logits; no categorical score cap is applied to them. Independent Student-t parameters are broadcast before statistics and event reductions. Categorical labels broadcast across sample/batch dimensions; exact zero probabilities retain finite gradients for observed positive-probability classes.
 
 Initial, duration and transition hard masks use exact negative infinity. Categorical logit construction accepts partial impossible support but rejects NaN, positive infinity and rows with no finite mass. Safe survival and sum reductions preserve impossible mass without undefined all-impossible backward paths. An impossible observed event can still have negative-infinite likelihood; numerical safety does not make it possible.
 
-Duration soft_dmax is applied consistently by log_matrix, expected_probs, forward (scores or return_dist=True) and log_prob when supplied with the same arguments. The [D] or [K,D] gate sigmoid(soft_dmax).clamp_min(EPS) is applied after temperature and hard masks, before normalization. Helpers preserve their native batch/context shapes; log_matrix retains its padded shape and T expansion. The D+ tail hazard remains separate. Audit D07 is resolved; see validation/duration-soft-gate-20261015.md.
 
-See `docs/validation/distribution-fixes-20261015.md` for regression coverage and explicit historical-suite limits.
 
 
 ## Empty inputs, support errors and model dtype
@@ -418,9 +400,6 @@ changed.
 Transition refinement requires explicit external context. The optimizer checks
 that requirement before it initializes a restart or changes any weights.
 
-The seven 2026-10-15 model audit findings and their regression evidence are
-tracked in [the repair checkpoint](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/models-fixes-20261015.md).
-
 ## Filtering validation and convergence bookkeeping
 
 Public HSMMFilterState construction requires normalized mass per batch item.
@@ -450,4 +429,6 @@ default_rng. Validation schema_version must be an integer excluding bool.
 Scenario names must be non-empty strings; from_dict does not coerce or merge
 different identifiers.
 
-Repair evidence: [convergence/filter/config fixes](https://github.com/awa-si/nhsmm/blob/c0178857da54f7099d1cb39cb76a7c5a0a6680a8/docs/validation/convergence-filtering-config-fixes-20261015.md).
+### Duration normalization gate
+
+Duration soft_dmax is applied consistently by log_matrix, expected_probs, forward (scores or return_dist=True) and log_prob when supplied with the same arguments. The [D] or [K,D] gate sigmoid(soft_dmax).clamp_min(EPS) is applied after temperature and hard masks, before normalization. Helpers preserve their native batch/context shapes; log_matrix retains its padded shape and T expansion. The D+ tail hazard remains separate.

@@ -34,37 +34,3 @@ NHSMMModel now calls the public fit method. Its native TrainerR research command
 is python -m adapter.qlib.nhsmm_lab. No Qlib or Nautilus dependency is added here.
 NHSMM and GBM share lifecycle verbs, not tensor/target/state semantics or artifact
 formats. See the host's docs/model-api.md for the cross-model contract.
-
-## Verification checkpoint — 2026-10-15
-
-On base 251738c28095e590a29b0c24621e3055677e76b3, the full core suite
-passed: 1315 tests, 3 CUDA-only skips, zero warnings, 239.83 seconds.
-Command: python -m pytest -q tests --tb=short, CPU threads=2.
-The focused 8-test fit gate verifies exact parameters, likelihoods, actual
-optimization summaries and mode parity against explicit initialization/optimize
-for dense/ragged, external/internal context, noncausal and initialized inputs.
-Failed fits still propagate errors. No model equation, training budget,
-artifact format, oracle setting or frozen holdout was changed.
-Log: /work/checkpoints/api-core-full-20261015.log.
-
-## Core slimming migration
-
-The unused nhsmm.data toy generator/SequenceDataset and its self-tests are
-removed; maintained model/reference fixtures use their existing generators.
-CPU benchmarking is host tooling, run from Nautilus:
-python -m adapter.qlib.nhsmm_research.benchmark_runtime ARTIFACT --steps 512 --warmup 64.
-Its implementation and regression test are retained; nhsmm.benchmark and the
-benchmark_cpu_runtime root export are removed.
-
-Convergence no longer accepts callbacks or early_stop, exports JSON, reports
-any_converged, or maintains an unused global stop_training flag. Training still
-uses the same delta/plateau predicates, scheduler and convergence_stop policy.
-Use optimization_summary and the Qlib/MLflow recorder for completed-fit telemetry.
-Unused ContextRouter get_* / select_features helpers, its write-only shape cache
-and SequenceSet.total_timesteps are removed. Direct tensor fields remain canonical.
-No compatibility aliases restore these retired surfaces.
-
-Prospective research source lists no longer hash the removed, unused data/
-benchmark modules. Archived protocols/reports/proofs and their historical source
-identities remain unchanged; restoring their pinned source is still required for
-a historical numerical replay. Oracle remains off and the holdout is not rescored.
