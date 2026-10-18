@@ -242,7 +242,9 @@ class NHSMM(nn.Module):
             self.dist = DistributionSet(config=self.config)
 
         try:
-            self.dist.to(device=self.duration_logits_bias.device, dtype=self.duration_logits_bias.dtype)
+            self.dist.to(
+                device=self.duration_logits_bias.device, dtype=self.duration_logits_bias.dtype
+            )
             self.dist.initialize(context, jitter)
         except Exception as err:
             raise RuntimeError(f"Failed to initialize NHSMM PDFs: {err}") from err
@@ -1284,9 +1286,9 @@ class NHSMM(nn.Module):
         if isinstance(X, list):
             if not X:
                 if return_mask:
-                    return torch.empty(0, 0, self.config.n_features, device=device, dtype=dtype), torch.empty(
-                        0, 0, dtype=torch.bool, device=device
-                    )
+                    return torch.empty(
+                        0, 0, self.config.n_features, device=device, dtype=dtype
+                    ), torch.empty(0, 0, dtype=torch.bool, device=device)
                 return torch.empty(0, 0, self.config.n_features, device=device, dtype=dtype)
 
             X_tensors = [torch.as_tensor(x, device=device, dtype=dtype) for x in X]
@@ -1324,8 +1326,11 @@ class NHSMM(nn.Module):
             if not X:
                 raise ValueError("X must contain at least one sequence")
             rows = [
-                torch.as_tensor(item, device=self.duration_logits_bias.device,
-                                dtype=self.duration_logits_bias.dtype)
+                torch.as_tensor(
+                    item,
+                    device=self.duration_logits_bias.device,
+                    dtype=self.duration_logits_bias.dtype,
+                )
                 for item in X
             ]
             return torch.cat(rows, dim=0)

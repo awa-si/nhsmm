@@ -92,7 +92,9 @@ class HSMMFilterTrace:
             raise ValueError("lengths contain values outside the trace time dimension")
         if value.shape[-2] < 1 or value.shape[-1] < 1:
             raise ValueError("trace state and age dimensions must be non-empty")
-        valid = torch.arange(value.shape[1], device=value.device).unsqueeze(0) < lengths.unsqueeze(1)
+        valid = torch.arange(value.shape[1], device=value.device).unsqueeze(0) < lengths.unsqueeze(
+            1
+        )
         valid_rows = value[valid]
         if valid_rows.shape[0]:
             HSMMFilterState(valid_rows)
