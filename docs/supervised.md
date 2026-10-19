@@ -53,3 +53,8 @@ The synthetic native ML-stack ladder is owned by Nautilus
 `adapter/qlib/nhsmm_research/supervised_ladder.py`. It establishes controlled
 supervised learning behavior; it does not establish market regimes, eliminate
 latent-state collapse in unsupervised training or qualify a trading model.
+
+Emission initialization without an explicit mode now honors the configured
+random/spread mode. Data-dependent kmeans modes retain a spread placeholder
+until the observation-aware latent training initializer runs; supervised fits
+from current parameters do not perform implicit kmeans initialization.

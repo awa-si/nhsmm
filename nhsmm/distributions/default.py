@@ -1035,11 +1035,16 @@ class Emission(Neural):
     @torch.no_grad()
     def initialize(
         self,
-        mode: Optional[str] = "spread",
+        mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
         jitter: float = 1e-5,
     ) -> Distribution:
-        self._init_params(mode, None, jitter)
+        # Observation-dependent modes are resolved later by the training
+        # initializer. Without observations retain the spread placeholder.
+        resolved = self.init_mode if mode is None else mode
+        if mode is None and resolved in ("kmeans", "kmeans_cluster_variance"):
+            resolved = "spread"
+        self._init_params(resolved, None, jitter)
         return self._get_dist(context=context)
 
     def _apply_constraints(
