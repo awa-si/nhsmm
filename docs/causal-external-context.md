@@ -7,8 +7,8 @@ The caller owns timestamps and causal feature construction. No automatic lag
 is applied. Plain Tensor contexts retain their existing shared timing semantics.
 
 Sequence APIs accept the existing dense/static or ragged context shapes in both fields. Streaming accepts single-step Tensor shapes. Missing
-channels, nonfinite values and incompatible lengths are rejected. This API does
-not substitute zero for missing data and does not implement a per-row fallback.
+channels, nonfinite available values and incompatible lengths are rejected.
+Explicit availability masks select base scores for missing rows, as described below.
 A stream cannot change between internal and external context without reset;
 reset discards filtering history. No-context inference bypasses context heads
 when the model has no internal encoder; it does not reconstruct a separately
@@ -59,8 +59,8 @@ base boundary scores selected at t affect the following t -> t+1 edge.
 Batch likelihood/filtering accept `BASE_CONTEXT` to bypass any internal encoder.
 Context-only fitting and transition refinement reject this bypass.
 
-This gate applies to the entire batch at a step. Per-batch-item or per-component
-availability masks are not implemented. An external adapter owns missingness,
+BASE_CONTEXT applies to the entire batch at a step. For per-item availability,
+use CausalContext.available as described below. Per-component masks are unsupported. An external adapter owns missingness,
 freshness and observation-clock policy; invalid context is not automatically
 reclassified as missing.
 
@@ -76,5 +76,36 @@ https://github.com/awa-si/nautilus/blob/cf3a8ef59fbbdf2484f5679307568b2c812f38bf
 
 The opt-in market adapter and production TA/Axis replay are documented in the
 host report. Synthetic fixture verification does not establish a historical
-market advantage. Mixed-batch-item masks and a mixed-availability batch training
-objective remain outside this extension.
+market advantage. The following extension adds mixed-availability batch scoring
+and training; the counts above describe the earlier base-score revision.
+
+## Mixed availability within a batch
+
+Use `CausalContext(emission=E, boundary=U, available=M)`. M is a strictly
+boolean scalar, shared [T], exact [B,T], or a list of [Ti] masks for ragged
+sequences. None preserves the all-available legacy behavior. For a batched
+streaming step use [B,1]; [B] is not a per-stream shorthand.
+
+At unavailable rows, all context corrections are bypassed before probability
+links and constraints. Initial probabilities use M[0]; emissions and outgoing
+hazards/transitions use M[t]. The prior step's boundary still propagates into
+the current observation. Observations are retained; the posterior and episode
+age continue. Missing context rows may contain NaN/Inf: they are sanitized and
+excluded before head evaluation. Available rows must be finite. A zero vector
+without a false mask remains ordinary context and can activate neural biases.
+
+Likelihood, observed-path supervision, decoding, filtering, streaming and latent
+optimization chunks carry the same mask. Context-only fitting and transition
+refinement reject datasets with no available rows before changing parameters.
+Masked context requires row-gating support in every distribution; unsupported
+custom distributions are rejected. The unmasked custom-distribution call contract
+is unchanged. Both E and U must retain their ordinary valid shapes.
+
+The mask gates both information sets together; separate emission/boundary
+availability is unsupported. It is a caller-supplied covariate, not a learned
+missingness process. Pre-observation emission availability must itself obey the
+information boundary. Exact fallback means current base scores, not the posterior
+of an independently run static model. No parameter paths or artifact schema change.
+
+Verification and native RD-Agent/Qlib/MLflow integration evidence are retained in
+https://github.com/awa-si/nautilus/blob/5adf39f034e02c72f2c5fd42b133669233865370/docs/nhsmm-masked-context.md.

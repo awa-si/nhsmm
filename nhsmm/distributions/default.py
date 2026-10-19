@@ -433,6 +433,33 @@ class Neural(nn.Module, ABC):
             delta = delta.squeeze(-len(self._shape) - 1)
         return delta
 
+    def _masked_context_delta(self, base, context, timestep, mask):
+        """Evaluate heads only on available rows; gate before probability links."""
+        if mask is None:
+            return self._apply_context(base, context, timestep)
+        if context is None:
+            raise ValueError("context mask requires explicit context values")
+        ctx = self._prepare_context(context)
+        if ctx.ndim != 3:
+            raise ValueError("masked context requires [B,T,H] context")
+        if not torch.is_tensor(mask) or mask.dtype != torch.bool or mask.shape != ctx.shape[:-1]:
+            raise ValueError("context_mask must be bool and match context batch/time dimensions")
+        if mask.device != ctx.device:
+            raise ValueError("context_mask and context must be on the same device")
+        if timestep is not None:
+            ctx = ctx[:, timestep : timestep + 1]
+            mask = mask[:, timestep : timestep + 1]
+        active = ctx.reshape(-1, ctx.shape[-1])[mask.reshape(-1)]
+        if not torch.isfinite(active).all():
+            raise ValueError("available context must be finite")
+        result = ctx.new_zeros((*ctx.shape[:-1], *self._shape))
+        if active.shape[0]:
+            delta = self._apply_context(base, active.unsqueeze(1))
+            result.reshape(-1, *self._shape)[mask.reshape(-1)] = delta.reshape(-1, *self._shape)
+        if timestep is not None:
+            result = result.squeeze(1)
+        return result
+
     def _modulate(
         self,
         context: Optional[torch.Tensor] = None,
@@ -441,7 +468,7 @@ class Neural(nn.Module, ABC):
         **kwargs,
     ) -> torch.Tensor:
         base = self._tensor_shape(self.base)
-        delta = self._apply_context(base, context, timestep)
+        delta = self._masked_context_delta(base, context, timestep, kwargs.get("context_mask"))
         mod = self._validate_base(base + delta)
         mod = self._apply_temperature(mod, temperature)
         return self._apply_constraints(mod, mask=kwargs.get("mask", None))

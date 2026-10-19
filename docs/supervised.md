@@ -62,3 +62,8 @@ from current parameters do not perform implicit kmeans initialization.
 ## Frozen-base context training
 
 fit_supervised(..., context_only=True) trains only distribution context networks, projections and delta scales from current parameters. Base parameters stay fixed; trainability flags and model mode are restored. Explicit external context is required. Missing context is not replaced by zeros. See [the timing contract](causal-external-context.md).
+
+Mixed availability is supplied as CausalContext.available. Unavailable rows
+retain their observations and base density/boundary factors; their context heads
+are not evaluated. Context-only fitting requires at least one available row.
+The caller owns the availability information boundary. See the timing contract.

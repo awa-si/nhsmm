@@ -7,7 +7,14 @@ import math
 import torch
 
 from nhsmm.config import EPS
-from nhsmm.context import BASE_CONTEXT, CausalContext, align_context_tensor
+from nhsmm.context import (
+    validate_masked_context,
+    BASE_CONTEXT,
+    CausalContext,
+    align_context_tensor,
+    align_context_availability,
+    context_options,
+)
 from nhsmm.filtering import (
     HSMMFilterState,
     _filter_step_normalized,
@@ -178,6 +185,7 @@ def _boundary_scores(
     temperature: Optional[float],
     cache: Optional[_RuntimeScoreCache] = None,
     batch_size: Optional[int] = None,
+    context_mask: Optional[torch.Tensor] = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     context_arg = context
     if context_arg is not None and context_arg.shape[-1] == 0:
@@ -188,6 +196,7 @@ def _boundary_scores(
         B = int(batch_size)
     else:
         B = context_arg.shape[0]
+    options = context_options(context_mask)
     duration_dist = model.dist.duration
     duration_bias = model.duration_logits_bias
     if (
@@ -198,6 +207,7 @@ def _boundary_scores(
         duration_mod = duration_dist._modulate(
             context=context_arg,
             temperature=temperature,
+            **options,
         )
         gate_log = cache.duration_gate_log(duration_bias)
         duration = torch.log_softmax(
@@ -213,6 +223,7 @@ def _boundary_scores(
         duration = duration_dist.log_matrix(
             context=context_arg,
             temperature=temperature,
+            **options,
             T=1,
             soft_dmax=duration_bias,
         )[:, 0]
@@ -227,7 +238,7 @@ def _boundary_scores(
         and getattr(transition_dist, "max_duration", None) is not None
     ):
         base = transition_dist._tensor_shape(transition_dist.base)
-        delta = transition_dist._apply_context(base, context_arg)
+        delta = transition_dist._masked_context_delta(base, context_arg, None, context_mask)
         transition_mod = transition_dist._validate_base(base + delta)
         transition_mod = transition_dist._apply_temperature(
             transition_mod,
@@ -244,6 +255,7 @@ def _boundary_scores(
         transition = transition_dist.log_matrix(
             context=context_arg,
             temperature=temperature,
+            **options,
             T=1,
             soft_dmax=duration_bias,
         )[:, 0]
@@ -287,6 +299,7 @@ def _emission_log_prob(
     observation: torch.Tensor,
     context: Optional[torch.Tensor],
     cache: Optional[_RuntimeScoreCache] = None,
+    context_mask: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     B = observation.shape[0]
     K = int(model.config.n_states)
@@ -296,7 +309,7 @@ def _emission_log_prob(
         and _is_default_distribution(emission, "Emission")
         and getattr(emission, "emission_type", None) == "gaussian"
     ):
-        loc = emission._modulate(context=context)
+        loc = emission._modulate(context=context, **context_options(context_mask))
         if loc.ndim == 2:
             loc = loc.unsqueeze(0).unsqueeze(0)
         var, log_norm = cache.gaussian_terms(
@@ -308,7 +321,7 @@ def _emission_log_prob(
         if not torch.isfinite(log_prob).all():
             raise ValueError("emission log_prob contains NaN/Inf")
     else:
-        log_prob = emission.log_prob(observation, context=context)
+        log_prob = emission.log_prob(observation, context=context, **context_options(context_mask))
     if log_prob.shape != (B, 1, K):
         raise ValueError(f"emission log_prob must be {(B, 1, K)}, got {log_prob.shape}")
     return log_prob[:, 0]
@@ -388,9 +401,17 @@ class HSMMFilterRuntime:
                 "between internal and external context"
             )
 
+        context_mask = None
         emission_context = None
         split_context = context if isinstance(context, CausalContext) else None
         if split_context is not None:
+            validate_masked_context(self.model, split_context.available)
+            context_mask = align_context_availability(
+                split_context.available,
+                lengths=torch.ones(obs.shape[0], device=obs.device, dtype=torch.long),
+                timesteps=1,
+                device=obs.device,
+            )
             emission_context = align_context_tensor(
                 split_context.emission,
                 batch_size=obs.shape[0],
@@ -398,6 +419,7 @@ class HSMMFilterRuntime:
                 context_dim=int(self.model.context_dim or 0),
                 device=obs.device,
                 dtype=obs.dtype,
+                available=context_mask,
             )
             context = split_context.boundary
         external_context = None
@@ -413,6 +435,7 @@ class HSMMFilterRuntime:
                 context_dim=int(self.model.context_dim),
                 device=obs.device,
                 dtype=obs.dtype,
+                available=context_mask,
             )
 
         if emission_context is None:
@@ -421,10 +444,7 @@ class HSMMFilterRuntime:
         if self.state is None:
             if uses_external_context:
                 emission = _emission_log_prob(
-                    self.model,
-                    obs,
-                    emission_context,
-                    self._score_cache,
+                    self.model, obs, emission_context, self._score_cache, context_mask=context_mask
                 )
                 B = obs.shape[0]
                 K = int(self.model.config.n_states)
@@ -432,6 +452,7 @@ class HSMMFilterRuntime:
                     context=emission_context,
                     temperature=self.temperature,
                     T=1,
+                    **context_options(context_mask, canonical=True),
                 )
                 if initial.shape[0] == 1 and B > 1:
                     initial = initial.expand(B, -1, -1)
@@ -448,6 +469,7 @@ class HSMMFilterRuntime:
                     temperature=self.temperature,
                     cache=self._score_cache,
                     batch_size=B,
+                    context_mask=context_mask,
                 )
                 self.state = HSMMRuntimeState(
                     filter_state=filter_state,
@@ -618,10 +640,7 @@ class HSMMFilterRuntime:
 
         if uses_external_context:
             emission = _emission_log_prob(
-                self.model,
-                obs,
-                emission_context,
-                self._score_cache,
+                self.model, obs, emission_context, self._score_cache, context_mask=context_mask
             )
             filter_state = _filter_step_normalized(
                 previous.filter_state,
@@ -636,6 +655,7 @@ class HSMMFilterRuntime:
                 temperature=self.temperature,
                 cache=self._score_cache,
                 batch_size=obs.shape[0],
+                context_mask=context_mask,
             )
             self.state = HSMMRuntimeState(
                 filter_state=filter_state,

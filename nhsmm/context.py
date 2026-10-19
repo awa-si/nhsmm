@@ -28,17 +28,77 @@ class CausalContext:
 
     ``emission[t]`` must be available before x_t; ``boundary[t]`` may include
     x_t and controls only the outgoing t -> t+1 boundary. Initial probabilities
-    use emission[0]. Both fields are required; missing/nonfinite rows fail closed.
+    use emission[0]. Both fields are required. Available rows must be finite;
+    unavailable rows bypass heads and use current base distribution scores.
     Tensor shapes and ragged lists follow the ordinary external-context API.
     """
 
     emission: torch.Tensor | list[torch.Tensor]
     boundary: torch.Tensor | list[torch.Tensor]
+    available: torch.Tensor | list[torch.Tensor] | None = None
 
     def __post_init__(self):
         for value in (self.emission, self.boundary):
             if not isinstance(value, (torch.Tensor, list)):
                 raise TypeError("CausalContext requires both emission and boundary context")
+
+
+def context_options(mask, *, canonical=False):
+    """Keep legacy/custom distribution calls unchanged when no mask is supplied."""
+    if mask is None:
+        return {}
+    return {"context_mask": mask[:, :1] if canonical else mask}
+
+
+def align_context_availability(available, *, lengths, timesteps, device):
+    """Strict bool availability: scalar, [T], [B,T], or ragged [Ti] list."""
+    if available is None:
+        return None
+    B, T = len(lengths), timesteps
+    if isinstance(available, list):
+        if len(available) != B:
+            raise ValueError("availability list must match observation batch")
+        rows = []
+        for row, length in zip(available, lengths.tolist(), strict=True):
+            row = torch.as_tensor(row, device=device)
+            if row.dtype != torch.bool or row.shape != (length,):
+                raise ValueError("ragged availability must contain bool [Ti] rows")
+            rows.append(row)
+        value = (
+            pad_sequence(rows, batch_first=True)
+            if rows
+            else torch.empty((0, T), device=device, dtype=torch.bool)
+        )
+    else:
+        value = torch.as_tensor(available, device=device)
+        if value.dtype != torch.bool:
+            raise TypeError("availability must use bool dtype")
+        if value.ndim == 0:
+            value = value.expand(B, T)
+        elif value.shape == (T,):
+            value = value.unsqueeze(0).expand(B, T)
+    if value.shape != (B, T):
+        raise ValueError("availability must be scalar, [T], [B,T], or ragged [Ti] list")
+    valid = torch.arange(T, device=device)[None, :] < lengths[:, None]
+    return value & valid
+
+
+def _align_causal_context(context, *, lengths, timesteps, context_dim, prototype):
+    available = align_context_availability(
+        context.available, lengths=lengths, timesteps=timesteps, device=prototype.device
+    )
+
+    def align(value):
+        return _align_sequence_context(
+            value,
+            lengths=lengths,
+            timesteps=timesteps,
+            context_dim=context_dim,
+            prototype=prototype,
+            available=available,
+        )
+
+    return CausalContext(align(context.emission), align(context.boundary), available)
 
 
 def align_context_tensor(
@@ -49,6 +109,7 @@ def align_context_tensor(
     context_dim: int,
     device: Optional[torch.device] = None,
     dtype: Optional[torch.dtype] = None,
+    available: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Normalize public external-context shapes to ``[B,T,H]``.
 
@@ -60,14 +121,21 @@ def align_context_tensor(
     tensor = torch.as_tensor(context, device=device, dtype=dtype)
     if not tensor.is_floating_point():
         raise TypeError("context must use a floating dtype")
-    if not torch.isfinite(tensor).all():
-        raise ValueError("context must contain only finite values")
     B, T, H = batch_size, timesteps, context_dim
+
+    def finish(value):
+        if available is not None:
+            if available.dtype != torch.bool or available.shape != (B, T):
+                raise ValueError("aligned availability must be bool [B,T]")
+            value = torch.where(available[..., None], value, torch.zeros_like(value))
+        if not torch.isfinite(value).all():
+            raise ValueError("context must contain only finite available values")
+        return value
 
     if tensor.ndim == 1:
         if tensor.shape[0] != H:
             raise ValueError(f"1D context must be [H]=[{H}], got {tuple(tensor.shape)}")
-        return tensor.view(1, 1, H).expand(B, T, H)
+        return finish(tensor.view(1, 1, H).expand(B, T, H))
 
     if tensor.ndim == 2:
         if tensor.shape != (T, H):
@@ -75,13 +143,13 @@ def align_context_tensor(
                 f"2D context must be [T,H]=({T},{H}); "
                 "batch-specific static context must use [B,1,H]"
             )
-        return tensor.unsqueeze(0).expand(B, T, H)
+        return finish(tensor.unsqueeze(0).expand(B, T, H))
 
     if tensor.ndim == 3:
         if tensor.shape == (B, 1, H):
-            return tensor.expand(B, T, H)
+            return finish(tensor.expand(B, T, H))
         if tensor.shape == (B, T, H):
-            return tensor
+            return finish(tensor)
         raise ValueError(
             f"3D context must be [B,1,H] or [B,T,H] for "
             f"(B,T,H)=({B},{T},{H}), got {tuple(tensor.shape)}"
@@ -99,6 +167,7 @@ def _align_sequence_context(
     timesteps: int,
     context_dim: int,
     prototype: torch.Tensor,
+    available: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Align external context against already validated observation lengths."""
     B, T = len(lengths), timesteps
@@ -125,7 +194,7 @@ def _align_sequence_context(
                     f"context sequence {index} feature dimension {tensor.shape[1]} "
                     f"does not match expected context_dim {context_dim}"
                 )
-            if not torch.isfinite(tensor).all():
+            if available is None and not torch.isfinite(tensor).all():
                 raise ValueError(f"context sequence {index} must contain only finite values")
             tensors.append(tensor)
         context = (
@@ -142,6 +211,7 @@ def _align_sequence_context(
         context_dim=context_dim,
         device=prototype.device,
         dtype=prototype.dtype,
+        available=available,
     )
 
 
@@ -155,6 +225,7 @@ class SequenceSet:
     contexts: torch.Tensor
     canonical: torch.Tensor
     log_probs: Optional[torch.Tensor] = None
+    context_mask: Optional[torch.Tensor] = None
 
     @classmethod
     def from_unbatched(
@@ -311,6 +382,7 @@ class SequenceSet:
             contexts=self.contexts[indices],
             canonical=self.canonical[indices],
             log_probs=self.log_probs[indices] if self.log_probs is not None else None,
+            context_mask=self.context_mask[indices] if self.context_mask is not None else None,
         )
 
     @staticmethod
@@ -363,6 +435,7 @@ class ContextRouter:
     names: Optional[list[str]] = None
     mask: Optional[torch.Tensor] = None
     log_probs: Optional[torch.Tensor] = None
+    context_mask: Optional[torch.Tensor] = None
 
     def __post_init__(self):
         if self.canonical.ndim != 3 or self.canonical.shape[1] != 1:
@@ -443,6 +516,7 @@ class ContextRouter:
             context=ctx,
             mask=mask,
             log_probs=log_probs,
+            context_mask=X.context_mask.clone() if X.context_mask is not None else None,
             names=names,
         )
 
@@ -455,6 +529,7 @@ class ContextRouter:
             names=self.names.copy(),
             mask=self.mask[indices],
             log_probs=self.log_probs[indices] if self.log_probs is not None else None,
+            context_mask=self.context_mask[indices] if self.context_mask is not None else None,
         )
 
     def detach(self) -> "ContextRouter":
@@ -464,6 +539,7 @@ class ContextRouter:
             names=self.names,
             mask=self.mask.detach(),
             log_probs=self.log_probs.detach() if self.log_probs is not None else None,
+            context_mask=self.context_mask.detach() if self.context_mask is not None else None,
         )
 
     def clone(self) -> "ContextRouter":
@@ -473,6 +549,7 @@ class ContextRouter:
             names=self.names.copy(),
             mask=self.mask.clone(),
             log_probs=self.log_probs.clone() if self.log_probs is not None else None,
+            context_mask=self.context_mask.clone() if self.context_mask is not None else None,
         )
 
 
@@ -678,3 +755,49 @@ class ContextEncoder(nn.Module):
             return tuple(inspect.signature(self.encoder.forward).parameters)
         except (TypeError, ValueError):
             return tuple()
+
+
+def validate_masked_context(model, available):
+    """Reject distributions without the built-in row-gating contract."""
+    if available is None:
+        return
+    for name in ("initial", "duration", "transition", "emission"):
+        if not callable(getattr(getattr(model.dist, name), "_masked_context_delta", None)):
+            raise ValueError("masked context requires row-gating support in every distribution")
+
+
+def _align_model_context(
+    model,
+    X: Union[torch.Tensor, list[torch.Tensor]],
+    context: Optional[Union[torch.Tensor, list[torch.Tensor]]],
+    *,
+    mask: Optional[torch.Tensor] = None,
+) -> Optional[torch.Tensor]:
+    if context is None or context is BASE_CONTEXT:
+        return context
+    if isinstance(context, CausalContext):
+        validate_masked_context(model, context.available)
+        if not model.config.causal:
+            raise ValueError("CausalContext requires causal=True")
+        if model.context_dim is None:
+            raise ValueError("external context requires configured context_dim")
+        if mask is None:
+            X, mask = model._ensure_tensor(X, return_mask=True)
+        return _align_causal_context(
+            context,
+            lengths=mask.sum(1),
+            timesteps=X.shape[1],
+            context_dim=model.context_dim,
+            prototype=X,
+        )
+    if model.context_dim is None:
+        raise ValueError("external context requires ModelConfig.context_dim to be configured")
+    if mask is None:
+        X, mask = model._ensure_tensor(X, return_mask=True)
+    return _align_sequence_context(
+        context,
+        lengths=mask.sum(dim=1),
+        timesteps=X.shape[1],
+        context_dim=int(model.context_dim),
+        prototype=X,
+    )

@@ -9,7 +9,7 @@ import torch
 
 from nhsmm.config import ModelConfig, logger
 from nhsmm.convergence import Convergence
-from nhsmm.context import BASE_CONTEXT
+from nhsmm.context import BASE_CONTEXT, CausalContext
 
 if TYPE_CHECKING:
     from nhsmm.models.base import NHSMM
@@ -48,6 +48,13 @@ def optimize_model(
         if not torch.isfinite(observations).all():
             raise ValueError("training observations must contain only finite values")
         context = model._align_external_context(X, context)
+        if (
+            cfg.transition_refine_steps > 0
+            and isinstance(context, CausalContext)
+            and context.available is not None
+            and not bool(context.available.any())
+        ):
+            raise ValueError("transition refinement requires available context rows")
 
         model._convergence = Convergence(
             tol=cfg.tol,

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional, Union
 
+from nhsmm.context import context_options
+
 import torch
 
 
@@ -489,18 +491,21 @@ def filter_model_sequence(
             context=canonical_context,
             temperature=temperature,
             T=T,
+            **context_options(sequence.context_mask, canonical=True),
         )
         duration_logits = model.dist.duration.log_matrix(
             context=sequence_context,
             temperature=temperature,
             T=T,
             soft_dmax=model.duration_logits_bias,
+            **context_options(sequence.context_mask, canonical=False),
         )
         transition_logits = model.dist.transition.log_matrix(
             context=sequence_context,
             temperature=temperature,
             T=T,
             soft_dmax=model.duration_logits_bias,
+            **context_options(sequence.context_mask, canonical=False),
         )
         tail_probability_fn = getattr(model.dist.duration, "tail_probability", None)
         tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None

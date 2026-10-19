@@ -47,7 +47,7 @@ jobs:
         with:
           repository: awa-si/nautilus
           token: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
-          ref: cf3a8ef59fbbdf2484f5679307568b2c812f38bf
+          ref: 5adf39f034e02c72f2c5fd42b133669233865370
           path: ml-stack
 
       - name: Run full test suite

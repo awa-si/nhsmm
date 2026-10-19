@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 from typing import Optional, Union
+from nhsmm.context import context_options
+
 import torch
 from nhsmm.context import SequenceSet, ContextRouter
 from nhsmm.config import NEG_INF
@@ -35,18 +37,21 @@ def _forward_causal_hazard(
         context=self._active_context(router.canonical),
         temperature=temperature,
         T=T,
+        **context_options(getattr(router, "context_mask", None), canonical=True),
     )
     duration_logits = self.dist.duration.log_matrix(
         context=self._active_context(router.context),
         temperature=temperature,
         T=T,
         soft_dmax=self.duration_logits_bias,
+        **context_options(getattr(router, "context_mask", None), canonical=False),
     )
     transition_logits = self.dist.transition.log_matrix(
         context=self._active_context(router.context),
         temperature=temperature,
         T=T,
         soft_dmax=self.duration_logits_bias,
+        **context_options(getattr(router, "context_mask", None), canonical=False),
     )
 
     initial_logits = self._expand_batch(initial_logits, B, "initial logits")
@@ -185,13 +190,19 @@ def forward(
         T=T,
     )
     initial_logits = self.dist.initial.log_matrix(
-        context=self._active_context(router.canonical), **kwargs
+        context=self._active_context(router.canonical),
+        **kwargs,
+        **context_options(getattr(router, "context_mask", None), canonical=True),
     )
     duration_logits = self.dist.duration.log_matrix(
-        context=self._active_context(router.context), **kwargs
+        context=self._active_context(router.context),
+        **kwargs,
+        **context_options(getattr(router, "context_mask", None), canonical=False),
     )
     transition_logits = self.dist.transition.log_matrix(
-        context=self._active_context(router.context), **kwargs
+        context=self._active_context(router.context),
+        **kwargs,
+        **context_options(getattr(router, "context_mask", None), canonical=False),
     )
     initial_logits = self._expand_batch(initial_logits, B, "initial logits")
     duration_logits = self._expand_batch(duration_logits, B, "duration logits")

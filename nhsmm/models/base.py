@@ -20,7 +20,8 @@ from nhsmm.context import (
     ContextEncoder,
     ContextRouter,
     SequenceSet,
-    _align_sequence_context,
+    context_options,
+    _align_model_context,
 )
 from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.config import DTYPE, logger, ModelConfig
@@ -307,26 +308,7 @@ class NHSMM(nn.Module):
         *,
         mask: Optional[torch.Tensor] = None,
     ) -> Optional[torch.Tensor]:
-        if context is None or context is BASE_CONTEXT:
-            return context
-        if isinstance(context, CausalContext):
-            if not self.config.causal:
-                raise ValueError("CausalContext requires causal=True")
-            return CausalContext(
-                self._align_external_context(X, context.emission, mask=mask),
-                self._align_external_context(X, context.boundary, mask=mask),
-            )
-        if self.context_dim is None:
-            raise ValueError("external context requires ModelConfig.context_dim to be configured")
-        if mask is None:
-            X, mask = self._ensure_tensor(X, return_mask=True)
-        return _align_sequence_context(
-            context,
-            lengths=mask.sum(dim=1),
-            timesteps=X.shape[1],
-            context_dim=int(self.context_dim),
-            prototype=X,
-        )
+        return _align_model_context(self, X, context, mask=mask)
 
     def _build_sequence_set(
         self,
@@ -366,6 +348,7 @@ class NHSMM(nn.Module):
                 context_tensor[:, :1] if T else X.new_zeros((B, 1, context_tensor.shape[-1]))
             )
 
+        context_mask = split_context.available if split_context is not None else None
         K = self.config.n_states
         emission_context = context_tensor if context_tensor.shape[-1] > 0 else None
         if split_context is not None:
@@ -378,7 +361,9 @@ class NHSMM(nn.Module):
         if T == 0:
             log_probs = X.new_empty(B, 0, K)
         else:
-            log_probs = self.dist.emission.log_prob(X, context=emission_context)
+            log_probs = self.dist.emission.log_prob(
+                X, context=emission_context, **context_options(context_mask)
+            )
             log_probs = log_probs.masked_fill(~mask.unsqueeze(-1), float("-inf"))
 
         return SequenceSet(
@@ -386,6 +371,7 @@ class NHSMM(nn.Module):
             lengths=mask.sum(dim=1),
             masks=mask.unsqueeze(-1),
             contexts=context_tensor,
+            context_mask=context_mask,
             canonical=canonical,
             log_probs=log_probs,
         )
@@ -825,6 +811,10 @@ class NHSMM(nn.Module):
             raise ValueError("lr must be positive")
         if context is None or context is BASE_CONTEXT:
             raise ValueError("transition refinement requires explicit external context")
+        if isinstance(context, CausalContext):
+            context = self._align_external_context(X, context)
+            if context.available is not None and not bool(context.available.any()):
+                raise ValueError("transition refinement requires available context rows")
 
         transition = self.dist.transition
         transition_params = [
@@ -892,6 +882,11 @@ class NHSMM(nn.Module):
                 ctx = CausalContext(
                     context.emission[start : start + batch_size, :length],
                     context.boundary[start : start + batch_size, :length],
+                    (
+                        None
+                        if context.available is None
+                        else context.available[start : start + batch_size, :length]
+                    ),
                 )
             else:
                 ctx = None if context is None else context[start : start + batch_size, :length]

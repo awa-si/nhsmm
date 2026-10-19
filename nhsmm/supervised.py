@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import math
 
+from nhsmm.context import context_options
+
 import torch
 
 from nhsmm.context import BASE_CONTEXT
@@ -51,17 +53,30 @@ def supervised_log_likelihood(model, observations, labels, *, context=None, redu
         return scores.sum() if reduce else scores
     active = model._active_context
     initial = model._expand_batch(
-        model.dist.initial.log_matrix(context=active(data.canonical)), B, "initial"
+        model.dist.initial.log_matrix(
+            context=active(data.canonical), **context_options(data.context_mask, canonical=True)
+        ),
+        B,
+        "initial",
     )
     q = model._expand_batch(
         model.dist.duration.log_matrix(
-            context=active(data.contexts), T=T, soft_dmax=model.duration_logits_bias
+            context=active(data.contexts),
+            T=T,
+            soft_dmax=model.duration_logits_bias,
+            **context_options(data.context_mask, canonical=False),
         ),
         B,
         "duration",
     )
     transition = model._expand_batch(
-        model.dist.transition.log_matrix(context=active(data.contexts), T=T), B, "transition"
+        model.dist.transition.log_matrix(
+            context=active(data.contexts),
+            T=T,
+            **context_options(data.context_mask, canonical=False),
+        ),
+        B,
+        "transition",
     )
     D = model.config.max_duration
     tail = model.dist.duration.tail_probability()
@@ -127,6 +142,8 @@ def fit_supervised(
         raise ValueError("supervised path has zero or non-finite probability")
     if not isinstance(context_only, bool):
         raise TypeError("context_only must be boolean")
+    if context_only and data.context_mask is not None and not bool(data.context_mask.any()):
+        raise ValueError("context_only fitting requires at least one available context row")
     if context_only and (context is None or context is BASE_CONTEXT):
         raise ValueError("context_only fitting requires active external context")
     before_flags = {name: p.requires_grad for name, p in model.named_parameters()}

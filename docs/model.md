@@ -450,3 +450,10 @@ likelihood/filtering or an entire streaming step. Within an external stream it
 preserves the posterior and age; the prior boundary still propagates into the
 current observation. None retains internal-mode semantics. Base scores use the
 current parameters. See [timing and fallback](causal-external-context.md).
+
+## Mixed external-context availability
+
+CausalContext(emission=E, boundary=U, available=M) carries strict boolean row
+availability through batch scoring, supervised/latent fitting and streaming.
+Missing rows bypass neural corrections while observations and filtering history
+remain intact. See [shapes, timing and limits](causal-external-context.md#mixed-availability-within-a-batch).

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 from typing import List, Optional, Union
+from nhsmm.context import context_options
+
 import torch
 from nhsmm.context import SequenceSet, ContextRouter
 from nhsmm.filtering import duration_log_hazard, _require_reachable_hazards
@@ -33,17 +35,42 @@ def _viterbi_causal_hazard(
             continue
 
         initial_logits = self.dist.initial.log_matrix(
-            context=self._active_context(router.canonical[b : b + 1]), T=L
+            context=self._active_context(router.canonical[b : b + 1]),
+            T=L,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1]
+                ),
+                canonical=True,
+            ),
         )[0, 0]
         duration_logits = self.dist.duration.log_matrix(
             context=self._active_context(router.context[b : b + 1, :L]),
             T=L,
             soft_dmax=self.duration_logits_bias,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1, :L]
+                ),
+                canonical=False,
+            ),
         )[0]
         transition_logits = self.dist.transition.log_matrix(
             context=self._active_context(router.context[b : b + 1, :L]),
             T=L,
             soft_dmax=self.duration_logits_bias,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1, :L]
+                ),
+                canonical=False,
+            ),
         )[0]
         tail_end_probability = self.dist.duration.tail_probability()
         log_end, log_continue = duration_log_hazard(
@@ -154,17 +181,42 @@ def _viterbi_noncausal_tail(
             continue
 
         initial_logits = self.dist.initial.log_matrix(
-            context=self._active_context(router.canonical[b : b + 1]), T=L
+            context=self._active_context(router.canonical[b : b + 1]),
+            T=L,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1]
+                ),
+                canonical=True,
+            ),
         )[0, 0]
         duration_logits = self.dist.duration.log_matrix(
             context=self._active_context(router.context[b : b + 1, :L]),
             T=L,
             soft_dmax=self.duration_logits_bias,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1, :L]
+                ),
+                canonical=False,
+            ),
         )[0]
         transition_logits = self.dist.transition.log_matrix(
             context=self._active_context(router.context[b : b + 1, :L]),
             T=L,
             soft_dmax=self.duration_logits_bias,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1, :L]
+                ),
+                canonical=False,
+            ),
         )[0]
 
         emit_log = router.log_probs[b, :L]
@@ -343,17 +395,42 @@ def _viterbi(
             continue
 
         initial_logits = self.dist.initial.log_matrix(
-            context=self._active_context(router.canonical[b : b + 1]), T=L
+            context=self._active_context(router.canonical[b : b + 1]),
+            T=L,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1]
+                ),
+                canonical=True,
+            ),
         )[0, 0]
         duration_logits = self.dist.duration.log_matrix(
             context=self._active_context(router.context[b : b + 1, :L]),
             T=L,
             soft_dmax=self.duration_logits_bias,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1, :L]
+                ),
+                canonical=False,
+            ),
         )[0]
         transition_logits = self.dist.transition.log_matrix(
             context=self._active_context(router.context[b : b + 1, :L]),
             T=L,
             soft_dmax=self.duration_logits_bias,
+            **context_options(
+                (
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else getattr(router, "context_mask", None)[b : b + 1, :L]
+                ),
+                canonical=False,
+            ),
         )[0]
 
         emit_log = router.log_probs[b, :L]

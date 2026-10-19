@@ -9,6 +9,8 @@ derivatives or approximating h. Only score evaluation needs this correction;
 the ordinary forward values and all interior derivatives remain unchanged.
 """
 
+from nhsmm.context import context_options
+
 import torch
 
 from nhsmm.filtering import (
@@ -56,19 +58,24 @@ def _missing_flux(model, sequence, scores, tail, temperature):
         return result
     active_context = model._active_context
     pi = model.dist.initial.log_matrix(
-        context=active_context(sequence.canonical), temperature=temperature, T=T
+        context=active_context(sequence.canonical),
+        temperature=temperature,
+        T=T,
+        **context_options(sequence.context_mask, canonical=True),
     )
     q = model.dist.duration.log_matrix(
         context=active_context(sequence.contexts),
         temperature=temperature,
         T=T,
         soft_dmax=model.duration_logits_bias,
+        **context_options(sequence.context_mask, canonical=False),
     )
     A = model.dist.transition.log_matrix(
         context=active_context(sequence.contexts),
         temperature=temperature,
         T=T,
         soft_dmax=model.duration_logits_bias,
+        **context_options(sequence.context_mask, canonical=False),
     )
     pi = model._expand_batch(pi, B, "initial logits").double()
     q = model._expand_batch(q, B, "duration logits").double()

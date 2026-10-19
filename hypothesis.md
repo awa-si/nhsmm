@@ -190,7 +190,7 @@ generally neutral because zero can be a valid input and neural biases can act.
 The current streaming external/non-external context mode is fixed until reset.
 Explicit `BASE_CONTEXT` now bypasses neural corrections within an external
 stream while preserving its posterior and age. `None` retains internal-mode
-semantics. Per-batch-item availability masks remain outside the public API.
+semantics. CausalContext.available now supports mixed batch/time availability.
 
 Disabling context on a jointly fine-tuned model does not necessarily recover the
 original trained static HSMM: base parameters may have changed. An exact fallback
@@ -201,17 +201,18 @@ transparent way to preserve the previous filtering posterior.
 `fit_supervised(..., context_only=True)` now freezes base distribution
 parameters while training only their context networks, projections and delta
 scales. It restores the original trainability flags and model mode. This option
-does not implement availability masks or reconstruct a static posterior.
-Both `CausalContext` fields are required; nonfinite or misaligned values are
+does not reconstruct a static posterior. CausalContext.available is carried
+through the supervised objective and bypasses corrections at unavailable rows.
+Both context fields are required; nonfinite available or misaligned values are
 rejected. Use `BASE_CONTEXT` for an explicit whole-step bypass. Plain zero
 context remains an ordinary network input.
 
-An availability-aware residual gate on finite parameter coordinates, followed
-by the existing probability links, is one candidate design: base plus a masked
-context correction. It is a proposal, not a current capability. Missing inputs
-must be handled before network evaluation; multiplying a NaN by zero is not
-safe. Exact base-parameter fallback additionally requires preserving those
-parameters. Even then, a posterior conditioned on earlier context need not
+The implemented availability-aware residual gate acts on finite parameter
+coordinates before the existing probability links: base plus an available-row
+context correction. Missing inputs are excluded before network evaluation;
+multiplying a NaN by zero is not safe. One mask controls all components at a row;
+independent emission/boundary masks remain outside the public API. Exact
+base-parameter fallback additionally requires preserving those parameters. Even then, a posterior conditioned on earlier context need not
 equal the posterior of a static model that never used context.
 
 ## Related research and limits
@@ -382,5 +383,7 @@ for boundaries, and base scores for missing/warmup/recovery rows. It preserves
 every 5m observation, rejects stale or misaligned payloads, and does not promote
 the existing 18-coordinate temporal artifacts into a new context schema.
 Synthetic OHLCV replay exercises production TA and Axis code against independent
-raw-TA arithmetic. Historical market verification, mixed-batch masks and an
-empirical market advantage remain open; no new market fit is implied.
+raw-TA arithmetic. Mixed batch/time masks now have independent path-product and
+gradient tests, plus a bounded native RD-Agent/Qlib/MLflow integration check.
+Historical market verification and an empirical market advantage remain open;
+no new market fit is implied.
