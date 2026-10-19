@@ -58,3 +58,7 @@ Emission initialization without an explicit mode now honors the configured
 random/spread mode. Data-dependent kmeans modes retain a spread placeholder
 until the observation-aware latent training initializer runs; supervised fits
 from current parameters do not perform implicit kmeans initialization.
+
+## Frozen-base context training
+
+fit_supervised(..., context_only=True) trains only distribution context networks, projections and delta scales from current parameters. Base parameters stay fixed; trainability flags and model mode are restored. Explicit external context is required. Missing context is not replaced by zeros. See [the timing contract](causal-external-context.md).

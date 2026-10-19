@@ -12,6 +12,25 @@ import torch.nn.functional as nnF
 from torch.nn.utils.rnn import pad_sequence
 
 
+@dataclass(frozen=True)
+class CausalContext:
+    """Explicit external information sets for a causal model.
+
+    ``emission[t]`` must be available before x_t; ``boundary[t]`` may include
+    x_t and controls only the outgoing t -> t+1 boundary. Initial probabilities
+    use emission[0]. Both fields are required; missing/nonfinite rows fail closed.
+    Tensor shapes and ragged lists follow the ordinary external-context API.
+    """
+
+    emission: torch.Tensor | list[torch.Tensor]
+    boundary: torch.Tensor | list[torch.Tensor]
+
+    def __post_init__(self):
+        for value in (self.emission, self.boundary):
+            if not isinstance(value, (torch.Tensor, list)):
+                raise TypeError("CausalContext requires both emission and boundary context")
+
+
 def align_context_tensor(
     context: torch.Tensor,
     *,

@@ -437,3 +437,7 @@ Noncausal public likelihood and training divide the completed-segmentation score
 The model class delegates recursions to `models/forward.py`, decoding to `models/decoding.py`, support-safe segment sums to `models/segments.py`, and observation objectives to `models/objective.py`. `models/boundary.py` owns the analytic first-order tail boundary VJP. No model or state-dict parameter paths change during this split. Higher-order differentiation at h_tail=1 is explicitly rejected; use interior parameters for higher-order work. Runtime and ordinary finite-support causal scoring keep their existing kernels.
 
 See [correctness repair](correctness-repair.md) for bounded evidence and artifact migration.
+
+## Explicit external component context
+
+Use CausalContext(emission=E, boundary=U) for distinct pre-observation and outgoing-boundary information sets. Initial probabilities use E[0]. Plain Tensor timing remains compatible. See [the timing contract](causal-external-context.md).

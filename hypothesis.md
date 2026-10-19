@@ -102,9 +102,17 @@ one-step predictive factor; it does not define a new public API.
 - Online estimates use causal filtering. Retrospective smoothing/Viterbi states
   must not be presented as states available to a live decision.
 
-### Shared external-row timing needs explicit verification
+### Explicit component timing and legacy shared external rows
 
-At the current reviewed implementation:
+`CausalContext(emission=E, boundary=U)` now supplies distinct information sets.
+E_t must be available before observing x_t; U_t may include x_t and controls only
+the outgoing boundary t -> t+1. The initial prior uses E_0. Both dense/static and
+ragged inputs are supported; batch likelihood, observed-path supervision and
+streaming use the same routing. No automatic lag or timestamp inference is
+applied. The host must still verify the feature construction against event time.
+
+
+The legacy plain-Tensor route retains the following timing:
 
 | Component at step t | Internal observation-derived context | External row U_t |
 | --- | --- | --- |
@@ -112,7 +120,7 @@ At the current reviewed implementation:
 | Emission for x_t | C_(t-1), with C_(-1)=0 | U_t |
 | Outgoing boundary t -> t+1 | C_t | U_t |
 
-For external context row U_t, the current contract uses U_t for the emission of
+For a plain external Tensor row U_t, the compatibility contract uses U_t for the emission of
 x_t and for outgoing duration/transition factors on boundary t -> t+1. The
 next emission uses U_(t+1). Thus a row derived after observing x_t cannot simply
 be reused as an exogenous input to its own emission likelihood. Lagging an
@@ -123,7 +131,7 @@ emission context and a different post-x_t boundary context by one index shift.
 Before a market experiment, specify a component-by-component event-time table.
 Verify the chosen routing against batch and streaming behavior. Using a more
 conservative lag is a valid declared design choice; changing routing to expose
-newer information is a separate implementation change, not assumed here. The
+newer information now uses the explicit `CausalContext` route described below. The
 internal causal encoder already has distinct emission-lag semantics; it is not
 interchangeable with arbitrary externally derived context.
 
@@ -189,6 +197,13 @@ original trained static HSMM: base parameters may have changed. An exact fallbac
 to that reference requires an explicit parameter/stream-state preservation or
 reconstruction policy. A reset also starts a new inference stream; it is not a
 transparent way to preserve the previous filtering posterior.
+
+`fit_supervised(..., context_only=True)` now freezes base distribution
+parameters while training only their context networks, projections and delta
+scales. It restores the original trainability flags and model mode. This option
+does not implement availability masks or reconstruct a static posterior.
+Both `CausalContext` fields are required; nonfinite or misaligned values are
+rejected. Plain zero context remains an ordinary network input.
 
 An availability-aware residual gate on finite parameter coordinates, followed
 by the existing probability links, is one candidate design: base plus a masked
@@ -258,11 +273,15 @@ formulation was checked against the publisher-indexed abstract; its full text
 was not reviewed here. No new empirical replication was performed.
 None of these sources is an independent reproduction of this repository.
 
-Implementation statements were checked at core revision
+The original literature review checked implementation statements at core revision
 `c97329da2aa8133a38550f7d0383f75a4414adba` against docs/model.md,
 docs/hsmm-mathematical-contract.md, docs/supervised.md, runtime.py and the
-boundary/objective implementations. Timing limitations are compatibility facts
-for the proposed feature routing, not evidence of an existing core defect.
+boundary/objective implementations. The subsequent implementation batch adds
+the explicit routing and frozen-base option described above. It also repairs an
+independently detected streaming defect: the optimized ergodic transition route
+must apply the structural mask, including disabled self-transitions, before
+normalization. Independent probability products and batch/streaming comparisons
+cover that case. See [the API contract](docs/causal-external-context.md).
 
 ## Falsifiable questions
 
@@ -355,5 +374,6 @@ benefit remain open. Before a real-market fit, the host must resolve the externa
 component timing table, select the dynamic-hazard interpretation, freeze the
 matched baselines/metrics and declare a genuinely uninspected evaluation period.
 
-This revision changes documentation only. No new fit, runtime modification,
-automatic fallback or empirical market-performance claim is implied.
+The context-interface batch changes runtime routing and adds bounded synthetic
+correctness tests; it does not run a new market study. Automatic per-row fallback,
+real OHLCV/TA pipeline verification and an empirical market advantage remain open.

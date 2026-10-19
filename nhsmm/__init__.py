@@ -1,3 +1,4 @@
+from .context import CausalContext
 from .config import ModelConfig
 from .encoder import DefaultEncoder
 from .convergence import Convergence
@@ -8,6 +9,7 @@ from .filtering import HSMMFilterState
 from .runtime import HSMMFilterRuntime, HSMMRuntimeState
 
 __all__ = [
+    "CausalContext",
     "ModelConfig",
     "DistributionSet",
     "DefaultEncoder",

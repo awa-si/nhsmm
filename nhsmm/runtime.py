@@ -7,7 +7,7 @@ import math
 import torch
 
 from nhsmm.config import EPS
-from nhsmm.context import align_context_tensor
+from nhsmm.context import CausalContext, align_context_tensor
 from nhsmm.filtering import (
     HSMMFilterState,
     _filter_step_normalized,
@@ -233,6 +233,7 @@ def _boundary_scores(
             transition_mod,
             temperature,
         )
+        transition_mod = transition_dist._apply_constraints(transition_mod)
         transition = torch.log_softmax(transition_mod, dim=-1)
         while transition.ndim < 5:
             transition = transition.unsqueeze(0)
@@ -387,6 +388,18 @@ class HSMMFilterRuntime:
                 "between internal and external context"
             )
 
+        emission_context = None
+        split_context = context if isinstance(context, CausalContext) else None
+        if split_context is not None:
+            emission_context = align_context_tensor(
+                split_context.emission,
+                batch_size=obs.shape[0],
+                timesteps=1,
+                context_dim=int(self.model.context_dim or 0),
+                device=obs.device,
+                dtype=obs.dtype,
+            )
+            context = split_context.boundary
         external_context = None
         if uses_external_context:
             if self.model.context_dim is None:
@@ -402,18 +415,21 @@ class HSMMFilterRuntime:
                 dtype=obs.dtype,
             )
 
+        if emission_context is None:
+            emission_context = external_context
+
         if self.state is None:
             if external_context is not None:
                 emission = _emission_log_prob(
                     self.model,
                     obs,
-                    external_context,
+                    emission_context,
                     self._score_cache,
                 )
                 B = external_context.shape[0]
                 K = int(self.model.config.n_states)
                 initial = self.model.dist.initial.log_matrix(
-                    context=external_context,
+                    context=emission_context,
                     temperature=self.temperature,
                     T=1,
                 )
@@ -601,7 +617,7 @@ class HSMMFilterRuntime:
             emission = _emission_log_prob(
                 self.model,
                 obs,
-                external_context,
+                emission_context,
                 self._score_cache,
             )
             filter_state = _filter_step_normalized(

@@ -14,7 +14,13 @@ from nhsmm.models import decoding as decoding_impl
 from nhsmm.models.objective import observation_log_likelihood
 from nhsmm.training import optimize_model
 from nhsmm.encoder import DefaultEncoder
-from nhsmm.context import ContextEncoder, ContextRouter, SequenceSet, _align_sequence_context
+from nhsmm.context import (
+    CausalContext,
+    ContextEncoder,
+    ContextRouter,
+    SequenceSet,
+    _align_sequence_context,
+)
 from nhsmm.distributions import Initial, Duration, Transition, Emission
 from nhsmm.config import DTYPE, logger, ModelConfig
 
@@ -302,6 +308,13 @@ class NHSMM(nn.Module):
     ) -> Optional[torch.Tensor]:
         if context is None:
             return None
+        if isinstance(context, CausalContext):
+            if not self.config.causal:
+                raise ValueError("CausalContext requires causal=True")
+            return CausalContext(
+                self._align_external_context(X, context.emission, mask=mask),
+                self._align_external_context(X, context.boundary, mask=mask),
+            )
         if self.context_dim is None:
             raise ValueError("external context requires ModelConfig.context_dim to be configured")
         if mask is None:
@@ -322,6 +335,9 @@ class NHSMM(nn.Module):
         self._require_distributions()
         X, mask = self._ensure_tensor(X, return_mask=True)
         context = self._align_external_context(X, context, mask=mask)
+        split_context = context if isinstance(context, CausalContext) else None
+        if split_context is not None:
+            context = split_context.boundary
         B, T, F = X.shape
         if F != self.config.n_features:
             raise ValueError(
@@ -348,6 +364,9 @@ class NHSMM(nn.Module):
 
         K = self.config.n_states
         emission_context = context_tensor if context_tensor.shape[-1] > 0 else None
+        if split_context is not None:
+            emission_context = split_context.emission
+            canonical = emission_context[:, :1] if T else canonical
         if context is None and self.encoder is not None and self.config.causal and T > 0:
             # Predict x_t from context available before observing x_t. Boundary
             # distributions retain unshifted contexts and use their previous row.
@@ -465,11 +484,13 @@ class NHSMM(nn.Module):
 
         return supervised_log_likelihood(self, X, states, context=context, reduce=reduce)
 
-    def fit_supervised(self, X, states, *, context=None, steps=200, lr=0.03):
+    def fit_supervised(self, X, states, *, context=None, steps=200, lr=0.03, context_only=False):
         """Fit known state paths from current parameters, without latent restarts."""
         from nhsmm.supervised import fit_supervised
 
-        return fit_supervised(self, X, states, context=context, steps=steps, lr=lr)
+        return fit_supervised(
+            self, X, states, context=context, steps=steps, lr=lr, context_only=context_only
+        )
 
     def log_likelihood(
         self,
@@ -861,7 +882,13 @@ class NHSMM(nn.Module):
             length = (
                 max(item.shape[0] for item in chunk) if isinstance(chunk, list) else chunk.shape[1]
             )
-            ctx = None if context is None else context[start : start + batch_size, :length]
+            if isinstance(context, CausalContext):
+                ctx = CausalContext(
+                    context.emission[start : start + batch_size, :length],
+                    context.boundary[start : start + batch_size, :length],
+                )
+            else:
+                ctx = None if context is None else context[start : start + batch_size, :length]
             yield chunk, ctx
 
     def _backward_training_loss(self, X, context, batch_size, **kwargs):

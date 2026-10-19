@@ -204,3 +204,7 @@ If `q(k,1)=0`, an episode in state `k` that has reached age one cannot end at th
 The current normalized likelihood contract supersedes the former unnormalized public noncausal score. The audited non-causal duration-dependent Viterbi predecessor-collapse defect has been corrected by retaining predecessor duration in the MAP dynamic-programming state, with a dedicated regression protecting the counterexample.
 
 Gate 0 is therefore **complete** and Gate 1 is unblocked.
+
+## External information sets
+
+For CausalContext(emission=E, boundary=U), emission x_t and the initial prior at t=0 use E_t and E_0 respectively; outgoing duration/transition factors use U_t. The t-1 -> t propagation uses U_(t-1). This remains a dynamic-hazard model. The caller must construct E_t before observing x_t. Plain Tensor contexts retain the shared row semantics. See [the timing contract](causal-external-context.md).

@@ -102,7 +102,9 @@ def supervised_log_likelihood(model, observations, labels, *, context=None, redu
     return values.sum() if reduce else values
 
 
-def fit_supervised(model, observations, labels, *, context=None, steps=200, lr=0.03):
+def fit_supervised(
+    model, observations, labels, *, context=None, steps=200, lr=0.03, context_only=False
+):
     """Bounded full-batch Adam on observed joint paths; never calls latent fit.
 
     Uses current parameters, no hidden restarts, no validation or label matching.
@@ -122,7 +124,22 @@ def fit_supervised(model, observations, labels, *, context=None, steps=200, lr=0
     initial = supervised_log_likelihood(model, observations, labels, context=context, reduce=True)
     if not bool(torch.isfinite(initial)):
         raise ValueError("supervised path has zero or non-finite probability")
+    if not isinstance(context_only, bool):
+        raise TypeError("context_only must be boolean")
+    if context_only and context is None:
+        raise ValueError("context_only fitting requires explicit external context")
+    before_flags = {name: p.requires_grad for name, p in model.named_parameters()}
+    if context_only:
+        for name, p in model.named_parameters():
+            p.requires_grad_(
+                before_flags[name]
+                and (".context_net." in name or "._proj." in name or name.endswith(".delta_scale"))
+            )
     parameters = [p for p in model.parameters() if p.requires_grad]
+    if not parameters:
+        for name, p in model.named_parameters():
+            p.requires_grad_(before_flags[name])
+        raise ValueError("no trainable parameters for supervised fitting")
     optimizer = torch.optim.Adam(parameters, lr=lr)
     before_mode = model.training
     model.train()
@@ -143,7 +160,7 @@ def fit_supervised(model, observations, labels, *, context=None, steps=200, lr=0
             ):
                 raise FloatingPointError("non-finite supervised gradient")
             optimizer.step()
-            if model.dist.duration.tail_end_probability is not None:
+            if not context_only and model.dist.duration.tail_end_probability is not None:
                 model.dist.duration._project_tail_parameter()
         model.eval()
         with torch.no_grad():
@@ -155,9 +172,12 @@ def fit_supervised(model, observations, labels, *, context=None, steps=200, lr=0
         return {
             "objective": "observed_joint_causal_prefix",
             "updates": steps,
+            "context_only": context_only,
             "rows": count,
             "initial_nll_per_row": -float(initial.detach()) / count,
             "final_nll_per_row": -float(final) / count,
         }
     finally:
+        for name, p in model.named_parameters():
+            p.requires_grad_(before_flags[name])
         model.train(before_mode)
