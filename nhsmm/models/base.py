@@ -428,9 +428,8 @@ class NHSMM(nn.Module):
 
         B, T, K = router.log_probs.shape[:3]
         D = int(self.dist.duration.max_duration)
-        alpha = router.log_probs.new_full((B, T, K, D), float("-inf"))
         if T == 0:
-            return alpha
+            return router.log_probs.new_empty((B, 0, K, D))
 
         initial_logits = self.dist.initial.log_matrix(
             context=self._active_context(router.canonical),
@@ -488,43 +487,71 @@ class NHSMM(nn.Module):
         log_end = log_end.reshape(B, T, K, D)
         log_continue = log_continue.reshape(B, T, K, D)
 
+        # Unbind once so each indexed input has only a single time row.
+        # Indexing the full history separately at every t would repeatedly
+        # allocate full-history zeros in each IndexBackward operation.
+        emission_steps = router.log_probs.unbind(dim=1)
+        transition_steps = transition_logits.unbind(dim=1)
+        log_end_steps = log_end.unbind(dim=1)
+        log_continue_steps = log_continue.unbind(dim=1)
+
         # Recurse on a normalized frontier and carry the cumulative evidence
         # separately. This preserves the public unnormalized-alpha contract while
         # preventing avoidable Float32 drift from repeatedly propagating a large
         # sequence-level log offset through logsumexp operations.
-        frontier = alpha.new_full((B, K, D), float("-inf"))
-        cumulative_log_z = alpha.new_zeros(B)
+        frontier = router.log_probs.new_full((B, K, D), float("-inf"))
+        cumulative_log_z = router.log_probs.new_zeros(B)
+        alpha_steps: list[torch.Tensor] = []
 
         valid0 = X.lengths > 0
         normalized_initial, initial_log_z = _initialize_causal_frontier(
-            initial_logits[valid0, 0], router.log_probs[valid0, 0], D
+            initial_logits[valid0, 0], emission_steps[0][valid0], D
         )
         frontier[valid0] = normalized_initial
         cumulative_log_z[valid0] = initial_log_z
-        alpha[valid0, 0] = normalized_initial + initial_log_z[:, None, None]
+        initial_active = torch.nonzero(valid0, as_tuple=False).squeeze(-1)
+        first_alpha = router.log_probs.new_full((B, K, D), float("-inf"))
+        alpha_steps.append(
+            first_alpha.index_copy(
+                0,
+                initial_active,
+                (normalized_initial + initial_log_z[:, None, None]).to(dtype=first_alpha.dtype),
+            )
+        )
 
         for t in range(1, T):
             valid = t < X.lengths
             if not bool(valid.any()):
+                padding = router.log_probs.new_full((B, K, D), float("-inf"))
+                alpha_steps.extend([padding] * (T - len(alpha_steps)))
                 break
             active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
 
-            transition = transition_logits[active, t - 1]
+            transition = transition_steps[t - 1].index_select(0, active)
             if not duration_dependent_transition:
                 transition = transition.unsqueeze(2)
             normalized, step_log_z = _causal_filter_step(
                 frontier[active],
-                router.log_probs[active, t],
-                log_end[active, t - 1],
-                log_continue[active, t - 1],
+                emission_steps[t].index_select(0, active),
+                log_end_steps[t - 1].index_select(0, active),
+                log_continue_steps[t - 1].index_select(0, active),
                 transition,
                 tail_enabled=tail_end_probability is not None,
             )
             frontier[active] = normalized
             cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
-            alpha[active, t] = normalized + cumulative_log_z[active, None, None]
+            # Stack output rows once instead of copying the full history gradient
+            # through an indexed table write at every recurrence step.
+            alpha_t = router.log_probs.new_full((B, K, D), float("-inf"))
+            alpha_steps.append(
+                alpha_t.index_copy(
+                    0,
+                    active,
+                    (normalized + cumulative_log_z[active, None, None]).to(dtype=alpha_t.dtype),
+                )
+            )
 
-        return alpha
+        return torch.stack(alpha_steps, dim=1)
 
     def forward(
         self,
