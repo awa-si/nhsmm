@@ -72,6 +72,13 @@ class DistributionSet(nn.Module):
             max_duration=self.config.max_duration,
             activation=self.config.activation,
         )
+        if not self.config.allow_self_transitions:
+            diagonal = torch.eye(
+                self.config.n_states,
+                dtype=torch.bool,
+                device=self.transition._structural_constraint.device,
+            )
+            self.transition._structural_constraint &= ~diagonal[:, None, :]
         self.transition.max_delta = self.config.transition_context_max_delta
         self.emission = emission(
             hidden_dim=distribution_hidden_dim,
@@ -269,6 +276,7 @@ class NHSMM(nn.Module):
             "context_dim",
             "hidden_dim",
             "transition_type",
+            "allow_self_transitions",
             "emission_type",
             "activation",
             "use_context_encoder",
@@ -450,6 +458,18 @@ class NHSMM(nn.Module):
     ) -> List[torch.Tensor]:
 
         return decoding_impl._viterbi(self, X, context)
+
+    def supervised_log_likelihood(self, X, states, *, context=None, reduce=False):
+        """Observed joint causal path score; final episode is right-censored."""
+        from nhsmm.supervised import supervised_log_likelihood
+
+        return supervised_log_likelihood(self, X, states, context=context, reduce=reduce)
+
+    def fit_supervised(self, X, states, *, context=None, steps=200, lr=0.03):
+        """Fit known state paths from current parameters, without latent restarts."""
+        from nhsmm.supervised import fit_supervised
+
+        return fit_supervised(self, X, states, context=context, steps=steps, lr=lr)
 
     def log_likelihood(
         self,

@@ -102,6 +102,7 @@ class ModelConfig:
     duration_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     transition_init_mode: Literal["normal", "biased", "uniform"] = "normal"
     transition_context_max_delta: float = 0.5
+    allow_self_transitions: bool = True
     transition_type: Literal["ergodic", "semi", "left-to-right"] = "ergodic"
     activation: Literal[
         "leaky_relu",
@@ -190,6 +191,7 @@ class ModelConfig:
             _require_finite(name, getattr(self, name), minimum=0.0)
 
         for name in (
+            "allow_self_transitions",
             "use_context_encoder",
             "duration_tail",
             "causal",
@@ -223,6 +225,10 @@ class ModelConfig:
             value = getattr(self, name)
             if not isinstance(value, str) or value not in allowed:
                 raise ValueError(f"{name} must be one of {sorted(allowed)}, got {value!r}")
+        if not self.allow_self_transitions and (
+            self.n_states < 2 or self.transition_type != "ergodic"
+        ):
+            raise ValueError("excluding self transitions requires ergodic K>=2")
         if self.optimizer_initialization == "current" and self.n_init != 1:
             raise ValueError("optimizer_initialization=current requires n_init=1")
 
