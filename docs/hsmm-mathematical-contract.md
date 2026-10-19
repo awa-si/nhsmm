@@ -1,6 +1,6 @@
 # HSMM mathematical contract
 
-This document freezes the model semantics used by the HSMM correctness research milestone. It describes the probability model implemented by the package; it is not an implementation guide for the independent reference oracle.
+This document defines the current model and observation-score semantics. Raw forward segment potentials and normalized observation likelihoods are distinct contracts. Independent references must derive these laws rather than import production recursions.
 
 ## Notation
 
@@ -44,7 +44,7 @@ with `h_cont_t(k,D)=0`. For every reachable `(k,a)`:
 h_end_t(k,a) + h_cont_t(k,a) = 1.
 ```
 
-Impossible duration support has exact zero mass. If `q_t(k,a)=0`, the corresponding end branch has zero mass; if no duration greater than `a` is possible, continuation has zero mass.
+Impossible duration support has exact zero mass. A context change must not make survival zero at an already reachable age: filtering, causal forward/MAP and forecasts reject that input rather than renormalize away its mass (`doc:nhsmm.reachable-duration-support`). The D+ tail bucket retains its explicitly defined hazard. If `q_t(k,a)=0`, the corresponding end branch has zero mass; if no duration greater than `a` is possible, continuation has zero mass.
 
 ## Causal state-age model
 
@@ -109,7 +109,7 @@ For a later segment, if the preceding segment ended at `s-1` in state `i` with d
 A_{s-1}(i,d_prev,k).
 ```
 
-Thus a complete non-causal segmentation with segment states `k_m`, durations `d_m`, starts `s_m`, and ends `t_m` has probability:
+Thus a complete non-causal segmentation with segment states `k_m`, durations `d_m`, starts `s_m`, and ends `t_m` has unnormalized weight:
 
 ```text
 pi(k_1)
@@ -124,6 +124,19 @@ pi(k_1)
 
 The production non-causal forward recursion sums exactly over predecessor state and predecessor duration before applying the current segment factor.
 
+### Normalized observation likelihood
+
+Let `W_T(X; C)` be the sum of the complete-segmentation weights above for fixed external covariates C (or no context). End-time-specific q rows define segment potentials; their row normalization does not normalize this sum. The partition is:
+
+```text
+Z_T(C) = sum_complete_segmentations pi * product(duration and transition factors)
+p(X | C, completed length T) = W_T(X; C) / Z_T(C).
+```
+
+Each emission density integrates to one conditional on fixed C. Therefore Z is obtained by the same recurrence with every emission factor replaced by one. Both numerator and partition are differentiated during training, at the same scheduled temperature. Empty sequences have W=Z=1. If Z=0 there is no admissible completed segmentation and the conditional likelihood is undefined: raise ValueError. If W=0 but Z>0, log-likelihood is -inf.
+
+Public `log_likelihood`, training and restart selection use this normalized density (`doc:nhsmm.likelihood`). `forward` continues returning raw log segment potentials; MAP is unchanged because Z is independent of the latent path. Noncausal internal observation-derived context remains retrospective-only and cannot claim a generative density. Use the public likelihood for score derivatives, especially at hard-support boundaries; log outputs at zero mass do not define ordinary log derivatives.
+
 ### Relationship to the causal model
 
 For a completed episode with a fixed duration PMF, the hazard identity telescopes:
@@ -132,7 +145,7 @@ For a completed episode with a fixed duration PMF, the hazard identity telescope
 product_{a=1..d-1} h_cont(k,a) * h_end(k,d) = q(k,d).
 ```
 
-This establishes agreement for **completed episode factors**, not equality of the package's two sequence-likelihood contracts. The causal forward/filter evaluates an observed prefix and therefore marginalizes an active final episode that may continue beyond `T-1` (right censoring). The non-causal segment DP requires its final segment to end exactly at `T-1` and scores a duration PMF factor for that completed final segment. Consequently, even with context-free parameters, causal prefix likelihood and non-causal complete-segmentation likelihood are generally different.
+This establishes agreement for **completed episode factors**, not equality of the package's two sequence-likelihood contracts. The causal forward/filter evaluates an observed prefix and therefore marginalizes an active final episode that may continue beyond `T-1` (right censoring). The non-causal segment DP requires its final segment to end exactly at `T-1` and scores a duration PMF factor for that completed final segment. Consequently, even with context-free parameters, causal prefix likelihood and non-causal likelihood conditioned on completed length are generally different. The latter additionally divides by Z_T.
 
 With time-varying duration context there is an additional difference: causal inference composes boundary-local hazards `q_t`, whereas non-causal segment inference scores one `q_t(k,d)` at the segment end. Correctness gates must therefore validate the causal prefix model and non-causal complete-segmentation model separately.
 
@@ -148,11 +161,11 @@ max_{i,d_prev} [ predecessor_score(i,d_prev) + log A(i,d_prev,j) ].
 
 It is not generally valid to choose the locally best predecessor duration for state `i` before applying the destination-dependent transition score.
 
-### Known Gate-0 implementation blocker
+### Resolved predecessor-duration defect
 
-At Gate 0 audit time, the production non-causal `_viterbi` path collapses predecessor duration into `V[prev_t,state]` / `best_dur[prev_t,state]` before applying `A(prev_state,prev_duration,next_state)`. This can discard a slightly worse predecessor duration whose transition to the requested destination is much better.
+The former non-causal `_viterbi` path collapsed predecessor duration into `V[prev_t,state]` / `best_dur[prev_t,state]` before applying `A(prev_state,prev_duration,next_state)`. This can discard a slightly worse predecessor duration whose transition to the requested destination is much better.
 
-The non-causal forward likelihood does not have this defect because it sums over predecessor state and predecessor duration jointly. Gate 1 must not start until the Viterbi recurrence is corrected and a regression case protects this contract.
+The current MAP recurrence retains predecessor duration, and a regression protects this case. Forward continues summing over predecessor state and duration jointly.
 
 ## Hand-check fixtures
 
@@ -188,6 +201,6 @@ If `q(k,1)=0`, an episode in state `k` that has reached age one cannot end at th
 
 ## Gate-0 status
 
-The mathematical semantics above are frozen for the correctness milestone. The audited non-causal duration-dependent Viterbi predecessor-collapse defect has been corrected by retaining predecessor duration in the MAP dynamic-programming state, with a dedicated regression protecting the counterexample.
+The current normalized likelihood contract supersedes the former unnormalized public noncausal score. The audited non-causal duration-dependent Viterbi predecessor-collapse defect has been corrected by retaining predecessor duration in the MAP dynamic-programming state, with a dedicated regression protecting the counterexample.
 
 Gate 0 is therefore **complete** and Gate 1 is unblocked.

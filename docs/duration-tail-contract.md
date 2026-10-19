@@ -1,6 +1,6 @@
 # Bounded duration-tail extension contract
 
-This document defines the proposed opt-in bounded-tail extension for NHSMM duration semantics. It does **not** change the currently accepted finite-support HSMM contract in `hsmm-mathematical-contract.md` until production implementation and equivalence gates are complete.
+This document defines the implemented opt-in bounded-tail extension. Finite support remains the default; the active model and normalized score contracts are owned by `hsmm-mathematical-contract.md`.
 
 ## Goal
 
@@ -122,7 +122,7 @@ A non-causal completed segment of duration `d >= D` receives the implied tail du
 q_tail * (1-h_tail)^(d-D) * h_tail
 ```
 
-A non-causal DP therefore cannot assume segment duration is bounded by `D`; for an observed sequence of length `T`, candidate completed segment durations are bounded by `T` instead. Production non-causal support is a later implementation step and must be independently checked against exhaustive enumeration before enablement.
+A non-causal DP therefore cannot assume segment duration is bounded by `D`; for an observed sequence of length `T`, candidate completed segment durations are bounded by `T` instead. The implemented non-causal forward and MAP paths are checked against exhaustive enumeration.
 
 ## Non-causal production implementation
 
@@ -155,3 +155,12 @@ Before production enablement, the extension must satisfy:
 4. Extend survival/forecast semantics.
 5. Extend non-causal likelihood/Viterbi with exhaustive-reference equivalence. **Complete.**
 6. Re-run canonical package acceptance before considering the extension production-ready.
+
+
+## Exact compatibility-boundary score gradients
+
+At h_tail=1 the forward values equal finite support, but zero-weight tail-continuation paths have nonzero one-sided derivatives. The score evaluator restores their missing first-order flux with analytic log-domain forward/backward messages (`doc:nhsmm.tail-boundary-gradient`). It never perturbs h or uses finite differences in production. For noncausal likelihood it corrects numerator and partition separately.
+
+This first-order VJP is used by public likelihood, training and score-based restart selection. Raw forward is a log-potential interface; do not derive boundary likelihood gradients by reducing hard-zero log outputs yourself. Higher-order differentiation at the exact boundary raises an explicit error. Interior derivatives use ordinary autograd. Inference under no_grad and parameters strictly below one do not pay for the boundary messages.
+
+Regression references retain zero-weight paths in probability space so their derivatives remain present. One-state causal observation likelihood is independent of h; the raw one-state D=1 completed score is proportional to h. Both identities are tested, including mixed interior/boundary states and ragged sequences.

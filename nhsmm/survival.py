@@ -6,7 +6,7 @@ from typing import Iterable, Optional, Union
 
 import torch
 
-from nhsmm.filtering import HSMMFilterState, duration_log_hazard
+from nhsmm.filtering import HSMMFilterState, duration_log_hazard, _require_reachable_hazards
 
 HorizonInput = Union[int, torch.Tensor, Iterable[int]]
 
@@ -143,7 +143,8 @@ def active_episode_survival_forecast(
         raise ValueError("log_duration dtype must match filter state")
 
     horizon_tensor = _as_horizons(horizons, device=posterior.device)
-    _, log_continue = duration_log_hazard(log_duration, tail_end_probability)
+    log_end, log_continue = duration_log_hazard(log_duration, tail_end_probability)
+    _require_reachable_hazards(posterior, log_end, log_continue)
 
     survival_by_horizon = []
     for horizon_tensor_value in horizon_tensor:

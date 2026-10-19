@@ -120,8 +120,17 @@ def load_inference_model(
         raise ValueError("state_dict must not be empty")
     validate_finite_state_tensors(state_dict, owner="state_dict")
 
+    dtypes = {value.dtype for value in state_dict.values() if value.is_floating_point()}
+    if len(dtypes) != 1:
+        raise ValueError(
+            "state_dict must have exactly one floating dtype; mixed precision is unsupported"
+        )
+    dtype = next(iter(dtypes))
+    if dtype not in (torch.float16, torch.bfloat16, torch.float32, torch.float64):
+        raise ValueError(f"unsupported model floating dtype: {dtype}")
     model = NHSMM(config=config, device=device)
     model.initialize_distributions()
+    model.to(dtype=dtype)
     try:
         model.load_state_dict(state_dict, strict=True)
     except RuntimeError as exc:

@@ -193,6 +193,16 @@ def _initialize_causal_frontier(
     return _normalize_causal_frontier(scores)
 
 
+def _require_reachable_hazards(previous, log_end, log_continue) -> None:
+    """Reject support changes that remove mass from an already reachable age.
+
+    doc:nhsmm.reachable-duration-support (docs/hsmm-mathematical-contract.md)
+    """
+    invalid = torch.isfinite(previous) & ~(torch.isfinite(log_end) | torch.isfinite(log_continue))
+    if bool(invalid.any()):
+        raise ValueError("duration support has zero survival at a reachable episode age")
+
+
 def _causal_filter_step(
     previous: torch.Tensor,
     emission_log_prob: torch.Tensor,
@@ -209,6 +219,7 @@ def _causal_filter_step(
     Boundary propagation uses the previous information set; the new emission
     is applied afterward. The final age bucket is D+ only when tail_enabled.
     """
+    _require_reachable_hazards(previous, log_end, log_continue)
     D = previous.shape[-1]
     continuation = previous[..., :-1] + log_continue[..., :-1]
     new_episode = _safe_logsumexp(
@@ -429,7 +440,8 @@ def next_episode_end_probability(
     if log_duration.shape != (B, K, D):
         raise ValueError(f"log_duration must be {(B, K, D)}, got {log_duration.shape}")
 
-    log_end, _ = duration_log_hazard(log_duration, tail_end_probability)
+    log_end, log_continue = duration_log_hazard(log_duration, tail_end_probability)
+    _require_reachable_hazards(prev, log_end, log_continue)
     result = _safe_logsumexp(prev + log_end, dim=(1, 2)).exp()
     if not torch.isfinite(result).all():
         raise ValueError("episode-end probability is non-finite")

@@ -5,7 +5,12 @@ from typing import Optional
 
 import torch
 
-from nhsmm.filtering import HSMMFilterState, _require_compatible, duration_log_hazard
+from nhsmm.filtering import (
+    HSMMFilterState,
+    _require_compatible,
+    duration_log_hazard,
+    _require_reachable_hazards,
+)
 
 
 @dataclass(frozen=True)
@@ -156,6 +161,7 @@ def one_step_transition_forecast(
 
     log_transition = _normalize_transition(transition_log_prob)
     log_end, log_continue = duration_log_hazard(log_duration, tail_end_probability)
+    _require_reachable_hazards(posterior, log_end, log_continue)
 
     # Joint boundary mass for source state -> destination state, marginalized over age.
     log_boundary_by_age = posterior + log_end

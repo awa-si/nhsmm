@@ -13,7 +13,7 @@ from nhsmm.inference import validate_finite_state_tensors, load_inference_model
 from nhsmm.models import NHSMM
 
 ARTIFACT_TYPE = "nhsmm"
-ARTIFACT_VERSION = 2
+ARTIFACT_VERSION = 3
 _ARTIFACT_KEYS = {
     "artifact_type",
     "artifact_version",
@@ -57,6 +57,7 @@ def _schema(config: ModelConfig) -> dict[str, Any]:
         "causal": bool(config.causal),
         "emission_type": str(config.emission_type),
         "transition_type": str(config.transition_type),
+        "likelihood_semantics": "causal_prefix" if config.causal else "conditional_completed",
         "internal_context_timing": (
             ("predictive_past" if config.causal else "retrospective_scores")
             if config.use_context_encoder
@@ -88,7 +89,7 @@ def build_artifact(model: NHSMM) -> dict[str, Any]:
 
 
 def save_artifact(model: NHSMM, path: Union[str, Path]) -> Path:
-    """Persist a trusted NHSMM artifact using the versioned v2 payload."""
+    """Persist a trusted NHSMM artifact using the versioned v3 payload."""
 
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -115,7 +116,7 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
     if (
         isinstance(version, bool)
         or not isinstance(version, int)
-        or version not in (1, ARTIFACT_VERSION)
+        or version not in (1, 2, ARTIFACT_VERSION)
     ):
         raise ValueError(f"unsupported artifact version: {payload['artifact_version']!r}")
     config_data = dict(_require_mapping(payload["model_config"], "model_config"))
@@ -136,6 +137,12 @@ def _validate_payload(payload: Any) -> tuple[ModelConfig, Mapping[str, torch.Ten
 
     schema = _require_mapping(payload["schema"], "schema")
     expected_schema = _schema(config)
+    if version < 3:
+        if not config.causal:
+            raise ValueError(
+                "legacy noncausal artifact uses unnormalized segment scores; retrain as v3"
+            )
+        expected_schema.pop("likelihood_semantics")
     if version == 1:
         expected_schema.pop("internal_context_timing")
     if dict(schema) != expected_schema:

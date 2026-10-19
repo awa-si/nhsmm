@@ -285,3 +285,6 @@ Validation documents describe controlled package behavior, not downstream domain
 ## License
 
 Apache License 2.0 © AWA.SI. See [LICENSE](./LICENSE).
+
+
+Mathematical repair: noncausal public likelihoods now normalize complete-segmentation potentials; raw forward and MAP retain their score contract. Artifact v3 records this distinction and preserves floating precision. See [the current mathematical contract](docs/hsmm-mathematical-contract.md) and [repair evidence](docs/correctness-repair.md). Canonical model tests remain in Nautilus.

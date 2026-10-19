@@ -229,7 +229,7 @@ This removes emission self-conditioning. The former normalization counterexample
 
 Noncausal internal encoders retain retrospective forward/decode scores. Public generative log_likelihood and optimize reject them when no external context is supplied: lagging a bidirectional encoder does not remove future dependence. Encoderless noncausal models remain supported.
 
-Artifacts use version 2 and declare internal_context_timing as predictive_past, retrospective_scores, or none. Version 1 encoder artifacts are rejected with retraining guidance because old observation-row timing cannot be silently reinterpreted. Version 1 encoderless artifacts remain loadable. Raw state_dict files carry no timing version: callers must establish provenance and retrain old encoder weights before predictive use. See [repair evidence](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md#predictive-neural-repair--2026-10-12).
+Artifacts use version 3 and declare both internal_context_timing and likelihood_semantics (causal_prefix or conditional_completed). Legacy v2 causal artifacts and v1 encoderless causal artifacts remain loadable. Legacy noncausal artifacts are rejected with retraining guidance because their unnormalized objective cannot be silently reinterpreted; v1 encoder artifacts also retain the timing rejection. Raw state_dict files carry no timing version: callers must establish provenance and retrain old encoder weights before predictive use. See [repair evidence](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md#predictive-neural-repair--2026-10-12).
 
 ## External context
 
@@ -386,16 +386,12 @@ prediction modes and unsupported causal timestep arguments are still rejected.
 Causal forward checks finite, positive evidence before normalization and raises
 ValueError when the active observations have no possible path. The public
 likelihood wrapper raises on NaN instead of hiding it behind a finite sentinel.
-Noncausal completed-segment likelihood may legitimately be negative infinity
-when no complete terminal path exists; Viterbi raises ValueError when no finite
-terminal MAP path exists. These checks do not assign mass to impossible events.
+Noncausal raw forward may be negative infinity when no complete path exists. Public likelihood raises ValueError when the context/length partition is zero; an impossible observation with a positive partition retains negative-infinite likelihood. Viterbi raises ValueError when no finite terminal MAP path exists. These checks do not assign mass to impossible events.
 
 Observation conversion, distribution initialization and training restarts use
 the live model parameter dtype/device. This includes Float64 models with an
 internal encoder. Continuous segment emission sums retain their actual density
-values and gradients instead of categorical score caps. Neither the artifact
-schema nor the separate causal-prefix/noncausal-completed-segment semantics is
-changed.
+values and gradients instead of categorical score caps. Segment sums count impossible emission factors separately so earlier -inf values cannot poison later valid segments (`doc:nhsmm.segment-emissions`). Artifact loading preserves the homogeneous floating model dtype and rejects mixed floating state rather than silently casting.
 
 Transition refinement requires explicit external context. The optimizer checks
 that requirement before it initializes a restart or changes any weights.
@@ -432,3 +428,12 @@ different identifiers.
 ### Duration normalization gate
 
 Duration soft_dmax is applied consistently by log_matrix, expected_probs, forward (scores or return_dist=True) and log_prob when supplied with the same arguments. The [D] or [K,D] gate sigmoid(soft_dmax).clamp_min(EPS) is applied after temperature and hard masks, before normalization. Helpers preserve their native batch/context shapes; log_matrix retains its padded shape and T expansion. The D+ tail hazard remains separate.
+
+
+## Normalized noncausal likelihood and implementation boundaries
+
+Noncausal public likelihood and training divide the completed-segmentation score by its context/length partition. Raw forward and MAP retain their segment-potential meaning. See [the mathematical owner](hsmm-mathematical-contract.md#normalized-observation-likelihood) for the generative definition; fixed external context is a conditioning variable.
+
+The model class delegates recursions to `models/forward.py`, decoding to `models/decoding.py`, support-safe segment sums to `models/segments.py`, and observation objectives to `models/objective.py`. `models/boundary.py` owns the analytic first-order tail boundary VJP. No model or state-dict parameter paths change during this split. Higher-order differentiation at h_tail=1 is explicitly rejected; use interior parameters for higher-order work. Runtime and ordinary finite-support causal scoring keep their existing kernels.
+
+See [correctness repair](correctness-repair.md) for bounded evidence and artifact migration.
