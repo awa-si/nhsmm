@@ -1,7 +1,7 @@
 # Hypothesis: neural context for a stable HSMM
 
 Status: research hypothesis; not evidence of predictive or trading value.
-Date: 2026-10-19. Model owner: `awa-si/nhsmm@v3`.
+Date: 2026-10-19. Research/contract review: 2026-10-19. Model owner: `awa-si/nhsmm@v3`.
 
 This document records the model rationale and an OHLCV motivating example.
 The implemented probability and timing contract remains [docs/model.md](docs/model.md).
@@ -24,6 +24,20 @@ Staged training starts from a stable HSMM before learning context effects.
 Whether to freeze the base parameters or jointly fine-tune them is an explicit
 experimental choice. Adding a neural component does not itself establish value.
 
+## What is established and what remains a hypothesis
+
+- Established model family: conditional/neural HMMs, explicit-duration models
+  and covariate-dependent HSMM durations have published predecessors. Combining
+  these components is not, by itself, a novelty or performance claim.
+- Information argument: finer bars can retain information lost by aggregation;
+  deterministic TA cannot add information beyond its complete source history.
+  Easier access for a finite fitted model is a separate, testable advantage.
+- Proposed application: the particular 1m/5m/15m/1h partition, selected TA blocks,
+  component routing and staged training policy remain unvalidated on market data.
+- Empirical claim: predictive density, state interpretation, directional
+  forecasting and net trading performance are different endpoints. Improvement
+  in one must not be reported as improvement in all of them.
+
 ## OHLCV motivating example
 
 For decisions every five minutes, candidate context includes 1m, 15m and 1h
@@ -43,13 +57,22 @@ For example, starting at 100, the 1m closes [101, 102, 98, 99, 100] and
 both yield 5m OHLCV [100, 102, 98, 100, 50]. Their sums of squared 1m log
 returns are approximately 0.00200058 and 0.00140046. Thus the finer path
 cannot be reconstructed from the aggregate. This establishes information loss,
-not forecastability. Higher-timeframe features may help a finite model use long
+not forecastability. This example uses equal interval boundaries and one source;
+independently supplied feeds may differ in alignment, corrections or coverage.
+Such differences require provenance checks, not a claim of new market information.
+Higher-timeframe features may help a finite model use long
 history efficiently even when they are deterministic summaries of that history.
 
 The HSMM clock must be declared separately. If one step is five minutes,
 episode age and duration are measured in five-minute steps. A one-minute HSMM
 with five-minute decisions has different duration semantics. Missing intervals
 must not be silently compressed into consecutive observations.
+
+Higher-timeframe values carried forward at 5m decisions are stale observations,
+not fresh independent measurements on every decision. Track their age, source
+bar end, warm-up and missingness. Calendar phase/time-of-day is an important
+control: an apparent timeframe effect may instead reflect intraday seasonality.
+OHLCV-derived 1m detail is not an order-book or bid-ask measurement.
 
 ## Information and probability contract
 
@@ -79,6 +102,77 @@ one-step predictive factor; it does not define a new public API.
 - Online estimates use causal filtering. Retrospective smoothing/Viterbi states
   must not be presented as states available to a live decision.
 
+### Shared external-row timing needs explicit verification
+
+At the current reviewed implementation:
+
+| Component at step t | Internal observation-derived context | External row U_t |
+| --- | --- | --- |
+| Initial prior at t=0 | Zero context | U_0 |
+| Emission for x_t | C_(t-1), with C_(-1)=0 | U_t |
+| Outgoing boundary t -> t+1 | C_t | U_t |
+
+For external context row U_t, the current contract uses U_t for the emission of
+x_t and for outgoing duration/transition factors on boundary t -> t+1. The
+next emission uses U_(t+1). Thus a row derived after observing x_t cannot simply
+be reused as an exogenous input to its own emission likelihood. Lagging an
+external tensor to protect emissions also changes the information available to
+the outgoing boundary. A single row does not generally provide both pre-x_t
+emission context and a different post-x_t boundary context by one index shift.
+
+Before a market experiment, specify a component-by-component event-time table.
+Verify the chosen routing against batch and streaming behavior. Using a more
+conservative lag is a valid declared design choice; changing routing to expose
+newer information is a separate implementation change, not assumed here. The
+internal causal encoder already has distinct emission-lag semantics; it is not
+interchangeable with arbitrary externally derived context.
+
+For history-derived context, evaluate the sequential predictive score
+sum_t log p(x_(t+1) | H_t), with every feature computed from its allowed prefix.
+Do not assume that a likelihood conditional on an entire externally fixed
+context trajectory has the same interpretation when later context rows encode
+earlier observations. No same-bar reconstruction score is evidence of a future
+forecast. This is a modeling requirement derived from the information boundary.
+
+### Duration conditioning: dynamic hazard versus entry-time duration
+
+The [mathematical contract](docs/hsmm-mathematical-contract.md) defines the
+current causal core as a dynamic-hazard process over state and episode age.
+For finite duration support, away from a separately configured D+ tail:
+
+```text
+h_t(i,a) = q_t(i,a) / sum_(r=a..D) q_t(i,r)
+P(continue episode i, age a+1 | i,a,H_t) = 1 - h_t(i,a)
+P(new episode j, age 1 | i,a,H_t) = h_t(i,a) * A_t(i,a,j)
+```
+
+Each reachable row must be normalized and have positive survival support.
+Context changes must not remove survival support from an already reachable age.
+When q_t changes during an episode, multiplying successive boundary factors is
+not generally equivalent to drawing one duration from q at episode entry.
+An entry-conditioned duration model and the current dynamic-hazard model are
+different hypotheses; neither the name HSMM nor a paper using that name proves
+their equivalence. Koslik's entry-time-indexed construction [7] is a relevant
+comparison, not an implementation identity.
+
+The geometric dwell-time restriction belongs to a homogeneous first-order HMM.
+With time-varying, covariate-dependent transition probabilities, a first-order
+HMM can already have non-geometric overall dwell times [7, introduction].
+Therefore explicit-age value must be tested against a context-matched
+time-varying-transition HMM, not only a static HMM.
+
+Sequence endpoints are right-censored on the causal path: a data-window end is
+not an observed regime exit. A fresh age-one start also differs from starting
+inside an unknown-age market episode. Declare warm-up/initial-age treatment and
+use identical boundary information for all candidates. See the mathematical
+contract; do not compare causal prefix and completed-segmentation likelihoods
+as if they were the same score.
+
+Multi-step duration/transition forecasts require a stated treatment of future
+context. Frozen-current-context scenarios, specified context paths and forecasts
+that integrate over unknown future context are different quantities. Future
+realized TA must not be supplied as if it were known at the forecast origin.
+
 ## Optional context and fallback
 
 Context-free inference is a supported model mode. Intermittently unavailable
@@ -95,6 +189,14 @@ original trained static HSMM: base parameters may have changed. An exact fallbac
 to that reference requires an explicit parameter/stream-state preservation or
 reconstruction policy. A reset also starts a new inference stream; it is not a
 transparent way to preserve the previous filtering posterior.
+
+An availability-aware residual gate on finite parameter coordinates, followed
+by the existing probability links, is one candidate design: base plus a masked
+context correction. It is a proposal, not a current capability. Missing inputs
+must be handled before network evaluation; multiplying a NaN by zero is not
+safe. Exact base-parameter fallback additionally requires preserving those
+parameters. Even then, a posterior conditioned on earlier context need not
+equal the posterior of a static model that never used context.
 
 ## Related research and limits
 
@@ -127,6 +229,41 @@ These are related building blocks, not independent validation of this exact
    Provides financial hierarchical-HMM modeling across temporal resolutions,
    with replication code; a methodological comparison reference.
 
+7. [Koslik, Hidden Semi-Markov Models with Inhomogeneous State Dwell-Time Distributions, 2024 preprint](https://arxiv.org/html/2405.13553v1).
+   Directly studies covariate-dependent dwell times and conditional transitions.
+   Section 2.3 indexes the duration law by episode-entry time; the associated
+   hazards retain that entry index as age advances. This differs from this
+   package's current-boundary dynamic q_t. Its introduction also explains why
+   inhomogeneous HMMs need not imply geometric overall dwell times. Application:
+   animal movement, not intraday trading. This review uses the 2024 preprint.
+8. [Rojas-Salazar et al., A Bayesian Hidden Semi-Markov Model with Covariate-Dependent State Duration Parameters for High-Frequency Environmental Data, 2021 preprint](https://arxiv.org/abs/2109.09949).
+   Models duration parameters using covariates observed before state transitions.
+   Also addresses residual conditional dependence in high-frequency observations.
+   Supports duration-context modeling as a researched idea; not financial evidence
+   and not proof that our factorization matches theirs.
+9. [Wiseman, Shieber and Rush, Learning Neural Templates for Text Generation, EMNLP 2018](https://aclanthology.org/D18-1356/).
+   A neural system with an HSMM decoder learning latent templates jointly with
+   generation. Establishes a neural-HSMM precedent outside finance; its segmental
+   text-generation setting does not validate causal trading or dynamic hazards.
+10. [Corsi, A Simple Approximate Long-Memory Model of Realized Volatility, 2009](https://doi.org/10.1093/jjfinec/nbp001).
+    HAR-RV combines volatility components over daily, weekly and monthly horizons.
+    Supports a parsimonious multi-horizon volatility baseline, not latent-state
+    or intraday neural-HSMM superiority. An intraday adaptation is a new experiment.
+
+Verification scope: the six original references were checked during the initial
+literature review; the additional sources above address missing model comparisons.
+Koslik section 2.3 was checked in full text. Rojas-Salazar and Wiseman are used
+for the scope stated by their author/publisher abstracts; Corsi's multi-horizon
+formulation was checked against the publisher-indexed abstract; its full text
+was not reviewed here. No new empirical replication was performed.
+None of these sources is an independent reproduction of this repository.
+
+Implementation statements were checked at core revision
+`c97329da2aa8133a38550f7d0383f75a4414adba` against docs/model.md,
+docs/hsmm-mathematical-contract.md, docs/supervised.md, runtime.py and the
+boundary/objective implementations. Timing limitations are compatibility facts
+for the proposed feature routing, not evidence of an existing core defect.
+
 ## Falsifiable questions
 
 | Claim | Evidence required | Failure or limitation |
@@ -134,7 +271,8 @@ These are related building blocks, not independent validation of this exact
 | 1m detail adds value | Improvement beyond matched 5m history on future data | Distinct information without predictive gain |
 | 15m/1h summaries help | Improvement beyond a long-history 5m reference | Gain explained only by a longer lookback or extra capacity |
 | Neural mapping is useful | Gain over simple linear/spline conditioning with the same inputs | Simple conditioning matches or beats it |
-| State-duration structure helps | Gain over a context-only predictive model | Context alone explains the gain |
+| Explicit-age structure helps | Gain over a context-matched time-varying-transition HMM | Covariates explain persistence without explicit age |
+| Latent state structure helps | Gain over a context-only predictive model | Context alone explains the gain |
 | Optional context is robust | Defined availability handling and stable causal state/age estimates | Collapse, invalid likelihood, or broken fallback behavior |
 | Prediction helps trading | Improvement after matched costs and execution assumptions | Better density/state diagnostics without economic benefit |
 
@@ -147,16 +285,35 @@ no new fit budget and does not authorize using an already inspected test as
 an untouched holdout.
 
 Compare static HMM/HSMM, a context-only predictor, simple context-conditioned
-HSMM and neural context-conditioned HSMM. Ablate 1m, 15m/1h and their combination
+HSMM, a context-matched time-varying-transition HMM and neural context-conditioned
+HSMM. Ablate 1m, 15m/1h and their combination
 on identical rows, effective historical coverage and decision boundaries.
 Match capacity/optimization where possible and report remaining differences.
 Compare frozen-base conditioning with joint fine-tuning only as separately
 declared training protocols. Preserve every failed candidate and selection trial.
 
+Isolate the neural routing before combining effects: emission-only,
+duration-only and transition-only conditioning, then a preregistered combination.
+The initial-state prior acts at sequence starts; repeatedly resetting it at each
+decision would change the model. Keep the observation vector and measure fixed
+for predictive-density comparisons. A log score on a different set of TA outputs
+is not directly comparable with a return-density score.
+
 Use chronological walk-forward evaluation, train-only processing and the
 required purge/embargo for forward targets. Refit every learned transformation
 inside its training fold. Repeated seeds on one dataset are not independent
 market samples; use temporal blocks and account for multiple comparisons.
+Past data may legitimately warm up features and filtering at an evaluation
+boundary if the same history would be available live; evaluation outcomes must
+not refit weights, preprocessing or thresholds. Report the initialization choice.
+
+Include a seasonality-only control and matched longer-history 5m baselines.
+For volatility targets, include a parsimonious HAR-style multi-horizon baseline
+with its intraday adaptation declared; do not compare different target measures.
+Input masks, lagging and temporal displacement are diagnostic interventions,
+not automatic valid significance tests: naive shuffling can destroy serial
+dependence and timeframe alignment. Preserve the clock and use an appropriate
+blocked null design if a significance test is intended.
 
 Evaluate predictive log score and distribution calibration, finite normalized
 likelihood, occupancy/effective-state count and duration stability. Align state
@@ -164,6 +321,17 @@ identities across refits before comparing state columns. Real-market regime
 accuracy needs independently defined labels; latent market states are not known
 ground truth merely because they have been named. Synthetic observed-state
 training and forward-return supervision are distinct tasks with distinct labels.
+TA-derived regime labels test reproduction of that label rule, not independent
+discovery of market regimes; retrospective pivots require their confirmation
+times. State-only supervised paths identify episode boundaries only under the
+core's no-self-reset restriction; see [supervised semantics](docs/supervised.md).
+Partial labels and explicit boundary labels are not current supervised features.
+
+Check residual serial dependence and overlapping rolling features: otherwise
+extra states can absorb emission misspecification rather than economic regimes.
+A rare state is not automatically a defect, and forcing equal occupancy is not
+validation. Diagnose degeneracy relative to the declared purpose and compare
+Gaussian/Student-t or autoregressive alternatives only in a budgeted study.
 Trading utility requires a separate evaluation after fees, spread, slippage,
 turnover and execution constraints. No automatic production promotion follows.
 
@@ -177,3 +345,15 @@ That finding neither confirms nor rejects the proposed market-context mapping.
 
 Host evidence: [synthetic confirmation](https://github.com/awa-si/nautilus/blob/503064e48e08e32af5a724bfe2e8bd12b135a919/docs/nhsmm-supervised-confirmation.md)
 and [paired context comparison](https://github.com/awa-si/nautilus/blob/503064e48e08e32af5a724bfe2e8bd12b135a919/docs/nhsmm-context-comparison.md).
+
+## Review outcome and next evidence gate
+
+The architecture remains plausible, with stronger direct duration-context and
+neural-HSMM precedents than the initial six-reference list captured. The exact
+trading feature mapping, timing route, missing-context behavior and predictive
+benefit remain open. Before a real-market fit, the host must resolve the external
+component timing table, select the dynamic-hazard interpretation, freeze the
+matched baselines/metrics and declare a genuinely uninspected evaluation period.
+
+This revision changes documentation only. No new fit, runtime modification,
+automatic fallback or empirical market-performance claim is implied.
