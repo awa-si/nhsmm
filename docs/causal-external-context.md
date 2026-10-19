@@ -33,7 +33,7 @@ batch inference. Existing artifacts can produce corrected streaming posteriors;
 their parameter paths and schema remain unchanged. Historical research archives
 retain their original source identity.
 
-## Verified source
+## Verification before base-score extension
 
 The canonical suite passed 1209 tests, with 3 skips for unavailable CUDA.
 Thirty study-harness regression tests also passed. The eleven new timing tests
@@ -42,3 +42,39 @@ The synthetic close-time fixture does not validate production OHLCV/TA code.
 Exact source hashes and execution outputs are retained in
 https://github.com/awa-si/nautilus/blob/c45d94f4a8b6c87870ee2dc8f775c9609128c027/docs/nhsmm-causal-context.json.
 No new market study or automatic per-row missing-context fallback was run.
+
+## Explicit base scores during external streams
+
+`BASE_CONTEXT` is an explicit whole-step bypass of the context networks and
+internal encoder. It uses the current model's base distributions. It is not a
+zero context vector and does not recover an independently trained baseline if
+base parameters were changed by joint training.
+
+Start an external stream with `context=BASE_CONTEXT` or explicit context, then
+alternate `BASE_CONTEXT`, Tensor context and `CausalContext` without resetting.
+The posterior and episode age continue across missing context. The previous
+step's stored boundary scores still propagate into the current observation;
+base boundary scores selected at t affect the following t -> t+1 edge.
+`None` keeps its internal/no-external meaning and cannot switch stream protocol.
+Batch likelihood/filtering accept `BASE_CONTEXT` to bypass any internal encoder.
+Context-only fitting and transition refinement reject this bypass.
+
+This gate applies to the entire batch at a step. Per-batch-item or per-component
+availability masks are not implemented. An external adapter owns missingness,
+freshness and observation-clock policy; invalid context is not automatically
+reclassified as missing.
+
+
+## Base-score extension verification
+
+The extended source passes 1215 canonical core tests, with 3 CUDA skips.
+The host passes 162 integration/TA tests and 11 subtests; one isolated no-GBM
+installation-profile test skips. A separate market-adapter smoke succeeds with
+GBM, Qlib, MLflow and RD-Agent imports blocked. Ruff and Black pass.
+Exact source hashes and execution outputs:
+https://github.com/awa-si/nautilus/blob/cf3a8ef59fbbdf2484f5679307568b2c812f38bf/docs/nhsmm-context-fallback.json.
+
+The opt-in market adapter and production TA/Axis replay are documented in the
+host report. Synthetic fixture verification does not establish a historical
+market advantage. Mixed-batch-item masks and a mixed-availability batch training
+objective remain outside this extension.

@@ -9,6 +9,7 @@ import torch
 
 from nhsmm.config import ModelConfig, logger
 from nhsmm.convergence import Convergence
+from nhsmm.context import BASE_CONTEXT
 
 if TYPE_CHECKING:
     from nhsmm.models.base import NHSMM
@@ -33,7 +34,7 @@ def optimize_model(
     cfg.__post_init__()
     model._require_generative_context(context)
     model._validate_optimization_config(cfg)
-    if cfg.transition_refine_steps > 0 and context is None:
+    if cfg.transition_refine_steps > 0 and (context is None or context is BASE_CONTEXT):
         raise ValueError("transition_refine_steps > 0 requires explicit external context")
     model._optimization_summary = None
     original_training = model.training

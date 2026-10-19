@@ -188,9 +188,9 @@ context requires an explicit policy; replacing missing context by zero is not
 generally neutral because zero can be a valid input and neural biases can act.
 
 The current streaming external/non-external context mode is fixed until reset.
-Automatic mid-stream switching or a learned availability mask is not established
-by this hypothesis. A future availability-aware design must be specified and
-tested separately against the public runtime contract.
+Explicit `BASE_CONTEXT` now bypasses neural corrections within an external
+stream while preserving its posterior and age. `None` retains internal-mode
+semantics. Per-batch-item availability masks remain outside the public API.
 
 Disabling context on a jointly fine-tuned model does not necessarily recover the
 original trained static HSMM: base parameters may have changed. An exact fallback
@@ -203,7 +203,8 @@ parameters while training only their context networks, projections and delta
 scales. It restores the original trainability flags and model mode. This option
 does not implement availability masks or reconstruct a static posterior.
 Both `CausalContext` fields are required; nonfinite or misaligned values are
-rejected. Plain zero context remains an ordinary network input.
+rejected. Use `BASE_CONTEXT` for an explicit whole-step bypass. Plain zero
+context remains an ordinary network input.
 
 An availability-aware residual gate on finite parameter coordinates, followed
 by the existing probability links, is one candidate design: base plus a masked
@@ -374,6 +375,12 @@ benefit remain open. Before a real-market fit, the host must resolve the externa
 component timing table, select the dynamic-hazard interpretation, freeze the
 matched baselines/metrics and declare a genuinely uninspected evaluation period.
 
-The context-interface batch changes runtime routing and adds bounded synthetic
-correctness tests; it does not run a new market study. Automatic per-row fallback,
-real OHLCV/TA pipeline verification and an empirical market advantage remain open.
+The context-interface batches add explicit routing and base-score bypass with
+bounded synthetic correctness tests. Nautilus provides an opt-in 5m adapter that
+uses prior accepted context for emissions, current completed 1m/15m/1h Axis values
+for boundaries, and base scores for missing/warmup/recovery rows. It preserves
+every 5m observation, rejects stale or misaligned payloads, and does not promote
+the existing 18-coordinate temporal artifacts into a new context schema.
+Synthetic OHLCV replay exercises production TA and Axis code against independent
+raw-TA arithmetic. Historical market verification, mixed-batch masks and an
+empirical market advantage remain open; no new market fit is implied.

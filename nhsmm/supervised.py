@@ -9,6 +9,7 @@ import math
 
 import torch
 
+from nhsmm.context import BASE_CONTEXT
 from nhsmm.filtering import _duration_log_hazard_from_log_p
 
 
@@ -126,8 +127,8 @@ def fit_supervised(
         raise ValueError("supervised path has zero or non-finite probability")
     if not isinstance(context_only, bool):
         raise TypeError("context_only must be boolean")
-    if context_only and context is None:
-        raise ValueError("context_only fitting requires explicit external context")
+    if context_only and (context is None or context is BASE_CONTEXT):
+        raise ValueError("context_only fitting requires active external context")
     before_flags = {name: p.requires_grad for name, p in model.named_parameters()}
     if context_only:
         for name, p in model.named_parameters():

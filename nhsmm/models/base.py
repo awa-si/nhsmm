@@ -15,6 +15,7 @@ from nhsmm.models.objective import observation_log_likelihood
 from nhsmm.training import optimize_model
 from nhsmm.encoder import DefaultEncoder
 from nhsmm.context import (
+    BASE_CONTEXT,
     CausalContext,
     ContextEncoder,
     ContextRouter,
@@ -306,8 +307,8 @@ class NHSMM(nn.Module):
         *,
         mask: Optional[torch.Tensor] = None,
     ) -> Optional[torch.Tensor]:
-        if context is None:
-            return None
+        if context is None or context is BASE_CONTEXT:
+            return context
         if isinstance(context, CausalContext):
             if not self.config.causal:
                 raise ValueError("CausalContext requires causal=True")
@@ -344,7 +345,10 @@ class NHSMM(nn.Module):
                 f"Feature dimension mismatch: expected {self.config.n_features}, got {F}"
             )
 
-        if context is None:
+        if context is BASE_CONTEXT:
+            context_tensor = X.new_zeros((B, T, 0))
+            canonical = X.new_zeros((B, 1, 0))
+        elif context is None:
             if self.encoder is None:
                 context_tensor = X.new_zeros((B, T, 0))
                 canonical = X.new_zeros((B, 1, 0))
@@ -819,7 +823,7 @@ class NHSMM(nn.Module):
             raise ValueError("steps must be positive")
         if lr <= 0.0:
             raise ValueError("lr must be positive")
-        if context is None:
+        if context is None or context is BASE_CONTEXT:
             raise ValueError("transition refinement requires explicit external context")
 
         transition = self.dist.transition
@@ -882,7 +886,9 @@ class NHSMM(nn.Module):
             length = (
                 max(item.shape[0] for item in chunk) if isinstance(chunk, list) else chunk.shape[1]
             )
-            if isinstance(context, CausalContext):
+            if context is BASE_CONTEXT:
+                ctx = BASE_CONTEXT
+            elif isinstance(context, CausalContext):
                 ctx = CausalContext(
                     context.emission[start : start + batch_size, :length],
                     context.boundary[start : start + batch_size, :length],

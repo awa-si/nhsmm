@@ -7,7 +7,7 @@ import math
 import torch
 
 from nhsmm.config import EPS
-from nhsmm.context import CausalContext, align_context_tensor
+from nhsmm.context import BASE_CONTEXT, CausalContext, align_context_tensor
 from nhsmm.filtering import (
     HSMMFilterState,
     _filter_step_normalized,
@@ -401,7 +401,7 @@ class HSMMFilterRuntime:
             )
             context = split_context.boundary
         external_context = None
-        if uses_external_context:
+        if uses_external_context and context is not BASE_CONTEXT:
             if self.model.context_dim is None:
                 raise ValueError(
                     "external context requires ModelConfig.context_dim to be configured"
@@ -419,20 +419,22 @@ class HSMMFilterRuntime:
             emission_context = external_context
 
         if self.state is None:
-            if external_context is not None:
+            if uses_external_context:
                 emission = _emission_log_prob(
                     self.model,
                     obs,
                     emission_context,
                     self._score_cache,
                 )
-                B = external_context.shape[0]
+                B = obs.shape[0]
                 K = int(self.model.config.n_states)
                 initial = self.model.dist.initial.log_matrix(
                     context=emission_context,
                     temperature=self.temperature,
                     T=1,
                 )
+                if initial.shape[0] == 1 and B > 1:
+                    initial = initial.expand(B, -1, -1)
                 if initial.shape != (B, 1, K):
                     raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
                 filter_state = initialize_filter(
@@ -445,6 +447,7 @@ class HSMMFilterRuntime:
                     external_context,
                     temperature=self.temperature,
                     cache=self._score_cache,
+                    batch_size=B,
                 )
                 self.state = HSMMRuntimeState(
                     filter_state=filter_state,
@@ -613,7 +616,7 @@ class HSMMFilterRuntime:
             raise ValueError("streaming batch size cannot change without reset")
         _require_compatible(previous.observations, obs, "observation")
 
-        if external_context is not None:
+        if uses_external_context:
             emission = _emission_log_prob(
                 self.model,
                 obs,
@@ -632,6 +635,7 @@ class HSMMFilterRuntime:
                 external_context,
                 temperature=self.temperature,
                 cache=self._score_cache,
+                batch_size=obs.shape[0],
             )
             self.state = HSMMRuntimeState(
                 filter_state=filter_state,

@@ -441,3 +441,12 @@ See [correctness repair](correctness-repair.md) for bounded evidence and artifac
 ## Explicit external component context
 
 Use CausalContext(emission=E, boundary=U) for distinct pre-observation and outgoing-boundary information sets. Initial probabilities use E[0]. Plain Tensor timing remains compatible. See [the timing contract](causal-external-context.md).
+
+
+## Explicit base-score context
+
+BASE_CONTEXT bypasses context heads and the internal encoder for batch
+likelihood/filtering or an entire streaming step. Within an external stream it
+preserves the posterior and age; the prior boundary still propagates into the
+current observation. None retains internal-mode semantics. Base scores use the
+current parameters. See [timing and fallback](causal-external-context.md).

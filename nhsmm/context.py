@@ -3,6 +3,7 @@
 from __future__ import annotations
 from typing import Optional, Literal, Tuple, Callable, Dict, Sequence, Union
 from dataclasses import dataclass
+from enum import Enum
 import contextlib
 import inspect
 
@@ -10,6 +11,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as nnF
 from torch.nn.utils.rnn import pad_sequence
+
+
+class ContextPolicy(Enum):
+    """Explicit context bypass, independent of internal/external encoder mode."""
+
+    BASE = "base"
+
+
+BASE_CONTEXT = ContextPolicy.BASE
 
 
 @dataclass(frozen=True)
