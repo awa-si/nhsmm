@@ -121,12 +121,23 @@ def _as_batched(tensor: torch.Tensor, ndim: int, name: str) -> torch.Tensor:
 
 
 def _safe_logaddexp(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
-    """Autograd-safe logaddexp for two impossible log-probability paths."""
-    both_impossible = torch.isneginf(left) & torch.isneginf(right)
-    safe_left = torch.where(both_impossible, torch.zeros_like(left), left)
-    safe_right = torch.where(both_impossible, torch.zeros_like(right), right)
+    """Preserve hard support and finite first/higher derivatives.
+
+    torch.logaddexp's backward can form inf * 0 in a second derivative when
+    exactly one input is -inf. A single supported branch is the identity.
+    """
+    left_empty, right_empty = torch.isneginf(left), torch.isneginf(right)
+    any_empty = left_empty | right_empty
+    safe_left = torch.where(any_empty, torch.zeros_like(left), left)
+    safe_right = torch.where(any_empty, torch.zeros_like(right), right)
     combined = torch.logaddexp(safe_left, safe_right)
-    return torch.where(both_impossible, torch.full_like(combined, float("-inf")), combined)
+    one_branch = torch.where(left_empty, right, left)
+    combined = torch.where(any_empty, one_branch, combined)
+    return torch.where(
+        left_empty & right_empty,
+        torch.full_like(combined, float("-inf")),
+        combined,
+    )
 
 
 def _safe_logsumexp(

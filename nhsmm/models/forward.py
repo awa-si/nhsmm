@@ -153,31 +153,83 @@ def _forward_causal_hazard(
     log_end = log_end.reshape(B, T, K, D)
     log_continue = log_continue.reshape(B, T, K, D)
 
+    transition = (
+        transition_logits if duration_dependent_transition else transition_logits.unsqueeze(3)
+    )
+    args = (
+        initial_logits[:, 0],
+        router.log_probs,
+        transition,
+        log_end,
+        log_continue,
+        X.lengths,
+        tail_end_probability is not None,
+    )
+    if (
+        normalized
+        and (D > 1 or self.config.duration_tail)
+        and torch.is_grad_enabled()
+        and router.log_probs.device.type == "cpu"
+        and router.log_probs.dtype in (torch.float32, torch.float64)
+    ):
+        from nhsmm.models.filter_grad import _CausalPrefixAdjoint
+
+        return _CausalPrefixAdjoint.apply(*args)
+    return _causal_prefix_serial(*args, normalized=normalized)
+
+
+def _causal_prefix_serial(
+    initial, emission, transition, log_end, log_continue, lengths, tail, *, normalized
+):
+    """Shared forward owner; transition uses [B,T,K,D-or-1,K]."""
+    B, T, K = emission.shape
+    D = log_end.shape[-1]
     # Unbind once so each indexed input has only a single time row.
     # Indexing the full history separately at every t would repeatedly
     # allocate full-history zeros in each IndexBackward operation.
-    emission_steps = router.log_probs.unbind(dim=1)
-    transition_steps = transition_logits.unbind(dim=1)
+    emission_steps = emission.unbind(dim=1)
+    transition_steps = transition.unbind(dim=1)
     log_end_steps = log_end.unbind(dim=1)
     log_continue_steps = log_continue.unbind(dim=1)
+
+    if bool((lengths == T).all()):
+        # A fully populated batch needs no active-row indexing or padding copies.
+        # Keep precisely the same step owner and evidence addition order.
+        frontier, cumulative_log_z = _initialize_causal_frontier(initial, emission_steps[0], D)
+        alpha_steps = [frontier if normalized else frontier + cumulative_log_z[:, None, None]]
+        for t in range(1, T):
+            frontier, step_log_z = _causal_filter_step(
+                frontier,
+                emission_steps[t],
+                log_end_steps[t - 1],
+                log_continue_steps[t - 1],
+                transition_steps[t - 1],
+                tail_enabled=tail,
+            )
+            if not normalized:
+                cumulative_log_z = cumulative_log_z + step_log_z
+            alpha_steps.append(
+                frontier if normalized else frontier + cumulative_log_z[:, None, None]
+            )
+        return torch.stack(alpha_steps, dim=1)
 
     # Recurse on a normalized frontier and carry the cumulative evidence
     # separately. This preserves the public unnormalized-alpha contract while
     # preventing avoidable Float32 drift from repeatedly propagating a large
     # sequence-level log offset through logsumexp operations.
-    frontier = router.log_probs.new_full((B, K, D), float("-inf"))
-    cumulative_log_z = router.log_probs.new_zeros(B)
+    frontier = emission.new_full((B, K, D), float("-inf"))
+    cumulative_log_z = emission.new_zeros(B)
     alpha_steps: list[torch.Tensor] = []
 
-    valid0 = X.lengths > 0
+    valid0 = lengths > 0
     normalized_initial, initial_log_z = _initialize_causal_frontier(
-        initial_logits[valid0, 0], emission_steps[0][valid0], D
+        initial[valid0], emission_steps[0][valid0], D
     )
     frontier[valid0] = normalized_initial
     if not normalized:
         cumulative_log_z[valid0] = initial_log_z
     initial_active = torch.nonzero(valid0, as_tuple=False).squeeze(-1)
-    first_alpha = router.log_probs.new_full((B, K, D), float("-inf"))
+    first_alpha = emission.new_full((B, K, D), float("-inf"))
     alpha_steps.append(
         first_alpha.index_copy(
             0,
@@ -191,30 +243,28 @@ def _forward_causal_hazard(
     )
 
     for t in range(1, T):
-        valid = t < X.lengths
+        valid = t < lengths
         if not bool(valid.any()):
-            padding = router.log_probs.new_full((B, K, D), float("-inf"))
+            padding = emission.new_full((B, K, D), float("-inf"))
             alpha_steps.extend([padding] * (T - len(alpha_steps)))
             break
         active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
 
         transition = transition_steps[t - 1].index_select(0, active)
-        if not duration_dependent_transition:
-            transition = transition.unsqueeze(2)
         next_frontier, step_log_z = _causal_filter_step(
             frontier[active],
             emission_steps[t].index_select(0, active),
             log_end_steps[t - 1].index_select(0, active),
             log_continue_steps[t - 1].index_select(0, active),
             transition,
-            tail_enabled=tail_end_probability is not None,
+            tail_enabled=tail,
         )
         frontier[active] = next_frontier
         if not normalized:
             cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
         # Stack output rows once instead of copying the full history gradient
         # through an indexed table write at every recurrence step.
-        alpha_t = router.log_probs.new_full((B, K, D), float("-inf"))
+        alpha_t = emission.new_full((B, K, D), float("-inf"))
         alpha_steps.append(
             alpha_t.index_copy(
                 0,

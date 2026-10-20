@@ -153,8 +153,9 @@ agrees with the classical right-censored segment law.
 Implementation decision: reuse the existing normalized state-age recursion
 without changing propagation, parameters, artifact schema or optimizer.
 The small-HMM scan remains restricted to its existing D=1/no-tail case.
-HSMM gradients retain the complete serial graph; market-scale performance
-requires measurement before allocating a fit budget.
+HSMM first derivatives use the exact adjoint described below; higher derivatives
+retain full-history serial autograd. Market-scale performance requires measurement
+before allocating a fit budget.
 
 Primary references reviewed: Yu (2010), Hidden semi-Markov models,
 doi:10.1016/j.artint.2009.11.011,
@@ -178,3 +179,65 @@ The expanded tests independently enumerate reset/continuation histories from
 raw parameters and compare every prefix frontier, filtering score and gradients.
 See Nautilus docs/nhsmm-hsmm-filter-math-gate.md and its machine evidence for
 source hashes, bounded long-sequence numerics, timing and scope limits.
+
+## HSMM gradient cost
+
+Anchor: `doc:nhsmm.causal-prefix-adjoint` in
+`nhsmm/models/filter_grad.py`. On CPU Float32/Float64, differentiable normalized
+HSMM/D+ prefixes use an exact vector-Jacobian product through the complete
+history. Ordinary inference and the bounded HMM scan keep their existing paths.
+Other devices/dtypes retain full-history autograd.
+
+The forward pass calls the same `_causal_prefix_serial` owner as ordinary
+forward inference; it stores normalized frontiers and factor inputs rather
+than every recurrence operation's autograd graph. First-derivative edge weights
+are batched across time with the existing NumPy dependency on CPU. Tensor-to-array
+views only read saved values; the exact custom VJP returns tensor gradients to
+the complete Torch parameter/context graph. Higher derivatives use Torch
+recomputation. Fully populated batches omit per-row padding/index copies while
+retaining the same causal step owner and evidence-addition order. Let p be a flattened
+state-age posterior and v its incoming log-posterior adjoint. Normalization gives
+`g = v - p * sum(v)`. A prediction edge with mass w entering destination j
+receives `g_j * w / predicted_mass_j`. Sum each edge derivative into its
+source adjoint and duration/transition factor; sum destination-age derivatives
+for the emission. Iterate backward through every row. Empty support contributes
+zero; D+ continuation and reset edges are both included. Ragged padding has
+zero derivative. No label, approximation, clipping or truncated history enters
+this derivative rule.
+
+First-derivative work is O(T K^2 D), matching the state-age transition law.
+Saved frontiers cost O(B T K D); the duration-dependent transition inputs still
+cost O(B T K^2 D). This reduces recurrence graph overhead, not model state space.
+When higher derivatives are requested, recompute the same serial owner under
+autograd, preserving Hessian-vector products rather than differentiating saved
+forward intermediates as constants. No new dependency, optimizer, artifact field
+or public configuration is added. Native torch.func transforms are not claimed.
+
+A related hard-support fix makes a single supported `logaddexp` branch an
+explicit identity: PyTorch's generic backward can otherwise produce a NaN
+second derivative for one finite and one -inf input. Both-impossible reductions
+retain -inf value and zero derivative. Finite-branch values and first derivatives
+are unchanged.
+
+Decision basis: retain the existing inference and PyTorch tensor primitives;
+adapt PyTorch's supported custom autograd/recomputation mechanism instead of
+adding another HSMM backend or a dense expanded-state matrix scan. The latter
+would materially enlarge arithmetic/storage for the measured K=3,D=8 workload.
+Primary implementation references:
+https://docs.pytorch.org/docs/2.14/notes/extending.html and
+https://docs.pytorch.org/tutorials/intermediate/custom_function_double_backward_tutorial.html.
+Independent raw-parameter probability/gradient tests remain mandatory, together
+with direct full-history VJP comparisons, finite differences, gradcheck,
+gradgradcheck, hard support, ragged resets and same-workload runtime/memory checks.
+
+NumPy log-space primitive reference: https://numpy.org/doc/stable/reference/generated/numpy.logaddexp.html.
+
+Performance checkpoint 2026-10-20: 1,421 canonical/affected integration tests
+passed, three CUDA skips (209.87 s). The paired K=3,F=3,D=8,T=1,440 CPU
+probe takes 0.956 s/update (finite) and 1.117 s/update (tail) in its additional
+ten-update phase. The paired three-update fits are 2.06x/1.66x faster; process
+peak RSS falls by 23.0%/29.4%. Cold startup and longer-phase timings remain
+separate. A 300-update tail fit is not admitted under a 300-second cap by this
+bounded evidence. No market fit/budget reset or inference/artifact schema
+change occurred. See Nautilus docs/nhsmm-hsmm-adjoint-gate.md for exact source,
+probability/gradient tolerances, regression evidence and measurement limits.
