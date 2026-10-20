@@ -474,12 +474,35 @@ class NHSMM(nn.Module):
 
         return supervised_log_likelihood(self, X, states, context=context, reduce=reduce)
 
-    def fit_supervised(self, X, states, *, context=None, steps=200, lr=0.03, context_only=False):
+    def supervised_filter_log_score(self, X, states, *, context=None, reduce=False):
+        """Sum causal prefix state log scores; causal D=1/no-tail HMM only."""
+        from nhsmm.supervised import supervised_filter_log_score
+
+        return supervised_filter_log_score(self, X, states, context=context, reduce=reduce)
+
+    def fit_supervised(
+        self,
+        X,
+        states,
+        *,
+        context=None,
+        steps=200,
+        lr=0.03,
+        context_only=False,
+        objective="observed_joint_causal_prefix",
+    ):
         """Fit known state paths from current parameters, without latent restarts."""
         from nhsmm.supervised import fit_supervised
 
         return fit_supervised(
-            self, X, states, context=context, steps=steps, lr=lr, context_only=context_only
+            self,
+            X,
+            states,
+            context=context,
+            steps=steps,
+            lr=lr,
+            context_only=context_only,
+            objective=objective,
         )
 
     def log_likelihood(

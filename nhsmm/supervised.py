@@ -118,14 +118,61 @@ def supervised_log_likelihood(model, observations, labels, *, context=None, redu
     return values.sum() if reduce else values
 
 
+def supervised_filter_log_score(model, observations, labels, *, context=None, reduce=False):
+    """Sum log P(z_t | x_0:t, causal context), with predicted-state propagation.
+
+    doc:nhsmm.supervised-filter (docs/supervised.md#causal-filtering-objective)
+    This proper per-row classification score is not a joint path likelihood.
+    Initial support is restricted to causal D=1, no-tail HMMs. Every supplied
+    sequence resets. Labels only gather scores; they never enter the recurrence.
+    """
+    from nhsmm.context import ContextRouter
+    from nhsmm.models.forward import _forward_causal_hazard
+
+    if not model.config.causal or model.config.max_duration != 1 or model.config.duration_tail:
+        raise ValueError("filter supervision currently requires a causal D=1 no-tail HMM")
+    data = model._build_sequence_set(observations, context=context)
+    B, T, K = data.log_probs.shape
+    paths = _paths(labels, data.lengths, data.sequences.device, K)
+    if T == 0 or B == 0:
+        values = model.duration_logits_bias.sum() * 0 + data.sequences.new_zeros(B)
+    else:
+        log_p = _forward_causal_hazard(
+            model, data, ContextRouter.from_tensor(data), normalized=True
+        )[..., 0]
+        values = torch.stack(
+            [log_p[b, : len(z)].gather(1, z[:, None]).sum() for b, z in enumerate(paths)]
+        )
+    return values.sum() if reduce else values
+
+
 def fit_supervised(
-    model, observations, labels, *, context=None, steps=200, lr=0.03, context_only=False
+    model,
+    observations,
+    labels,
+    *,
+    context=None,
+    steps=200,
+    lr=0.03,
+    context_only=False,
+    objective="observed_joint_causal_prefix",
 ):
-    """Bounded full-batch Adam on observed joint paths; never calls latent fit.
+    """Bounded full-batch Adam on an explicit supervised score; no latent fit.
 
     Uses current parameters, no hidden restarts, no validation or label matching.
     Returns a separate summary and leaves the latent optimization API untouched.
     """
+    scorers = {
+        "observed_joint_causal_prefix": supervised_log_likelihood,
+        "causal_filter_log_score": supervised_filter_log_score,
+    }
+    if not isinstance(objective, str) or objective not in scorers:
+        raise ValueError("unsupported supervised objective")
+    score_fn = scorers[objective]
+    if objective == "causal_filter_log_score" and (
+        not model.config.causal or model.config.max_duration != 1 or model.config.duration_tail
+    ):
+        raise ValueError("filter supervision currently requires a causal D=1 no-tail HMM")
     if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
         raise ValueError("steps must be a positive integer")
     if isinstance(lr, bool) or not isinstance(lr, (int, float)) or not math.isfinite(lr) or lr <= 0:
@@ -137,7 +184,7 @@ def fit_supervised(
     count = int(data.lengths.sum())
     if count == 0:
         raise ValueError("supervised fitting requires observations")
-    initial = supervised_log_likelihood(model, observations, labels, context=context, reduce=True)
+    initial = score_fn(model, observations, labels, context=context, reduce=True)
     if not bool(torch.isfinite(initial)):
         raise ValueError("supervised path has zero or non-finite probability")
     if not isinstance(context_only, bool):
@@ -164,12 +211,7 @@ def fit_supervised(
     try:
         for _ in range(steps):
             optimizer.zero_grad(set_to_none=True)
-            loss = (
-                -supervised_log_likelihood(
-                    model, observations, labels, context=context, reduce=True
-                )
-                / count
-            )
+            loss = -score_fn(model, observations, labels, context=context, reduce=True) / count
             if not bool(torch.isfinite(loss)):
                 raise FloatingPointError("non-finite supervised loss")
             loss.backward()
@@ -182,13 +224,11 @@ def fit_supervised(
                 model.dist.duration._project_tail_parameter()
         model.eval()
         with torch.no_grad():
-            final = supervised_log_likelihood(
-                model, observations, labels, context=context, reduce=True
-            )
+            final = score_fn(model, observations, labels, context=context, reduce=True)
         if not bool(torch.isfinite(final)):
             raise FloatingPointError("non-finite final supervised score")
         return {
-            "objective": "observed_joint_causal_prefix",
+            "objective": objective,
             "updates": steps,
             "context_only": context_only,
             "rows": count,

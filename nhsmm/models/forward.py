@@ -15,14 +15,53 @@ from nhsmm.filtering import (
 )
 from nhsmm.models.segments import EmissionPrefix
 
+# Bounded specialization for the measured two/three-state filtering-loss workload.
+_SMALL_HMM_SCAN_MAX_STATES = 3
+
+
+def _hmm_prefix_log_posteriors(initial, emission, transition):
+    """Inclusive log-semiring matrix scan, retaining every causal prefix.
+
+    doc:nhsmm.hmm-prefix-scan (docs/supervised.md#small-hmm-gradient-cost)
+    Common matrix scale factors cancel in the final row normalization. Scaling
+    each scan block avoids a large cumulative log-evidence offset. Stable tensor
+    primitives retain exact autograd; no prototype scan API or detached state.
+    Work O(T K^3 log T), graph depth O(log T); restricted to small K by caller.
+    """
+    K = initial.numel()
+    first = (initial + emission[0]).expand(1, K, K)
+    blocks = torch.cat((first, transition + emission[1:, None, :]), dim=0)
+
+    def scale(values):
+        mass = _safe_logsumexp(values, dim=(-2, -1), keepdim=True)
+        if not bool(torch.isfinite(mass).all()):
+            raise ValueError("causal evidence has zero or non-finite probability mass")
+        return values - mass
+
+    blocks = scale(blocks)
+    offset = 1
+    while offset < len(blocks):
+        combined = _safe_logsumexp(
+            blocks[:-offset].unsqueeze(-1) + blocks[offset:].unsqueeze(-3), dim=-2
+        )
+        blocks = torch.cat((blocks[:offset], scale(combined)), dim=0)
+        offset *= 2
+    return torch.log_softmax(blocks[:, 0, :], dim=-1)
+
 
 def _forward_causal_hazard(
     self,
     X: SequenceSet,
     router: ContextRouter,
     temperature: Optional[float] = None,
+    *,
+    normalized: bool = False,
 ) -> torch.Tensor:
     """Unnormalized causal forward recursion over ``(state, episode_age)``.
+
+    Internal normalized=True returns log prefix posteriors for differentiable
+    supervised filtering scores, without adding/subtracting cumulative evidence.
+    The default unnormalized forward contract is unchanged.
 
     Boundary ``t-1 -> t`` uses duration and transition quantities conditioned
     only on ``F_{t-1}``; ``x_t`` enters after propagation through its emission.
@@ -74,6 +113,30 @@ def _forward_causal_hazard(
             f"transition logits must be {expected_transition}, got {transition_logits.shape}"
         )
 
+    if (
+        normalized
+        and D == 1
+        and not self.config.duration_tail
+        and K <= _SMALL_HMM_SCAN_MAX_STATES
+        and bool(torch.isfinite(duration_logits).all())
+    ):
+        matrices = (
+            transition_logits[..., 0, :] if duration_dependent_transition else transition_logits
+        )
+        rows = []
+        for b, length in enumerate(X.lengths.tolist()):
+            padding = router.log_probs.new_full((T - length, K), float("-inf"))
+            if length:
+                posterior = _hmm_prefix_log_posteriors(
+                    initial_logits[b, 0],
+                    router.log_probs[b, :length],
+                    matrices[b, : length - 1],
+                )
+                rows.append(torch.cat((posterior, padding), dim=0).unsqueeze(-1))
+            else:
+                rows.append(padding.unsqueeze(-1))
+        return torch.stack(rows, dim=0)
+
     tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
     tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None
     expanded_tail = None
@@ -111,14 +174,19 @@ def _forward_causal_hazard(
         initial_logits[valid0, 0], emission_steps[0][valid0], D
     )
     frontier[valid0] = normalized_initial
-    cumulative_log_z[valid0] = initial_log_z
+    if not normalized:
+        cumulative_log_z[valid0] = initial_log_z
     initial_active = torch.nonzero(valid0, as_tuple=False).squeeze(-1)
     first_alpha = router.log_probs.new_full((B, K, D), float("-inf"))
     alpha_steps.append(
         first_alpha.index_copy(
             0,
             initial_active,
-            (normalized_initial + initial_log_z[:, None, None]).to(dtype=first_alpha.dtype),
+            (
+                normalized_initial
+                if normalized
+                else normalized_initial + initial_log_z[:, None, None]
+            ).to(dtype=first_alpha.dtype),
         )
     )
 
@@ -133,7 +201,7 @@ def _forward_causal_hazard(
         transition = transition_steps[t - 1].index_select(0, active)
         if not duration_dependent_transition:
             transition = transition.unsqueeze(2)
-        normalized, step_log_z = _causal_filter_step(
+        next_frontier, step_log_z = _causal_filter_step(
             frontier[active],
             emission_steps[t].index_select(0, active),
             log_end_steps[t - 1].index_select(0, active),
@@ -141,8 +209,9 @@ def _forward_causal_hazard(
             transition,
             tail_enabled=tail_end_probability is not None,
         )
-        frontier[active] = normalized
-        cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
+        frontier[active] = next_frontier
+        if not normalized:
+            cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
         # Stack output rows once instead of copying the full history gradient
         # through an indexed table write at every recurrence step.
         alpha_t = router.log_probs.new_full((B, K, D), float("-inf"))
@@ -150,7 +219,11 @@ def _forward_causal_hazard(
             alpha_t.index_copy(
                 0,
                 active,
-                (normalized + cumulative_log_z[active, None, None]).to(dtype=alpha_t.dtype),
+                (
+                    next_frontier
+                    if normalized
+                    else next_frontier + cumulative_log_z[active, None, None]
+                ).to(dtype=alpha_t.dtype),
             )
         )
 

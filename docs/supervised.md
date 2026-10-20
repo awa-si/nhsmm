@@ -67,3 +67,68 @@ Mixed availability is supplied as CausalContext.available. Unavailable rows
 retain their observations and base density/boundary factors; their context heads
 are not evaluated. Context-only fitting requires at least one available row.
 The caller owns the availability information boundary. See the timing contract.
+
+
+## Causal filtering objective
+
+Anchor: `doc:nhsmm.supervised-filter` in `nhsmm/supervised.py`.
+`supervised_filter_log_score(X, states, context=None, reduce=False)` sums
+`log P(z_t | X_0:t, causal context)` per sequence. This is a composite per-row
+classification score, not log probability of the complete label sequence given
+all observations. Each prefix uses model-produced filtering history; no true
+previous label, future row, detached history or terminal exit is introduced.
+Scores remain in log space, so rare events are not silently clipped. Impossible
+labeled events score -inf and fitting rejects them before an update.
+
+`fit_supervised(..., objective="causal_filter_log_score")` minimizes the negative
+sum divided by the number of valid observations using the existing bounded Adam
+loop. The existing `observed_joint_causal_prefix` objective remains the default.
+The new objective currently accepts causal D=1/no-tail HMMs only; HSMM and D+
+models fail explicitly before optimization. Ragged sequences reset independently;
+padding and empty prefixes contribute no score. Causal external E/U routing and
+boolean availability use the existing core forward primitives. Labels only gather
+prefix scores. The artifact/state_dict schema and inference law are unchanged.
+
+Decision: adapt the existing normalized state-age forward kernel and PyTorch
+log-space/autograd operations instead of importing a second model framework or
+creating a parallel inference/optimizer implementation. The internal normalized
+forward option avoids adding and subtracting a large cumulative evidence offset.
+Complexity follows the existing causal forward scan; the graph retains full
+history for exact gradients. No truncated backpropagation is used.
+
+References reviewed: Chen, Chang and Mehta (L4DC/PMLR 331, 2026),
+https://proceedings.mlr.press/v331/chen26c.html, establishes differentiable causal
+HMM filtering with SGD but optimizes next-observation prediction, not this
+supervised prefix-state score. No parameters, architecture or market-performance
+claim are imported from that paper. PyTorch 2.14 logsumexp documentation:
+https://docs.pytorch.org/docs/2.14/generated/torch.logsumexp.html.
+Independent prefix enumeration/gradient tests live in the canonical Nautilus
+model suite. Classification improvements require separate empirical evidence.
+
+
+## Small-HMM gradient cost
+
+Anchor: `doc:nhsmm.hmm-prefix-scan` in `nhsmm/models/forward.py`.
+The initial full-history serial gradient probe (CPU, K=3, F=2, T=1440,
+three updates, one thread) cost 3.614 seconds/update, exceeding the proposed
+300-second candidate budget at 300 updates. The filtering-score path therefore
+uses an inclusive log-semiring matrix-prefix scan for K<=3, D=1, no tail and
+finite singleton duration scores. Each block is rescaled by one common log
+mass; final state normalization cancels this factor, including its derivatives.
+The larger-state or unsupported-score paths retain the serial reference.
+Default forward/inference and the generative objective are unchanged.
+The specialization adds O(T K^3 log T) arithmetic for small dense matrices to
+replace T dependent Python/autograd stages with log(T) tensor stages. It is
+not claimed to be work-optimal or beneficial for large K. Exact zero support
+uses the existing safe logsumexp; impossible prefixes fail rather than clip.
+
+Adapted mathematical approach: Hassan, Sarkka and Garcia-Fernandez (2021),
+Temporal Parallelization of Inference in Hidden Markov Models, IEEE TSP 69,
+4875-4887, doi:10.1109/TSP.2021.3103338, https://arxiv.org/abs/2102.05743.
+This implementation uses established stable tensor primitives rather than the
+PyTorch 2.14 associative_scan prototype, whose documentation warns of missing
+autograd support: https://docs.pytorch.org/docs/2.14/higher_order_ops/associative_scan.html.
+No external implementation is copied. Independent prefix/gradient references
+and direct same-input serial-versus-scan checks are required before market use.
+
+Integrated verification on 2026-10-20: 1,330 tests passed, three CUDA skips (Nautilus canonical model suite plus affected supervised/runner integration bundles). The same 1,440-row three-update CPU probe fell from 10.8417 to 1.4960 seconds; initial/final objective values agree in that probe. This is a bounded same-host result, not a universal performance guarantee.

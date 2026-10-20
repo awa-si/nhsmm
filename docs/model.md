@@ -88,6 +88,10 @@ increment after optimizer.step succeeds. Refinement counts are published only
 after the refinement completes. The summary is not part of inference artifacts
 or state_dict, and changing the returned dictionary cannot mutate model telemetry.
 
+## Supervised prefix-state training
+
+`fit_supervised(..., objective="causal_filter_log_score")` is an explicit HMM-only alternative to the default observed-joint supervised objective. It minimizes causal prefix state classification loss through the model-produced filter history. See [objective, support and small-HMM scan](supervised.md#causal-filtering-objective). Inference and artifact parameter schemas are unchanged.
+
 ## Duration-tail training
 
 The optional D+ tail stores its per-state end hazard directly as a probability. Joint optimization projects this parameter into [EPS, 1] after each optimizer update, before restart scoring and snapshots. This prevents an update beyond the feasible domain from entering the zero-gradient region of the inference clamp. The exact h_tail=1 finite-support boundary and artifact parameter representation are preserved. The inference clamp remains a guard for externally supplied parameters.
