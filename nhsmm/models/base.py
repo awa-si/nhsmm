@@ -475,7 +475,7 @@ class NHSMM(nn.Module):
         return supervised_log_likelihood(self, X, states, context=context, reduce=reduce)
 
     def supervised_filter_log_score(self, X, states, *, context=None, reduce=False):
-        """Sum causal prefix state log scores; causal D=1/no-tail HMM only."""
+        """Sum causal prefix state log scores, marginalizing episode ages and resets."""
         from nhsmm.supervised import supervised_filter_log_score
 
         return supervised_filter_log_score(self, X, states, context=context, reduce=reduce)

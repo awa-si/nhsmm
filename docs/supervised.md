@@ -83,8 +83,14 @@ labeled events score -inf and fitting rejects them before an update.
 `fit_supervised(..., objective="causal_filter_log_score")` minimizes the negative
 sum divided by the number of valid observations using the existing bounded Adam
 loop. The existing `observed_joint_causal_prefix` objective remains the default.
-The new objective currently accepts causal D=1/no-tail HMMs only; HSMM and D+
-models fail explicitly before optimization. Ragged sequences reset independently;
+The filtering objective accepts causal HMMs, finite-duration HSMMs and D+
+models. Noncausal configurations fail explicitly before optimization. For each
+prefix, the normalized state-age frontier is summed over all ages in log space.
+The D+ bucket includes all ages at least D; its continuation mass is retained.
+Self resets are latent events and are marginalized by the forward kernel, so
+state-only filtering supervision permits them. The observed-joint objective
+still requires no self resets for HSMMs because its labelled path must uniquely
+identify episodes. Ragged sequences reset independently;
 padding and empty prefixes contribute no score. Causal external E/U routing and
 boolean availability use the existing core forward primitives. Labels only gather
 prefix scores. The artifact/state_dict schema and inference law are unchanged.
@@ -132,3 +138,43 @@ No external implementation is copied. Independent prefix/gradient references
 and direct same-input serial-versus-scan checks are required before market use.
 
 Integrated verification on 2026-10-20: 1,330 tests passed, three CUDA skips (Nautilus canonical model suite plus affected supervised/runner integration bundles). The same 1,440-row three-update CPU probe fell from 10.8417 to 1.4960 seconds; initial/final objective values agree in that probe. This is a bounded same-host result, not a universal performance guarantee.
+
+## HSMM filtering supervision
+
+The score is
+`sum_t log sum_a P(z_t=label_t, age_t=a | X_0:t, causal context)`.
+Each prefix starts at age one and has an open final episode. No terminal
+exit factor or completed-duration PMF is applied to that episode. The shared
+dynamic-hazard law in [the mathematical contract](hsmm-mathematical-contract.md)
+uses outgoing U_t on boundary t -> t+1; time-varying context does not freeze a
+duration draw at episode start. With no context and a fixed PMF, prefix survival
+agrees with the classical right-censored segment law.
+
+Implementation decision: reuse the existing normalized state-age recursion
+without changing propagation, parameters, artifact schema or optimizer.
+The small-HMM scan remains restricted to its existing D=1/no-tail case.
+HSMM gradients retain the complete serial graph; market-scale performance
+requires measurement before allocating a fit budget.
+
+Primary references reviewed: Yu (2010), Hidden semi-Markov models,
+doi:10.1016/j.artint.2009.11.011,
+https://www.cs.ubc.ca/~murphyk/Teaching/CS540-Spring10/projects/Yu-hsmm09.pdf
+(state-plus-age representation and boundary censoring); Chiappa,
+Explicit-Duration Markov Switching Models, https://arxiv.org/abs/1909.05800
+(explicit-duration representations). These references motivate the state-age
+formulation; they do not establish correctness of this implementation.
+Canonical independent tests enumerate raw-parameter probability products,
+including continuation and reset branches, compare every prefix and gradients,
+and check finite differences, missing context, ragged resets and tail support.
+
+Filtering labels select separate prefix marginals, not a single constrained
+state path: a label sequence with zero observed-joint support can still have
+finite per-row filtering scores. State-only filtering supervision also does
+not guarantee identifiability of duration distributions and self-reset rates.
+
+Verification checkpoint 2026-10-20: the canonical Nautilus model suite and
+affected host regressions pass (1,404 passed, three CUDA-unavailable skips).
+The expanded tests independently enumerate reset/continuation histories from
+raw parameters and compare every prefix frontier, filtering score and gradients.
+See Nautilus docs/nhsmm-hsmm-filter-math-gate.md and its machine evidence for
+source hashes, bounded long-sequence numerics, timing and scope limits.

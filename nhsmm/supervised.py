@@ -12,7 +12,7 @@ from nhsmm.context import context_options
 import torch
 
 from nhsmm.context import BASE_CONTEXT
-from nhsmm.filtering import _duration_log_hazard_from_log_p
+from nhsmm.filtering import _duration_log_hazard_from_log_p, _safe_logsumexp
 
 
 def _paths(labels, lengths, device, n_states):
@@ -123,23 +123,25 @@ def supervised_filter_log_score(model, observations, labels, *, context=None, re
 
     doc:nhsmm.supervised-filter (docs/supervised.md#causal-filtering-objective)
     This proper per-row classification score is not a joint path likelihood.
-    Initial support is restricted to causal D=1, no-tail HMMs. Every supplied
-    sequence resets. Labels only gather scores; they never enter the recurrence.
+    Ages and unobserved episode resets are marginalized, including D+ tails.
+    Every supplied sequence resets. Labels only gather scores; they never enter
+    the recurrence, so self resets need not be identified by state labels.
     """
     from nhsmm.context import ContextRouter
     from nhsmm.models.forward import _forward_causal_hazard
 
-    if not model.config.causal or model.config.max_duration != 1 or model.config.duration_tail:
-        raise ValueError("filter supervision currently requires a causal D=1 no-tail HMM")
+    if not model.config.causal:
+        raise ValueError("filter supervision requires a causal model")
     data = model._build_sequence_set(observations, context=context)
     B, T, K = data.log_probs.shape
     paths = _paths(labels, data.lengths, data.sequences.device, K)
     if T == 0 or B == 0:
         values = model.duration_logits_bias.sum() * 0 + data.sequences.new_zeros(B)
     else:
-        log_p = _forward_causal_hazard(
-            model, data, ContextRouter.from_tensor(data), normalized=True
-        )[..., 0]
+        log_p = _safe_logsumexp(
+            _forward_causal_hazard(model, data, ContextRouter.from_tensor(data), normalized=True),
+            dim=-1,
+        )
         values = torch.stack(
             [log_p[b, : len(z)].gather(1, z[:, None]).sum() for b, z in enumerate(paths)]
         )
@@ -169,10 +171,8 @@ def fit_supervised(
     if not isinstance(objective, str) or objective not in scorers:
         raise ValueError("unsupported supervised objective")
     score_fn = scorers[objective]
-    if objective == "causal_filter_log_score" and (
-        not model.config.causal or model.config.max_duration != 1 or model.config.duration_tail
-    ):
-        raise ValueError("filter supervision currently requires a causal D=1 no-tail HMM")
+    if objective == "causal_filter_log_score" and not model.config.causal:
+        raise ValueError("filter supervision requires a causal model")
     if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
         raise ValueError("steps must be a positive integer")
     if isinstance(lr, bool) or not isinstance(lr, (int, float)) or not math.isfinite(lr) or lr <= 0:
