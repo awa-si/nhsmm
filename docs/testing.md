@@ -69,3 +69,13 @@ model plus tuning/auditor suite passed 1517 with three CUDA skips. The prior
 source reproduced a NaN-gradient Adam update corrupting emission locations.
 The initial reproduction test used a nonexistent parameter name; corrected
 mu injection established the actual failure. Ruff and Black passed.
+
+The canonical test_supervised_setup.py injects Adam-construction and mode-switch
+failures in training/eval and base/context-only modes. It verifies unchanged
+weights and restored trainability, including parameters frozen by the caller,
+and retains coverage of the no-trainable-parameters cleanup path.
+
+2026-10-21 setup-restoration gate: 28 focused checks passed; full model plus
+affected native ML-stack bundle passed 1566 with three CUDA skips. The first
+regression reproduces incorrect frozen base flags after Adam setup failure
+on core 371e19c. No defaults, supervised scores or training budgets changed.

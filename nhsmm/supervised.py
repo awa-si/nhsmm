@@ -197,26 +197,28 @@ def fit_supervised(
     if context_only and (context is None or context is BASE_CONTEXT):
         raise ValueError("context_only fitting requires active external context")
     before_flags = {name: p.requires_grad for name, p in model.named_parameters()}
-    if context_only:
-        for name, p in model.named_parameters():
-            p.requires_grad_(
-                before_flags[name]
-                and (".context_net." in name or "._proj." in name or name.endswith(".delta_scale"))
-            )
-    parameters = [p for p in model.parameters() if p.requires_grad]
-    if not parameters:
-        for name, p in model.named_parameters():
-            p.requires_grad_(before_flags[name])
-        raise ValueError("no trainable parameters for supervised fitting")
-    optimizer = torch.optim.Adam(
-        parameters,
-        lr=lr,
-        betas=(model.config.adam_beta1, model.config.adam_beta2),
-        eps=model.config.adam_eps,
-    )
     before_mode = model.training
-    model.train()
     try:
+        if context_only:
+            for name, p in model.named_parameters():
+                p.requires_grad_(
+                    before_flags[name]
+                    and (
+                        ".context_net." in name
+                        or "._proj." in name
+                        or name.endswith(".delta_scale")
+                    )
+                )
+        parameters = [p for p in model.parameters() if p.requires_grad]
+        if not parameters:
+            raise ValueError("no trainable parameters for supervised fitting")
+        optimizer = torch.optim.Adam(
+            parameters,
+            lr=lr,
+            betas=(model.config.adam_beta1, model.config.adam_beta2),
+            eps=model.config.adam_eps,
+        )
+        model.train()
         for _ in range(steps):
             optimizer.zero_grad(set_to_none=True)
             loss = -score_fn(model, observations, labels, context=context, reduce=True) / count

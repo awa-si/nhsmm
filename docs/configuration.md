@@ -252,3 +252,12 @@ publish no completed optimization summary. A failure does not automatically
 roll back earlier successful updates or restart initialization. Final-score
 failures may occur after updates; callers must discard failed fit results.
 No retry, replacement loss or numerical threshold tuning is introduced.
+
+### Supervised setup failures
+
+The supervised cleanup boundary covers context-only trainability restrictions,
+selection of trainable parameters, Adam construction and switching into training
+mode. If any of those setup operations fails, original trainability flags and
+the caller training/eval mode are restored. The no-trainable-parameters case
+uses the same cleanup path. Numerical checks and the supervised objective,
+updates, learning rate and returned summary remain unchanged.
