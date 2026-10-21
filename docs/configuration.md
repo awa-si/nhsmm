@@ -204,3 +204,18 @@ adapter.qlib.nhsmm_research.config_tuning uses scikit-learn ParameterGrid,
 native RD-Agent, Qlib and MLflow. The host docs/nhsmm-config-tuning report
 records the frozen protocol and observed result. Synthetic calibration does
 not establish an optimal trading configuration.
+
+### Per-call optimization configuration
+
+An alternate `optimize(cfg=...)` may change latent optimization budgets,
+learning rate, Adam/clipping, temperature schedule, convergence/scheduler
+settings, transition refinement and emission initialization mode.
+The actual annealed objective and its history use the same supplied steepness;
+transition refinement uses the supplied Adam and clipping settings too.
+
+All remaining fields must match the model configuration. In particular, encoder,
+distribution, initializer magnitude/KMeans settings, seed, padding and
+supervised-only settings cannot be changed through this latent optimizer call.
+Construct a model with those settings instead. Unsupported changes fail before
+updates; they are never silently ignored. Per-call training overrides do not
+replace the model construction configuration saved in inference artifacts.

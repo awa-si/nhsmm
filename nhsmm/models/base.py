@@ -290,32 +290,41 @@ class NHSMM(nn.Module):
             )
 
     def _validate_optimization_config(self, cfg: ModelConfig) -> None:
-        structural_fields = (
-            "n_states",
-            "n_features",
-            "max_duration",
-            "duration_tail",
-            "causal",
-            "context_dim",
-            "hidden_dim",
-            "transition_type",
-            "allow_self_transitions",
-            "emission_type",
-            "activation",
-            "use_context_encoder",
-            "context_pool_scale",
-            "context_pool_layer_norm",
-            "context_attention_init_std",
-            "context_hidden_min",
-            "context_delta_scale",
-            "context_max_delta",
-            "transition_context_max_delta",
-            "context_layer_norm_eps",
-            "context_allow_projection",
-            "context_final_activation",
-            "context_xavier_gain",
-            "leaky_relu_slope",
-        )
+        # Only fields consumed by this optimization may differ. Component,
+        # initializer, encoder and supervised-only settings belong to construction.
+        runtime_fields = {
+            "n_init",
+            "lr",
+            "tol",
+            "max_iter",
+            "optimizer_temperature_mode",
+            "optimizer_target_temperature",
+            "optimizer_initialization",
+            "optimizer_batch_size",
+            "transition_refine_steps",
+            "transition_refine_lr",
+            "loss_bias",
+            "plateau_window",
+            "plateau_tol",
+            "use_scheduler",
+            "convergence_stop",
+            "convergence_mode",
+            "verbose",
+            "emission_init_mode",
+            "adam_beta1",
+            "adam_beta2",
+            "adam_eps",
+            "grad_clip_norm",
+            "scheduler_factor",
+            "scheduler_min_patience",
+            "temperature_min_ratio",
+            "temperature_steepness",
+            "convergence_patience",
+            "convergence_patience_scale",
+            "convergence_auto_patience",
+            "convergence_patience_max",
+        }
+        structural_fields = sorted(set(self.config.to_dict()) - runtime_fields)
         mismatches = [
             name for name in structural_fields if getattr(cfg, name) != getattr(self.config, name)
         ]
@@ -837,12 +846,18 @@ class NHSMM(nn.Module):
         max_iter: int = default_value("max_iter"),
         t_min: float = default_value("temperature_min_ratio"),
         t_max: float = default_value("optimizer_target_temperature"),
+        temperature_steepness: Optional[float] = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
         self._require_generative_context(context)
         seq_set = self._build_sequence_set(X, context=context)
+        steepness = (
+            self.config.temperature_steepness
+            if temperature_steepness is None
+            else temperature_steepness
+        )
         temperature = t_min + (t_max - t_min) / (
-            1 + math.exp((self.config.temperature_steepness / max_iter) * (it - max_iter / 2))
+            1 + math.exp((steepness / max_iter) * (it - max_iter / 2))
         )
         log_likelihoods = observation_log_likelihood(self, seq_set, temperature)
 
@@ -866,6 +881,7 @@ class NHSMM(nn.Module):
         *,
         steps: int,
         lr: float,
+        cfg: Optional[ModelConfig] = None,
     ) -> float:
         """Refine transition context modulation against exact sequence likelihood."""
         if steps <= 0:
@@ -879,6 +895,7 @@ class NHSMM(nn.Module):
             if context.available is not None and not bool(context.available.any()):
                 raise ValueError("transition refinement requires available context rows")
 
+        cfg = self.config if cfg is None else cfg
         transition = self.dist.transition
         transition_params = [
             *[p for p in transition.context_net.parameters() if p.requires_grad],
@@ -898,8 +915,8 @@ class NHSMM(nn.Module):
             optimizer = torch.optim.Adam(
                 transition_params,
                 lr=lr,
-                betas=(self.config.adam_beta1, self.config.adam_beta2),
-                eps=self.config.adam_eps,
+                betas=(cfg.adam_beta1, cfg.adam_beta2),
+                eps=cfg.adam_eps,
             )
             for step in range(steps):
                 optimizer.zero_grad()
@@ -913,7 +930,7 @@ class NHSMM(nn.Module):
                     t_max=1.0,
                 )
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(transition_params, self.config.grad_clip_norm)
+                torch.nn.utils.clip_grad_norm_(transition_params, cfg.grad_clip_norm)
                 optimizer.step()
 
             with torch.no_grad():

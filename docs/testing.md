@@ -41,3 +41,13 @@ The canonical test_forecast_precision.py module checks rare finite/D+ end and st
 ## Central tunable verification
 
 The canonical test_central_tunables.py checks invalid/valid overrides, actual probability laws, context/encoder propagation, Adam/scheduler/patience settings, supervised precedence and current/legacy artifact predictions. Host test_nhsmm_config_tuning.py checks the bounded search policy, grid, split separation, request guards and native Qlib/MLflow recording.
+
+Alternate optimization-config regressions verify the actual annealing temperatures,
+main/refinement Adam and clipping settings, and rejection of ignored construction
+or supervised-only overrides before any parameter update.
+
+2026-10-21 optimizer-config verification: 125 focused tests passed. The full
+model plus tuning/auditor run passed 1474 tests with three CUDA skips; one
+metadata setup error was resolved by exporting the original pyproject.toml.
+That unchanged test passed separately (1475 distinct passes total). No model
+code changed between those runs; Ruff and Black passed for the complete core.

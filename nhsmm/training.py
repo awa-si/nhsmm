@@ -136,6 +136,7 @@ def optimize_model(
                     max_iter=cfg.max_iter,
                     t_min=minimum,
                     t_max=target,
+                    temperature_steepness=cfg.temperature_steepness,
                 )
                 target_ll = model._target_training_score(
                     X, context, target, cfg.optimizer_batch_size
@@ -201,6 +202,7 @@ def optimize_model(
                 context,
                 steps=cfg.transition_refine_steps,
                 lr=cfg.transition_refine_lr,
+                cfg=cfg,
             )
 
         model._optimization_summary = {
