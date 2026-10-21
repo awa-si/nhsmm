@@ -6,7 +6,12 @@ from typing import Iterable, Optional, Union
 
 import torch
 
-from nhsmm.filtering import HSMMFilterState, duration_log_hazard, _require_reachable_hazards
+from nhsmm.filtering import (
+    HSMMFilterState,
+    duration_log_hazard,
+    _require_reachable_hazards,
+    _safe_logsumexp,
+)
 
 HorizonInput = Union[int, torch.Tensor, Iterable[int]]
 
@@ -147,6 +152,7 @@ def active_episode_survival_forecast(
     _require_reachable_hazards(posterior, log_end, log_continue)
 
     survival_by_horizon = []
+    end_by_horizon = []
     for horizon_tensor_value in horizon_tensor:
         horizon = int(horizon_tensor_value.item())
         component_log_survival = posterior.new_full((B, K, D), float("-inf"))
@@ -174,14 +180,19 @@ def active_episode_survival_forecast(
                     total = total + tail_steps * log_continue[..., -1]
                 component_log_survival[..., age_index] = total
 
-        log_survival = torch.logsumexp(
+        log_survival = _safe_logsumexp(
             posterior + component_log_survival,
             dim=(1, 2),
         )
         survival_by_horizon.append(log_survival.exp())
+        # Complement each conditional survival before averaging. Subtracting
+        # the marginal survival from one loses rare end events, particularly
+        # when posterior normalization itself rounds at machine precision.
+        component_end = -torch.expm1(component_log_survival.clamp_max(0.0))
+        end_by_horizon.append((posterior.exp() * component_end).sum(dim=(1, 2)))
 
     survival = torch.stack(survival_by_horizon, dim=1).clamp(0.0, 1.0)
-    end_within = (1.0 - survival).clamp(0.0, 1.0)
+    end_within = torch.stack(end_by_horizon, dim=1).clamp(0.0, 1.0)
 
     if survival.shape[1] > 1:
         tolerance = 1e-6

@@ -34,3 +34,5 @@ ML_STACK_TESTS_READ_TOKEN with read-only access to awa-si/nautilus. The default
 core-repository token cannot authorize that checkout. Jobs fail closed before
 checkout if the secret is absent. Secret provisioning and hosted execution
 are not verified by local migration checks. Never commit the token value.
+
+The canonical test_forecast_precision.py module checks rare finite/D+ end and state-change risks against 80-digit Decimal references in Float32/Float64, hard-support forecast gradients against independent probability formulas, geometric first/second derivatives, result identities, and separate duration/transition target learning.

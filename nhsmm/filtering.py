@@ -277,6 +277,14 @@ def _duration_log_hazard_from_log_p(
     if D > 1:
         valid_continue = valid_survival[..., :-1] & torch.isfinite(rev_cumsum[..., 1:])
         continue_values = safe_survival[..., 1:] - safe_survival[..., :-1]
+        # A suffix ratio close to one loses small end risks by subtraction.
+        # Use log1p on the smaller hazard; guard the unused branch away from
+        # log1p(-1) so exact hard support retains finite backward derivatives.
+        small_end = log_end[..., :-1] < -0.6931471805599453
+        safe_log_end = torch.where(
+            small_end, log_end[..., :-1], torch.full_like(continue_values, -1.0)
+        )
+        continue_values = torch.where(small_end, torch.log1p(-safe_log_end.exp()), continue_values)
         log_continue[..., :-1] = torch.where(
             valid_continue,
             continue_values,
@@ -299,11 +307,14 @@ def _duration_log_hazard_from_log_p(
         if bool(((tail_end_probability <= 0) | (tail_end_probability > 1)).any()):
             raise ValueError("tail_end_probability must satisfy 0 < h <= 1")
         tail_log_end = tail_end_probability.log().unsqueeze(-1)
-        tail_continue = 1.0 - tail_end_probability
+        interior = tail_end_probability < 1
+        safe_tail = torch.where(
+            interior, tail_end_probability, torch.zeros_like(tail_end_probability)
+        )
         tail_log_continue = torch.where(
-            tail_continue > 0,
-            tail_continue.clamp_min(torch.finfo(log_p.dtype).tiny).log(),
-            torch.full_like(tail_continue, float("-inf")),
+            interior,
+            torch.log1p(-safe_tail),
+            torch.full_like(safe_tail, float("-inf")),
         ).unsqueeze(-1)
         log_end = torch.cat((log_end[..., :-1], tail_log_end), dim=-1)
         log_continue = torch.cat((log_continue[..., :-1], tail_log_continue), dim=-1)

@@ -208,3 +208,30 @@ Gate 0 is therefore **complete** and Gate 1 is unblocked.
 ## External information sets
 
 For CausalContext(emission=E, boundary=U), emission x_t and the initial prior at t=0 use E_t and E_0 respectively; outgoing duration/transition factors use U_t. The t-1 -> t propagation uses U_(t-1). This remains a dynamic-hazard model. The caller must construct E_t before observing x_t. Plain Tensor contexts retain the shared row semantics. See [the timing contract](causal-external-context.md).
+
+## Numerical duration and transition forecasts
+
+The causal factorization and artifact parameter schema are unchanged.
+Continuation hazards near one use `log1p(-h_end)` instead of subtracting nearly
+equal log survival scores; the other branch retains the suffix ratio. D+ uses
+`log1p(-h_tail)` for interior hazards and exact negative infinity at
+`h_tail=1`. Unused singular branches are guarded before evaluation.
+
+For frozen current context, let `L(k,a,h)` be the sum of continuation log
+hazards over the next h boundaries. Forecasts evaluate the episode-end CDF as
+
+```text
+P(end within h | F_t)
+    = sum_(k,a) posterior(k,a) * [-expm1(L(k,a,h))].
+```
+
+The complement is evaluated per component before posterior averaging. This
+retains small representable end risks even when marginal survival rounds to
+one. State-change probability is the sum of off-diagonal boundary joint mass,
+rather than episode-end probability minus self-reset mass. Self-resets still
+end the current episode and reset age without changing state.
+
+Forecast reductions preserve hard-zero support without all-negative-infinity
+backward NaNs. The transition result validates its off-diagonal state-change
+identity. These numerical changes do not create support for impossible paths,
+nor do they eliminate ordinary floating-point underflow.

@@ -10,6 +10,7 @@ from nhsmm.filtering import (
     _require_compatible,
     duration_log_hazard,
     _require_reachable_hazards,
+    _safe_logsumexp,
 )
 
 
@@ -104,6 +105,14 @@ class HSMMTransitionForecast:
             raise ValueError("next_state_prior must be normalized")
         if (change > end + atol).any():
             raise ValueError("state_change_probability cannot exceed episode_end_probability")
+        off_diagonal = ~torch.eye(K, dtype=torch.bool, device=joint.device)
+        if not torch.allclose(
+            change,
+            joint.masked_fill(~off_diagonal, 0.0).sum(dim=(1, 2)),
+            atol=atol,
+            rtol=0.0,
+        ):
+            raise ValueError("state_change_probability must equal off-diagonal boundary mass")
 
 
 def _normalize_transition(log_transition: torch.Tensor) -> torch.Tensor:
@@ -165,7 +174,7 @@ def one_step_transition_forecast(
 
     # Joint boundary mass for source state -> destination state, marginalized over age.
     log_boundary_by_age = posterior + log_end
-    log_boundary_joint = torch.logsumexp(
+    log_boundary_joint = _safe_logsumexp(
         log_boundary_by_age.unsqueeze(-1) + log_transition,
         dim=2,
     )  # [B,K_src,K_dst]
@@ -175,12 +184,14 @@ def one_step_transition_forecast(
     episode_end = next_episode_joint.sum(dim=-1)
 
     # Continuations retain the current state; boundaries may move to any next state.
-    log_continue_state = torch.logsumexp(posterior + log_continue, dim=-1)  # [B,K]
+    log_continue_state = _safe_logsumexp(posterior + log_continue, dim=-1)  # [B,K]
     continuation_state = log_continue_state.exp()
     next_state_prior = continuation_state + next_episode_joint
 
-    diagonal_boundary = boundary_joint.diagonal(dim1=-2, dim2=-1).sum(dim=-1)
-    state_change = episode_end - diagonal_boundary
+    # Sum the event itself: subtracting almost equal end/self masses can
+    # erase a representable rare state-change probability.
+    off_diagonal = ~torch.eye(K, dtype=torch.bool, device=posterior.device)
+    state_change = boundary_joint.masked_fill(~off_diagonal, 0.0).sum(dim=(1, 2))
 
     eps = _probability_tolerance(posterior)
     if not torch.allclose(

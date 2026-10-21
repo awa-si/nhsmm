@@ -369,6 +369,8 @@ See [validation.md](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/n
 
 ## Distribution numerical boundaries
 
+Duration continuation hazards and survival CDFs retain small representable end risks using log1p/expm1. State-change forecasts sum off-diagonal boundary mass directly. Forecast reductions preserve exact support with finite backward derivatives on impossible branches. See [the numerical forecast contract](hsmm-mathematical-contract.md#numerical-duration-and-transition-forecasts).
+
 Continuous Gaussian/Student-t locations are finite real values, not categorical logits; no categorical score cap is applied to them. Independent Student-t parameters are broadcast before statistics and event reductions. Categorical labels broadcast across sample/batch dimensions; exact zero probabilities retain finite gradients for observed positive-probability classes.
 
 Initial, duration and transition hard masks use exact negative infinity. Categorical logit construction accepts partial impossible support but rejects NaN, positive infinity and rows with no finite mass. Safe survival and sum reductions preserve impossible mass without undefined all-impossible backward paths. An impossible observed event can still have negative-infinite likelihood; numerical safety does not make it possible.
