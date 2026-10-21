@@ -219,3 +219,19 @@ supervised-only settings cannot be changed through this latent optimizer call.
 Construct a model with those settings instead. Unsupported changes fail before
 updates; they are never silently ignored. Per-call training overrides do not
 replace the model construction configuration saved in inference artifacts.
+
+### Numerical temperature limits
+
+The latent objective and history share one logistic schedule calculation.
+Constant temperatures bypass the exponential. Large positive exponents use the
+equivalent reciprocal-exponential expression, avoiding overflow without changing
+ordinary-range arithmetic. No temperature floor is silently added.
+
+The final (smallest) update temperature is checked before model state changes.
+For example, the product of a positive subnormal minimum ratio and a small
+target can underflow to zero; with extreme steepness,
+that unrepresentable schedule is rejected before initialization or updates.
+This is a numerical validity check, not a change to the default schedule.
+
+Formula reference: [SciPy expit](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.expit.html).
+The scalar implementation uses the standard library and adds no dependency.

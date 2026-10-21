@@ -51,3 +51,12 @@ model plus tuning/auditor run passed 1474 tests with three CUDA skips; one
 metadata setup error was resolved by exporting the original pyproject.toml.
 That unchanged test passed separately (1475 distinct passes total). No model
 code changed between those runs; Ruff and Black passed for the complete core.
+
+Temperature-boundary verification (2026-10-21): test_temperature_numerics.py
+adds 24 cases, including 100-digit Decimal schedule references, bit-exact
+ordinary arithmetic, actual extreme annealed/constant training temperatures,
+and rejection of an underflowing positive ratio/target combination before
+model mutation. The complete model plus tuning/auditor suite passed 1499 tests
+with three CUDA skips. Initial focused testing exposed an invalid zero-ratio
+test setup; it was corrected to a valid underflowing configuration, without
+changing configuration bounds. Corrected focused run: 39 passed.

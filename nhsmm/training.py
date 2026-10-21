@@ -15,6 +15,30 @@ if TYPE_CHECKING:
     from nhsmm.models.base import NHSMM
 
 
+def _scheduled_temperature(it, max_iter, t_min, t_max, steepness):
+    """Evaluate the logistic schedule without an overflowing exponential.
+
+    Preserve ordinary-range arithmetic. For positive overflowing exponents,
+    multiply numerator and denominator by exp(-exponent). Constant schedules
+    bypass the exponential entirely. A zero/invalid result is not a valid
+    probabilistic temperature; do not silently clamp it.
+    """
+    if max_iter <= 0:
+        raise ValueError("temperature schedule requires max_iter > 0")
+    if t_min == t_max:
+        temperature = t_max
+    else:
+        exponent = (steepness / max_iter) * (it - max_iter / 2)
+        try:
+            temperature = t_min + (t_max - t_min) / (1 + math.exp(exponent))
+        except OverflowError:
+            tail = math.exp(-exponent)
+            temperature = t_min + (t_max - t_min) * tail / (1 + tail)
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise ValueError("temperature schedule must remain finite and strictly positive")
+    return temperature
+
+
 def optimize_model(
     model: NHSMM,
     X: torch.Tensor | list[torch.Tensor],
@@ -34,6 +58,20 @@ def optimize_model(
     cfg.__post_init__()
     model._require_generative_context(context)
     model._validate_optimization_config(cfg)
+    minimum = (
+        cfg.optimizer_target_temperature
+        if cfg.optimizer_temperature_mode == "constant"
+        else cfg.temperature_min_ratio * cfg.optimizer_target_temperature
+    )
+    # The validated positive-steepness schedule decreases monotonically.
+    # Check its final update before changing model state or restarting weights.
+    _scheduled_temperature(
+        cfg.max_iter - 1,
+        cfg.max_iter,
+        minimum,
+        cfg.optimizer_target_temperature,
+        cfg.temperature_steepness,
+    )
     if cfg.transition_refine_steps > 0 and (context is None or context is BASE_CONTEXT):
         raise ValueError("transition_refine_steps > 0 requires explicit external context")
     model._optimization_summary = None
@@ -147,13 +185,8 @@ def optimize_model(
                         "scheduled_ll": float(ll.detach()),
                         "target_ll": float(target_ll.detach()),
                         "target_temperature": target,
-                        "scheduled_temperature": minimum
-                        + (target - minimum)
-                        / (
-                            1
-                            + math.exp(
-                                (cfg.temperature_steepness / cfg.max_iter) * (it - cfg.max_iter / 2)
-                            )
+                        "scheduled_temperature": _scheduled_temperature(
+                            it, cfg.max_iter, minimum, target, cfg.temperature_steepness
                         ),
                     }
                 )

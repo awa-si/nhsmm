@@ -2,7 +2,6 @@ from __future__ import annotations
 from dataclasses import replace
 from copy import deepcopy
 from typing import Optional, List, Tuple, Any, Literal, Dict, Union
-import math
 
 import torch
 import torch.nn as nn
@@ -12,7 +11,7 @@ from torch.nn.utils.rnn import pad_sequence
 from nhsmm.models import forward as forward_impl
 from nhsmm.models import decoding as decoding_impl
 from nhsmm.models.objective import observation_log_likelihood
-from nhsmm.training import optimize_model
+from nhsmm.training import optimize_model, _scheduled_temperature
 from nhsmm.encoder import DefaultEncoder
 from nhsmm.context import (
     BASE_CONTEXT,
@@ -856,9 +855,7 @@ class NHSMM(nn.Module):
             if temperature_steepness is None
             else temperature_steepness
         )
-        temperature = t_min + (t_max - t_min) / (
-            1 + math.exp((steepness / max_iter) * (it - max_iter / 2))
-        )
+        temperature = _scheduled_temperature(it, max_iter, t_min, t_max, steepness)
         log_likelihoods = observation_log_likelihood(self, seq_set, temperature)
 
         ll = log_likelihoods.sum()
