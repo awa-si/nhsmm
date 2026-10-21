@@ -60,3 +60,12 @@ model mutation. The complete model plus tuning/auditor suite passed 1499 tests
 with three CUDA skips. Initial focused testing exposed an invalid zero-ratio
 test setup; it was corrected to a valid underflowing configuration, without
 changing configuration bounds. Corrected focused run: 39 passed.
+
+Training-finiteness verification (2026-10-21): 18 new injected-failure cases
+check objective/score finiteness, NaN/Inf gradients, total-norm overflow from
+finite elements, mode/trainability restoration and absence of successful
+completion telemetry. The focused training bundle passed 57 tests; the full
+model plus tuning/auditor suite passed 1517 with three CUDA skips. The prior
+source reproduced a NaN-gradient Adam update corrupting emission locations.
+The initial reproduction test used a nonexistent parameter name; corrected
+mu injection established the actual failure. Ruff and Black passed.

@@ -176,9 +176,13 @@ def optimize_model(
                     t_max=target,
                     temperature_steepness=cfg.temperature_steepness,
                 )
+                if not bool(torch.isfinite(ll)) or not bool(torch.isfinite(loss)):
+                    raise FloatingPointError("non-finite accumulated training objective")
                 target_ll = model._target_training_score(
                     X, context, target, cfg.optimizer_batch_size
                 )
+                if not bool(torch.isfinite(target_ll)):
+                    raise FloatingPointError("non-finite training target score")
                 history.append(
                     {
                         "completed_updates": it,
@@ -190,7 +194,7 @@ def optimize_model(
                         ),
                     }
                 )
-                torch.nn.utils.clip_grad_norm_(params, cfg.grad_clip_norm)
+                torch.nn.utils.clip_grad_norm_(params, cfg.grad_clip_norm, error_if_nonfinite=True)
                 model._optimizer.step()
                 completed_updates[run_idx] += 1
                 project_tail = getattr(model.dist.duration, "_project_tail_parameter", None)
@@ -219,6 +223,8 @@ def optimize_model(
             final_ll = model._target_training_score(
                 X, context, cfg.optimizer_target_temperature, cfg.optimizer_batch_size
             )
+            if not bool(torch.isfinite(final_ll)):
+                raise FloatingPointError("non-finite final training score")
             final_ll_val = float(final_ll.item())
             model._restart_scores.append(final_ll_val)
 

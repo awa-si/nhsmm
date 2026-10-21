@@ -917,7 +917,7 @@ class NHSMM(nn.Module):
             )
             for step in range(steps):
                 optimizer.zero_grad()
-                _, loss = self._compute_loss(
+                ll, loss = self._compute_loss(
                     X,
                     context=context,
                     loss_bias=0.0,
@@ -926,8 +926,12 @@ class NHSMM(nn.Module):
                     t_min=1.0,
                     t_max=1.0,
                 )
+                if not bool(torch.isfinite(ll)) or not bool(torch.isfinite(loss)):
+                    raise FloatingPointError("non-finite transition refinement objective")
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(transition_params, cfg.grad_clip_norm)
+                torch.nn.utils.clip_grad_norm_(
+                    transition_params, cfg.grad_clip_norm, error_if_nonfinite=True
+                )
                 optimizer.step()
 
             with torch.no_grad():
@@ -940,6 +944,8 @@ class NHSMM(nn.Module):
                     t_min=1.0,
                     t_max=1.0,
                 )
+            if not bool(torch.isfinite(ll)):
+                raise FloatingPointError("non-finite final transition refinement score")
             return float(ll.item())
         finally:
             for parameter in self.parameters():
@@ -981,6 +987,8 @@ class NHSMM(nn.Module):
         for index, (chunk, ctx) in enumerate(self._optimization_chunks(X, context, batch_size)):
             options = {**kwargs, "loss_bias": kwargs["loss_bias"] if index == 0 else 0.0}
             ll, loss = self._compute_loss(chunk, context=ctx, **options)
+            if not bool(torch.isfinite(ll)) or not bool(torch.isfinite(loss)):
+                raise FloatingPointError("non-finite training chunk objective")
             if loss.requires_grad:
                 loss.backward()
             total_ll = total_ll + ll.detach()

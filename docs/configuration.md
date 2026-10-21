@@ -235,3 +235,20 @@ This is a numerical validity check, not a change to the default schedule.
 
 Formula reference: [SciPy expit](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.expit.html).
 The scalar implementation uses the standard library and adds no dependency.
+
+### Nonfinite training failures
+
+Latent training rejects nonfinite chunk and accumulated objectives, monitoring
+scores and final restart scores. Transition refinement checks its objectives
+and final score too. Whenever clipping is enabled, the native PyTorch
+[error_if_nonfinite](https://docs.pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
+guard rejects nonfinite total gradient norms before Adam steps, including norm
+overflow from individually finite gradients. Supervised elementwise gradient
+checks remain active even with clipping disabled.
+
+These failures raise immediately. Training/eval mode is restored; refinement
+and supervised fitting also restore trainability flags. Failed latent attempts
+publish no completed optimization summary. A failure does not automatically
+roll back earlier successful updates or restart initialization. Final-score
+failures may occur after updates; callers must discard failed fit results.
+No retry, replacement loss or numerical threshold tuning is introduced.

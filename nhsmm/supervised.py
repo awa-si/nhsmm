@@ -228,7 +228,9 @@ def fit_supervised(
             ):
                 raise FloatingPointError("non-finite supervised gradient")
             if model.config.supervised_grad_clip_norm is not None:
-                torch.nn.utils.clip_grad_norm_(parameters, model.config.supervised_grad_clip_norm)
+                torch.nn.utils.clip_grad_norm_(
+                    parameters, model.config.supervised_grad_clip_norm, error_if_nonfinite=True
+                )
             optimizer.step()
             if not context_only and model.dist.duration.tail_end_probability is not None:
                 model.dist.duration._project_tail_parameter()
