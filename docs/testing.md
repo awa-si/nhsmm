@@ -126,3 +126,13 @@ research publication and input/configuration/retained-replay audit bundle:
 1673 passed, three CUDA skips. Complete core Ruff and Black pass.
 No model default or artifact-schema change, new market fit or reserved test
 score. Evidence: Nautilus docs/nhsmm-streaming-verification.json.
+
+
+## Viterbi common-offset gate
+
+The host test_viterbi_numerics.py verifies MAP decisions under large shared
+Gaussian density offsets, dynamic finite/D+ raw-weight path enumeration,
+ragged empty/single-row inputs and 1440-row weak-preference causal HMMs.
+Existing exhaustive decoder tests retain exact ties and hard support.
+See [the numerical contract](model.md#viterbi-common-offset-stability)
+for offset cancellation, noncausal endpoint limits and rounding boundaries.

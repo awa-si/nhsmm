@@ -10,6 +10,12 @@ from nhsmm.filtering import duration_log_hazard, _require_reachable_hazards
 from nhsmm.models.segments import EmissionPrefix
 
 
+def _relative_log_scores(scores: torch.Tensor, dim) -> torch.Tensor:
+    """Remove a shared finite offset without changing support or argmax."""
+    peak = scores.amax(dim=dim, keepdim=True)
+    return scores - torch.where(torch.isfinite(peak), peak, torch.zeros_like(peak))
+
+
 def _viterbi_terminal_index(score: torch.Tensor) -> int:
     value, index = score.reshape(-1).max(dim=0)
     if not torch.isfinite(value):
@@ -80,7 +86,9 @@ def _viterbi_causal_hazard(
         score = router.log_probs.new_full((L, K, D), float("-inf"))
         prev_state = torch.full((L, K, D), -1, dtype=torch.long, device=score.device)
         prev_age = torch.full((L, K, D), -1, dtype=torch.long, device=score.device)
-        score[0, :, 0] = initial_logits + router.log_probs[b, 0]
+        emission = _relative_log_scores(router.log_probs[b, :L], dim=-1)
+        score[0, :, 0] = initial_logits + emission[0]
+        score[0] = _relative_log_scores(score[0], dim=(0, 1))
 
         state_indices = torch.arange(K, device=score.device).view(K, 1)
         age_indices = torch.arange(max(D - 1, 0), device=score.device).view(1, -1)
@@ -90,16 +98,14 @@ def _viterbi_causal_hazard(
             _require_reachable_hazards(score[t - 1], log_end[t - 1], log_continue[t - 1])
             if D > 1:
                 continuation = score[t - 1, :, :-1] + log_continue[t - 1, :, :-1]
-                score[t, :, 1:] = continuation + router.log_probs[b, t].unsqueeze(-1)
+                score[t, :, 1:] = continuation + emission[t].unsqueeze(-1)
                 prev_state[t, :, 1:] = state_indices.expand(K, D - 1)
                 prev_age[t, :, 1:] = age_indices.expand(K, D - 1)
 
             # The final age bucket represents D+ with an enabled tail.
             # Compete with the incoming D-1 continuation for its MAP path.
             if tail_end_probability is not None:
-                tail_score = (
-                    score[t - 1, :, -1] + log_continue[t - 1, :, -1] + router.log_probs[b, t]
-                )
+                tail_score = score[t - 1, :, -1] + log_continue[t - 1, :, -1] + emission[t]
                 target_age = D - 1
                 use_tail = tail_score > score[t, :, target_age]
                 score[t, :, target_age] = torch.where(use_tail, tail_score, score[t, :, target_age])
@@ -127,7 +133,7 @@ def _viterbi_causal_hazard(
                 boundary_score, boundary_prev_state = candidates.max(dim=0)
                 boundary_prev_age = boundary_age[boundary_prev_state]
 
-            boundary_score = boundary_score + router.log_probs[b, t]
+            boundary_score = boundary_score + emission[t]
             if D == 1 and tail_end_probability is not None:
                 use_boundary = boundary_score > score[t, :, 0]
                 score[t, :, 0] = torch.maximum(score[t, :, 0], boundary_score)
@@ -139,6 +145,10 @@ def _viterbi_causal_hazard(
                 score[t, :, 0] = boundary_score
                 prev_state[t, :, 0] = boundary_prev_state
                 prev_age[t, :, 0] = boundary_prev_age
+
+            # All candidates at a causal frontier have the same prefix length.
+            # A common shift can therefore be discarded at every timestep.
+            score[t] = _relative_log_scores(score[t], dim=(0, 1))
 
         flat_index = self._viterbi_terminal_index(score[L - 1])
         state = flat_index // D
@@ -219,7 +229,7 @@ def _viterbi_noncausal_tail(
             ),
         )[0]
 
-        emit_log = router.log_probs[b, :L]
+        emit_log = _relative_log_scores(router.log_probs[b, :L], dim=-1)
         emission_prefix = EmissionPrefix.build(emit_log, dim=0)
 
         if duration_dependent_transition:
@@ -433,7 +443,7 @@ def _viterbi(
             ),
         )[0]
 
-        emit_log = router.log_probs[b, :L]
+        emit_log = _relative_log_scores(router.log_probs[b, :L], dim=-1)
         emission_prefix = EmissionPrefix.build(emit_log, dim=0)
 
         if duration_dependent_transition:

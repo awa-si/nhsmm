@@ -499,3 +499,36 @@ https://docs.pytorch.org/docs/2.14/generated/torch.autograd.grad_mode.inference_
 and https://docs.pytorch.org/docs/2.14/generated/torch.is_inference.html.
 These document the version-counter limitation; tests establish this package's
 cache and streaming behavior.
+
+
+## Viterbi common-offset stability
+
+MAP decoding removes the finite maximum emission log density at each row
+before combining emissions with initial, duration or transition factors.
+Every complete path contains one emission per row, so this subtracts the
+same sum from every candidate and preserves its mathematical MAP ranking.
+Impossible rows remain all negative infinity and still reject at termination.
+
+The causal decoder also removes the finite maximum of each state/age frontier.
+Every candidate at that frontier spans the same observation prefix, so this
+shared shift preserves backpointers while preventing accumulated offsets from
+erasing weak state preferences. Completed-segment decoders only center
+emissions; independently centering their different prefix endpoints would
+require tracking relative endpoint offsets and is deliberately not done.
+
+No model distribution, evidence, supervised objective, parameter dtype or
+artifact schema changes. This correction cannot recover state differences
+already rounded away in caller-provided emission tensors. Exact ties remain
+valid MAP ties; no public lexicographic tie ordering is promised.
+
+The canonical test_viterbi_numerics gate in the Nautilus host includes real
+identical Gaussian densities at large finite observations, dynamic finite/D+
+raw-weight path enumeration under exactly representable common offsets,
+ragged empty/single-row inputs, and 1440-row weak-preference HMM paths.
+See the host verification report for exact source hashes and test results.
+
+Reference: Rabiner (1989), A Tutorial on Hidden Markov Models and Selected
+Applications in Speech Recognition, DOI https://doi.org/10.1109/5.18626,
+describes log-domain Viterbi. The common-offset cancellation above is the
+algebraic justification for this package's additional precision guard, rather
+than a claim that the reference guarantees arbitrary floating-point precision.
