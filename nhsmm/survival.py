@@ -5,6 +5,7 @@ from numbers import Integral
 from typing import Iterable, Optional, Union
 
 import torch
+from nhsmm.config import PROBABILITY_ATOL
 
 from nhsmm.filtering import (
     HSMMFilterState,
@@ -75,8 +76,8 @@ class HSMMSurvivalForecast:
         if not torch.allclose(
             survival + end_within,
             torch.ones_like(survival),
-            atol=1e-6,
-            rtol=1e-6,
+            atol=PROBABILITY_ATOL,
+            rtol=PROBABILITY_ATOL,
         ):
             raise ValueError("survival and end-within probabilities must be complementary")
 
@@ -195,7 +196,7 @@ def active_episode_survival_forecast(
     end_within = torch.stack(end_by_horizon, dim=1).clamp(0.0, 1.0)
 
     if survival.shape[1] > 1:
-        tolerance = 1e-6
+        tolerance = PROBABILITY_ATOL
         if (survival[:, 1:] > survival[:, :-1] + tolerance).any():
             raise ValueError("survival probability must be non-increasing with horizon")
         if (end_within[:, 1:] + tolerance < end_within[:, :-1]).any():

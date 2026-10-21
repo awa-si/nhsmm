@@ -12,6 +12,8 @@ import torch.nn as nn
 import torch.nn.functional as nnF
 from torch.nn.utils.rnn import pad_sequence
 
+from nhsmm.config import default_value, CONTEXT_ENCODER_DROPOUT, ATTENTION_MASK_LOGIT
+
 
 class ContextPolicy(Enum):
     """Explicit context bypass, independent of internal/external encoder mode."""
@@ -557,10 +559,12 @@ class ContextEncoder(nn.Module):
     def __init__(
         self,
         encoder: nn.Module,
-        n_heads: int = 4,
-        dropout: float = 0.0,
-        layer_norm: bool = True,
-        context_scale: float = 1.0,
+        n_heads: int = default_value("n_heads"),
+        dropout: float = CONTEXT_ENCODER_DROPOUT,
+        layer_norm: bool = default_value("context_pool_layer_norm"),
+        context_scale: float = default_value("context_pool_scale"),
+        attention_init_std: float = default_value("context_attention_init_std"),
+        layer_norm_eps: float = default_value("context_layer_norm_eps"),
         pool: Literal["mean", "last", "max", "attn", "mha"] = "mean",
     ):
         super().__init__()
@@ -569,6 +573,8 @@ class ContextEncoder(nn.Module):
         self.encoder = encoder
         self.layer_norm = layer_norm
         self.context_scale = context_scale
+        self.attention_init_std = attention_init_std
+        self.layer_norm_eps = layer_norm_eps
         self.dropout_layer = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
         self._context: Optional[torch.Tensor] = None
         self._sequence: Optional[torch.Tensor] = None
@@ -606,7 +612,7 @@ class ContextEncoder(nn.Module):
         self._sequence = context.detach()
         pooled, attn = self._pool_context(context, mask, return_attn_weights)
         if self.layer_norm:
-            pooled = nnF.layer_norm(pooled, (pooled.shape[-1],))
+            pooled = nnF.layer_norm(pooled, (pooled.shape[-1],), eps=self.layer_norm_eps)
         pooled = self.dropout_layer(torch.tanh(pooled * self.context_scale))
         canonical = pooled.unsqueeze(1)
         self._context = canonical.detach()
@@ -690,7 +696,9 @@ class ContextEncoder(nn.Module):
 
     def _init_attn_vector(self, H: int, *, device: torch.device, dtype: torch.dtype):
         if self._attn_vector is None:
-            self._attn_vector = nn.Parameter(torch.randn(H, device=device, dtype=dtype) * 0.1)
+            self._attn_vector = nn.Parameter(
+                torch.randn(H, device=device, dtype=dtype) * self.attention_init_std
+            )
             self.register_parameter("_attn_vector", self._attn_vector)
         elif self._attn_vector.shape != (H,):
             raise ValueError(
@@ -702,7 +710,7 @@ class ContextEncoder(nn.Module):
         self._init_attn_vector(H, device=context.device, dtype=context.dtype)
         scores = context @ self._attn_vector
         if mask is not None:
-            scores = scores.masked_fill(~mask, -1e9)
+            scores = scores.masked_fill(~mask, ATTENTION_MASK_LOGIT)
         attn_w = nnF.softmax(scores, dim=1).unsqueeze(-1)
         pooled = (attn_w * context).sum(dim=1)
         return pooled, attn_w if ret_attn else None

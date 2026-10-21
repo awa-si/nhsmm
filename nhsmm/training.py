@@ -64,7 +64,10 @@ def optimize_model(
             mode=cfg.convergence_mode,
             plateau_tol=cfg.plateau_tol,
             plateau_window=cfg.plateau_window,
-            patience=max(1, cfg.plateau_window // 2),
+            patience=cfg.convergence_patience or max(1, cfg.plateau_window // 2),
+            patience_max=cfg.convergence_patience_max,
+            patience_scale=cfg.convergence_patience_scale,
+            auto_patience=cfg.convergence_auto_patience,
             verbose=cfg.verbose,
         )
 
@@ -101,13 +104,15 @@ def optimize_model(
             if not params:
                 raise RuntimeError("NHSMM has no trainable parameters")
 
-            model._optimizer = torch.optim.Adam(params, lr=cfg.lr)
+            model._optimizer = torch.optim.Adam(
+                params, lr=cfg.lr, betas=(cfg.adam_beta1, cfg.adam_beta2), eps=cfg.adam_eps
+            )
             if cfg.use_scheduler:
                 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                     model._optimizer,
                     mode="max",
-                    factor=0.5,
-                    patience=max(2, cfg.plateau_window // 2),
+                    factor=cfg.scheduler_factor,
+                    patience=max(cfg.scheduler_min_patience, cfg.plateau_window // 2),
                 )
                 model._convergence.attach_scheduler(scheduler)
 
@@ -117,7 +122,11 @@ def optimize_model(
             for it in range(cfg.max_iter):
                 model._optimizer.zero_grad()
                 target = cfg.optimizer_target_temperature
-                minimum = target if cfg.optimizer_temperature_mode == "constant" else 0.3 * target
+                minimum = (
+                    target
+                    if cfg.optimizer_temperature_mode == "constant"
+                    else cfg.temperature_min_ratio * target
+                )
                 ll, loss = model._backward_training_loss(
                     X,
                     context=context,
@@ -139,10 +148,15 @@ def optimize_model(
                         "target_temperature": target,
                         "scheduled_temperature": minimum
                         + (target - minimum)
-                        / (1 + math.exp((10 / cfg.max_iter) * (it - cfg.max_iter / 2))),
+                        / (
+                            1
+                            + math.exp(
+                                (cfg.temperature_steepness / cfg.max_iter) * (it - cfg.max_iter / 2)
+                            )
+                        ),
                     }
                 )
-                torch.nn.utils.clip_grad_norm_(params, 5.0)
+                torch.nn.utils.clip_grad_norm_(params, cfg.grad_clip_norm)
                 model._optimizer.step()
                 completed_updates[run_idx] += 1
                 project_tail = getattr(model.dist.duration, "_project_tail_parameter", None)

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, Union
 
 from nhsmm.context import context_options
+from nhsmm.config import FILTER_NORMALIZATION_ATOL, FILTER_NORMALIZATION_ULPS, LOG_HALF
 
 import torch
 
@@ -33,7 +34,9 @@ class HSMMFilterState:
         log_z = _safe_logsumexp(value.flatten(1), dim=1)
         if not torch.isfinite(log_z).all():
             raise ValueError("log_posterior must contain finite probability mass per batch item")
-        tolerance = max(1e-12, 8 * torch.finfo(value.dtype).eps)
+        tolerance = max(
+            FILTER_NORMALIZATION_ATOL, FILTER_NORMALIZATION_ULPS * torch.finfo(value.dtype).eps
+        )
         if not torch.allclose(log_z, torch.zeros_like(log_z), atol=tolerance, rtol=0.0):
             raise ValueError("log_posterior must be normalized per batch item")
 
@@ -280,7 +283,7 @@ def _duration_log_hazard_from_log_p(
         # A suffix ratio close to one loses small end risks by subtraction.
         # Use log1p on the smaller hazard; guard the unused branch away from
         # log1p(-1) so exact hard support retains finite backward derivatives.
-        small_end = log_end[..., :-1] < -0.6931471805599453
+        small_end = log_end[..., :-1] < LOG_HALF
         safe_log_end = torch.where(
             small_end, log_end[..., :-1], torch.full_like(continue_values, -1.0)
         )

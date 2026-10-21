@@ -24,7 +24,7 @@ from nhsmm.context import (
     _align_model_context,
 )
 from nhsmm.distributions import Initial, Duration, Transition, Emission
-from nhsmm.config import DTYPE, logger, ModelConfig
+from nhsmm.config import DTYPE, logger, ModelConfig, default_value
 
 
 class DistributionSet(nn.Module):
@@ -49,7 +49,7 @@ class DistributionSet(nn.Module):
             "emission": emission,
         }
         distribution_hidden_dim = max(
-            16,
+            self.config.context_hidden_min,
             self.config.hidden_dim or 0,
             self.config.context_dim or 0,
         )
@@ -59,6 +59,7 @@ class DistributionSet(nn.Module):
             n_states=self.config.n_states,
             init_mode=self.config.initial_init_mode,
             activation=self.config.activation,
+            config=self.config,
         )
         self.duration = duration(
             hidden_dim=distribution_hidden_dim,
@@ -67,6 +68,7 @@ class DistributionSet(nn.Module):
             max_duration=self.config.max_duration,
             init_mode=self.config.duration_init_mode,
             activation=self.config.activation,
+            config=self.config,
             tail_enabled=self.config.duration_tail,
             tail_init_probability=self.config.duration_tail_init_probability,
         )
@@ -79,6 +81,7 @@ class DistributionSet(nn.Module):
             init_mode=self.config.transition_init_mode,
             max_duration=self.config.max_duration,
             activation=self.config.activation,
+            config=self.config,
         )
         if not self.config.allow_self_transitions:
             diagonal = torch.eye(
@@ -97,12 +100,13 @@ class DistributionSet(nn.Module):
             emission_type=self.config.emission_type,
             init_mode=self.config.emission_init_mode,
             activation=self.config.activation,
+            config=self.config,
         )
 
     def initialize(
         self,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> Dict[str, Any]:
         return {
             "initial": self.initial.initialize(context=context, jitter=jitter),
@@ -164,7 +168,13 @@ class NHSMM(nn.Module):
 
         if encoder is None:
             if self.config.context_dim is None:
-                encoder_hidden_dim = max(32, min(64, self.config.n_features * 2))
+                encoder_hidden_dim = max(
+                    self.config.encoder_hidden_min,
+                    min(
+                        self.config.encoder_hidden_max,
+                        self.config.n_features * self.config.encoder_hidden_multiplier,
+                    ),
+                )
             else:
                 directions = 1 if self.config.causal else 2
                 if self.config.context_dim % directions != 0:
@@ -181,6 +191,7 @@ class NHSMM(nn.Module):
                 bidirectional=not self.config.causal,
                 causal=self.config.causal,
                 dropout=self.config.dropout,
+                layer_norm_eps=self.config.context_layer_norm_eps,
             )
         elif self.config.causal:
             raw_encoder = encoder.encoder if isinstance(encoder, ContextEncoder) else encoder
@@ -195,6 +206,10 @@ class NHSMM(nn.Module):
             else ContextEncoder(
                 encoder=encoder,
                 pool=self.config.pool,
+                context_scale=self.config.context_pool_scale,
+                layer_norm=self.config.context_pool_layer_norm,
+                attention_init_std=self.config.context_attention_init_std,
+                layer_norm_eps=self.config.context_layer_norm_eps,
                 n_heads=self.config.n_heads,
                 dropout=self.config.dropout,
             )
@@ -243,7 +258,7 @@ class NHSMM(nn.Module):
     def initialize_distributions(
         self,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
         dist: Optional[type[DistributionSet]] = None,
     ) -> None:
         if dist is not None:
@@ -288,6 +303,18 @@ class NHSMM(nn.Module):
             "emission_type",
             "activation",
             "use_context_encoder",
+            "context_pool_scale",
+            "context_pool_layer_norm",
+            "context_attention_init_std",
+            "context_hidden_min",
+            "context_delta_scale",
+            "context_max_delta",
+            "transition_context_max_delta",
+            "context_layer_norm_eps",
+            "context_allow_projection",
+            "context_final_activation",
+            "context_xavier_gain",
+            "leaky_relu_slope",
         )
         mismatches = [
             name for name in structural_fields if getattr(cfg, name) != getattr(self.config, name)
@@ -486,8 +513,8 @@ class NHSMM(nn.Module):
         states,
         *,
         context=None,
-        steps=200,
-        lr=0.03,
+        steps=None,
+        lr=None,
         context_only=False,
         objective="observed_joint_causal_prefix",
     ):
@@ -647,7 +674,12 @@ class NHSMM(nn.Module):
 
     @staticmethod
     def _kmeans_centers(
-        observations: torch.Tensor, n_states: int, n_iter: int = 20
+        observations: torch.Tensor,
+        n_states: int,
+        n_iter: int = default_value("kmeans_max_iter"),
+        *,
+        atol: float = default_value("kmeans_atol"),
+        rtol: float = default_value("kmeans_rtol"),
     ) -> torch.Tensor:
         """Return K-Means++/Lloyd centers for training-time emission initialization."""
         if observations.ndim != 2:
@@ -683,7 +715,7 @@ class NHSMM(nn.Module):
                     x[members].mean(dim=0) if bool(members.any()) else x[nearest.argmax()]
                 )
             candidate = torch.stack(updated)
-            if torch.allclose(candidate, current, atol=1e-5, rtol=1e-5):
+            if torch.allclose(candidate, current, atol=atol, rtol=rtol):
                 return candidate
             current = candidate
         return current
@@ -696,7 +728,13 @@ class NHSMM(nn.Module):
         observations = observations.to(
             device=self.duration_logits_bias.device, dtype=self.duration_logits_bias.dtype
         )
-        centers = self._kmeans_centers(observations, self.config.n_states)
+        centers = self._kmeans_centers(
+            observations,
+            self.config.n_states,
+            self.config.kmeans_max_iter,
+            atol=self.config.kmeans_atol,
+            rtol=self.config.kmeans_rtol,
+        )
         if emission.emission_type == "gaussian":
             emission.mu.copy_(centers)
             if cluster_variance:
@@ -712,7 +750,9 @@ class NHSMM(nn.Module):
                         for state in range(self.config.n_states)
                     ]
                 )
-                target_variance = variances.clamp(min=0.05, max=5.0)
+                target_variance = variances.clamp(
+                    min=self.config.cluster_variance_min, max=self.config.cluster_variance_max
+                )
                 # Gaussian variance is softplus(log_var), not exp(log_var).
                 inverse_softplus = target_variance + torch.log(-torch.expm1(-target_variance))
                 emission.log_var.copy_(inverse_softplus)
@@ -720,8 +760,8 @@ class NHSMM(nn.Module):
                 emission.log_var.zero_()
         else:
             emission.loc.copy_(centers)
-            emission.scale_param.fill_(1.0)
-            emission.dof.clamp_(min=2.1)
+            emission.scale_param.fill_(self.config.studentt_kmeans_raw_scale)
+            emission.dof.clamp_(min=self.config.studentt_raw_dof_floor)
 
     def _initialize_run_state(
         self,
@@ -792,17 +832,17 @@ class NHSMM(nn.Module):
         self,
         X: Union[torch.Tensor, List[torch.Tensor]],
         context: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
-        loss_bias: float = 1e-3,
+        loss_bias: float = default_value("loss_bias"),
         it: int = 0,
-        max_iter: int = 20,
-        t_min: float = 0.3,
-        t_max: float = 1.0,
+        max_iter: int = default_value("max_iter"),
+        t_min: float = default_value("temperature_min_ratio"),
+        t_max: float = default_value("optimizer_target_temperature"),
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
         self._require_generative_context(context)
         seq_set = self._build_sequence_set(X, context=context)
         temperature = t_min + (t_max - t_min) / (
-            1 + math.exp((10 / max_iter) * (it - max_iter / 2))
+            1 + math.exp((self.config.temperature_steepness / max_iter) * (it - max_iter / 2))
         )
         log_likelihoods = observation_log_likelihood(self, seq_set, temperature)
 
@@ -855,7 +895,12 @@ class NHSMM(nn.Module):
             for parameter in self.parameters():
                 parameter.requires_grad_(id(parameter) in transition_ids)
             self.eval()
-            optimizer = torch.optim.Adam(transition_params, lr=lr)
+            optimizer = torch.optim.Adam(
+                transition_params,
+                lr=lr,
+                betas=(self.config.adam_beta1, self.config.adam_beta2),
+                eps=self.config.adam_eps,
+            )
             for step in range(steps):
                 optimizer.zero_grad()
                 _, loss = self._compute_loss(
@@ -868,7 +913,7 @@ class NHSMM(nn.Module):
                     t_max=1.0,
                 )
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(transition_params, 5.0)
+                torch.nn.utils.clip_grad_norm_(transition_params, self.config.grad_clip_norm)
                 optimizer.step()
 
             with torch.no_grad():

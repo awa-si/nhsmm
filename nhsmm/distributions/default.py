@@ -8,7 +8,15 @@ import torch.nn as nn
 import torch.nn.functional as nnF
 from torch.distributions import Distribution, MultivariateNormal, StudentT
 
-from nhsmm.config import EPS, MIN_LOGITS, MAX_LOGITS
+from nhsmm.config import (
+    EPS,
+    MIN_LOGITS,
+    MAX_LOGITS,
+    ModelConfig,
+    default_value,
+    STANDALONE_CONTEXT_HIDDEN_RATIO,
+    TRANSITION_INITIAL_ROW_OFFSET,
+)
 
 
 class Categorical(Distribution):
@@ -240,9 +248,10 @@ class Neural(nn.Module, ABC):
         final_activation: str = "tanh",
         context_dim: Optional[int] = None,
         hidden_dim: Optional[int] = None,
-        allow_projection: bool = True,
-        delta_scale: float = 0.1,
-        max_delta: float = 0.5,
+        allow_projection: Optional[bool] = None,
+        delta_scale: Optional[float] = None,
+        max_delta: Optional[float] = None,
+        config: Optional[ModelConfig] = None,
     ):
         super().__init__()
 
@@ -253,22 +262,33 @@ class Neural(nn.Module, ABC):
         if int(math.prod(self._shape)) != target_dim:
             raise ValueError("target_dim != prod(_shape)")
 
-        self.max_delta = max_delta
+        self.settings = config or ModelConfig(n_states=1, n_features=1)
+        if delta_scale is None:
+            delta_scale = self.settings.context_delta_scale
+        self.max_delta = self.settings.context_max_delta if max_delta is None else max_delta
         self.target_dim = target_dim
         self.context_dim = context_dim
 
+        if allow_projection is None:
+            allow_projection = self.settings.context_allow_projection
         self.activation_fn = self._get_activation(activation)
-        self.final_activation_fn = self._get_activation(final_activation)
+        self.final_activation_fn = self._get_activation(
+            self.settings.context_final_activation if config is not None else final_activation
+        )
         self._proj = (
             nn.Linear(context_dim, context_dim)
             if allow_projection and context_dim is not None
             else None
         )
-        hidden_dim = hidden_dim or max(16, target_dim // 2, context_dim or target_dim)
+        hidden_dim = hidden_dim or max(
+            self.settings.context_hidden_min,
+            int(target_dim * STANDALONE_CONTEXT_HIDDEN_RATIO),
+            context_dim or target_dim,
+        )
         self.context_net = (
             nn.Sequential(
                 nn.Linear(context_dim, hidden_dim),
-                nn.LayerNorm(hidden_dim),
+                nn.LayerNorm(hidden_dim, eps=self.settings.context_layer_norm_eps),
                 self._get_activation(activation),
                 nn.Linear(hidden_dim, target_dim),
             )
@@ -298,7 +318,7 @@ class Neural(nn.Module, ABC):
             "gelu": nn.GELU,
             "softplus": nn.Softplus,
             "identity": nn.Identity,
-            "leaky_relu": lambda: nn.LeakyReLU(0.01),
+            "leaky_relu": lambda: nn.LeakyReLU(self.settings.leaky_relu_slope),
         }
         key = mode.lower()
         try:
@@ -315,7 +335,7 @@ class Neural(nn.Module, ABC):
             return
         for m in module.modules():
             if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
+                nn.init.xavier_uniform_(m.weight, gain=self.settings.context_xavier_gain)
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
@@ -552,9 +572,10 @@ class Initial(Neural):
         n_states: int,
         activation: str,
         init_mode: str = "normal",
-        allow_projection: bool = True,
+        allow_projection: Optional[bool] = None,
         hidden_dim: Optional[int] = None,
         context_dim: Optional[int] = None,
+        config: Optional[ModelConfig] = None,
     ):
         self._shape = (n_states,)
         super().__init__(
@@ -564,6 +585,7 @@ class Initial(Neural):
             allow_projection=allow_projection,
             final_activation="tanh",
             activation=activation,
+            config=config,
         )
         self.n_states = n_states
         self.init_mode = init_mode
@@ -574,16 +596,19 @@ class Initial(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> torch.Tensor:
+        jitter = self.settings.init_jitter if jitter is None else jitter
         mode = mode or self.init_mode
         if mode == "uniform":
             logits = torch.full(self._shape, -math.log(self.n_states))
         elif mode == "biased":
-            w = torch.linspace(0.8, 0.2, self.n_states)
+            w = torch.linspace(
+                self.settings.initial_bias_start, self.settings.initial_bias_end, self.n_states
+            )
             logits = torch.log(w / w.sum())
         elif mode == "normal":
-            logits = torch.randn(self._shape) * 0.1
+            logits = torch.randn(self._shape) * self.settings.logits_init_std
         else:
             raise ValueError(f"Unknown init_mode '{mode}'")
         if context is not None and self.context_net is not None:
@@ -598,7 +623,7 @@ class Initial(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> Distribution:
         self.logits.copy_(self._init_params(mode, None, jitter))
         return self._get_dist(context=context)
@@ -641,13 +666,14 @@ class Duration(Neural):
         self,
         n_states: int,
         activation: str,
-        max_duration: int = 30,
+        max_duration: int = default_value("max_duration"),
         init_mode: str = "normal",
-        allow_projection: bool = True,
+        allow_projection: Optional[bool] = None,
         hidden_dim: Optional[int] = None,
         context_dim: Optional[int] = None,
         tail_enabled: bool = False,
-        tail_init_probability: float = 0.5,
+        tail_init_probability: float = default_value("duration_tail_init_probability"),
+        config: Optional[ModelConfig] = None,
     ):
         if max_duration < 1:
             raise ValueError("max_duration must be >= 1")
@@ -663,6 +689,7 @@ class Duration(Neural):
             final_activation="tanh",
             hidden_dim=hidden_dim,
             activation=activation,
+            config=config,
         )
         self.n_states = n_states
         self.init_mode = init_mode
@@ -681,17 +708,26 @@ class Duration(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> torch.Tensor:
+        jitter = self.settings.init_jitter if jitter is None else jitter
         mode = mode or self.init_mode
         if mode == "uniform":
             logits = torch.full(self._shape, -math.log(self.max_duration))
         elif mode == "biased":
-            w = torch.linspace(0.7, 0.3, self.max_duration).unsqueeze(0).expand(self.n_states, -1)
+            w = (
+                torch.linspace(
+                    self.settings.duration_bias_start,
+                    self.settings.duration_bias_end,
+                    self.max_duration,
+                )
+                .unsqueeze(0)
+                .expand(self.n_states, -1)
+            )
             logits = (w / w.sum(dim=1, keepdim=True)).clamp_min(EPS).log()
         elif mode == "normal":
-            logits = torch.randn(*self._shape) * 0.1 - (
-                torch.arange(self.max_duration) * 0.05
+            logits = torch.randn(*self._shape) * self.settings.logits_init_std - (
+                torch.arange(self.max_duration) * self.settings.duration_init_decay
             ).unsqueeze(0)
         else:
             raise ValueError(f"Unknown init_mode '{mode}'")
@@ -708,7 +744,7 @@ class Duration(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> Distribution:
         self.logits.copy_(self._init_params(mode, None, jitter))
         return self._get_dist(context=context)
@@ -815,10 +851,11 @@ class Transition(Neural):
         activation: str,
         transition_type: str,
         init_mode: str = "normal",
-        allow_projection: bool = True,
+        allow_projection: Optional[bool] = None,
         hidden_dim: Optional[int] = None,
         context_dim: Optional[int] = None,
         max_duration: Optional[int] = None,
+        config: Optional[ModelConfig] = None,
     ):
         if max_duration is not None and max_duration < 1:
             raise ValueError("max_duration must be >= 1 when provided")
@@ -833,6 +870,7 @@ class Transition(Neural):
             hidden_dim=hidden_dim,
             final_activation="tanh",
             activation=activation,
+            config=config,
         )
         self.n_states = n_states
         self.init_mode = init_mode
@@ -878,28 +916,29 @@ class Transition(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> torch.Tensor:
+        jitter = self.settings.init_jitter if jitter is None else jitter
         mode = mode or self.init_mode
         D, K, shape = self.max_duration, self.n_states, self._shape
         if mode == "uniform":
             logits = torch.full(shape, -math.log(K))
         elif mode == "biased":
             if D is None:
-                m = torch.full((K, K), 0.1)
-                m.fill_diagonal_(0.7)
+                m = torch.full((K, K), self.settings.transition_bias_off_diagonal)
+                m.fill_diagonal_(self.settings.transition_bias_diagonal)
                 m /= m.sum(dim=-1, keepdim=True)
                 logits = m.log()
             else:
-                m = torch.full(shape, 0.1)
+                m = torch.full(shape, self.settings.transition_bias_off_diagonal)
                 for k in range(K):
-                    m[k, :, k] = 0.7
+                    m[k, :, k] = self.settings.transition_bias_diagonal
                     m[k] /= m[k].sum(dim=-1, keepdim=True)
                 logits = m.log()
         elif mode == "normal":
-            logits = torch.randn(*shape) * 0.1
+            logits = torch.randn(*shape) * self.settings.logits_init_std
             if D is not None:
-                logits = logits - (torch.arange(D) * 0.05).view(1, D, 1)
+                logits = logits - (torch.arange(D) * TRANSITION_INITIAL_ROW_OFFSET).view(1, D, 1)
         else:
             raise ValueError(f"Unknown init_mode '{mode}'")
         if context is not None and self.context_net is not None:
@@ -915,7 +954,7 @@ class Transition(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> Distribution:
         self.logits.copy_(self._init_params(mode, None, jitter))
         return self._get_dist(context=context)
@@ -963,11 +1002,12 @@ class Emission(Neural):
         n_features: int,
         activation: str,
         emission_type: str,
-        min_covar: float = 1e-6,
+        min_covar: float = default_value("min_covar"),
         init_mode: str = "spread",
-        allow_projection: bool = True,
+        allow_projection: Optional[bool] = None,
         context_dim: Optional[int] = None,
         hidden_dim: Optional[int] = None,
+        config: Optional[ModelConfig] = None,
     ):
         self._shape = (n_states, n_features)
         if emission_type == "gaussian":
@@ -982,6 +1022,7 @@ class Emission(Neural):
             context_dim=context_dim,
             hidden_dim=hidden_dim,
             activation=activation,
+            config=config,
         )
         # Emissions use mu/loc as their base parameters. The inherited logits
         # and temperature parameters remain in the state dict for artifact
@@ -994,12 +1035,20 @@ class Emission(Neural):
         self.n_features = n_features
         self.emission_type = emission_type
         if self.emission_type == "gaussian":
-            self.mu = nn.Parameter(torch.randn(self.n_states, self.n_features) * 0.1)
-            self.log_var = nn.Parameter(torch.full((self.n_states, self.n_features), -1.0))
+            self.mu = nn.Parameter(
+                torch.randn(self.n_states, self.n_features) * self.settings.emission_init_std
+            )
+            self.log_var = nn.Parameter(
+                torch.full((self.n_states, self.n_features), self.settings.emission_raw_log_var)
+            )
         else:
-            self.dof = nn.Parameter(torch.full((n_states,), 5.0))
-            self.loc = nn.Parameter(torch.randn(self.n_states, self.n_features) * 0.1)
-            self.scale_param = nn.Parameter(torch.full((self.n_states, self.n_features), 0.1))
+            self.dof = nn.Parameter(torch.full((n_states,), self.settings.studentt_raw_dof))
+            self.loc = nn.Parameter(
+                torch.randn(self.n_states, self.n_features) * self.settings.emission_init_std
+            )
+            self.scale_param = nn.Parameter(
+                torch.full((self.n_states, self.n_features), self.settings.studentt_raw_scale)
+            )
 
     def _validate_base(self, base: torch.Tensor) -> torch.Tensor:
         # Continuous locations are not categorical scores. Finite observations
@@ -1016,24 +1065,33 @@ class Emission(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> torch.Tensor:
+        jitter = self.settings.init_jitter if jitter is None else jitter
         mode = mode or self.init_mode
         reference = self.mu if self.emission_type == "gaussian" else self.loc
         device, dtype = reference.device, reference.dtype
         if mode == "random":
             init_mean = (
-                torch.randn(self.n_states, self.n_features, device=device, dtype=dtype) * 0.1
+                torch.randn(self.n_states, self.n_features, device=device, dtype=dtype)
+                * self.settings.emission_init_std
             )
         elif mode == "spread":
-            linspace = torch.linspace(-1.0, 1.0, steps=self.n_states, device=device, dtype=dtype)
+            linspace = torch.linspace(
+                -self.settings.emission_spread_extent,
+                self.settings.emission_spread_extent,
+                steps=self.n_states,
+                device=device,
+                dtype=dtype,
+            )
             perm_idx = torch.stack(
                 [torch.randperm(self.n_states, device=device) for _ in range(self.n_features)],
                 dim=0,
             )
             init_mean = (
                 linspace[perm_idx].T
-                + torch.randn(self.n_states, self.n_features, device=device, dtype=dtype) * 0.05
+                + torch.randn(self.n_states, self.n_features, device=device, dtype=dtype)
+                * self.settings.emission_spread_noise
             )
         else:
             raise ValueError(f"Unsupported mode: {mode}")
@@ -1043,10 +1101,10 @@ class Emission(Neural):
             init_mean = init_mean + delta
             if self.emission_type == "studentt":
                 with torch.no_grad():
-                    self.dof.clamp_(min=2.1)
+                    self.dof.clamp_(min=self.settings.studentt_raw_dof_floor)
         init_var = torch.full(
             (self.n_states, self.n_features),
-            1.0,
+            self.settings.emission_variance_proxy,
             device=init_mean.device,
             dtype=init_mean.dtype,
         )
@@ -1064,7 +1122,7 @@ class Emission(Neural):
         self,
         mode: Optional[str] = None,
         context: Optional[torch.Tensor] = None,
-        jitter: float = 1e-5,
+        jitter: Optional[float] = None,
     ) -> Distribution:
         # Observation-dependent modes are resolved later by the training
         # initializer. Without observations retain the spread placeholder.

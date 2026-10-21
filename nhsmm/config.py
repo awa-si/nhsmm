@@ -14,6 +14,25 @@ NEG_INF = torch.finfo(DTYPE).min
 MIN_LOGITS: float = NEG_INF
 MAX_LOGITS: float = 1e5
 
+# Numerical/standalone API constants: inspectable, not search hyperparameters.
+FILTER_NORMALIZATION_ATOL = 1e-12
+FILTER_NORMALIZATION_ULPS = 8
+PROBABILITY_ATOL = 1e-6
+BOUNDARY_RANGE_ULPS = 32
+BOUNDARY_SUM_ULPS = 64
+LOG_HALF = -math.log(2.0)
+ATTENTION_MASK_LOGIT = -1e9
+CONVERGENCE_LR_RATIO_FLOOR = 1e-8
+STANDALONE_ENCODER_CHANNELS = 16
+CONTEXT_ENCODER_DROPOUT = 0.0
+STANDALONE_CONTEXT_HIDDEN_RATIO = 0.5
+TRANSITION_INITIAL_ROW_OFFSET = 0.05
+CONVERGENCE_DEFAULT_PATIENCE = 3
+CONVERGENCE_DEFAULT_TOL = 1e-5
+CONVERGENCE_DEFAULT_WINDOW = 5
+CONVERGENCE_DEFAULT_MODE = "delta"
+
+
 logger = logging.getLogger("NHSMM")
 logger.addHandler(logging.NullHandler())
 
@@ -136,6 +155,60 @@ class ModelConfig:
     convergence_mode: Literal["delta", "plateau"] = "plateau"
     verbose: bool = True
 
+    # Central tunables: explicit overrides, artifacts and host-owned searches.
+    context_pool_scale: float = 1.0
+    context_pool_layer_norm: bool = True
+    context_attention_init_std: float = 0.1
+    context_hidden_min: int = 16
+    encoder_hidden_min: int = 32
+    encoder_hidden_max: int = 64
+    encoder_hidden_multiplier: int = 2
+    context_delta_scale: float = 0.1
+    context_max_delta: float = 0.5
+    context_layer_norm_eps: float = 1e-5
+    context_allow_projection: bool = True
+    context_final_activation: str = "tanh"
+    context_xavier_gain: float = 1.0
+    leaky_relu_slope: float = 0.01
+    init_jitter: float = 1e-5
+    logits_init_std: float = 0.1
+    initial_bias_start: float = 0.8
+    initial_bias_end: float = 0.2
+    duration_bias_start: float = 0.7
+    duration_bias_end: float = 0.3
+    duration_init_decay: float = 0.05
+    transition_bias_diagonal: float = 0.7
+    transition_bias_off_diagonal: float = 0.1
+    emission_init_std: float = 0.1
+    emission_spread_extent: float = 1.0
+    emission_spread_noise: float = 0.05
+    emission_raw_log_var: float = -1.0
+    emission_variance_proxy: float = 1.0
+    studentt_raw_dof: float = 5.0
+    studentt_raw_scale: float = 0.1
+    studentt_kmeans_raw_scale: float = 1.0
+    studentt_raw_dof_floor: float = 2.1
+    kmeans_max_iter: int = 20
+    kmeans_atol: float = 1e-5
+    kmeans_rtol: float = 1e-5
+    cluster_variance_min: float = 0.05
+    cluster_variance_max: float = 5.0
+    supervised_steps: int = 200
+    supervised_lr: float = 0.03
+    adam_beta1: float = 0.9
+    adam_beta2: float = 0.999
+    adam_eps: float = 1e-8
+    grad_clip_norm: float = 5.0
+    supervised_grad_clip_norm: float | None = None
+    scheduler_factor: float = 0.5
+    scheduler_min_patience: int = 2
+    temperature_min_ratio: float = 0.3
+    temperature_steepness: float = 10.0
+    convergence_patience: int | None = None
+    convergence_patience_scale: float = 1.0
+    convergence_auto_patience: bool = True
+    convergence_patience_max: int | None = None
+
     def __post_init__(self) -> None:
         for name, minimum in (
             ("n_states", 1),
@@ -150,6 +223,128 @@ class ModelConfig:
             ("transition_refine_steps", 0),
         ):
             _require_int(name, getattr(self, name), minimum=minimum)
+
+        _require_finite("context_pool_scale", self.context_pool_scale, minimum=0.0)
+        _require_bool("context_pool_layer_norm", self.context_pool_layer_norm)
+        _require_finite("context_attention_init_std", self.context_attention_init_std, minimum=0.0)
+        _require_int("context_hidden_min", self.context_hidden_min, minimum=1)
+        _require_int("encoder_hidden_min", self.encoder_hidden_min, minimum=1)
+        _require_int("encoder_hidden_max", self.encoder_hidden_max, minimum=1)
+        _require_int("encoder_hidden_multiplier", self.encoder_hidden_multiplier, minimum=1)
+        _require_finite("context_delta_scale", self.context_delta_scale, minimum=0.0)
+        _require_finite("context_max_delta", self.context_max_delta, minimum=0.0)
+        _require_finite(
+            "context_layer_norm_eps",
+            self.context_layer_norm_eps,
+            minimum=0.0,
+            minimum_inclusive=False,
+        )
+        _require_bool("context_allow_projection", self.context_allow_projection)
+        _require_finite(
+            "context_xavier_gain", self.context_xavier_gain, minimum=0.0, minimum_inclusive=False
+        )
+        _require_finite("leaky_relu_slope", self.leaky_relu_slope, minimum=0.0)
+        _require_finite("init_jitter", self.init_jitter, minimum=0.0)
+        _require_finite("logits_init_std", self.logits_init_std, minimum=0.0)
+        _require_finite(
+            "initial_bias_start", self.initial_bias_start, minimum=0.0, minimum_inclusive=False
+        )
+        _require_finite(
+            "initial_bias_end", self.initial_bias_end, minimum=0.0, minimum_inclusive=False
+        )
+        _require_finite(
+            "duration_bias_start", self.duration_bias_start, minimum=0.0, minimum_inclusive=False
+        )
+        _require_finite(
+            "duration_bias_end", self.duration_bias_end, minimum=0.0, minimum_inclusive=False
+        )
+        _require_finite("duration_init_decay", self.duration_init_decay, minimum=0.0)
+        _require_finite(
+            "transition_bias_diagonal",
+            self.transition_bias_diagonal,
+            minimum=0.0,
+            minimum_inclusive=False,
+        )
+        _require_finite(
+            "transition_bias_off_diagonal",
+            self.transition_bias_off_diagonal,
+            minimum=0.0,
+            minimum_inclusive=False,
+        )
+        _require_finite("emission_init_std", self.emission_init_std, minimum=0.0)
+        _require_finite("emission_spread_extent", self.emission_spread_extent, minimum=0.0)
+        _require_finite("emission_spread_noise", self.emission_spread_noise, minimum=0.0)
+        _require_finite("emission_raw_log_var", self.emission_raw_log_var)
+        _require_finite(
+            "emission_variance_proxy",
+            self.emission_variance_proxy,
+            minimum=0.0,
+            minimum_inclusive=False,
+        )
+        _require_finite("studentt_raw_dof", self.studentt_raw_dof)
+        _require_finite("studentt_raw_scale", self.studentt_raw_scale)
+        _require_finite("studentt_kmeans_raw_scale", self.studentt_kmeans_raw_scale)
+        _require_finite("studentt_raw_dof_floor", self.studentt_raw_dof_floor)
+        _require_int("kmeans_max_iter", self.kmeans_max_iter, minimum=1)
+        _require_finite("kmeans_atol", self.kmeans_atol, minimum=0.0)
+        _require_finite("kmeans_rtol", self.kmeans_rtol, minimum=0.0)
+        _require_finite(
+            "cluster_variance_min", self.cluster_variance_min, minimum=0.0, minimum_inclusive=False
+        )
+        _require_finite(
+            "cluster_variance_max", self.cluster_variance_max, minimum=0.0, minimum_inclusive=False
+        )
+        _require_int("supervised_steps", self.supervised_steps, minimum=1)
+        _require_finite("supervised_lr", self.supervised_lr, minimum=0.0, minimum_inclusive=False)
+        _require_finite("adam_beta1", self.adam_beta1, minimum=0.0)
+        _require_finite("adam_beta2", self.adam_beta2, minimum=0.0)
+        _require_finite("adam_eps", self.adam_eps, minimum=0.0, minimum_inclusive=False)
+        _require_finite("grad_clip_norm", self.grad_clip_norm, minimum=0.0, minimum_inclusive=False)
+        if self.supervised_grad_clip_norm is not None:
+            _require_finite(
+                "supervised_grad_clip_norm",
+                self.supervised_grad_clip_norm,
+                minimum=0.0,
+                minimum_inclusive=False,
+            )
+        _require_finite("scheduler_factor", self.scheduler_factor, minimum=0.0)
+        _require_int("scheduler_min_patience", self.scheduler_min_patience, minimum=1)
+        _require_finite("temperature_min_ratio", self.temperature_min_ratio, minimum=0.0)
+        _require_finite(
+            "temperature_steepness",
+            self.temperature_steepness,
+            minimum=0.0,
+            minimum_inclusive=False,
+        )
+        _require_optional_int("convergence_patience", self.convergence_patience, minimum=1)
+        _require_finite("convergence_patience_scale", self.convergence_patience_scale, minimum=0.0)
+        _require_bool("convergence_auto_patience", self.convergence_auto_patience)
+        _require_optional_int("convergence_patience_max", self.convergence_patience_max, minimum=1)
+        if self.encoder_hidden_min > self.encoder_hidden_max:
+            raise ValueError("encoder_hidden_min must not exceed encoder_hidden_max")
+        if self.cluster_variance_min > self.cluster_variance_max:
+            raise ValueError("cluster_variance_min must not exceed cluster_variance_max")
+        for name in ("adam_beta1", "adam_beta2"):
+            if not 0.0 <= getattr(self, name) < 1.0:
+                raise ValueError(f"{name} must be in [0,1)")
+        for name in ("scheduler_factor", "temperature_min_ratio"):
+            if not 0.0 < getattr(self, name) < 1.0:
+                raise ValueError(f"{name} must be in (0,1)")
+        if self.convergence_patience_max is not None and self.convergence_patience_max < (
+            self.convergence_patience or max(1, self.plateau_window // 2)
+        ):
+            raise ValueError("convergence_patience_max is below effective patience")
+        if not isinstance(
+            self.context_final_activation, str
+        ) or self.context_final_activation not in {
+            "leaky_relu",
+            "identity",
+            "softplus",
+            "gelu",
+            "relu",
+            "tanh",
+        }:
+            raise ValueError("unsupported context_final_activation")
 
         _require_optional_int("hidden_dim", self.hidden_dim, minimum=1)
         _require_optional_int("context_dim", self.context_dim, minimum=1)
@@ -253,3 +448,8 @@ class ModelConfig:
 
         _reject_unknown(type(self), overrides)
         return replace(self, **overrides)
+
+
+def default_value(name: str) -> Any:
+    """Single source for low-level API defaults; no model instantiation."""
+    return ModelConfig.__dataclass_fields__[name].default

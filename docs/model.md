@@ -463,3 +463,8 @@ CausalContext(emission=E, boundary=U, available=M) carries strict boolean row
 availability through batch scoring, supervised/latent fitting and streaming.
 Missing rows bypass neural corrections while observations and filtering history
 remain intact. See [shapes, timing and limits](causal-external-context.md#mixed-availability-within-a-batch).
+
+
+## Central tunables
+
+See [configuration](configuration.md) for validated overrides, component propagation, supervised argument precedence, initialization semantics, artifact persistence and fixed numerical constants. Search remains host-owned.

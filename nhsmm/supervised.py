@@ -154,8 +154,8 @@ def fit_supervised(
     labels,
     *,
     context=None,
-    steps=200,
-    lr=0.03,
+    steps=None,
+    lr=None,
     context_only=False,
     objective="observed_joint_causal_prefix",
 ):
@@ -164,6 +164,9 @@ def fit_supervised(
     Uses current parameters, no hidden restarts, no validation or label matching.
     Returns a separate summary and leaves the latent optimization API untouched.
     """
+    model.config.__post_init__()
+    steps = model.config.supervised_steps if steps is None else steps
+    lr = model.config.supervised_lr if lr is None else lr
     scorers = {
         "observed_joint_causal_prefix": supervised_log_likelihood,
         "causal_filter_log_score": supervised_filter_log_score,
@@ -205,7 +208,12 @@ def fit_supervised(
         for name, p in model.named_parameters():
             p.requires_grad_(before_flags[name])
         raise ValueError("no trainable parameters for supervised fitting")
-    optimizer = torch.optim.Adam(parameters, lr=lr)
+    optimizer = torch.optim.Adam(
+        parameters,
+        lr=lr,
+        betas=(model.config.adam_beta1, model.config.adam_beta2),
+        eps=model.config.adam_eps,
+    )
     before_mode = model.training
     model.train()
     try:
@@ -219,6 +227,8 @@ def fit_supervised(
                 p.grad is not None and not bool(torch.isfinite(p.grad).all()) for p in parameters
             ):
                 raise FloatingPointError("non-finite supervised gradient")
+            if model.config.supervised_grad_clip_norm is not None:
+                torch.nn.utils.clip_grad_norm_(parameters, model.config.supervised_grad_clip_norm)
             optimizer.step()
             if not context_only and model.dist.duration.tail_end_probability is not None:
                 model.dist.duration._project_tail_parameter()

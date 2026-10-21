@@ -8,6 +8,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as nnF
 
+from nhsmm.config import default_value, STANDALONE_ENCODER_CHANNELS
+
 
 @dataclass(frozen=True)
 class DefaultEncoderStreamState:
@@ -30,14 +32,15 @@ class DefaultEncoder(nn.Module):
     def __init__(
         self,
         n_features: int,
-        cnn_kernel: int = 3,
-        hidden_dim: int = 32,
-        cnn_channels: int = 16,
+        cnn_kernel: int = default_value("cnn_kernel"),
+        hidden_dim: int = default_value("encoder_hidden_min"),
+        cnn_channels: int = STANDALONE_ENCODER_CHANNELS,
         bidirectional: bool = True,
         return_sequence: bool = True,
         use_packed: bool = True,
-        dropout: float = 0.05,
+        dropout: float = default_value("dropout"),
         causal: bool = False,
+        layer_norm_eps: float = default_value("context_layer_norm_eps"),
     ):
         super().__init__()
         self.n_features = n_features
@@ -55,7 +58,7 @@ class DefaultEncoder(nn.Module):
         if self.conv.bias is not None:
             nn.init.zeros_(self.conv.bias)
 
-        self.norm = nn.LayerNorm(cnn_channels)
+        self.norm = nn.LayerNorm(cnn_channels, eps=layer_norm_eps)
         self.lstm = nn.LSTM(
             cnn_channels, hidden_dim, batch_first=True, bidirectional=self.bidirectional
         )

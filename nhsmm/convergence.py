@@ -4,7 +4,16 @@ import math
 import torch
 from typing import Optional, Literal
 
-from nhsmm.config import EPS, logger
+from nhsmm.config import (
+    EPS,
+    logger,
+    default_value,
+    CONVERGENCE_LR_RATIO_FLOOR,
+    CONVERGENCE_DEFAULT_PATIENCE,
+    CONVERGENCE_DEFAULT_TOL,
+    CONVERGENCE_DEFAULT_WINDOW,
+    CONVERGENCE_DEFAULT_MODE,
+)
 
 
 class Convergence:
@@ -23,16 +32,16 @@ class Convergence:
         self,
         n_init: int,
         max_iter: int,
-        patience: int = 3,
-        tol: float = 1e-5,
-        rel_tol: float = 1e-5,
-        plateau_window: int = 5,
-        plateau_tol: float = 1e-4,
-        mode: Literal["delta", "plateau"] = "delta",
+        patience: int = CONVERGENCE_DEFAULT_PATIENCE,
+        tol: float = CONVERGENCE_DEFAULT_TOL,
+        rel_tol: float = CONVERGENCE_DEFAULT_TOL,
+        plateau_window: int = CONVERGENCE_DEFAULT_WINDOW,
+        plateau_tol: float = default_value("plateau_tol"),
+        mode: Literal["delta", "plateau"] = CONVERGENCE_DEFAULT_MODE,
         patience_max: Optional[int] = None,
-        patience_scale: float = 1.0,
-        auto_patience: bool = True,
-        verbose: bool = True,
+        patience_scale: float = default_value("convergence_patience_scale"),
+        auto_patience: bool = default_value("convergence_auto_patience"),
+        verbose: bool = default_value("verbose"),
     ):
         if n_init < 1:
             raise ValueError("n_init must be >= 1")
@@ -100,7 +109,7 @@ class Convergence:
         except Exception:
             return self.patience
 
-        ratio = max(float(lr) / float(self._lr_ref), 1e-8)
+        ratio = max(float(lr) / float(self._lr_ref), CONVERGENCE_LR_RATIO_FLOOR)
         scale = 1.0 + self.patience_scale * (-math.log10(ratio))
         p = int(round(self.patience * scale))
         if self.patience_max is not None:

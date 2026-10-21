@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import torch
+from nhsmm.config import BOUNDARY_RANGE_ULPS, BOUNDARY_SUM_ULPS
 
 from nhsmm.filtering import (
     HSMMFilterState,
@@ -65,7 +66,7 @@ class HSMMTransitionForecast:
 
         if not torch.isfinite(end).all():
             raise ValueError("episode_end_probability must be finite")
-        eps = 32 * torch.finfo(end.dtype).eps
+        eps = BOUNDARY_RANGE_ULPS * torch.finfo(end.dtype).eps
         for name, value in (
             ("episode_end_probability", end),
             ("boundary_transition_joint", joint),
@@ -76,7 +77,7 @@ class HSMMTransitionForecast:
             if (value < -eps).any() or (value > 1.0 + eps).any():
                 raise ValueError(f"{name} must contain probabilities in [0,1]")
 
-        atol = float(64 * torch.finfo(end.dtype).eps)
+        atol = float(BOUNDARY_SUM_ULPS * torch.finfo(end.dtype).eps)
         boundary_end = joint.sum(dim=(1, 2))
         if not torch.allclose(boundary_end, end, atol=atol, rtol=0.0):
             raise ValueError("boundary_transition_joint must sum to episode_end_probability")
@@ -125,7 +126,7 @@ def _normalize_transition(log_transition: torch.Tensor) -> torch.Tensor:
 
 
 def _probability_tolerance(reference: torch.Tensor) -> float:
-    return float(64 * torch.finfo(reference.dtype).eps)
+    return float(BOUNDARY_SUM_ULPS * torch.finfo(reference.dtype).eps)
 
 
 def _require_normalized_posterior(log_posterior: torch.Tensor) -> None:
