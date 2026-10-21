@@ -198,9 +198,14 @@ class DefaultEncoder(nn.Module):
                 self.lstm.bias_ih_l0,
                 self.lstm.bias_hh_l0,
             )
-            cache_key = tuple((id(parameter), int(parameter._version)) for parameter in parameters)
+            cache_key = (
+                None
+                if any(torch.is_inference(parameter) for parameter in parameters)
+                else tuple((id(parameter), int(parameter._version)) for parameter in parameters)
+            )
             if (
-                self._stream_lstm_weight is None
+                cache_key is None
+                or self._stream_lstm_weight is None
                 or self._stream_lstm_bias is None
                 or cache_key != self._stream_lstm_cache_key
             ):

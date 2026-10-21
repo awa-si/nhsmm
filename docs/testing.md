@@ -99,3 +99,30 @@ retained-replay auditor bundle: 1647 passed, three CUDA-unavailable skips.
 Ruff and Black pass for the complete core. No defaults, artifact schema,
 market fit budget or reserved data changed. Exact source and JUnit evidence
 are retained in Nautilus docs/nhsmm-hsmm-boundary-verification.json.
+
+## Long-prefix HSMM and streaming state verification
+
+Canonical test_hsmm_streaming_integrity.py adds 26 cases. Four 1440-row
+Gaussian HSMM sequences (finite/D+ and Float32/64) compare every batch and
+streaming state-age posterior with a separately constructed NumPy long-double
+expanded-state probability chain. Its inputs are raw weights; it never calls
+production distribution scoring, hazard or filtering helpers. Final likelihood
+per row, one-step state/end probabilities and frozen-duration survival forecasts
+are checked independently. Reset starts 128 fresh suffix observations from age
+one. Two custom exact-support models retain deterministic 100-row age cycles.
+
+The same module checks variance-floor cache invalidation, inference-tensor
+parameter updates without version counters (including incremental LSTM gates),
+unchanged persistent state during inference, invalid timestamp rejection before
+state advance and valid datetime continuation. Model reset clears runtime caches.
+Posterior comparison tolerances are 2e-5 for Float32 and 2e-12 for Float64;
+log-evidence per-row tolerances are 1e-5 and 1e-10. These are bounded numerical
+checks, not a proof over arbitrary sequence lengths or custom distributions.
+
+2026-10-21 streaming gate: 26 new cases pass; the same final tests on core
+c25da77 have 17 failures and nine passes. Focused runtime/encoder bundle:
+47 passed. Full canonical model plus affected native Qlib/MLflow/RD-Agent,
+research publication and input/configuration/retained-replay audit bundle:
+1673 passed, three CUDA skips. Complete core Ruff and Black pass.
+No model default or artifact-schema change, new market fit or reserved test
+score. Evidence: Nautilus docs/nhsmm-streaming-verification.json.

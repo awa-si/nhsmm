@@ -190,6 +190,7 @@ A runtime session is either timestamped or untimestamped.
 If the first step includes a timestamp:
 
 - all later steps must include timestamps;
+- timestamps must be finite and yield an ordered scalar comparison; NaN/NaT are rejected;
 - timestamps must be strictly increasing.
 
 If the first step omits a timestamp, timestamps cannot be enabled later without reset.
@@ -267,7 +268,7 @@ runtime.reset()
 
 Reset clears:
 
-- filter/runtime state;
+- filter/runtime state and runtime score caches;
 - context-mode lock;
 - timestamp/session history.
 
@@ -468,3 +469,33 @@ remain intact. See [shapes, timing and limits](causal-external-context.md#mixed-
 ## Central tunables
 
 See [configuration](configuration.md) for validated overrides, component propagation, supervised argument precedence, initialization semantics, artifact persistence and fixed numerical constants. Search remains host-owned.
+
+
+## Streaming cache validity
+
+Runtime Gaussian variance terms are keyed by emission parameter identity,
+version, device, dtype and min_covar. A changed variance floor invalidates
+those terms even when log_var has not changed. Duration gates retain their
+parameter-version checks. Reset discards the runtime-owned score cache
+alongside filter/context/timestamp state.
+
+Tensors allocated inside torch.inference_mode() do not expose a version
+counter. Runtime duration/emission terms and incremental encoder LSTM gates
+therefore recompute for such parameters rather than read a nonexistent counter
+or silently reuse an unverifiable cache. Versioned parameters retain their
+existing cached path. This does not make model parameter mutation during a
+running episode an artifact-consistency contract: use reset when intentionally
+starting a stream under changed weights. Direct scorers nevertheless do not
+reuse stale cached factors.
+
+Runtime timestamp validation occurs before observation/context/encoder work.
+A rejected NaN/NaT/nonfinite or non-increasing timestamp leaves the accepted
+runtime state unchanged; a valid later observation can resume from that state.
+The public HSMMRuntimeState constructor enforces the same scalar timestamp
+validity. Numeric and datetime-like scalar timestamps remain supported.
+
+Primary API reference:
+https://docs.pytorch.org/docs/2.14/generated/torch.autograd.grad_mode.inference_mode.html
+and https://docs.pytorch.org/docs/2.14/generated/torch.is_inference.html.
+These document the version-counter limitation; tests establish this package's
+cache and streaming behavior.

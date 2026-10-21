@@ -35,13 +35,19 @@ class _RuntimeScoreCache:
     def __init__(self) -> None:
         self._duration_key: Optional[tuple[int, int, torch.device, torch.dtype]] = None
         self._duration_gate_log: Optional[torch.Tensor] = None
-        self._emission_key: Optional[tuple[int, int, torch.device, torch.dtype]] = None
+        self._emission_key: Optional[tuple[int, int, torch.device, torch.dtype, float]] = None
         self._emission_var: Optional[torch.Tensor] = None
         self._emission_log_norm: Optional[torch.Tensor] = None
 
     def duration_gate_log(self, bias: torch.Tensor) -> torch.Tensor:
-        key = (id(bias), int(bias._version), bias.device, bias.dtype)
-        if self._duration_gate_log is None or key != self._duration_key:
+        key = (
+            None
+            if torch.is_inference(bias)
+            else (id(bias), int(bias._version), bias.device, bias.dtype)
+        )
+        # Inference tensors have no version counter and can still be mutated
+        # inside inference_mode. Recompute rather than reuse unprovable cache.
+        if self._duration_gate_log is None or key is None or key != self._duration_key:
             with torch.no_grad():
                 self._duration_gate_log = torch.sigmoid(bias).clamp_min(EPS).log()
             self._duration_key = key
@@ -53,8 +59,12 @@ class _RuntimeScoreCache:
         *,
         min_covar: float,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        key = (id(log_var), int(log_var._version), log_var.device, log_var.dtype)
-        if self._emission_var is None or key != self._emission_key:
+        key = (
+            None
+            if torch.is_inference(log_var)
+            else (id(log_var), int(log_var._version), log_var.device, log_var.dtype, min_covar)
+        )
+        if self._emission_var is None or key is None or key != self._emission_key:
             with torch.no_grad():
                 var = torch.nn.functional.softplus(log_var).clamp_min(min_covar)
                 self._emission_var = var
@@ -62,6 +72,25 @@ class _RuntimeScoreCache:
             self._emission_key = key
         assert self._emission_log_norm is not None
         return self._emission_var, self._emission_log_norm
+
+
+def _validate_timestamp(timestamp: Any) -> None:
+    if timestamp is None:
+        return
+    try:
+        finite = math.isfinite(timestamp)
+    except (TypeError, OverflowError):
+        # Datetime-like and other scalar ordered objects need not support
+        # conversion to float. Arbitrarily large integer timestamps are finite.
+        finite = True
+    if not finite:
+        raise ValueError("timestamp must be finite and ordered")
+    try:
+        self_ordered = bool(timestamp <= timestamp)
+    except (TypeError, ValueError, RuntimeError) as exc:
+        raise TypeError("timestamp must support scalar ordering") from exc
+    if not self_ordered:
+        raise ValueError("timestamp must be finite and ordered")
 
 
 def _is_default_distribution(value: Any, class_name: str) -> bool:
@@ -142,6 +171,7 @@ class HSMMRuntimeState:
             raise ValueError("timestamped runtime state requires last_timestamp")
         if not self.uses_timestamps and self.last_timestamp is not None:
             raise ValueError("untimestamped runtime state must not carry last_timestamp")
+        _validate_timestamp(self.last_timestamp)
 
 
 def _validate_model(model: Any) -> None:
@@ -346,6 +376,7 @@ class HSMMFilterRuntime:
     def reset(self) -> None:
         self.state = None
         self._uses_external_context = None
+        self._score_cache = _RuntimeScoreCache()
 
     @torch.inference_mode()
     def forecast_survival(self, horizons: HorizonInput) -> HSMMSurvivalForecast:
@@ -382,6 +413,7 @@ class HSMMFilterRuntime:
         timestamp: Optional[Any] = None,
     ) -> HSMMFilterState:
         _validate_model(self.model)
+        _validate_timestamp(timestamp)
         obs = _as_observation(
             observation,
             n_features=int(self.model.config.n_features),
@@ -625,7 +657,7 @@ class HSMMFilterRuntime:
             if timestamp is None:
                 raise ValueError("timestamp is required after timestamped initialization")
             try:
-                if timestamp <= previous.last_timestamp:
+                if not timestamp > previous.last_timestamp:
                     raise ValueError("timestamp must be strictly increasing")
             except TypeError as exc:
                 raise TypeError("timestamps must support strict ordering") from exc
