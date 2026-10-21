@@ -14,6 +14,7 @@ from nhsmm.context import context_options
 import torch
 
 from nhsmm.filtering import (
+    _center_emission_log_probs,
     _duration_log_hazard_from_log_p,
     _safe_logaddexp,
     _safe_logsumexp,
@@ -155,6 +156,7 @@ def _missing_filter_flux(paths, scores, tail, inputs):
     from nhsmm.filtering import _causal_filter_step, _initialize_causal_frontier
 
     pi, emission, A, end, continuation = (value.double() for value in inputs)
+    emission, _ = _center_emission_log_probs(emission)
     B, _, K, D = end.shape
     targets = torch.nonzero(tail == 1, as_tuple=False).flatten()
     result = emission.new_zeros((B, K))

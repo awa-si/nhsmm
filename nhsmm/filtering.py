@@ -183,7 +183,7 @@ def _normalize_log_probs(log_values: torch.Tensor, *, dim: int, name: str) -> to
     log_z = _safe_logsumexp(log_values, dim=dim, keepdim=True)
     if not torch.isfinite(log_z).all():
         raise ValueError(f"{name} has zero or non-finite probability mass")
-    return log_values - log_z
+    return torch.log_softmax(log_values, dim=dim)
 
 
 def _normalize_causal_frontier(
@@ -197,6 +197,13 @@ def _normalize_causal_frontier(
     return torch.log_softmax(flat, dim=1).reshape_as(log_values), log_evidence
 
 
+def _center_emission_log_probs(values: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Separate a finite row offset before adding smaller prior/boundary terms."""
+    peak = values.amax(dim=-1, keepdim=True)
+    offset = torch.where(torch.isfinite(peak), peak, torch.zeros_like(peak))
+    return values - offset, offset.squeeze(-1)
+
+
 def _initialize_causal_frontier(
     log_initial: torch.Tensor,
     emission_log_prob: torch.Tensor,
@@ -205,8 +212,11 @@ def _initialize_causal_frontier(
     """Initialize age one; the first emission contributes to prefix evidence."""
     B, K = log_initial.shape
     scores = log_initial.new_full((B, K, max_duration), float("-inf"))
-    scores[..., 0] = log_initial + emission_log_prob
-    return _normalize_causal_frontier(scores)
+    initial, initial_offset = _center_emission_log_probs(log_initial)
+    emission, emission_offset = _center_emission_log_probs(emission_log_prob)
+    scores[..., 0] = initial + emission
+    posterior, evidence = _normalize_causal_frontier(scores)
+    return posterior, evidence + initial_offset + emission_offset
 
 
 def _require_reachable_hazards(previous, log_end, log_continue) -> None:
@@ -254,7 +264,9 @@ def _causal_filter_step(
             )
     else:
         predicted = torch.cat((new_episode.unsqueeze(-1), continuation), dim=-1)
-    return _normalize_causal_frontier(predicted + emission_log_prob.unsqueeze(-1))
+    emission, offset = _center_emission_log_probs(emission_log_prob)
+    posterior, evidence = _normalize_causal_frontier(predicted + emission.unsqueeze(-1))
+    return posterior, evidence + offset
 
 
 def _duration_log_hazard_from_log_p(

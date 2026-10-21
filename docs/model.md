@@ -532,3 +532,39 @@ Applications in Speech Recognition, DOI https://doi.org/10.1109/5.18626,
 describes log-domain Viterbi. The common-offset cancellation above is the
 algebraic justification for this package's additional precision guard, rather
 than a claim that the reference guarantees arbitrary floating-point precision.
+
+
+## Causal emission-offset invariance
+
+Causal initialization and state/age updates split each finite emission row
+into relative state scores and one shared scalar offset before adding initial
+or boundary factors. Initialization treats arbitrary public initial-score
+offsets the same way. Incremental evidence restores those offsets after the
+posterior has been normalized. All-impossible rows retain negative infinity
+and the existing support errors. Public duration/transition score normalization
+uses log_softmax so differing support sizes remain normalized beside large
+common constants.
+
+The small-HMM differentiable prefix scan likewise centers emissions before
+building semiring blocks. Its posterior and the HSMM custom-adjoint posterior
+therefore preserve weak latent preferences beside large continuous densities.
+The first-order h_tail=1 filter correction propagates relative emissions too.
+
+Causal likelihood centers observation emissions before calling the ordinary
+forward method, restores only valid rows' offsets after the terminal reduction,
+and retains the existing custom forward hook and tail boundary correction.
+This avoids losing likelihood gradients by first adding a large absolute
+evidence constant to every state and then reducing those rounded values.
+
+The public raw forward tensor still represents absolute unnormalized log joint
+mass in its floating dtype. Small differences may be unrepresentable beside a
+huge common value. Use filter_model_sequence or HSMMFilterRuntime for posterior
+probabilities rather than normalizing an already rounded raw alpha tensor.
+The scalar log likelihood also has finite absolute-value resolution; the
+offset split preserves its relative-law derivatives without promising extra
+mantissa bits. No parameter dtype, distribution law or artifact schema changes.
+
+The offset identity follows log-domain HMM algebra (Rabiner 1989,
+https://doi.org/10.1109/5.18626). The package-specific regression gate compares
+raw-weight probability-space path enumeration, a dense expanded-state chain,
+real identical Gaussian emissions and exact-zero boundary derivatives.

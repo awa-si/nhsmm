@@ -274,3 +274,16 @@ Independent raw-parameter reset/continuation enumeration, one-sided numerical
 differences, Float32/64 gradients, ragged/empty prefixes, a projected Adam update
 and single head-evaluation checks are retained by the canonical Nautilus
 test_hsmm_boundary_derivatives.py. Labels remain score selectors only.
+
+
+## Large common emission offsets
+
+Prefix filtering scores center emissions before combining them with latent
+priors and boundaries, including the small-HMM scan and exact h_tail=1 VJP.
+Causal marginal likelihood separates and restores the shared row constants
+around its forward reduction. Independent raw-weight path enumeration verifies
+parameter, emission-score and explicit E/U context gradients for both scores
+in Float32/64. See [the numerical contract](model.md#causal-emission-offset-invariance).
+These checks preserve the declared objectives; they do not change supervision
+into a marginal state-path MAP objective or alter the existing first-order
+boundary derivative limit.

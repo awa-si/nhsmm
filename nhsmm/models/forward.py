@@ -9,6 +9,7 @@ from nhsmm.context import SequenceSet, ContextRouter
 from nhsmm.config import NEG_INF
 from nhsmm.filtering import (
     _causal_filter_step,
+    _center_emission_log_probs,
     _duration_log_hazard_from_log_p,
     _initialize_causal_frontier,
     _safe_logsumexp,
@@ -29,6 +30,7 @@ def _hmm_prefix_log_posteriors(initial, emission, transition):
     Work O(T K^3 log T), graph depth O(log T); restricted to small K by caller.
     """
     K = initial.numel()
+    emission, _ = _center_emission_log_probs(emission)
     first = (initial + emission[0]).expand(1, K, K)
     blocks = torch.cat((first, transition + emission[1:, None, :]), dim=0)
 

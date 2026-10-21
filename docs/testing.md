@@ -136,3 +136,14 @@ ragged empty/single-row inputs and 1440-row weak-preference causal HMMs.
 Existing exhaustive decoder tests retain exact ties and hard support.
 See [the numerical contract](model.md#viterbi-common-offset-stability)
 for offset cancellation, noncausal endpoint limits and rounding boundaries.
+
+
+## Causal filter emission-offset gate
+
+Canonical host test_filter_offset_invariance.py checks identical Gaussian
+emissions with large finite observations, ragged empty/single-row sequences,
+batch/runtime posteriors, latent-law evidence gradients, and raw-parameter
+path enumeration for likelihood/filter scores and all parameter/E/U gradients.
+Finite/D+ durations, exact h_tail=1 and differing hard transition support sizes
+are included. The host report records baseline failures, source/JUnit hashes
+and full native ML-stack validation.
