@@ -90,7 +90,7 @@ or state_dict, and changing the returned dictionary cannot mutate model telemetr
 
 ## Supervised prefix-state training
 
-`fit_supervised(..., objective="causal_filter_log_score")` is an explicit HMM-only alternative to the default observed-joint supervised objective. It minimizes causal prefix state classification loss through the model-produced filter history. See [objective, support and small-HMM scan](supervised.md#causal-filtering-objective). Inference and artifact parameter schemas are unchanged.
+`fit_supervised(..., objective="causal_filter_log_score")` is an explicit causal HMM/HSMM alternative to the default observed-joint supervised objective. It minimizes causal prefix state classification loss through the model-produced filter history. See [objective, support and small-HMM scan](supervised.md#causal-filtering-objective). Inference and artifact parameter schemas are unchanged.
 
 ## Duration-tail training
 

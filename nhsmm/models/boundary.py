@@ -126,3 +126,76 @@ def _missing_flux(model, sequence, scores, tail, temperature):
             continuation = cont[b, t] + torch.cat((future[:, 1:], future[:, -1:]), -1)
             backward = _safe_logaddexp(boundary, continuation)
     return result
+
+
+def tail_boundary_filter_score(model, paths, scores, inputs):
+    """Restore zero-continuation derivatives of prefix state log scores.
+
+    The log recursion retains positive paths. At h=1 a continuation path has
+    zero value but nonzero one-sided derivative. Propagate the positive flux
+    obtained by removing each such edge, normalized by the original prefix
+    evidence. Subtract its total-evidence contribution from the labelled-state
+    contribution. This is a first-order boundary VJP, not a perturbed hazard.
+    """
+    tail_fn = getattr(model.dist.duration, "tail_probability", None)
+    tail = tail_fn() if callable(tail_fn) else None
+    if (
+        tail is None
+        or not torch.is_grad_enabled()
+        or not tail.requires_grad
+        or not bool((tail == 1).any())
+    ):
+        return scores
+    with torch.no_grad():
+        flux = _missing_filter_flux(paths, scores, tail, inputs)
+    return _TailBoundaryScore.apply(scores, tail, flux.to(tail))
+
+
+def _missing_filter_flux(paths, scores, tail, inputs):
+    from nhsmm.filtering import _causal_filter_step, _initialize_causal_frontier
+
+    pi, emission, A, end, continuation = (value.double() for value in inputs)
+    B, _, K, D = end.shape
+    targets = torch.nonzero(tail == 1, as_tuple=False).flatten()
+    result = emission.new_zeros((B, K))
+    for b, labels in enumerate(paths):
+        if len(labels) < 2 or not bool(torch.isfinite(scores[b])):
+            continue
+        frontier, _ = _initialize_causal_frontier(pi[b : b + 1], emission[b, 0:1], D)
+        frontier = frontier[0]
+        extra = emission.new_full((len(targets), K, D), -torch.inf)
+        for t in range(1, len(labels)):
+            following, log_z = _causal_filter_step(
+                frontier[None],
+                emission[b, t : t + 1],
+                end[b, t - 1 : t],
+                continuation[b, t - 1 : t],
+                A[b, t - 1 : t],
+                tail_enabled=True,
+            )
+            reset = _safe_logsumexp(
+                (extra + end[b, t - 1]).unsqueeze(-1) + A[b, t - 1],
+                dim=(1, 2),
+            )
+            cont = extra + continuation[b, t - 1]
+            if D == 1:
+                predicted = _safe_logaddexp(reset, cont[..., -1]).unsqueeze(-1)
+            else:
+                last = _safe_logaddexp(cont[..., -2], cont[..., -1])
+                predicted = torch.cat((reset[..., None], cont[..., :-2], last[..., None]), -1)
+            # The derivative of the omitted (1-h) edge is -1. Store its
+            # positive missing mass here; the VJP applies the minus sign.
+            index = torch.arange(len(targets), device=targets.device)
+            predicted[index, targets, -1] = _safe_logaddexp(
+                predicted[index, targets, -1], frontier[targets, -1]
+            )
+            extra = predicted + emission[b, t, :, None] - log_z[0]
+            frontier = following[0]
+            label = labels[t]
+            log_label_mass = _safe_logsumexp(frontier[label], dim=-1)
+            label_flux = _safe_logsumexp(extra[:, label], dim=-1) - log_label_mass
+            total_flux = _safe_logsumexp(extra, dim=(1, 2))
+            result[b, targets] += label_flux.exp() - total_flux.exp()
+    if not torch.isfinite(result).all():
+        raise RuntimeError("tail boundary filtering derivative is non-finite")
+    return result

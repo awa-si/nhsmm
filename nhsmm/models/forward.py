@@ -56,6 +56,7 @@ def _forward_causal_hazard(
     temperature: Optional[float] = None,
     *,
     normalized: bool = False,
+    boundary_inputs: list | None = None,
 ) -> torch.Tensor:
     """Unnormalized causal forward recursion over ``(state, episode_age)``.
 
@@ -165,6 +166,10 @@ def _forward_causal_hazard(
         X.lengths,
         tail_end_probability is not None,
     )
+    if boundary_inputs is not None:
+        # Share the exact sampled scores with the boundary derivative. Calling
+        # distribution heads again would resample training-time dropout.
+        boundary_inputs.extend(args[:5])
     if (
         normalized
         and (D > 1 or self.config.duration_tail)

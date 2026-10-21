@@ -187,6 +187,17 @@ def one_step_transition_forecast(
     # Continuations retain the current state; boundaries may move to any next state.
     log_continue_state = _safe_logsumexp(posterior + log_continue, dim=-1)  # [B,K]
     continuation_state = log_continue_state.exp()
+    if (
+        tail_end_probability is not None
+        and torch.is_grad_enabled()
+        and tail_end_probability.requires_grad
+    ):
+        tail = tail_end_probability.expand(B, K)
+        # Preserve the derivative of the zero-weight continuation at h=1.
+        # Values and the interior log-domain calculation remain unchanged.
+        continuation_state = continuation_state + posterior[..., -1].exp() * torch.where(
+            tail == 1, 1 - tail, torch.zeros_like(tail)
+        )
     next_state_prior = continuation_state + next_episode_joint
 
     # Sum the event itself: subtracting almost equal end/self masses can

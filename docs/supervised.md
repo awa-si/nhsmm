@@ -153,8 +153,10 @@ agrees with the classical right-censored segment law.
 Implementation decision: reuse the existing normalized state-age recursion
 without changing propagation, parameters, artifact schema or optimizer.
 The small-HMM scan remains restricted to its existing D=1/no-tail case.
-HSMM first derivatives use the exact adjoint described below; higher derivatives
-retain full-history serial autograd. Market-scale performance requires measurement
+HSMM first derivatives use the exact adjoint described below; interior higher
+derivatives retain full-history serial autograd. At the exact h_tail=1 boundary,
+filter-score derivatives use the first-order correction described below and
+higher-order requests raise explicitly. Market-scale performance requires measurement
 before allocating a fit budget.
 
 Primary references reviewed: Yu (2010), Hidden semi-Markov models,
@@ -193,8 +195,8 @@ forward inference; it stores normalized frontiers and factor inputs rather
 than every recurrence operation's autograd graph. First-derivative edge weights
 are batched across time with the existing NumPy dependency on CPU. Tensor-to-array
 views only read saved values; the exact custom VJP returns tensor gradients to
-the complete Torch parameter/context graph. Higher derivatives use Torch
-recomputation. Fully populated batches omit per-row padding/index copies while
+the complete Torch parameter/context graph. Interior higher derivatives use
+Torch recomputation. Fully populated batches omit per-row padding/index copies while
 retaining the same causal step owner and evidence-addition order. Let p be a flattened
 state-age posterior and v its incoming log-posterior adjoint. Normalization gives
 `g = v - p * sum(v)`. A prediction edge with mass w entering destination j
@@ -241,3 +243,34 @@ separate. A 300-update tail fit is not admitted under a 300-second cap by this
 bounded evidence. No market fit/budget reset or inference/artifact schema
 change occurred. See Nautilus docs/nhsmm-hsmm-adjoint-gate.md for exact source,
 probability/gradient tolerances, regression evidence and measurement limits.
+
+
+## Exact finite-support boundary in D+ filter supervision
+
+At h_tail=1 the forward probabilities equal finite support. A tail continuation
+has zero value there, but d(1-h)/dh=-1. Omitting these zero-weight paths from
+the log recursion silently loses part of the filtering-score derivative.
+
+The public supervised filtering score now adds an exact first-order boundary
+VJP. For each boundary state k, propagate the positive mass obtained by removing
+one zero continuation edge from each path. Normalize this flux by the unchanged
+prefix evidence. Its contribution to the score gradient is minus the difference
+between labelled-state flux divided by labelled-state probability and total
+prefix flux. Both terms are required: the label selects a prefix marginal, not
+a constrained episode path. Multiple omitted edges have zero first-order mass.
+The propagation remains in log space and uses the exact once-sampled initial,
+emission and boundary scores from the forward pass, including training dropout.
+
+The correction is active only under autograd for trainable tail hazards exactly
+equal to one. It does not perturb hazards or change scores, predictions,
+parameters, artifacts or the interior derivative. Each active boundary state
+adds a flux frontier of K*D entries; per-sequence extra frontier storage is
+O(M*K*D), M<=K, and extra work is O(T*M*K^2*D). This is not a measured performance
+claim. The shared boundary VJP is explicitly first-order; higher-order requests
+at this boundary raise rather than silently return an incomplete Hessian.
+See duration-tail-contract.md for survival and transition forecast derivatives.
+
+Independent raw-parameter reset/continuation enumeration, one-sided numerical
+differences, Float32/64 gradients, ragged/empty prefixes, a projected Adam update
+and single head-evaluation checks are retained by the canonical Nautilus
+test_hsmm_boundary_derivatives.py. Labels remain score selectors only.

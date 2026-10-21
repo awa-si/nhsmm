@@ -152,11 +152,24 @@ def active_episode_survival_forecast(
     log_end, log_continue = duration_log_hazard(log_duration, tail_end_probability)
     _require_reachable_hazards(posterior, log_end, log_continue)
 
+    # Zero-weight tail continuations still have polynomial derivatives at
+    # h=1. The log semiring omits those edges; retain their exact zero-valued
+    # probability term for forecasts, including higher-order derivatives.
+    boundary_tail = None
+    if (
+        tail_end_probability is not None
+        and torch.is_grad_enabled()
+        and tail_end_probability.requires_grad
+        and bool((tail_end_probability == 1).any())
+    ):
+        boundary_tail = tail_end_probability.expand(B, K)
+
     survival_by_horizon = []
     end_by_horizon = []
     for horizon_tensor_value in horizon_tensor:
         horizon = int(horizon_tensor_value.item())
         component_log_survival = posterior.new_full((B, K, D), float("-inf"))
+        boundary_survival = torch.zeros_like(posterior) if boundary_tail is not None else None
 
         if tail_end_probability is None:
             # Historical finite-support behavior: ages that would exceed D
@@ -178,6 +191,12 @@ def active_episode_survival_forecast(
                     total = log_continue[..., age_index : age_index + exact_steps].sum(dim=-1)
                 tail_steps = horizon - exact_steps
                 if tail_steps > 0:
+                    if boundary_tail is not None:
+                        boundary_survival[..., age_index] = total.exp() * torch.where(
+                            boundary_tail == 1,
+                            (1 - boundary_tail) ** tail_steps,
+                            torch.zeros_like(boundary_tail),
+                        )
                     total = total + tail_steps * log_continue[..., -1]
                 component_log_survival[..., age_index] = total
 
@@ -185,12 +204,17 @@ def active_episode_survival_forecast(
             posterior + component_log_survival,
             dim=(1, 2),
         )
-        survival_by_horizon.append(log_survival.exp())
+        correction = (
+            (posterior.exp() * boundary_survival).sum(dim=(1, 2))
+            if boundary_survival is not None
+            else 0.0
+        )
+        survival_by_horizon.append(log_survival.exp() + correction)
         # Complement each conditional survival before averaging. Subtracting
         # the marginal survival from one loses rare end events, particularly
         # when posterior normalization itself rounds at machine precision.
         component_end = -torch.expm1(component_log_survival.clamp_max(0.0))
-        end_by_horizon.append((posterior.exp() * component_end).sum(dim=(1, 2)))
+        end_by_horizon.append((posterior.exp() * component_end).sum(dim=(1, 2)) - correction)
 
     survival = torch.stack(survival_by_horizon, dim=1).clamp(0.0, 1.0)
     end_within = torch.stack(end_by_horizon, dim=1).clamp(0.0, 1.0)

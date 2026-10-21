@@ -79,3 +79,23 @@ and retains coverage of the no-trainable-parameters cleanup path.
 affected native ML-stack bundle passed 1566 with three CUDA skips. The first
 regression reproduces incorrect frozen base flags after Adam setup failure
 on core 371e19c. No defaults, supervised scores or training budgets changed.
+
+## Exact finite-support boundary derivatives
+
+Canonical test_hsmm_boundary_derivatives.py adds 45 cases for the exact D+
+h_tail=1 boundary: raw-parameter path-enumeration gradients in Float32/64,
+D=1/2/3, self resets, mixed interior/boundary states, forecast first and mixed
+second derivatives, next-state derivative conservation, ragged and empty
+prefixes, one-sided numerical differences, projected supervised Adam direction,
+and single evaluation of stochastic heads. The score-boundary VJP is explicitly
+first-order; higher-order requests raise. Forecast values and artifact schemas
+remain unchanged. This is mathematical verification, not empirical trading
+qualification.
+
+2026-10-21 boundary gate: 45 new cases pass; the final same tests on core
+84d38da have 44 failures and one pass. Full canonical model plus affected
+native Qlib/MLflow, research publication, configuration/input audits and
+retained-replay auditor bundle: 1647 passed, three CUDA-unavailable skips.
+Ruff and Black pass for the complete core. No defaults, artifact schema,
+market fit budget or reserved data changed. Exact source and JUnit evidence
+are retained in Nautilus docs/nhsmm-hsmm-boundary-verification.json.

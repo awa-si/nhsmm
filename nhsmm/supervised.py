@@ -138,13 +138,23 @@ def supervised_filter_log_score(model, observations, labels, *, context=None, re
     if T == 0 or B == 0:
         values = model.duration_logits_bias.sum() * 0 + data.sequences.new_zeros(B)
     else:
+        boundary_inputs = []
         log_p = _safe_logsumexp(
-            _forward_causal_hazard(model, data, ContextRouter.from_tensor(data), normalized=True),
+            _forward_causal_hazard(
+                model,
+                data,
+                ContextRouter.from_tensor(data),
+                normalized=True,
+                boundary_inputs=boundary_inputs,
+            ),
             dim=-1,
         )
         values = torch.stack(
             [log_p[b, : len(z)].gather(1, z[:, None]).sum() for b, z in enumerate(paths)]
         )
+        from nhsmm.models.boundary import tail_boundary_filter_score
+
+        values = tail_boundary_filter_score(model, paths, values, boundary_inputs)
     return values.sum() if reduce else values
 
 
