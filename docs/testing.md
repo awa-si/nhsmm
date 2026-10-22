@@ -147,3 +147,24 @@ path enumeration for likelihood/filter scores and all parameter/E/U gradients.
 Finite/D+ durations, exact h_tail=1 and differing hard transition support sizes
 are included. The host report records baseline failures, source/JUnit hashes
 and full native ML-stack validation.
+
+
+## Artifact publication and real Gaussian derivative gates
+
+Canonical host test_artifact_publication.py injects serialization, file-sync
+and replacement failures for absent and existing targets, verifies that the
+target is unchanged until serialization completes, and checks Float32/64
+Gaussian/Student-t round trips and existing POSIX permissions.
+
+test_gaussian_offset_derivatives.py uses real Gaussian scoring and independently
+enumerated prefix-conditioned occupancies to check mean, raw-variance and
+observation gradients at large positive and negative observations. It covers
+HMM, finite HSMM and D+ (D=1/3), Float32/64, and marginal/filter objectives.
+Derivative errors are compared after division by their natural observation
+scale (x or x squared); it does not claim arbitrary absolute precision.
+
+
+Scoped CPU qualification and operational limits: [production.md](production.md).
+
+2026-10-22 smoke/release test-owner pin: 59bf4d93eb0fb7caf4eefef598da2fde40af5da9. Smoke also runs on v3 pushes
+and pull requests; hosted outcomes remain separate from local CPU qualification.

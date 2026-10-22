@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import os
+import stat
 from collections.abc import Mapping
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, Optional, Union
 
 import torch
@@ -91,9 +94,26 @@ def build_artifact(model: NHSMM) -> dict[str, Any]:
 def save_artifact(model: NHSMM, path: Union[str, Path]) -> Path:
     """Persist a trusted NHSMM artifact using the versioned v3 payload."""
 
+    # doc:nhsmm.artifact-publication -> docs/model.md#artifact-publication
+    payload = build_artifact(model)
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(build_artifact(model), target)
+    temporary = None
+    try:
+        with NamedTemporaryFile(
+            mode="w+b", dir=target.parent, prefix=f".{target.name}.", suffix=".tmp", delete=False
+        ) as stream:
+            temporary = Path(stream.name)
+            torch.save(payload, stream)
+            stream.flush()
+            if target.exists():
+                temporary.chmod(stat.S_IMODE(target.stat().st_mode))
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return target
 
 

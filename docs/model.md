@@ -568,3 +568,21 @@ The offset identity follows log-domain HMM algebra (Rabiner 1989,
 https://doi.org/10.1109/5.18626). The package-specific regression gate compares
 raw-weight probability-space path enumeration, a dense expanded-state chain,
 real identical Gaussian emissions and exact-zero boundary derivatives.
+
+
+## Artifact publication
+
+save_artifact validates and snapshots the model before writing. It serializes to
+a unique temporary file in the target directory, flushes and fsyncs that file,
+then atomically replaces the target (doc:nhsmm.artifact-publication). A failed
+serialization, file sync or replacement leaves the prior target unchanged;
+ordinary exception cleanup removes the temporary file. Existing file permission
+bits are retained; newly created artifacts use the private temporary-file mode.
+The serialized payload, load validation and artifact version are unchanged.
+
+Concurrent readers on a filesystem supporting atomic same-directory replacement
+see a complete previous or new artifact. Concurrent successful writers remain
+last-replacement-wins; this API does not provide a writer lock or compare-and-swap.
+Abrupt process termination can leave an unpublished temporary file. Directory
+metadata is not fsynced, so this is not a power-loss durability guarantee.
+Primary primitive: https://docs.python.org/3.14/library/os.html#os.replace.
