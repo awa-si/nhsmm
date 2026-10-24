@@ -89,3 +89,15 @@ See the [complete result and limits](https://github.com/awa-si/nautilus/blob/1bb
 These are bounded synthetic results, not evidence of market regime accuracy,
 profitability, accelerator support or live strategy readiness. Source code,
 ordinary defaults and artifact schema are unchanged by this documentation update.
+
+## Observation-shift qualification limit
+
+A frozen-model diagnostic on already consumed synthetic validation rows
+completes technically but fails the declared robustness quality flag in all
+nine profiles. Stronger noise and a fixed mean shift degrade accuracy while
+posterior confidence stays high. No optimizer updates or core-code changes
+occurred; the original well-separated qualification is not a general noise,
+shift or confidence-calibration guarantee.
+Read the [diagnostic and scope limits](https://github.com/awa-si/nautilus/blob/81066bd4baaa23f8c7aa76f029d6e9b68d85ea26/docs/hsmm-robustness.md).
+Require a separately fixed emission/noise-calibration protocol before any
+new fitting. No market production or neural-context promotion follows.

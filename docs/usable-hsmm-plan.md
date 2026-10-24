@@ -26,9 +26,14 @@ The completed result supersedes this plan's former pending status:
 
 ## Remaining scope
 
-The observations in that generator are well separated. Before broader usability
-claims, preregister a frozen-model diagnostic with weaker observations and
-controlled shifts, fixed metrics and no new candidate selection.
+The observations in the qualification generator are well separated. The
+preregistered frozen-model noise/shift diagnostic is now complete: all nine
+profiles fail at least one diagnostic quality case, with no optimizer updates
+or artifact changes. All 72 probability/score audits pass, and all three
+state prediction classes remain represented. Broader observation robustness
+is not qualified. Preregister matched-noise or emission-calibration work
+before further fitting or neural expansion.
+See the [complete result](https://github.com/awa-si/nautilus/blob/81066bd4baaa23f8c7aa76f029d6e9b68d85ea26/docs/hsmm-robustness.md).
 Keep already consumed synthetic slices labelled as diagnostics. Do not open
 reserved market cohorts or resume exhausted market budgets under this plan.
 Neural/context benefit and market production readiness remain separate gates.
