@@ -594,3 +594,19 @@ HSMM construction. It resolves existing fields, rejects conflicting options and
 leaves low-level defaults and artifact v3 unchanged. model_mode is a derived
 architecture property. See [the mode boundary](model-modes.md), code anchor
  doc:nhsmm.model-modes. No fitted artifact is reinterpreted by a mode switch.
+
+## HMM filtering specializations
+
+doc:nhsmm.hmm-filtering-performance.
+Finite D=1 inference with finite model duration scores uses the ordinary HMM
+boundary update directly: every one-step episode ends, then transition and
+current emission apply in the established causal order. No-gradient streaming
+omits the redundant duration hazard, empty continuation and age concatenation.
+Autograd, invalid-duration support and all D+ cases retain the general kernel.
+
+For K<=3, filter_model_sequence reuses the existing scaled log-semiring prefix
+scan from models/forward.py after normal score/shape admission. It returns every
+causal prefix, preserves ragged/empty sequence padding and uses outgoing t-1
+transition context. Larger K retains the sequential path. The scan trades
+O(T K^3 log T) work for fewer Python dispatches; temporary arrays scale with T.
+No model field, optimizer, artifact format or mathematical duration law changes.

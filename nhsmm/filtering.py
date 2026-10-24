@@ -392,6 +392,21 @@ def _filter_step_normalized(
     ``filter_step`` remains the validated path for arbitrary external scores.
     """
 
+    # D=1 without a tail is an ordinary HMM: every episode ends at this row.
+    # Keep autograd and invalid-duration support on the established general path.
+    if (
+        not torch.is_grad_enabled()
+        and previous.log_posterior.shape[-1] == 1
+        and tail_end_probability is None
+        and bool(torch.isfinite(log_duration).all())
+    ):
+        predicted = _safe_logsumexp(
+            previous.log_posterior.unsqueeze(-1) + transition_log_prob, dim=(1, 2)
+        )
+        emission, _ = _center_emission_log_probs(emission_log_prob)
+        posterior, _ = _normalize_causal_frontier(predicted.unsqueeze(-1) + emission.unsqueeze(-1))
+        return HSMMFilterState._from_normalized_unchecked(posterior)
+
     log_end, log_continue = _duration_log_hazard_from_log_p(log_duration, tail_end_probability)
     posterior, _ = _causal_filter_step(
         previous.log_posterior,
@@ -568,6 +583,24 @@ def filter_model_sequence(
             raise ValueError(
                 f"transition logits must be {expected_transition}, got {transition_logits.shape}"
             )
+
+        if D == 1 and tail_end_probability is None:
+            # Reuse the existing bounded, scaled log-semiring prefix scan.
+            # It is already the differentiable small-HMM filtering-loss kernel.
+            from nhsmm.models.forward import (
+                _SMALL_HMM_SCAN_MAX_STATES,
+                _hmm_prefix_log_posteriors,
+            )
+
+            if K <= _SMALL_HMM_SCAN_MAX_STATES and bool(torch.isfinite(duration_logits).all()):
+                for b, length in enumerate(sequence.lengths.tolist()):
+                    if length:
+                        trace[b, :length, :, 0] = _hmm_prefix_log_posteriors(
+                            initial_logits[b, 0],
+                            sequence.log_probs[b, :length],
+                            transition_logits[b, : length - 1, :, 0, :],
+                        )
+                return HSMMFilterTrace(trace, sequence.lengths.clone())
 
         for b in range(B):
             length = int(sequence.lengths[b].item())

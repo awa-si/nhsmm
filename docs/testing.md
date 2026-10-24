@@ -188,3 +188,13 @@ HMM/HSMM fitting, v3 artifact round trips, continued fitting, streaming and
 external-context fallback. Public scripts/smoke_cpu.py also exercises HMM,
 finite/D+ HSMM and internally conditioned NHSMM in Float32/64. Profile
 selection adds no new inference algorithm or artifact field. See model-modes.md.
+
+## HMM filtering performance regressions
+
+Canonical test_hmm_optimized_filter.py checks bit-exact D=1 no-gradient steps
+against the unchanged general kernel at K=2/3/6 and Float32/64, continued
+selection of the autograd path, invalid reachable duration rejection,
+three-state neural HMM prefixes against independent raw path enumeration,
+ragged empty/singleton inputs and future-prefix causality. Existing full model
+and serving gates still apply. Timing comparisons use identical artifact
+weights/inputs and alternate old/new code; score tolerances remain unchanged.
