@@ -154,23 +154,53 @@ def _safe_logsumexp(
     return result if keepdim else result.squeeze(dim)
 
 
+def _duration_log_survival_scan(log_p: torch.Tensor) -> torch.Tensor:
+    """Differentiable suffix log sums, including zero sensitivities/support."""
+    suffix = log_p.flip(-1)
+    offset = 1
+    while offset < suffix.shape[-1]:
+        combined = _safe_logsumexp(
+            torch.stack((suffix[..., offset:], suffix[..., :-offset]), dim=-1),
+            dim=-1,
+        )
+        suffix = torch.cat((suffix[..., :offset], combined), dim=-1)
+        offset *= 2
+    return suffix.flip(-1)
+
+
+class _FiniteDurationSurvival(torch.autograd.Function):
+    """Native finite forward/VJP; reconstruct a safe graph for higher derivatives."""
+
+    @staticmethod
+    def forward(ctx, log_p):
+        with torch.enable_grad():
+            leaf = log_p.detach().requires_grad_()
+            survival = torch.logcumsumexp(leaf.flip(-1), dim=-1).flip(-1)
+        ctx.save_for_backward(log_p, leaf, survival)
+        return survival.detach()
+
+    @staticmethod
+    def backward(ctx, gradient):
+        original, leaf, survival = ctx.saved_tensors
+        if torch.is_grad_enabled():
+            # Native double backward takes log(abs(upstream_grad)); zero
+            # sensitivities can cause 0/0. Reconstruct only on explicit request.
+            stable = _duration_log_survival_scan(original)
+            return torch.autograd.grad(stable, original, gradient, create_graph=True)[0]
+        with torch.enable_grad():
+            # Retain the private graph until the outer context is released so
+            # repeated backwards with retain_graph=True remain valid.
+            return torch.autograd.grad(survival, leaf, gradient, retain_graph=True)[0]
+
+
 def _duration_log_survival(log_p: torch.Tensor) -> torch.Tensor:
-    """Exact suffix survival scores with a safe backward on zero-mass tails."""
+    """Exact suffix survival scores with finite higher derivatives."""
     if torch.is_grad_enabled() and log_p.requires_grad:
-        # Native logcumsumexp double backward takes log(abs(upstream_grad));
-        # zero suffix sensitivities can therefore produce 0/0 NaNs.
-        # A bounded-depth log-sum scan has the same survival law and retains
-        # ordinary autograd through zero sensitivities and exact hard support.
-        suffix = log_p.flip(-1)
-        offset = 1
-        while offset < suffix.shape[-1]:
-            combined = _safe_logsumexp(
-                torch.stack((suffix[..., offset:], suffix[..., :-offset]), dim=-1),
-                dim=-1,
-            )
-            suffix = torch.cat((suffix[..., :offset], combined), dim=-1)
-            offset *= 2
-        return suffix.flip(-1)
+        if log_p.shape[-1] == 1:
+            return log_p
+        if bool(torch.isfinite(log_p).all()):
+            return _FiniteDurationSurvival.apply(log_p)
+        return _duration_log_survival_scan(log_p)
     if bool(torch.isfinite(log_p).all()):
         return torch.logcumsumexp(log_p.flip(-1), dim=-1).flip(-1)
     running = log_p[..., -1]
