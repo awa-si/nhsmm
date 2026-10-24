@@ -610,3 +610,26 @@ causal prefix, preserves ragged/empty sequence padding and uses outgoing t-1
 transition context. Larger K retains the sequential path. The scan trades
 O(T K^3 log T) work for fewer Python dispatches; temporary arrays scale with T.
 No model field, optimizer, artifact format or mathematical duration law changes.
+
+## Duration survival derivative stability
+
+doc:nhsmm.duration-survival-derivatives
+
+Differentiable duration suffix survival uses a bounded-depth log-sum scan with
+safe reductions, including exact zero support. On the qualified Torch CPU
+profile, native logcumsumexp double backward can produce NaNs when upstream
+suffix sensitivities are zero. The scan retains finite first and higher
+derivatives for the tested interior laws without changing duration semantics.
+No-gradient finite-support survival retains the native fast path. Existing
+explicit first-order restrictions at the exact D+ h_tail=1 score boundary remain.
+
+Batch HSMM filtering computes hazards for all used outgoing boundary rows of
+each sequence together, then applies the same causal state-age step at every
+row. It excludes padding and the final unused boundary. Canonical state-only
+D+ tail vectors are supported by this specialization; custom tail shapes retain
+the established step path. Ordinary D=1 HMM filtering retains its existing
+specializations.
+
+Hazard batching retains two temporary [used_boundaries,K,D] tensors for the
+current sequence. This trades O(TKD) temporary storage for fewer dispatches;
+it does not add these tensors to persistent streaming state.

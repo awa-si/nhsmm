@@ -198,3 +198,13 @@ three-state neural HMM prefixes against independent raw path enumeration,
 ragged empty/singleton inputs and future-prefix causality. Existing full model
 and serving gates still apply. Timing comparisons use identical artifact
 weights/inputs and alternate old/new code; score tolerances remain unchanged.
+
+## Extended HSMM and HMM preservation gate
+
+Canonical test_hsmm_extended_validation.py checks 17/64-age finite and D+
+batch/stream frontiers against independent raw-weight expanded Markov chains,
+ragged dynamic age-dependent transition/duration adjoints against a separate
+probability recurrence, interior Hessian-vector products and zero-sensitivity
+duration suffix derivatives with exact hard support and separated scores.
+Hazard batching excludes padded and unused final boundaries. Full model and
+existing HMM optimization/usability gates remain required.

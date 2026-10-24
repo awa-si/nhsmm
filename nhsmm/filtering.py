@@ -156,6 +156,21 @@ def _safe_logsumexp(
 
 def _duration_log_survival(log_p: torch.Tensor) -> torch.Tensor:
     """Exact suffix survival scores with a safe backward on zero-mass tails."""
+    if torch.is_grad_enabled() and log_p.requires_grad:
+        # Native logcumsumexp double backward takes log(abs(upstream_grad));
+        # zero suffix sensitivities can therefore produce 0/0 NaNs.
+        # A bounded-depth log-sum scan has the same survival law and retains
+        # ordinary autograd through zero sensitivities and exact hard support.
+        suffix = log_p.flip(-1)
+        offset = 1
+        while offset < suffix.shape[-1]:
+            combined = _safe_logsumexp(
+                torch.stack((suffix[..., offset:], suffix[..., :-offset]), dim=-1),
+                dim=-1,
+            )
+            suffix = torch.cat((suffix[..., :offset], combined), dim=-1)
+            offset *= 2
+        return suffix.flip(-1)
     if bool(torch.isfinite(log_p).all()):
         return torch.logcumsumexp(log_p.flip(-1), dim=-1).flip(-1)
     running = log_p[..., -1]
@@ -614,14 +629,44 @@ def filter_model_sequence(
             )
             trace[b, 0] = state.log_posterior[0]
 
-            for t in range(1, length):
-                state = _filter_step_normalized(
-                    state,
-                    sequence.log_probs[b : b + 1, t],
-                    duration_logits[b : b + 1, t - 1],
-                    transition_logits[b : b + 1, t - 1],
-                    tail_end_probability,
+            hazards = None
+            if (
+                length > 1
+                and D > 1
+                and (
+                    tail_end_probability is None
+                    or (
+                        isinstance(tail_end_probability, torch.Tensor)
+                        and tail_end_probability.shape == (K,)
+                    )
                 )
+            ):
+                # Treat used boundary rows as a batch: suffix survival is local
+                # to each row and need not be recomputed inside the time loop.
+                # Preserve custom tail shapes on the established step path.
+                hazards = _duration_log_hazard_from_log_p(
+                    duration_logits[b, : length - 1], tail_end_probability
+                )
+
+            for t in range(1, length):
+                if hazards is None:
+                    state = _filter_step_normalized(
+                        state,
+                        sequence.log_probs[b : b + 1, t],
+                        duration_logits[b : b + 1, t - 1],
+                        transition_logits[b : b + 1, t - 1],
+                        tail_end_probability,
+                    )
+                else:
+                    posterior, _ = _causal_filter_step(
+                        state.log_posterior,
+                        sequence.log_probs[b : b + 1, t],
+                        hazards[0][t - 1 : t],
+                        hazards[1][t - 1 : t],
+                        transition_logits[b : b + 1, t - 1],
+                        tail_enabled=tail_end_probability is not None,
+                    )
+                    state = HSMMFilterState._from_normalized_unchecked(posterior)
                 trace[b, t] = state.log_posterior[0]
 
         return HSMMFilterTrace(trace, sequence.lengths.clone())
