@@ -8,7 +8,8 @@ live artifact location.
 ## Qualified runtime and model scope
 
 The recorded local run uses Linux x86-64, Python 3.14.8, PyTorch 2.14.1+cpu and
-NumPy 2.5.4. Float32 and Float64 are exercised. This does not qualify every
+NumPy 2.5.4. Float32 and Float64 are exercised. The later supervised calibration also passes
+on Python 3.14.9 with the same Torch/NumPy versions. This does not qualify every
 version admitted by the broad package dependency bounds, accelerators,
 Float16/BFloat16, torch.compile, or arbitrary custom distributions/encoders.
 
@@ -17,9 +18,13 @@ right-censored final episodes, supervised observed-joint and prefix-filter
 objectives, optional external component context, and canonical internal context.
 Use the public normalized filter/runtime APIs for posterior probabilities;
 raw absolute forward scores have the finite-resolution limits in model.md.
-At exactly h_tail=1, the score correction supports first-order derivatives;
-higher-order requests are rejected. Interior/forecast derivative contracts
-remain those in the mathematical owner.
+At exactly h_tail=1, the public supervised filtering score supports exact
+second and mixed derivatives; third-derivative graphs are rejected.
+The separate marginal-likelihood boundary correction remains first-order
+and rejects higher-order requests. Use the public score interfaces rather
+than deriving boundary gradients from raw hard-zero log frontiers.
+See [the derivative owner](duration-tail-contract.md#forecast-and-filtering-derivatives-at-h_tail1)
+and [supervised filtering](supervised.md) for the precise scope.
 
 Gaussian and Student-t packaged save/load/runtime paths are exercised.
 The extreme-offset *new* analytic emission-parameter gate is Gaussian-only;
@@ -71,3 +76,16 @@ matching-source evidence before release; public smoke alone is not that gate.
 See [CI ownership](testing.md#ci-ownership-without-a-cross-repository-secret).
 Hosted outcomes and the broader dependency-version matrix remain separate
 from local evidence. No tag or PyPI publication follows from this qualification.
+
+## Supervised static qualification update (2026-10-24)
+
+Model source 8c0998c is qualified for the declared CPU synthetic HMM/HSMM cases.
+The exact-source full canonical owner gate passes 1852 tests with three CUDA
+skips. The later host correction has 134 targeted passes, and nine native
+calibration profiles complete with all 99 artifact hashes verified.
+The first saved profile is replayed without training; the remaining eight
+consume the declared budget. Geometric controls retain HMM.
+See the [complete result and limits](https://github.com/awa-si/nautilus/blob/1bbcd0b2ffd5d5d8766d702c8a0185ae9b351594/docs/usable-hsmm.md).
+These are bounded synthetic results, not evidence of market regime accuracy,
+profitability, accelerator support or live strategy readiness. Source code,
+ordinary defaults and artifact schema are unchanged by this documentation update.

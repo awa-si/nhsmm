@@ -97,10 +97,13 @@ h_tail=1 boundary: raw-parameter path-enumeration gradients in Float32/64,
 D=1/2/3, self resets, mixed interior/boundary states, forecast first and mixed
 second derivatives, next-state derivative conservation, ragged and empty
 prefixes, one-sided numerical differences, projected supervised Adam direction,
-and single evaluation of stochastic heads. The score-boundary VJP is explicitly
-first-order; higher-order requests raise. Forecast values and artifact schemas
-remain unchanged. This is mathematical verification, not empirical trading
-qualification.
+and single evaluation of stochastic heads. The original 2026-10-21 gate
+restricted the score-boundary VJP to first order. That restriction still
+applies to marginal likelihood. At source 8c0998c, supervised filtering
+separately supports exact second derivatives and rejects third-derivative
+graphs, as covered by the usable-supervised-HSMM gate below.
+Forecast values and artifact schemas remain unchanged. This is mathematical
+verification, not empirical trading qualification.
 
 2026-10-21 boundary gate: 45 new cases pass; the final same tests on core
 84d38da have 44 failures and one pass. Full canonical model plus affected
@@ -218,3 +221,10 @@ expanded Markov chains, batch/stream/reset parity, exact h_tail=1 Hessian-vector
 products and explicit third-derivative rejection. Existing HMM gates remain.
 Host synthetic calibration is owned by Nautilus usable_hsmm.py through native
 Qlib TrainerR/MLflow, with a sealed split/source/candidate budget.
+
+The completed 2026-10-24 native calibration is recorded in
+[Nautilus](https://github.com/awa-si/nautilus/blob/1bbcd0b2ffd5d5d8766d702c8a0185ae9b351594/docs/usable-hsmm.md):
+nine declared profiles pass; geometric controls retain HMM.
+The unchanged core's canonical source pair is NHSMM 8c0998c / Nautilus 37028d7
+(1852 passes, three CUDA skips). The later host-only scorer/replay correction
+has 134 targeted rechecks; it does not replace or rerun the full canonical gate.

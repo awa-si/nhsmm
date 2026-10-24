@@ -441,7 +441,7 @@ Duration soft_dmax is applied consistently by log_matrix, expected_probs, forwar
 
 Noncausal public likelihood and training divide the completed-segmentation score by its context/length partition. Raw forward and MAP retain their segment-potential meaning. See [the mathematical owner](hsmm-mathematical-contract.md#normalized-observation-likelihood) for the generative definition; fixed external context is a conditioning variable.
 
-The model class delegates recursions to `models/forward.py`, decoding to `models/decoding.py`, support-safe segment sums to `models/segments.py`, and observation objectives to `models/objective.py`. `models/boundary.py` owns the analytic first-order tail boundary VJP. No model or state-dict parameter paths change during this split. Supervised filtering supports exact second derivatives at h_tail=1; its third-derivative graphs are rejected. The separate marginal-score boundary VJP remains first-order. Runtime and ordinary finite-support causal scoring keep their existing kernels.
+The model class delegates recursions to `models/forward.py`, decoding to `models/decoding.py`, support-safe segment sums to `models/segments.py`, and observation objectives to `models/objective.py`. `models/boundary.py` owns the analytic marginal tail-boundary VJP and supervised filter derivative corrections. No model or state-dict parameter paths change during this split. Supervised filtering supports exact second derivatives at h_tail=1; its third-derivative graphs are rejected. The separate marginal-score boundary VJP remains first-order. Runtime and ordinary finite-support causal scoring keep their existing kernels.
 
 See [correctness repair](correctness-repair.md) for bounded evidence and artifact migration.
 
