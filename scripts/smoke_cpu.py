@@ -19,15 +19,12 @@ def main():
     torch.set_num_threads(1)
     cases = []
     for dtype in (torch.float32, torch.float64):
-        for tail in (False, True):
-            config = ModelConfig(
-                n_states=2,
-                n_features=1,
-                max_duration=3,
-                duration_tail=tail,
-                causal=True,
-                dropout=0.0,
-                seed=7,
+        for mode, tail in (("hmm", False), ("hsmm", False), ("hsmm", True), ("nhsmm", False)):
+            options = {"duration_tail": tail}
+            if mode != "hmm":
+                options["max_duration"] = 3
+            config = ModelConfig.for_mode(
+                mode, n_states=2, n_features=1, dropout=0.0, seed=7, **options
             )
             assert config.with_overrides(max_iter=20).max_iter == 20
             model = NHSMM(config, device="cpu")
@@ -41,6 +38,7 @@ def main():
                 save_artifact(model, artifact)
                 restored = load_artifact(artifact, require_causal=True)
                 assert not restored.training
+                assert restored.config.model_mode == mode
                 for name, original in model.state_dict().items():
                     torch.testing.assert_close(
                         restored.state_dict()[name], original, rtol=0, atol=0
@@ -65,7 +63,7 @@ def main():
                     rtol=0,
                     atol=tolerance,
                 )
-            cases.append({"dtype": str(dtype), "duration_tail": tail})
+            cases.append({"mode": mode, "dtype": str(dtype), "duration_tail": tail})
     assert not hasattr(nhsmm, "ModelHealthThresholds")
     assert not hasattr(nhsmm, "evaluate_context_effect_replication")
     print(

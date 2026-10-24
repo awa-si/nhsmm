@@ -427,6 +427,66 @@ class ModelConfig:
         if self.optimizer_initialization == "current" and self.n_init != 1:
             raise ValueError("optimizer_initialization=current requires n_init=1")
 
+    @property
+    def model_mode(self) -> Literal["hmm", "hsmm", "nhsmm"]:
+        """Resolved model family, derived from the serialized architecture."""
+        if self.use_context_encoder or self.context_dim is not None:
+            return "nhsmm"
+        if self.max_duration == 1 and not self.duration_tail:
+            return "hmm"
+        return "hsmm"
+
+    @classmethod
+    def for_mode(
+        cls,
+        mode: Literal["hmm", "hsmm", "nhsmm"],
+        *,
+        n_states: int,
+        n_features: int,
+        **overrides: Any,
+    ) -> "ModelConfig":
+        """Build a causal, independent HMM -> HSMM -> NHSMM profile.
+
+        doc:nhsmm.model-modes -> docs/model-modes.md
+        Lower-level ModelConfig construction remains available for custom laws.
+        Only resolved existing fields are serialized; artifact v3 is unchanged.
+        """
+        if not isinstance(mode, str) or mode not in {"hmm", "hsmm", "nhsmm"}:
+            raise ValueError("mode must be hmm, hsmm or nhsmm")
+        _reject_unknown(cls, overrides)
+        settings: dict[str, Any] = {
+            "causal": True,
+            "allow_self_transitions": mode == "hmm",
+        }
+        if mode in {"hmm", "hsmm"}:
+            settings.update(use_context_encoder=False, context_dim=None, hidden_dim=None)
+        else:
+            # Explicit external context does not require an observation encoder.
+            settings["use_context_encoder"] = overrides.get("context_dim") is None
+        if mode == "hmm":
+            settings.update(max_duration=1, duration_tail=False)
+        settings.update(overrides)
+        config = cls(n_states=n_states, n_features=n_features, **settings)
+        if not config.causal:
+            raise ValueError(f"mode={mode} requires causal=True")
+        if mode in {"hmm", "hsmm"} and (
+            config.use_context_encoder
+            or config.context_dim is not None
+            or config.hidden_dim is not None
+        ):
+            raise ValueError(f"mode={mode} requires no encoder or neural context dimensions")
+        if mode == "hmm" and (
+            config.max_duration != 1 or config.duration_tail or not config.allow_self_transitions
+        ):
+            raise ValueError(
+                "mode=hmm requires max_duration=1, duration_tail=False and self transitions"
+            )
+        if mode in {"hsmm", "nhsmm"} and (config.max_duration < 2 or config.allow_self_transitions):
+            raise ValueError(f"mode={mode} requires max_duration>=2 and no self-reset transitions")
+        if config.model_mode != mode:
+            raise ValueError(f"mode={mode} requires an encoder or explicit context_dim")
+        return config
+
     def to_dict(self) -> dict[str, Any]:
         """Return the complete resolved model configuration."""
 

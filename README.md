@@ -293,3 +293,10 @@ Mathematical repair: noncausal public likelihoods now normalize complete-segment
 
 The causal core supports observed state-path training and an ordinary HMM
 specialization. See [supervised semantics and examples](docs/supervised.md).
+
+## Explicit HMM / HSMM / NHSMM selection
+
+Use ModelConfig.for_mode(mode, n_states=3, n_features=3) with mode set to
+hmm, hsmm or nhsmm. Static modes construct no observation encoder or neural
+context heads. The same supervised fit, artifact and streaming APIs apply.
+See [mode contracts and examples](docs/model-modes.md).

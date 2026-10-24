@@ -586,3 +586,11 @@ last-replacement-wins; this API does not provide a writer lock or compare-and-sw
 Abrupt process termination can leave an unpublished temporary file. Directory
 metadata is not fsynced, so this is not a power-loss durability guarantee.
 Primary primitive: https://docs.python.org/3.14/library/os.html#os.replace.
+
+## Explicit model profiles
+
+ModelConfig.for_mode selects independent causal HMM, static HSMM or neural
+HSMM construction. It resolves existing fields, rejects conflicting options and
+leaves low-level defaults and artifact v3 unchanged. model_mode is a derived
+architecture property. See [the mode boundary](model-modes.md), code anchor
+ doc:nhsmm.model-modes. No fitted artifact is reinterpreted by a mode switch.

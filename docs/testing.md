@@ -179,3 +179,12 @@ Scoped CPU qualification and operational limits: [production.md](production.md).
 The former 2026-10-22 cross-repository test-owner pin was superseded on
 2026-10-24 by the owner-local canonical workflow above. Smoke still runs on
 v3 pushes and pull requests, and can be called by release without custom secrets.
+
+## Independent model-mode qualification
+
+Canonical test_model_modes.py verifies static construction without neural
+networks, raw-weight path-enumeration scores/posteriors, synthetic supervised
+HMM/HSMM fitting, v3 artifact round trips, continued fitting, streaming and
+external-context fallback. Public scripts/smoke_cpu.py also exercises HMM,
+finite/D+ HSMM and internally conditioned NHSMM in Float32/64. Profile
+selection adds no new inference algorithm or artifact field. See model-modes.md.
