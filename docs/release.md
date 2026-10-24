@@ -69,7 +69,7 @@ No long-lived PyPI API token is required once Trusted Publishing is configured.
 Before creating a release tag:
 
 1. Use a complete checkout of the intended release commit.
-2. Run the canonical tests/ml_stack/nhsmm suite from the pinned Nautilus test-owner checkout, against this editable core source.
+2. Run the full canonical suite in private Nautilus against the exact intended public core SHA (owner-local CI or a verified local checkout), and retain its successful source-bound evidence.
 3. Confirm the release commit contains the desired public API and documentation.
 4. Confirm `git status` is clean in the release checkout.
 5. Confirm the chosen version is new on PyPI.
@@ -100,17 +100,17 @@ Pushing the tag starts `.github/workflows/release.yml`.
 
 The tag-triggered workflow:
 
-1. runs the canonical external NHSMM pytest suite on Python 3.12, pinned by immutable test-owner SHA;
+1. reuses the public CPU package smoke on Python 3.12 without private repository access;
 2. checks out full Git history/tags for `setuptools_scm`;
 3. builds sdist + wheel;
 4. runs `twine check`;
 5. installs the built wheel into a fresh venv;
 6. verifies the installed package version exactly equals the pushed tag without its `v` prefix;
-7. runs the installed-package public-API smoke;
+7. runs the same causal batch/stream/artifact smoke against the installed wheel;
 8. uploads the exact verified distributions as an artifact;
 9. publishes those same distributions to PyPI through Trusted Publishing.
 
-The build job cannot run unless the full test job succeeds. The publish job cannot run unless build/verification succeeds, and it is gated to `refs/tags/v*`.
+The build job requires the reusable public package smoke. The publish job requires build/verification and is gated to refs/tags/v*. The full mathematical suite is a separate prerequisite in the private test-owner repository; this public workflow cannot inspect that private CI run. Verify its exact matching core SHA before creating the release tag.
 
 ## Versioning
 
@@ -145,16 +145,17 @@ PyPI release files are immutable: never reuse a version that has already been up
 
 TestPyPI is optional. The production workflow intentionally publishes only to PyPI after package validation. If a TestPyPI rehearsal is needed, use a separate temporary/manual workflow rather than weakening the production release job.
 
-## Test-owner migration — 2026-10-16
+## CI ownership — 2026-10-24
 
-The repository no longer contains a tests/ tree or a [test] package extra.
-The smoke and release test jobs check out the pinned [canonical suite](https://github.com/awa-si/nautilus/tree/main/tests/ml_stack/nhsmm).
-Installed-package smoke uses current ModelConfig/context APIs; removed
-ValidationConfig/search examples are not restored for release checks. The
-2026-09-28 dry-run above is historical evidence, not evidence for this change.
+The model repository has no duplicate tests/ tree or [test] package extra.
+The full [canonical suite](https://github.com/awa-si/nautilus/tree/main/tests/ml_stack/nhsmm)
+runs inside its private owner using that repository's automatic read-only token
+and a pinned public core SHA. No cross-repository private-read Actions secret
+is needed. Keep exact source/test-owner evidence as a pre-tag prerequisite.
 
-The test-owner repository is private. GitHub jobs require the symbolic secret
-ML_STACK_TESTS_READ_TOKEN with read-only access to awa-si/nautilus. The default
-core-repository token cannot authorize that checkout. Jobs fail closed before
-checkout if the secret is absent. Secret provisioning and hosted execution
-are not verified by local migration checks. Never commit the token value.
+Public smoke and release use scripts/smoke_cpu.py for package integration only.
+The release job reuses smoke, builds the sdist/wheel, installs the wheel into a
+fresh CPU venv and reruns that same smoke outside the checkout. Trusted
+Publishing still uses short-lived OIDC; no long-lived PyPI token is introduced.
+Private tests remain private. Old failed runs retain their historical status.
+The 2026-09-28 dry-run above is historical evidence, not proof of this change.

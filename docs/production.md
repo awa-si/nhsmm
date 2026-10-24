@@ -64,8 +64,10 @@ October 20 development cohort. It is not a fresh holdout result. Reserved
 market cohorts remain unopened; no market refit or optimizer invocation is
 admitted by that replay.
 
-The smoke and release workflows pin the canonical external test commit.
-The smoke workflow also runs on v3 pushes and pull requests. Hosted run
-execution, secret provisioning and the broader dependency-version matrix
-must be reported separately from local evidence. No package tag or PyPI
-publication follows merely from this qualification.
+Public smoke/release perform package checks without a private checkout or
+custom Actions secret. The complete canonical suite runs in its private test
+owner against an explicitly pinned public core SHA. Require its successful
+matching-source evidence before release; public smoke alone is not that gate.
+See [CI ownership](testing.md#ci-ownership-without-a-cross-repository-secret).
+Hosted outcomes and the broader dependency-version matrix remain separate
+from local evidence. No tag or PyPI publication follows from this qualification.

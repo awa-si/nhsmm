@@ -24,16 +24,26 @@ Frozen fixtures/input reports live in tests/ml_stack/fixtures/nhsmm. Tests no
 longer require research files in this core checkout. Run CLIs from Nautilus
 with python -m and the new module name. Oracle remains OFF and opt-in.
 
-Local core static checks remain ruff check nhsmm scripts and
-black --check nhsmm scripts. Smoke/release CI checks out the pinned external
-test owner and runs the NHSMM subtree against the core commit being built.
-A successful model suite verifies contracts, not trading performance.
+## CI ownership without a cross-repository secret
 
-The test-owner repository is private. GitHub jobs require the symbolic secret
-ML_STACK_TESTS_READ_TOKEN with read-only access to awa-si/nautilus. The default
-core-repository token cannot authorize that checkout. Jobs fail closed before
-checkout if the secret is absent. Secret provisioning and hosted execution
-are not verified by local migration checks. Never commit the token value.
+Local core static checks remain ruff check nhsmm scripts and
+black --check nhsmm scripts. The public smoke workflow runs only this repository:
+install the qualified CPU dependency profile, pip integrity and
+scripts/smoke_cpu.py. Release reuses that same workflow, then builds and verifies
+the wheel and sdist. The installed wheel runs the same smoke outside the checkout.
+Neither workflow reads a private repository or needs a custom Actions secret.
+
+doc:nhsmm.public-package-smoke covers finite/D+ Float32/64 causal batch/stream
+parity, trusted artifact save/load, exact learned weights and fresh reset.
+This is a public package integration check, not the full mathematical test suite.
+
+The full canonical suite stays in private awa-si/nautilus under
+.github/workflows/nhsmm-core.yml. It uses its own automatic read-only
+GITHUB_TOKEN to read itself and checks out an explicitly pinned public core SHA.
+Record that exact core/test-owner SHA pair and require its successful full gate
+before release. The public release workflow cannot automatically read or enforce
+that private run. A green public smoke alone never means full qualification.
+No private tests are copied into this package, and no token value is required.
 
 The canonical test_forecast_precision.py module checks rare finite/D+ end and state-change risks against 80-digit Decimal references in Float32/Float64, hard-support forecast gradients against independent probability formulas, geometric first/second derivatives, result identities, and separate duration/transition target learning.
 
@@ -166,5 +176,6 @@ scale (x or x squared); it does not claim arbitrary absolute precision.
 
 Scoped CPU qualification and operational limits: [production.md](production.md).
 
-2026-10-22 smoke/release test-owner pin: 59bf4d93eb0fb7caf4eefef598da2fde40af5da9. Smoke also runs on v3 pushes
-and pull requests; hosted outcomes remain separate from local CPU qualification.
+The former 2026-10-22 cross-repository test-owner pin was superseded on
+2026-10-24 by the owner-local canonical workflow above. Smoke still runs on
+v3 pushes and pull requests, and can be called by release without custom secrets.

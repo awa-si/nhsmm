@@ -15,44 +15,8 @@ concurrency:
 
 jobs:
   test:
-    name: Full test suite
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install package and test dependencies
-        run: python -m pip install -e . pytest
-
-      - name: Require private test-owner access
-        env:
-          ML_STACK_TESTS_READ_TOKEN: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
-        shell: bash
-        run: |
-          if [ -z "$ML_STACK_TESTS_READ_TOKEN" ]; then
-            echo "::error::Set ML_STACK_TESTS_READ_TOKEN with read access to awa-si/nautilus."
-            exit 1
-          fi
-
-      - name: Checkout canonical model tests
-        uses: actions/checkout@v7
-        with:
-          repository: awa-si/nautilus
-          token: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
-          ref: 59bf4d93eb0fb7caf4eefef598da2fde40af5da9
-          path: ml-stack
-
-      - name: Run full test suite
-        working-directory: ml-stack
-        run: python -m pytest -q tests/ml_stack/nhsmm
+    name: Public package smoke
+    uses: ./.github/workflows/smoke.yml
 
   build:
     name: Build and verify distributions
@@ -65,6 +29,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -86,6 +51,7 @@ jobs:
         run: |
           python -m venv /tmp/nhsmm-release-venv
           /tmp/nhsmm-release-venv/bin/python -m pip install --upgrade pip
+          /tmp/nhsmm-release-venv/bin/python -m pip install 'torch==2.14.1' --index-url https://download.pytorch.org/whl/cpu
           /tmp/nhsmm-release-venv/bin/python -m pip install dist/*.whl
 
       - name: Verify installed release version matches tag
@@ -104,37 +70,11 @@ jobs:
           print("nhsmm", installed)
           PY
 
-      - name: Verify installed public API
+      - name: Verify installed package runtime
         shell: bash
         run: |
           cd /tmp
-          /tmp/nhsmm-release-venv/bin/python - <<'PY'
-          from importlib.metadata import version
-
-          import nhsmm
-          from nhsmm import ModelConfig, NHSMM, HSMMFilterRuntime, load_artifact, save_artifact
-
-          cfg = ModelConfig(
-              n_states=3,
-              n_features=2,
-              max_duration=4,
-              context_dim=2,
-              hidden_dim=2,
-              causal=True,
-              dropout=0.0,
-              seed=7,
-          )
-          model = NHSMM(cfg, device="cpu")
-          model.initialize_distributions()
-          assert HSMMFilterRuntime
-          assert load_artifact and save_artifact
-          assert not hasattr(nhsmm, "ModelHealthThresholds")
-          assert not hasattr(nhsmm, "evaluate_context_effect_replication")
-
-          assert cfg.with_overrides(max_iter=20).max_iter == 20
-          print("nhsmm", version("nhsmm"))
-          print("public_api", "ok")
-          PY
+          /tmp/nhsmm-release-venv/bin/python "$GITHUB_WORKSPACE/scripts/smoke_cpu.py"
 
       - name: Upload distributions
         uses: actions/upload-artifact@v7

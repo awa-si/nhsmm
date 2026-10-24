@@ -2,6 +2,7 @@ name: NHSMM smoke
 
 on:
   workflow_dispatch:
+  workflow_call:
   push:
     branches: [v3]
   pull_request:
@@ -11,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nhsmm-smoke-${{ github.ref }}
+  group: nhsmm-smoke-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -22,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Prepare logs
         shell: bash
@@ -49,80 +52,19 @@ jobs:
             python -m pip --version
           } 2>&1 | tee smoke-logs/python.txt
 
-      - name: Install package
+      - name: Install CPU runtime and package
         shell: bash
         run: |
           set -o pipefail
-          python -m pip install --upgrade pip 2>&1 | tee smoke-logs/pip-upgrade.txt
+          python -m pip install 'torch==2.14.1' --index-url https://download.pytorch.org/whl/cpu 2>&1 | tee smoke-logs/torch-install.txt
           python -m pip install -e . 2>&1 | tee smoke-logs/install.txt
-          python -m pip install pytest 2>&1 | tee smoke-logs/pytest-install.txt
+          python -m pip check 2>&1 | tee smoke-logs/pip-check.txt
 
-      - name: Import smoke
+      - name: Public CPU package smoke
         shell: bash
         run: |
           set -o pipefail
-          python - <<'PY' 2>&1 | tee smoke-logs/import.txt
-          import torch
-          import nhsmm
-          from nhsmm import ModelConfig, NHSMM
-
-          print("torch", torch.__version__)
-          print("nhsmm", nhsmm.__file__)
-          cfg = ModelConfig(n_states=3, n_features=4, max_duration=5, causal=True, dropout=0.0, seed=7)
-          model = NHSMM(cfg, device="cpu")
-          model.initialize_distributions()
-          print("model_device", model.device)
-          print("causal", model.config.causal)
-          PY
-
-      - name: Require private test-owner access
-        env:
-          ML_STACK_TESTS_READ_TOKEN: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
-        shell: bash
-        run: |
-          if [ -z "$ML_STACK_TESTS_READ_TOKEN" ]; then
-            echo "::error::Set ML_STACK_TESTS_READ_TOKEN with read access to awa-si/nautilus."
-            exit 1
-          fi
-
-      - name: Checkout canonical model tests
-        uses: actions/checkout@v7
-        with:
-          repository: awa-si/nautilus
-          token: ${{ secrets.ML_STACK_TESTS_READ_TOKEN }}
-          ref: 59bf4d93eb0fb7caf4eefef598da2fde40af5da9
-          path: ml-stack
-
-      - name: Pytest suite
-        working-directory: ml-stack
-        shell: bash
-        run: |
-          set -o pipefail
-          python -m pytest -q tests/ml_stack/nhsmm 2>&1 | tee ../smoke-logs/pytest.txt
-
-      - name: CPU runtime benchmark
-        working-directory: ml-stack
-        shell: bash
-        run: |
-          set -o pipefail
-          python - <<'PY'
-          from nhsmm import ModelConfig, NHSMM, save_artifact
-
-          config = ModelConfig(
-              n_states=3,
-              n_features=4,
-              max_duration=5,
-              causal=True,
-              dropout=0.0,
-              seed=61,
-          )
-          model = NHSMM(config, device="cpu")
-          model.initialize_distributions()
-          model.eval()
-          save_artifact(model, "/tmp/nhsmm-smoke-model.pt")
-          PY
-          python -m adapter.qlib.nhsmm_research.benchmark_runtime /tmp/nhsmm-smoke-model.pt --steps 128 --warmup 16 --batch-size 1 \
-            | tee ../smoke-logs/runtime-benchmark.json
+          python scripts/smoke_cpu.py 2>&1 | tee smoke-logs/runtime.txt
 
       - name: Collect repository state
         if: always()
