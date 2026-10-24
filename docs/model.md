@@ -441,7 +441,7 @@ Duration soft_dmax is applied consistently by log_matrix, expected_probs, forwar
 
 Noncausal public likelihood and training divide the completed-segmentation score by its context/length partition. Raw forward and MAP retain their segment-potential meaning. See [the mathematical owner](hsmm-mathematical-contract.md#normalized-observation-likelihood) for the generative definition; fixed external context is a conditioning variable.
 
-The model class delegates recursions to `models/forward.py`, decoding to `models/decoding.py`, support-safe segment sums to `models/segments.py`, and observation objectives to `models/objective.py`. `models/boundary.py` owns the analytic first-order tail boundary VJP. No model or state-dict parameter paths change during this split. Higher-order differentiation at h_tail=1 is explicitly rejected; use interior parameters for higher-order work. Runtime and ordinary finite-support causal scoring keep their existing kernels.
+The model class delegates recursions to `models/forward.py`, decoding to `models/decoding.py`, support-safe segment sums to `models/segments.py`, and observation objectives to `models/objective.py`. `models/boundary.py` owns the analytic first-order tail boundary VJP. No model or state-dict parameter paths change during this split. Supervised filtering supports exact second derivatives at h_tail=1; its third-derivative graphs are rejected. The separate marginal-score boundary VJP remains first-order. Runtime and ordinary finite-support causal scoring keep their existing kernels.
 
 See [correctness repair](correctness-repair.md) for bounded evidence and artifact migration.
 
@@ -622,7 +622,7 @@ profile, native logcumsumexp double backward can produce NaNs when upstream
 suffix sensitivities are zero. The scan retains finite first and higher
 derivatives for the tested interior laws without changing duration semantics.
 No-gradient finite-support survival also retains the native fast path. Existing
-explicit first-order restrictions at the exact D+ h_tail=1 score boundary remain.
+explicit first-order restriction at the marginal-likelihood D+ h_tail=1 boundary remains; supervised filtering supports second derivatives.
 
 Batch HSMM filtering computes hazards for all used outgoing boundary rows of
 each sequence together, then applies the same causal state-age step at every
@@ -634,3 +634,5 @@ specializations.
 Hazard batching retains two temporary [used_boundaries,K,D] tensors for the
 current sequence. This trades O(TKD) temporary storage for fewer dispatches;
 it does not add these tensors to persistent streaming state.
+
+Explicit unknown-age initialization and boundary-aware fitting: [stationary entry](stationary-entry.md), [supervision](supervised.md#boundary-aware-regularized-static-fitting).

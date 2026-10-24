@@ -161,7 +161,7 @@ Before production enablement, the extension must satisfy:
 
 At h_tail=1 the forward values equal finite support, but zero-weight tail-continuation paths have nonzero one-sided derivatives. The score evaluator restores their missing first-order flux with analytic log-domain forward/backward messages (`doc:nhsmm.tail-boundary-gradient`). It never perturbs h or uses finite differences in production. For noncausal likelihood it corrects numerator and partition separately.
 
-This first-order VJP is used by public likelihood, training and score-based restart selection. Raw forward is a log-potential interface; do not derive boundary likelihood gradients by reducing hard-zero log outputs yourself. Higher-order differentiation at the exact boundary raises an explicit error. Interior derivatives use ordinary autograd. Inference under no_grad and parameters strictly below one do not pay for the boundary messages.
+This first-order VJP is used by public likelihood, training and score-based restart selection. Raw forward is a log-potential interface; do not derive boundary likelihood gradients by reducing hard-zero log outputs yourself. Higher-order differentiation of the marginal likelihood at the exact boundary raises an explicit error. Supervised filtering separately supports second derivatives as described below. Interior derivatives use ordinary autograd. Inference under no_grad and parameters strictly below one do not pay for the boundary messages.
 
 Regression references retain zero-weight paths in probability space so their derivatives remain present. One-state causal observation likelihood is independent of h; the raw one-state D=1 completed score is proportional to h. Both identities are tested, including mixed interior/boundary states and ragged sequences.
 
@@ -177,10 +177,11 @@ mass receives the missing continuation derivative. Ordinary no-grad values and
 interior log-domain calculations are unchanged. Forecast first and mixed second
 derivatives are checked against direct PMF-suffix/geometric products.
 
-The supervised prefix-state filtering score uses a separate log-domain missing
-flux VJP, sharing its once-sampled forward factors. As with the likelihood
-boundary VJP, this score correction supports first-order derivatives only.
-Higher-order requests at the exact boundary raise explicitly. Raw forward and
+The supervised prefix-state filtering score keeps its separate log-domain
+first-order VJP and reconstructs an exact degree-two missing-path expansion
+for Hessian requests, sharing its once-sampled forward factors. Second and
+mixed derivatives are supported; third-derivative graphs are rejected.
+The separate marginal-likelihood boundary VJP remains first-order. Raw forward and
 filter_step remain log-potential interfaces; their hard-zero outputs do not
 establish a boundary score-derivative contract. Use the public supervised score
 rather than reducing raw hard-zero log frontiers for boundary training.

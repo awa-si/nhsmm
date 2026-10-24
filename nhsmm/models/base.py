@@ -540,6 +540,12 @@ class NHSMM(nn.Module):
             objective=objective,
         )
 
+    def fit_supervised_boundaries(self, states, *, starts_at_boundary):
+        """Regularize static duration/transition laws from boundary-aware labels."""
+        from nhsmm.supervised_boundaries import fit_supervised_boundaries
+
+        return fit_supervised_boundaries(self, states, starts_at_boundary=starts_at_boundary)
+
     def log_likelihood(
         self,
         X: Union[torch.Tensor, List[torch.Tensor]],

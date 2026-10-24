@@ -149,7 +149,7 @@ def tail_boundary_filter_score(model, paths, scores, inputs):
         return scores
     with torch.no_grad():
         flux = _missing_filter_flux(paths, scores, tail, inputs)
-    return _TailBoundaryScore.apply(scores, tail, flux.to(tail))
+    return _TailBoundaryFilterScore.apply(scores, tail, flux.to(tail), paths, *inputs)
 
 
 def _missing_filter_flux(paths, scores, tail, inputs):
@@ -201,3 +201,136 @@ def _missing_filter_flux(paths, scores, tail, inputs):
     if not torch.isfinite(result).all():
         raise RuntimeError("tail boundary filtering derivative is non-finite")
     return result
+
+
+def _guard_boundary_gradient(value):
+    return None if value is None else _BoundarySecondOrderOnly.apply(value)
+
+
+class _BoundarySecondOrderOnly(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, value):
+        return value.clone()
+
+    @staticmethod
+    def backward(ctx, gradient):
+        if torch.is_grad_enabled():
+            raise RuntimeError("tail boundary filtering supports derivatives up to second order")
+        return gradient
+
+
+class _TailBoundaryFilterScore(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, score, tail, flux, paths, *inputs):
+        ctx.save_for_backward(tail, flux, *inputs)
+        ctx.paths = paths
+        return score.clone()
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        tail, flux, *inputs = ctx.saved_tensors
+        if not torch.is_grad_enabled():
+            return (
+                grad_output,
+                -(grad_output[:, None] * flux).sum(0),
+                None,
+                None,
+                *[None for _ in inputs],
+            )
+        correction = _filter_boundary_taylor(ctx.paths, tail, inputs)
+        required = [value for value in inputs if value.requires_grad]
+        gradients = iter(
+            torch.autograd.grad(
+                correction, required, grad_output, create_graph=True, allow_unused=True
+            )
+        )
+        # Tail is represented through the sampled end-log-hazard inputs in
+        # this branch, so its ancestor gradient must not be counted twice.
+        return (
+            grad_output,
+            None,
+            None,
+            None,
+            *[
+                _guard_boundary_gradient(next(gradients)) if value.requires_grad else None
+                for value in inputs
+            ],
+        )
+
+
+def _filter_boundary_taylor(paths, tail, inputs):
+    """Exact degree-two missing-path expansion; no epsilon perturbation.
+
+    Positive base paths remain in the original score. extra1 and extra2
+    respectively remove one and two zero continuation edges, in time order.
+    Ratios to the base prefix mass give the second-order log Taylor terms.
+    """
+    from nhsmm.filtering import _causal_filter_step, _initialize_causal_frontier
+
+    pi, emission, A, end, continuation = [value.double() for value in inputs]
+    emission, _ = _center_emission_log_probs(emission)
+    targets = torch.nonzero(tail.detach() == 1, as_tuple=False).flatten()
+    m, k, d = len(targets), end.shape[-2], end.shape[-1]
+    index = torch.arange(m, device=end.device)
+
+    def propagate(extra, b, t):
+        reset = _safe_logsumexp((extra + end[b, t]).unsqueeze(-1) + A[b, t], dim=(1, 2))
+        cont = extra + continuation[b, t]
+        if d == 1:
+            return _safe_logaddexp(reset, cont[..., -1]).unsqueeze(-1)
+        last = _safe_logaddexp(cont[..., -2], cont[..., -1])
+        return torch.cat((reset[..., None], cont[..., :-2], last[..., None]), -1)
+
+    result = []
+    for b, labels in enumerate(paths):
+        # The sampled tail end score is log(h). Using it as the local coordinate
+        # keeps input partials independent of the ancestor tail parameter.
+        delta = 1 - end[b, 0, targets, -1].exp()
+        correction = delta.sum() * 0
+        if len(labels) < 2:
+            result.append(correction)
+            continue
+        frontier, _ = _initialize_causal_frontier(pi[b : b + 1], emission[b, 0:1], d)
+        frontier = frontier[0]
+        one = end.new_full((m, k, d), -torch.inf)
+        two = end.new_full((m * m, k, d), -torch.inf)
+        pair_delta = (delta[:, None] * delta[None, :]).reshape(-1)
+        for t in range(1, len(labels)):
+            following, log_z = _causal_filter_step(
+                frontier[None],
+                emission[b, t : t + 1],
+                end[b, t - 1 : t],
+                continuation[b, t - 1 : t],
+                A[b, t - 1 : t],
+                tail_enabled=True,
+            )
+            predicted_one = propagate(one, b, t - 1)
+            inject_one = torch.full_like(one, -torch.inf)
+            inject_one[index, targets, -1] = frontier[targets, -1]
+            predicted_two = propagate(two, b, t - 1)
+            inject_two = torch.full_like(two, -torch.inf)
+            earlier = index[:, None].expand(m, m).reshape(-1)
+            latest = index[None, :].expand(m, m).reshape(-1)
+            inject_two[torch.arange(m * m, device=end.device), targets[latest], -1] = one[
+                earlier, targets[latest], -1
+            ]
+            one = _safe_logaddexp(predicted_one, inject_one) + emission[b, t, :, None] - log_z[0]
+            two = _safe_logaddexp(predicted_two, inject_two) + emission[b, t, :, None] - log_z[0]
+            frontier = following[0]
+            label = labels[t]
+            label_mass = _safe_logsumexp(frontier[label], -1)
+            one_label = (_safe_logsumexp(one[:, label], -1) - label_mass).exp()
+            one_total = _safe_logsumexp(one, (1, 2)).exp()
+            two_label = (_safe_logsumexp(two[:, label], -1) - label_mass).exp()
+            two_total = _safe_logsumexp(two, (1, 2)).exp()
+            a = (delta * one_label).sum()
+            z = (delta * one_total).sum()
+            correction = (
+                correction
+                + a
+                - z
+                + (pair_delta * (two_label - two_total)).sum()
+                - (a.square() - z.square()) / 2
+            )
+        result.append(correction)
+    return torch.stack(result)

@@ -18,6 +18,8 @@ from nhsmm.context import (
 from nhsmm.filtering import (
     HSMMFilterState,
     _filter_step_normalized,
+    _validated_initial_prior,
+    _initialize_prior_frontier,
     _require_compatible,
     initialize_filter,
 )
@@ -366,12 +368,32 @@ class HSMMFilterRuntime:
     full-prefix fallback.
     """
 
-    def __init__(self, model: Any, temperature: Optional[float] = None) -> None:
+    def __init__(
+        self,
+        model: Any,
+        temperature: Optional[float] = None,
+        *,
+        initial_prior: Optional[HSMMFilterState] = None,
+    ) -> None:
         self.model = model
         self.temperature = temperature
+        self._initial_prior = None
+        if initial_prior is not None:
+            if not isinstance(initial_prior, HSMMFilterState):
+                raise TypeError("initial_prior must be HSMMFilterState")
+            value = _validated_initial_prior(
+                model, initial_prior, initial_prior.log_posterior.shape[0]
+            )
+            self._initial_prior = HSMMFilterState(value.detach().clone())
         self.state: Optional[HSMMRuntimeState] = None
         self._uses_external_context: Optional[bool] = None
         self._score_cache = _RuntimeScoreCache()
+
+    def _initialize_filter(self, initial, emission, max_duration):
+        if self._initial_prior is None:
+            return initialize_filter(initial, emission, max_duration)
+        value = _validated_initial_prior(self.model, self._initial_prior, emission.shape[0])
+        return _initialize_prior_frontier(value, emission)
 
     def reset(self) -> None:
         self.state = None
@@ -490,7 +512,7 @@ class HSMMFilterRuntime:
                     initial = initial.expand(B, -1, -1)
                 if initial.shape != (B, 1, K):
                     raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
-                filter_state = initialize_filter(
+                filter_state = self._initialize_filter(
                     initial[:, 0],
                     emission,
                     int(self.model.dist.duration.max_duration),
@@ -541,7 +563,7 @@ class HSMMFilterRuntime:
                 )
                 if initial.shape != (B, 1, K):
                     raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
-                filter_state = initialize_filter(
+                filter_state = self._initialize_filter(
                     initial[:, 0],
                     emission,
                     int(self.model.dist.duration.max_duration),
@@ -586,7 +608,7 @@ class HSMMFilterRuntime:
                     initial = initial.expand(B, *initial.shape[1:])
                 if initial.shape != (B, 1, K):
                     raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
-                filter_state = initialize_filter(
+                filter_state = self._initialize_filter(
                     initial[:, 0],
                     emission,
                     int(self.model.dist.duration.max_duration),
@@ -626,7 +648,7 @@ class HSMMFilterRuntime:
             if initial.shape != (B, 1, K):
                 raise ValueError(f"initial logits must be {(B, 1, K)}, got {initial.shape}")
 
-            filter_state = initialize_filter(
+            filter_state = self._initialize_filter(
                 initial[:, 0],
                 sequence.log_probs[:, 0],
                 int(self.model.dist.duration.max_duration),

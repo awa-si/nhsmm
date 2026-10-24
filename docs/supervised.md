@@ -154,9 +154,9 @@ Implementation decision: reuse the existing normalized state-age recursion
 without changing propagation, parameters, artifact schema or optimizer.
 The small-HMM scan remains restricted to its existing D=1/no-tail case.
 HSMM first derivatives use the exact adjoint described below; interior higher
-derivatives retain full-history serial autograd. At the exact h_tail=1 boundary,
-filter-score derivatives use the first-order correction described below and
-higher-order requests raise explicitly. Market-scale performance requires measurement
+derivatives retain full-history serial autograd. At the exact h_tail=1 boundary, filter-score derivatives use the missing-path
+correction below. First and second derivatives are supported; constructing a
+third-derivative graph is explicitly rejected. Market-scale performance requires measurement
 before allocating a fit budget.
 
 Primary references reviewed: Yu (2010), Hidden semi-Markov models,
@@ -247,34 +247,23 @@ probability/gradient tolerances, regression evidence and measurement limits.
 
 ## Exact finite-support boundary in D+ filter supervision
 
-At h_tail=1 the forward probabilities equal finite support. A tail continuation
-has zero value there, but d(1-h)/dh=-1. Omitting these zero-weight paths from
-the log recursion silently loses part of the filtering-score derivative.
+At h_tail=1, omitted zero-continuation paths still have nonzero derivatives.
+Ordinary first-order training keeps the exact existing log-domain missing-flux
+VJP. Higher requests reconstruct a differentiable degree-two missing-path
+expansion from the once-sampled forward inputs. One extra frontier removes one
+zero continuation edge; an ordered pair removes two. With delta=1-h, label and
+total evidence ratios contribute delta*r1 + delta*delta*r2
+minus half the squared first-order term to each prefix log probability.
+This gives exact boundary Hessians and mixed parameter/context derivatives.
+No perturbed hazard, resampled network head, probability clipping or dense
+state-age transition matrix is used.
 
-The public supervised filtering score now adds an exact first-order boundary
-VJP. For each boundary state k, propagate the positive mass obtained by removing
-one zero continuation edge from each path. Normalize this flux by the unchanged
-prefix evidence. Its contribution to the score gradient is minus the difference
-between labelled-state flux divided by labelled-state probability and total
-prefix flux. Both terms are required: the label selects a prefix marginal, not
-a constrained episode path. Multiple omitted edges have zero first-order mass.
-The propagation remains in log space and uses the exact once-sampled initial,
-emission and boundary scores from the forward pass, including training dropout.
-
-The correction is active only under autograd for trainable tail hazards exactly
-equal to one. It does not perturb hazards or change scores, predictions,
-parameters, artifacts or the interior derivative. Each active boundary state
-adds a flux frontier of K*D entries; per-sequence extra frontier storage is
-O(M*K*D), M<=K, and extra work is O(T*M*K^2*D). This is not a measured performance
-claim. The shared boundary VJP is explicitly first-order; higher-order requests
-at this boundary raise rather than silently return an incomplete Hessian.
-See duration-tail-contract.md for survival and transition forecast derivatives.
-
-Independent raw-parameter reset/continuation enumeration, one-sided numerical
-differences, Float32/64 gradients, ragged/empty prefixes, a projected Adam update
-and single head-evaluation checks are retained by the canonical Nautilus
-test_hsmm_boundary_derivatives.py. Labels remain score selectors only.
-
+The higher-derivative path costs O(T*M^2*K^2*D), M<=K active boundary states,
+with extra frontier storage O(M^2*K*D) plus its autograd graph. It is only built
+when differentiable first gradients are requested. Third-derivative graphs
+are rejected explicitly. The separate marginal-likelihood boundary VJP remains
+first-order. Independent raw-parameter probability-path Hessian-vector products
+cover D=1/2/3, self resets, mixed boundary/interior tails and E/U contexts.
 
 ## Large common emission offsets
 
@@ -287,3 +276,41 @@ in Float32/64. See [the numerical contract](model.md#causal-emission-offset-inva
 These checks preserve the declared objectives; they do not change supervision
 into a marginal state-path MAP objective or alter the existing first-order
 boundary derivative limit.
+
+
+## Boundary-aware regularized static fitting
+
+prepare_supervised_sequences(X, states, starts_at_boundary=flags, mode="hsmm")
+requires one explicit boolean per input sequence (a scalar for one sequence).
+Unknown first episodes are trimmed through their first observed state change.
+All-unknown constant paths are omitted; no remaining rows is an error. The helper
+is for training only: evaluation labels must never trim an inference window.
+It returns observations, labels and an offset/retained-row provenance report.
+HMM rows do not need age trimming.
+
+After fitting emissions/initial weights with fit_supervised on that cohort,
+model.fit_supervised_boundaries(states, starts_at_boundary=flags) refits only
+static canonical duration/transition parameters. The final episode contributes
+observed continuations but no invented exit. Duration hazards are
+(end_count+alpha)/(end_count+continue_count+alpha+beta), with finite h_D=1.
+D+ pools all tail-bucket exposures. The implied PMF uses survival products.
+
+Transition rows add a positive symmetric pseudocount and optional concentration
+times a pooled train-only destination distribution, respecting structural
+support. This is an empirical-Bayes shrinkage/count estimator; it is not a new
+Adam objective and does not promise lower training NLL. Four ModelConfig
+supervised_duration_end_prior / supervised_duration_continue_prior /
+supervised_transition_prior / supervised_transition_pool_strength fields own
+the priors. Existing fit_supervised behavior is unchanged.
+
+The model must be initialized, static causal HMM/HSMM and ergodic. State-labelled
+HSMM count fitting requires no self resets. Custom heads are rejected.
+Temperature and duration gates are inverted when encoding target probabilities;
+actual model scores are verified on a private candidate before live mutation.
+Emission/initial weights, mode and trainability are preserved. Fit manifests
+should retain returned counts, priors and cohort provenance.
+
+For unknown-age inference use a preserved filter state/history, or explicitly
+choose stationary_filter_prior for a time-homogeneous stationary entry law.
+See stationary-entry.md. Neither training labels nor validation labels enter
+the causal inference initialization.

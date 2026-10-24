@@ -33,6 +33,9 @@ CONVERGENCE_DEFAULT_WINDOW = 5
 CONVERGENCE_DEFAULT_MODE = "delta"
 
 
+SUPERVISED_BOUNDARY_FLOAT32_ATOL = 2e-5
+SUPERVISED_BOUNDARY_FLOAT64_ATOL = 2e-12
+
 logger = logging.getLogger("NHSMM")
 logger.addHandler(logging.NullHandler())
 
@@ -115,6 +118,10 @@ class ModelConfig:
     max_duration: int = 35
     duration_tail: bool = False
     duration_tail_init_probability: float = 0.5
+    supervised_duration_end_prior: float = 0.5
+    supervised_duration_continue_prior: float = 0.5
+    supervised_transition_prior: float = 0.5
+    supervised_transition_pool_strength: float = 4.0
     min_covar: float = 1e-6
     emission_init_mode: Literal["random", "spread", "kmeans", "kmeans_cluster_variance"] = "spread"
     initial_init_mode: Literal["normal", "biased", "uniform"] = "normal"
@@ -360,6 +367,18 @@ class ModelConfig:
         _require_finite("dropout", self.dropout)
         if not 0.0 <= float(self.dropout) < 1.0:
             raise ValueError("dropout must satisfy 0 <= dropout < 1")
+
+        for name in (
+            "supervised_duration_end_prior",
+            "supervised_duration_continue_prior",
+            "supervised_transition_prior",
+        ):
+            _require_finite(name, getattr(self, name), minimum=0.0, minimum_inclusive=False)
+        _require_finite(
+            "supervised_transition_pool_strength",
+            self.supervised_transition_pool_strength,
+            minimum=0.0,
+        )
 
         for name in ("min_covar", "lr", "transition_refine_lr", "optimizer_target_temperature"):
             _require_finite(

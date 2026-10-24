@@ -547,11 +547,32 @@ def next_episode_end_probability(
     return result
 
 
+def _validated_initial_prior(model, prior, batch):
+    if not isinstance(prior, HSMMFilterState):
+        raise TypeError("initial_prior must be HSMMFilterState")
+    if model.config.model_mode not in {"hmm", "hsmm"} or not model.config.causal:
+        raise ValueError("explicit initial priors require a static causal model")
+    value = prior.log_posterior
+    _require_compatible(model.duration_logits_bias, value, "initial_prior")
+    if value.shape[1:] != (model.config.n_states, model.config.max_duration):
+        raise ValueError("initial prior state/age shape does not match model")
+    if value.shape[0] not in {1, batch}:
+        raise ValueError("initial prior batch must be one or match observations")
+    return value.expand(batch, -1, -1)
+
+
+def _initialize_prior_frontier(prior, emission):
+    centered, _ = _center_emission_log_probs(emission)
+    posterior, _ = _normalize_causal_frontier(prior + centered.unsqueeze(-1))
+    return HSMMFilterState._from_normalized_unchecked(posterior)
+
+
 def filter_model_sequence(
     model: Any,
     X: Union[torch.Tensor, list[torch.Tensor]],
     context: Optional[torch.Tensor] = None,
     temperature: Optional[float] = None,
+    initial_prior: Optional[HSMMFilterState] = None,
 ) -> HSMMFilterTrace:
     """Run the causal `(state, age)` filter using an initialized NHSMM.
 
@@ -577,6 +598,7 @@ def filter_model_sequence(
         sequence = model._build_sequence_set(X, context=context)
         B, T, K = sequence.log_probs.shape
         D = int(model.dist.duration.max_duration)
+        prior = None if initial_prior is None else _validated_initial_prior(model, initial_prior, B)
         trace = sequence.log_probs.new_full((B, T, K, D), float("-inf"))
 
         if T == 0:
@@ -629,6 +651,9 @@ def filter_model_sequence(
                 f"transition logits must be {expected_transition}, got {transition_logits.shape}"
             )
 
+        if prior is not None and D == 1:
+            initial_logits = prior[..., 0].unsqueeze(1)
+
         if D == 1 and tail_end_probability is None:
             # Reuse the existing bounded, scaled log-semiring prefix scan.
             # It is already the differentiable small-HMM filtering-loss kernel.
@@ -652,10 +677,10 @@ def filter_model_sequence(
             if length == 0:
                 continue
 
-            state = initialize_filter(
-                initial_logits[b, 0],
-                sequence.log_probs[b, 0],
-                D,
+            state = (
+                initialize_filter(initial_logits[b, 0], sequence.log_probs[b, 0], D)
+                if prior is None
+                else _initialize_prior_frontier(prior[b : b + 1], sequence.log_probs[b : b + 1, 0])
             )
             trace[b, 0] = state.log_posterior[0]
 

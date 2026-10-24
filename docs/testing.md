@@ -208,3 +208,13 @@ probability recurrence, interior Hessian-vector products and zero-sensitivity
 duration suffix derivatives with exact hard support and separated scores.
 Hazard batching excludes padded and unused final boundaries. Full model and
 existing HMM optimization/usability gates remain required.
+
+## Usable supervised HSMM gate
+
+Canonical test_usable_hsmm.py verifies boundary provenance and censoring counts,
+actual temperature/gate-aware smoothed laws, unchanged emissions/initial weights,
+invalid-fit immutability, stationary state-age priors against independently
+expanded Markov chains, batch/stream/reset parity, exact h_tail=1 Hessian-vector
+products and explicit third-derivative rejection. Existing HMM gates remain.
+Host synthetic calibration is owned by Nautilus usable_hsmm.py through native
+Qlib TrainerR/MLflow, with a sealed split/source/candidate budget.
