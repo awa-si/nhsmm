@@ -1,3 +1,14 @@
+---
+title: HSMM CPU qualification
+description: Verified model-library runtime scope and operational limits.
+type: specification
+status: active
+language: en
+owner: AWA
+created: 2026-10-22
+updated: 2026-10-27
+---
+
 # HSMM CPU qualification
 
 This is a technical model-library qualification, separate from the host's
@@ -99,5 +110,12 @@ posterior confidence stays high. No optimizer updates or core-code changes
 occurred; the original well-separated qualification is not a general noise,
 shift or confidence-calibration guarantee.
 Read the [diagnostic and scope limits](https://github.com/awa-si/nautilus/blob/81066bd4baaa23f8c7aa76f029d6e9b68d85ea26/docs/hsmm-robustness.md).
-Require a separately fixed emission/noise-calibration protocol before any
-new fitting. No market production or neural-context promotion follows.
+The separately fixed [variance-only study](https://github.com/awa-si/nautilus/blob/main/docs/hsmm-emission-calibration.md)
+failed its clean HMM floor. The later [causal noise-routing study](https://github.com/awa-si/nautilus/blob/main/docs/hsmm-noise-routing.md)
+passed on fresh synthetic episodes, but is a two-expert forecast policy rather
+than one changed core likelihood; its [market admission](https://github.com/awa-si/nautilus/blob/main/docs/hsmm-market-routing-admission.md)
+was rejected by the original artifacts' feature, precision and prior contracts.
+Constant mean shift remains unresolved. These results do not widen this
+model-library qualification or change defaults. A new fit needs its own
+prospectively fixed protocol and admissible evidence. No market production or
+neural-context promotion follows.

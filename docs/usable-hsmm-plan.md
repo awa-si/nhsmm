@@ -1,3 +1,14 @@
+---
+title: Usable supervised HSMM
+description: Static CPU qualification and subsequent observation-robustness limits.
+type: report
+status: active
+language: en
+owner: AWA
+created: 2026-10-24
+updated: 2026-10-27
+---
+
 # Usable supervised HSMM
 
 Status: the declared supervised static HMM/HSMM CPU qualification is complete.
@@ -30,10 +41,23 @@ The observations in the qualification generator are well separated. The
 preregistered frozen-model noise/shift diagnostic is now complete: all nine
 profiles fail at least one diagnostic quality case, with no optimizer updates
 or artifact changes. All 72 probability/score audits pass, and all three
-state prediction classes remain represented. Broader observation robustness
-is not qualified. Preregister matched-noise or emission-calibration work
-before further fitting or neural expansion.
-See the [complete result](https://github.com/awa-si/nautilus/blob/81066bd4baaa23f8c7aa76f029d6e9b68d85ea26/docs/hsmm-robustness.md).
-Keep already consumed synthetic slices labelled as diagnostics. Do not open
-reserved market cohorts or resume exhausted market budgets under this plan.
-Neural/context benefit and market production readiness remain separate gates.
+state prediction classes remain represented.
+
+Broader observation robustness is not qualified. The separately fixed
+[train-only variance study](https://github.com/awa-si/nautilus/blob/main/docs/hsmm-emission-calibration.md)
+reduced severe-noise errors but failed its clean HMM floor, so broad variance
+was not adopted as a general default. A separate
+[causal noise router](https://github.com/awa-si/nautilus/blob/main/docs/hsmm-noise-routing.md)
+passed fresh synthetic validation/test gates while leaving the original clean
+forecasts unchanged; its scalar Float64 stationary-prior contract does not
+admit the retained three-feature Float32 market artifacts. Constant mean shift
+remains unresolved. These host studies changed neither the qualified model
+core nor a production default.
+See the original [frozen-model diagnostic](https://github.com/awa-si/nautilus/blob/main/docs/hsmm-robustness.md)
+and the [market admission stop](https://github.com/awa-si/nautilus/blob/main/docs/hsmm-market-routing-admission.md).
+Keep already consumed synthetic slices labelled as diagnostics. Any new fitting
+or context comparison requires a separate prospective protocol and fresh
+admissible evidence. Do not open reserved market cohorts or resume exhausted
+market budgets under this plan. Neural/context benefit and market production
+readiness remain separate gates; the [current directional decision](https://github.com/awa-si/nautilus/blob/main/docs/nhsmm-directional-decision.md)
+stops promotion of the fixed market references under the no-new-data constraint.
