@@ -1,3 +1,14 @@
+---
+title: Model verification
+description: Canonical test ownership, verification commands, and model-core evidence.
+type: guide
+status: active
+language: en
+owner: NHSMM
+created: 2026-09-26
+updated: 2026-10-31
+---
+
 # Model verification
 
 Canonical model, mathematical reference, distribution, training, runtime, artifact
@@ -180,8 +191,9 @@ scale (x or x squared); it does not claim arbitrary absolute precision.
 Scoped CPU qualification and operational limits: [production.md](production.md).
 
 The former 2026-10-22 cross-repository test-owner pin was superseded on
-2026-10-24 by the owner-local canonical workflow above. Smoke still runs on
-v3 pushes and pull requests, and can be called by release without custom secrets.
+2026-10-24 by the owner-local canonical workflow above. The public smoke workflow
+runs manually through `workflow_dispatch`; `workflow_call` lets the manually
+dispatched release workflow reuse it. It has no push or pull-request trigger.
 
 ## Independent model-mode qualification
 

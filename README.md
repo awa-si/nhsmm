@@ -1,3 +1,14 @@
+---
+title: NHSMM — Neural Hidden Semi-Markov Models
+description: Package overview, installation, APIs, and links to canonical model documentation.
+type: guide
+status: active
+language: en
+owner: NHSMM
+created: 2025-10-10
+updated: 2026-10-31
+---
+
 # NHSMM — Neural Hidden Semi-Markov Models
 
 PyTorch implementation of context-aware hidden semi-Markov models with explicit state durations.
@@ -276,7 +287,6 @@ Model and mathematics tests are maintained in the [Nautilus ML stack](https://gi
 - [`docs/configuration.md`](docs/configuration.md) — configuration contracts
 - [`docs/validation.md`](https://github.com/awa-si/nautilus/tree/main/docs/ml-stack/nhsmm/evaluation.md) — validation API
 - [`docs/testing.md`](docs/testing.md) — verification policy
-- [`docs/state.md`](docs/state.md) — development-state record
 - [`docs/release.md`](docs/release.md) — packaging/release process
 - [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/adapter/qlib) — active research and integration
 

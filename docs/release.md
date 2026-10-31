@@ -1,3 +1,14 @@
+---
+title: NHSMM release procedure
+description: Manual build verification and PyPI Trusted Publishing process.
+type: procedure
+status: active
+language: en
+owner: NHSMM
+created: 2026-09-27
+updated: 2026-10-31
+---
+
 # Release procedure
 
 NHSMM uses `setuptools`/PEP 517 packaging, `setuptools_scm` for tag-derived versions, and PyPI Trusted Publishing for production releases.
@@ -11,10 +22,11 @@ NHSMM uses `setuptools`/PEP 517 packaging, `setuptools_scm` for tag-derived vers
 - publish workflow: `.github/workflows/release.yml`
 - publish target: PyPI project `nhsmm`
 
-The canonical workflow supports two modes:
+The canonical workflow has only a manual `workflow_dispatch` trigger.
 
-- manual `workflow_dispatch`: build/install dry-run only; never publishes;
-- pushed `v*` tag: full build/verification followed by PyPI publication.
+- Dispatch on a branch such as `v3`: build/install dry-run; publishing is skipped.
+- Dispatch on a `v*` tag: full build/verification and PyPI publication.
+- Pushing a tag alone does not start the workflow.
 
 ## Verified packaging dry-run
 
@@ -96,9 +108,9 @@ git tag -a v0.0.5a0 -m "NHSMM 0.0.5a0"
 git push origin v0.0.5a0
 ```
 
-Pushing the tag starts `.github/workflows/release.yml`.
+Pushing the tag does not start the workflow. In GitHub Actions, select `NHSMM release`, choose the tag ref, and dispatch it manually.
 
-The tag-triggered workflow:
+The manually dispatched workflow on a `v*` tag:
 
 1. reuses the public CPU package smoke on Python 3.12 without private repository access;
 2. checks out full Git history/tags for `setuptools_scm`;
@@ -110,7 +122,7 @@ The tag-triggered workflow:
 8. uploads the exact verified distributions as an artifact;
 9. publishes those same distributions to PyPI through Trusted Publishing.
 
-The build job requires the reusable public package smoke. The publish job requires build/verification and is gated to refs/tags/v*. The full mathematical suite is a separate prerequisite in the private test-owner repository; this public workflow cannot inspect that private CI run. Verify its exact matching core SHA before creating the release tag.
+The build job requires the reusable public package smoke. The publish job requires build/verification and is gated to refs/tags/v*; dispatching on a tag publishes after any configured `pypi` environment approval. The full mathematical suite is a separate prerequisite in the private test-owner repository; this public workflow cannot inspect that private CI run. Verify its exact matching core SHA before creating the release tag.
 
 ## Versioning
 
