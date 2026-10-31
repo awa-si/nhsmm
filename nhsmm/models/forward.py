@@ -196,6 +196,7 @@ def _causal_prefix_serial(
     *,
     normalized,
     direct_reductions=False,
+    compile_step=False,
 ):
     """Shared forward owner; transition uses [B,T,K,D-or-1,K].
 
@@ -230,6 +231,7 @@ def _causal_prefix_serial(
                 transition_steps[t - 1],
                 tail_enabled=tail,
                 direct_reductions=direct_reductions,
+                compile_step=compile_step,
             )
             if not normalized:
                 cumulative_log_z = cumulative_log_z + step_log_z

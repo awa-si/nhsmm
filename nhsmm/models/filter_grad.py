@@ -17,6 +17,14 @@ class _CausalPrefixAdjoint(torch.autograd.Function):
     def forward(ctx, initial, emission, transition, end, continuation, lengths, tail):
         from nhsmm.models.forward import _causal_prefix_serial
 
+        sequence_length = emission.shape[1]
+        compile_step = (
+            tail
+            and sequence_length >= 16_384
+            and initial.device.type == "cpu"
+            and initial.dtype in (torch.float32, torch.float64)
+            and bool((lengths == sequence_length).all())
+        )
         alpha = _causal_prefix_serial(
             initial,
             emission,
@@ -27,6 +35,7 @@ class _CausalPrefixAdjoint(torch.autograd.Function):
             tail,
             normalized=True,
             direct_reductions=True,
+            compile_step=compile_step,
         )
         ctx.save_for_backward(initial, emission, transition, end, continuation, lengths, alpha)
         ctx.tail = tail

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import threading
+import warnings
 from typing import Any, Optional, Union
 
 from nhsmm.context import context_options
 from nhsmm.config import FILTER_NORMALIZATION_ATOL, FILTER_NORMALIZATION_ULPS, LOG_HALF
 
 import torch
+
+_COMPILED_FILTER_LOCK = threading.Lock()
+_COMPILED_FILTER_STEP = None
+_COMPILED_FILTER_READY = False
+_COMPILED_FILTER_DISABLED = False
 
 
 @dataclass(frozen=True)
@@ -232,14 +239,14 @@ def _normalize_log_probs(log_values: torch.Tensor, *, dim: int, name: str) -> to
 
 
 def _normalize_causal_frontier(
-    log_values: torch.Tensor, *, direct_reductions: bool = False
+    log_values: torch.Tensor, *, direct_reductions: bool = False, check_finite: bool = True
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Return normalized [B,K,D] log mass and incremental [B] log evidence."""
     flat = log_values.flatten(1)
     log_evidence = (
         torch.logsumexp(flat, dim=1) if direct_reductions else _safe_logsumexp(flat, dim=1)
     )
-    if not torch.isfinite(log_evidence).all():
+    if check_finite and not torch.isfinite(log_evidence).all():
         raise ValueError("causal evidence has zero or non-finite probability mass")
     return torch.log_softmax(flat, dim=1).reshape_as(log_values), log_evidence
 
@@ -278,6 +285,77 @@ def _require_reachable_hazards(previous, log_end, log_continue) -> None:
         raise ValueError("duration support has zero survival at a reachable episode age")
 
 
+def _run_compiled_causal_filter_step(
+    previous: torch.Tensor,
+    emission_log_prob: torch.Tensor,
+    log_end: torch.Tensor,
+    log_continue: torch.Tensor,
+    transition_log_prob: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    global _COMPILED_FILTER_STEP, _COMPILED_FILTER_READY, _COMPILED_FILTER_DISABLED
+
+    def eager() -> tuple[torch.Tensor, torch.Tensor]:
+        return _causal_filter_step_impl(
+            previous,
+            emission_log_prob,
+            log_end,
+            log_continue,
+            transition_log_prob,
+            tail_enabled=True,
+            direct_reductions=True,
+        )
+
+    if _COMPILED_FILTER_DISABLED:
+        return eager()
+
+    def run_compiled() -> tuple[torch.Tensor, torch.Tensor]:
+        return _COMPILED_FILTER_STEP(
+            previous,
+            emission_log_prob,
+            log_end,
+            log_continue,
+            transition_log_prob,
+            tail_enabled=True,
+            direct_reductions=True,
+            check_finite=False,
+        )
+
+    try:
+        if _COMPILED_FILTER_READY:
+            result = run_compiled()
+        else:
+            with _COMPILED_FILTER_LOCK:
+                if _COMPILED_FILTER_DISABLED:
+                    return eager()
+                if _COMPILED_FILTER_STEP is None:
+                    compiler = getattr(torch, "compile", None)
+                    if not callable(compiler):
+                        _COMPILED_FILTER_DISABLED = True
+                        return eager()
+                    _COMPILED_FILTER_STEP = compiler(
+                        _causal_filter_step_impl, backend="inductor", fullgraph=True
+                    )
+                result = run_compiled()
+                if bool(torch.isfinite(result[1]).all()):
+                    _COMPILED_FILTER_READY = True
+                    return result
+                return eager()
+        if bool(torch.isfinite(result[1]).all()):
+            return result
+        return eager()
+    except Exception as exc:
+        with _COMPILED_FILTER_LOCK:
+            first_failure = not _COMPILED_FILTER_DISABLED
+            _COMPILED_FILTER_DISABLED = True
+        if first_failure:
+            warnings.warn(
+                f"compiled causal filter step failed; using eager path: {exc}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        return eager()
+
+
 def _causal_filter_step(
     previous: torch.Tensor,
     emission_log_prob: torch.Tensor,
@@ -287,6 +365,7 @@ def _causal_filter_step(
     *,
     tail_enabled: bool,
     direct_reductions: bool = False,
+    compile_step: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """One causal state-age update shared by forward and streaming.
 
@@ -296,6 +375,39 @@ def _causal_filter_step(
     is applied afterward. The final age bucket is D+ only when tail_enabled.
     """
     _require_reachable_hazards(previous, log_end, log_continue)
+    if (
+        compile_step
+        and direct_reductions
+        and tail_enabled
+        and previous.device.type == "cpu"
+        and previous.dtype in (torch.float32, torch.float64)
+    ):
+        return _run_compiled_causal_filter_step(
+            previous, emission_log_prob, log_end, log_continue, transition_log_prob
+        )
+    return _causal_filter_step_impl(
+        previous,
+        emission_log_prob,
+        log_end,
+        log_continue,
+        transition_log_prob,
+        tail_enabled=tail_enabled,
+        direct_reductions=direct_reductions,
+    )
+
+
+def _causal_filter_step_impl(
+    previous: torch.Tensor,
+    emission_log_prob: torch.Tensor,
+    log_end: torch.Tensor,
+    log_continue: torch.Tensor,
+    transition_log_prob: torch.Tensor,
+    *,
+    tail_enabled: bool,
+    direct_reductions: bool = False,
+    check_finite: bool = True,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Tensor core shared by eager and compiled filter paths."""
     D = previous.shape[-1]
     continuation = previous[..., :-1] + log_continue[..., :-1]
     reset_scores = (previous + log_end).unsqueeze(-1) + transition_log_prob
@@ -326,7 +438,9 @@ def _causal_filter_step(
         predicted = torch.cat((new_episode.unsqueeze(-1), continuation), dim=-1)
     emission, offset = _center_emission_log_probs(emission_log_prob)
     posterior, evidence = _normalize_causal_frontier(
-        predicted + emission.unsqueeze(-1), direct_reductions=direct_reductions
+        predicted + emission.unsqueeze(-1),
+        direct_reductions=direct_reductions,
+        check_finite=check_finite,
     )
     return posterior, evidence + offset
 
