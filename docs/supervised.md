@@ -236,6 +236,28 @@ hashes recorded in the Jun-Sep runtime evidence. This is one paired timing on
 Python 3.14.8 / Torch 2.14.1+cpu, not a latency distribution; no validation or
 reserved rows were read.
 
+
+The compiled filter-step fast path is opt-in inside the causal-prefix adjoint
+and is selected only for CPU Float32/Float64, D+ tail, full unpadded batches
+with at least 16,384 time steps. It compiles the exact single-step recurrence
+with Torch Inductor; all shorter, ragged, non-tail, unsupported dtype/device,
+and ordinary inference paths remain eager. Compilation is lazy and cached.
+If compilation fails, the code warns and falls back to eager execution.
+
+A same-host alternating A/B on the Jun-Sep 2023 training-only workload used
+source SHA 86b24ff8a1427a1fec3c640a177c15ee18a1bfa9, preparation SHA
+708664adf1e166e75488f829166ee5eb80e1e69bcd6fadc28bbd4292329f9f63,
+training SHA b85d48e623bc39840e20517a28873e3fa350b840ea3d19b131aba34f2b6f0418,
+and label SHA c4a63d8badd298980c7fe74884c9349dcf78e0e2b44f43c251fe0829d68c47da.
+For one causal_filter_log_score update at K=3, D=8, F=3 and 22,365 rows
+(99 unknown-age rows trimmed), Torch 2.14.1+cpu with one thread measured
+baseline runs of 33.411 and 34.710 s and compiled runs of 32.251 and 29.802 s.
+The medians were 34.061 and 31.027 s (1.098x); maximum final parameter
+difference was 7.45e-9. The first compiled update incurred 75.114 s including
+compilation, so the latency gain applies after warm-up and does not imply a
+short-run wall-clock gain. This is a two-run-per-path measurement, not a
+latency distribution; no validation or reserved rows were read.
+
 First-derivative work is O(T K^2 D), matching the state-age transition law.
 Saved frontiers cost O(B T K D); the duration-dependent transition inputs still
 cost O(B T K^2 D). This reduces recurrence graph overhead, not model state space.
