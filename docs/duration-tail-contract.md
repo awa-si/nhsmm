@@ -1,3 +1,14 @@
+---
+title: Bounded duration-tail extension contract
+description: Mathematical, runtime, compatibility, and acceptance gates for the opt-in duration tail.
+type: contract
+status: active
+language: en
+owner: NHSMM
+created: 2026-10-07
+updated: 2026-10-31
+---
+
 # Bounded duration-tail extension contract
 
 This document defines the implemented opt-in bounded-tail extension. Finite support remains the default; the active model and normalized score contracts are owned by `hsmm-mathematical-contract.md`.
@@ -154,7 +165,7 @@ Before production enablement, the extension must satisfy:
 3. Extend causal forward/filter/runtime and prove `h_tail=1` equivalence to the current implementation.
 4. Extend survival/forecast semantics.
 5. Extend non-causal likelihood/Viterbi with exhaustive-reference equivalence. **Complete.**
-6. Re-run canonical package acceptance before considering the extension production-ready.
+6. Re-run the full canonical, source-bound suite before considering the extension package-qualified. **Complete for code SHA `8c0998c77d34334a76200ebabd508b6372bc917c`**: the exact-source suite passed 1,852 tests with three CUDA-unavailable skips against test-owner SHA `37028d70f50f1620555e5dadfb4825c9ded8d1d9`. The current v3 head `b120605b47f34db659c4edbdd4cf495554da0209` differs from that code snapshot only in documentation/workflows. See [model verification](testing.md) and [CPU qualification](production.md). On the next NHSMM code change, manually dispatch the canonical owner workflow with that change's exact full commit SHA; this historical pass does not qualify later code.
 
 
 ## Exact compatibility-boundary score gradients

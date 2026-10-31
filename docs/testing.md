@@ -49,12 +49,18 @@ parity, trusted artifact save/load, exact learned weights and fresh reset.
 This is a public package integration check, not the full mathematical test suite.
 
 The full canonical suite stays in private awa-si/nautilus under
-.github/workflows/nhsmm-core.yml. It uses its own automatic read-only
-GITHUB_TOKEN to read itself and checks out an explicitly pinned public core SHA.
-Record that exact core/test-owner SHA pair and require its successful full gate
-before release. The public release workflow cannot automatically read or enforce
-that private run. A green public smoke alone never means full qualification.
-No private tests are copied into this package, and no token value is required.
+.github/workflows/nhsmm-core.yml. That workflow is manual-only
+(`workflow_dispatch`) and requires `nhsmm_core_sha`: the exact full 40-character
+commit to test from this repository's `v3` branch. It checks out that commit and
+asserts the resolved SHA before running tests; its evidence records both the
+NHSMM core and Nautilus test-owner SHAs plus source hashes and JUnit results.
+
+For the next NHSMM code change, manually dispatch this workflow against that
+change's exact commit SHA. Do not use the previous pin, an automatic push run,
+or the public package smoke as a substitute. Require the successful
+source-matched full gate before release. The public release workflow cannot
+automatically read or enforce this private run. No private tests are copied
+into this package, and no token value is required.
 
 ## Source-bound repair and context evidence
 
