@@ -186,9 +186,24 @@ def _forward_causal_hazard(
 
 
 def _causal_prefix_serial(
-    initial, emission, transition, log_end, log_continue, lengths, tail, *, normalized
+    initial,
+    emission,
+    transition,
+    log_end,
+    log_continue,
+    lengths,
+    tail,
+    *,
+    normalized,
+    direct_reductions=False,
 ):
-    """Shared forward owner; transition uses [B,T,K,D-or-1,K]."""
+    """Shared forward owner; transition uses [B,T,K,D-or-1,K].
+
+    Direct reductions are reserved for the custom-autograd forward, whose exact
+    VJP is supplied separately and does not build a derivative graph here.
+    """
+    if direct_reductions and torch.is_grad_enabled():
+        raise RuntimeError("direct reductions require a graph-free custom forward")
     B, T, K = emission.shape
     D = log_end.shape[-1]
     # Unbind once so each indexed input has only a single time row.
@@ -202,7 +217,9 @@ def _causal_prefix_serial(
     if bool((lengths == T).all()):
         # A fully populated batch needs no active-row indexing or padding copies.
         # Keep precisely the same step owner and evidence addition order.
-        frontier, cumulative_log_z = _initialize_causal_frontier(initial, emission_steps[0], D)
+        frontier, cumulative_log_z = _initialize_causal_frontier(
+            initial, emission_steps[0], D, direct_reductions=direct_reductions
+        )
         alpha_steps = [frontier if normalized else frontier + cumulative_log_z[:, None, None]]
         for t in range(1, T):
             frontier, step_log_z = _causal_filter_step(
@@ -212,6 +229,7 @@ def _causal_prefix_serial(
                 log_continue_steps[t - 1],
                 transition_steps[t - 1],
                 tail_enabled=tail,
+                direct_reductions=direct_reductions,
             )
             if not normalized:
                 cumulative_log_z = cumulative_log_z + step_log_z
@@ -230,7 +248,7 @@ def _causal_prefix_serial(
 
     valid0 = lengths > 0
     normalized_initial, initial_log_z = _initialize_causal_frontier(
-        initial[valid0], emission_steps[0][valid0], D
+        initial[valid0], emission_steps[0][valid0], D, direct_reductions=direct_reductions
     )
     frontier[valid0] = normalized_initial
     if not normalized:
@@ -265,6 +283,7 @@ def _causal_prefix_serial(
             log_continue_steps[t - 1].index_select(0, active),
             transition,
             tail_enabled=tail,
+            direct_reductions=direct_reductions,
         )
         frontier[active] = next_frontier
         if not normalized:

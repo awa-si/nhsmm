@@ -232,11 +232,15 @@ def _normalize_log_probs(log_values: torch.Tensor, *, dim: int, name: str) -> to
 
 
 def _normalize_causal_frontier(
-    log_values: torch.Tensor,
+    log_values: torch.Tensor, *, direct_reductions: bool = False
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Return normalized [B,K,D] log mass and incremental [B] log evidence."""
     flat = log_values.flatten(1)
-    log_evidence = _safe_logsumexp(flat, dim=1)
+    log_evidence = (
+        torch.logsumexp(flat, dim=1)
+        if direct_reductions
+        else _safe_logsumexp(flat, dim=1)
+    )
     if not torch.isfinite(log_evidence).all():
         raise ValueError("causal evidence has zero or non-finite probability mass")
     return torch.log_softmax(flat, dim=1).reshape_as(log_values), log_evidence
@@ -253,6 +257,8 @@ def _initialize_causal_frontier(
     log_initial: torch.Tensor,
     emission_log_prob: torch.Tensor,
     max_duration: int,
+    *,
+    direct_reductions: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Initialize age one; the first emission contributes to prefix evidence."""
     B, K = log_initial.shape
@@ -260,7 +266,9 @@ def _initialize_causal_frontier(
     initial, initial_offset = _center_emission_log_probs(log_initial)
     emission, emission_offset = _center_emission_log_probs(emission_log_prob)
     scores[..., 0] = initial + emission
-    posterior, evidence = _normalize_causal_frontier(scores)
+    posterior, evidence = _normalize_causal_frontier(
+        scores, direct_reductions=direct_reductions
+    )
     return posterior, evidence + initial_offset + emission_offset
 
 
@@ -282,6 +290,7 @@ def _causal_filter_step(
     transition_log_prob: torch.Tensor,
     *,
     tail_enabled: bool,
+    direct_reductions: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """One causal state-age update shared by forward and streaming.
 
@@ -293,16 +302,26 @@ def _causal_filter_step(
     _require_reachable_hazards(previous, log_end, log_continue)
     D = previous.shape[-1]
     continuation = previous[..., :-1] + log_continue[..., :-1]
-    new_episode = _safe_logsumexp(
-        (previous + log_end).unsqueeze(-1) + transition_log_prob,
-        dim=(1, 2),
+    reset_scores = (previous + log_end).unsqueeze(-1) + transition_log_prob
+    new_episode = (
+        torch.logsumexp(reset_scores, dim=(1, 2))
+        if direct_reductions
+        else _safe_logsumexp(reset_scores, dim=(1, 2))
     )
     if tail_enabled:
         tail_continuation = previous[..., -1] + log_continue[..., -1]
         if D == 1:
-            predicted = _safe_logaddexp(new_episode, tail_continuation).unsqueeze(-1)
+            predicted = (
+                torch.logaddexp(new_episode, tail_continuation)
+                if direct_reductions
+                else _safe_logaddexp(new_episode, tail_continuation)
+            ).unsqueeze(-1)
         else:
-            last = _safe_logaddexp(continuation[..., -1], tail_continuation)
+            last = (
+                torch.logaddexp(continuation[..., -1], tail_continuation)
+                if direct_reductions
+                else _safe_logaddexp(continuation[..., -1], tail_continuation)
+            )
             predicted = torch.cat(
                 (new_episode.unsqueeze(-1), continuation[..., :-1], last.unsqueeze(-1)),
                 dim=-1,
@@ -310,7 +329,9 @@ def _causal_filter_step(
     else:
         predicted = torch.cat((new_episode.unsqueeze(-1), continuation), dim=-1)
     emission, offset = _center_emission_log_probs(emission_log_prob)
-    posterior, evidence = _normalize_causal_frontier(predicted + emission.unsqueeze(-1))
+    posterior, evidence = _normalize_causal_frontier(
+        predicted + emission.unsqueeze(-1), direct_reductions=direct_reductions
+    )
     return posterior, evidence + offset
 
 

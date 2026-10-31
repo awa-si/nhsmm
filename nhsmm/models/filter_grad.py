@@ -18,7 +18,15 @@ class _CausalPrefixAdjoint(torch.autograd.Function):
         from nhsmm.models.forward import _causal_prefix_serial
 
         alpha = _causal_prefix_serial(
-            initial, emission, transition, end, continuation, lengths, tail, normalized=True
+            initial,
+            emission,
+            transition,
+            end,
+            continuation,
+            lengths,
+            tail,
+            normalized=True,
+            direct_reductions=True,
         )
         ctx.save_for_backward(initial, emission, transition, end, continuation, lengths, alpha)
         ctx.tail = tail

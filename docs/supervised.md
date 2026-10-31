@@ -218,6 +218,24 @@ zero; D+ continuation and reset edges are both included. Ragged padding has
 zero derivative. No label, approximation, clipping or truncated history enters
 this derivative rule.
 
+The custom forward uses direct native torch.logsumexp and torch.logaddexp
+reductions in its graph-free pass. These return the same values as the safe
+wrappers, including empty -inf support; the wrappers remain the default for
+ordinary differentiable paths. A graph-enabled guard prevents using this
+forward-only option outside the custom adjoint. The custom VJP is unchanged,
+and explicit higher derivatives still recompute through the safe serial owner.
+
+On the Jun-Sep 2023 training-only HSMM workload (22,365 rows after the 99-row
+unknown-age trim; 1 Torch CPU thread), one causal_filter_log_score update
+measured 39.355 s on source tree
+f8c812b125d9c2b62c3172062373d0d78b5018e5063dbccb346f0d8097c56562 and
+32.989 s on candidate tree
+774bff00afc94ea4afcd52a25ec87a9d464bb171ac5ab2a0cf37217dce4c6efe,
+a 16.2% reduction (1.19x). Both used the same preparation, training and label
+hashes recorded in the Jun-Sep runtime evidence. This is one paired timing on
+Python 3.14.8 / Torch 2.14.1+cpu, not a latency distribution; no validation or
+reserved rows were read.
+
 First-derivative work is O(T K^2 D), matching the state-age transition law.
 Saved frontiers cost O(B T K D); the duration-dependent transition inputs still
 cost O(B T K^2 D). This reduces recurrence graph overhead, not model state space.
