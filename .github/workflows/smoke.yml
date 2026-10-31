@@ -3,10 +3,6 @@ name: NHSMM smoke
 on:
   workflow_dispatch:
   workflow_call:
-  push:
-    branches: [v3]
-  pull_request:
-    branches: [v3]
 
 permissions:
   contents: read
