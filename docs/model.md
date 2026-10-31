@@ -1,3 +1,14 @@
+---
+title: NHSMM model and runtime contract
+description: Canonical public model, training, inference, artifact and runtime semantics.
+type: contract
+status: active
+language: en
+owner: NHSMM
+created: 2026-01-01
+updated: 2026-10-31
+---
+
 # NHSMM model and runtime contract
 
 This document describes the core model/runtime boundary of `nhsmm`.
@@ -443,27 +454,49 @@ Noncausal public likelihood and training divide the completed-segmentation score
 
 The model class delegates recursions to `models/forward.py`, decoding to `models/decoding.py`, support-safe segment sums to `models/segments.py`, and observation objectives to `models/objective.py`. `models/boundary.py` owns the analytic marginal tail-boundary VJP and supervised filter derivative corrections. No model or state-dict parameter paths change during this split. Supervised filtering supports exact second derivatives at h_tail=1; its third-derivative graphs are rejected. The separate marginal-score boundary VJP remains first-order. Runtime and ordinary finite-support causal scoring keep their existing kernels.
 
-See [correctness repair](correctness-repair.md) for bounded evidence and artifact migration.
+Artifact likelihood compatibility and source-bound repair evidence are summarized in [verification](testing.md#source-bound-repair-and-context-evidence).
 
 ## Explicit external component context
 
-Use CausalContext(emission=E, boundary=U) for distinct pre-observation and outgoing-boundary information sets. Initial probabilities use E[0]. Plain Tensor timing remains compatible. See [the timing contract](causal-external-context.md).
+Use `CausalContext(emission=E, boundary=U)` when emission and outgoing-boundary
+features have different availability times. `E[t]` must be available before
+observing `x[t]`; initial probabilities use `E[0]`. `U[t]` controls the
+outgoing duration hazard and transition to `t+1`, so propagation into `x[t]`
+uses `U[t-1]`. No lag is inferred automatically.
+
+Plain Tensor context preserves the legacy shared-row contract: row `U[t]` is
+used for the emission of `x[t]` and the outgoing boundary `t -> t+1`. A row
+computed after seeing `x[t]` is therefore not admissible as emission context
+for that same observation. Use `CausalContext` to supply separate information
+sets. The host remains responsible for event-time and feature-availability checks.
 
 
 ## Explicit base-score context
 
-BASE_CONTEXT bypasses context heads and the internal encoder for batch
-likelihood/filtering or an entire streaming step. Within an external stream it
-preserves the posterior and age; the prior boundary still propagates into the
-current observation. None retains internal-mode semantics. Base scores use the
-current parameters. See [timing and fallback](causal-external-context.md).
+BASE_CONTEXT bypasses the internal encoder and context heads for an entire batch
+or streaming step, using the current model's base distributions. It is not a
+zero context vector and does not reproduce a separately trained static model
+after joint parameter updates. In an external stream it preserves posterior and
+episode age; the preceding boundary still propagates into the current observation.
+`None` retains the runtime's internal/no-external context meaning. BASE_CONTEXT
+applies to a whole step; use `CausalContext.available` for per-row availability.
 
 ## Mixed external-context availability
 
-CausalContext(emission=E, boundary=U, available=M) carries strict boolean row
-availability through batch scoring, supervised/latent fitting and streaming.
-Missing rows bypass neural corrections while observations and filtering history
-remain intact. See [shapes, timing and limits](causal-external-context.md#mixed-availability-within-a-batch).
+CausalContext(emission=E, boundary=U, available=M) supports a strict boolean
+availability mask: scalar, shared `[T]`, exact `[B,T]`, or ragged `[T_i]`
+masks. Streaming batches use `[B,1]`; `[B]` is not a per-stream shorthand.
+The mask gates emission and boundary context together, not independently.
+
+Unavailable rows select current base scores before probability links and neural
+heads run. Their observations are still scored and update filtering history;
+missing context values may be NaN/Inf and are excluded from head evaluation.
+Available rows must be finite. A zero vector without a false mask remains normal
+context. Likelihood, supervision, decoding, filtering, streaming and latent
+optimization use the same mask. Context-only fitting and transition refinement
+reject a dataset with no available rows before changing parameters. Custom
+distributions without row-gating support are rejected. The caller owns the mask
+and its event-time meaning; no missingness model or automatic fallback is inferred.
 
 
 ## Central tunables
@@ -609,7 +642,9 @@ scan from models/forward.py after normal score/shape admission. It returns every
 causal prefix, preserves ragged/empty sequence padding and uses outgoing t-1
 transition context. Larger K retains the sequential path. The scan trades
 O(T K^3 log T) work for fewer Python dispatches; temporary arrays scale with T.
-No model field, optimizer, artifact format or mathematical duration law changes.
+The optimized ergodic transition path applies structural support constraints
+before normalization, preserving disabled self-transition semantics and batch
+parity. No model field, optimizer, artifact format or mathematical duration law changes.
 
 ## Duration survival derivative stability
 

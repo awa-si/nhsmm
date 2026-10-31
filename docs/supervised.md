@@ -1,3 +1,14 @@
+---
+title: Fully observed causal state paths
+description: Supervised state-path fitting and causal filtering score contracts.
+type: contract
+status: active
+language: en
+owner: NHSMM
+created: 2026-10-19
+updated: 2026-10-31
+---
+
 # Fully observed causal state paths
 
 `NHSMM.supervised_log_likelihood(X, states, context=None, reduce=False)` scores
@@ -61,7 +72,7 @@ from current parameters do not perform implicit kmeans initialization.
 
 ## Frozen-base context training
 
-fit_supervised(..., context_only=True) trains only distribution context networks, projections and delta scales from current parameters. Base parameters stay fixed; trainability flags and model mode are restored. Explicit external context is required. Missing context is not replaced by zeros. See [the timing contract](causal-external-context.md).
+fit_supervised(..., context_only=True) trains only distribution context networks, projections and delta scales from current parameters. Base parameters stay fixed; trainability flags and model mode are restored. Explicit external context is required. Missing context is not replaced by zeros. See [the timing contract](model.md#explicit-external-component-context).
 
 Mixed availability is supplied as CausalContext.available. Unavailable rows
 retain their observations and base density/boundary factors; their context heads

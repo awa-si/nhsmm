@@ -1,3 +1,14 @@
+---
+title: HSMM mathematical contract
+description: Probability, duration, filtering and decoding semantics for the NHSMM core.
+type: contract
+status: active
+language: en
+owner: NHSMM
+created: 2026-10-06
+updated: 2026-10-31
+---
+
 # HSMM mathematical contract
 
 This document defines the current model and observation-score semantics. Raw forward segment potentials and normalized observation likelihoods are distinct contracts. Independent references must derive these laws rather than import production recursions.
@@ -207,7 +218,7 @@ Gate 0 is therefore **complete** and Gate 1 is unblocked.
 
 ## External information sets
 
-For CausalContext(emission=E, boundary=U), emission x_t and the initial prior at t=0 use E_t and E_0 respectively; outgoing duration/transition factors use U_t. The t-1 -> t propagation uses U_(t-1). This remains a dynamic-hazard model. The caller must construct E_t before observing x_t. Plain Tensor contexts retain the shared row semantics. See [the timing contract](causal-external-context.md).
+For CausalContext(emission=E, boundary=U), emission x_t and the initial prior at t=0 use E_t and E_0 respectively; outgoing duration/transition factors use U_t. The t-1 -> t propagation uses U_(t-1). This remains a dynamic-hazard model. The caller must construct E_t before observing x_t. Plain Tensor contexts retain the shared row semantics. See [the timing contract](model.md#explicit-external-component-context).
 
 ## Numerical duration and transition forecasts
 

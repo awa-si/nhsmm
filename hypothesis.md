@@ -1,3 +1,14 @@
+---
+title: Hypothesis: neural context for a stable HSMM
+description: Research rationale, falsifiable claims, admissible evidence and unresolved limits.
+type: research
+status: active
+language: en
+owner: NHSMM
+created: 2026-10-19
+updated: 2026-10-31
+---
+
 # Hypothesis: neural context for a stable HSMM
 
 Status: research hypothesis; not evidence of predictive or trading value.
@@ -102,118 +113,16 @@ one-step predictive factor; it does not define a new public API.
 - Online estimates use causal filtering. Retrospective smoothing/Viterbi states
   must not be presented as states available to a live decision.
 
-### Explicit component timing and legacy shared external rows
+## Implemented contract
 
-`CausalContext(emission=E, boundary=U)` now supplies distinct information sets.
-E_t must be available before observing x_t; U_t may include x_t and controls only
-the outgoing boundary t -> t+1. The initial prior uses E_0. Both dense/static and
-ragged inputs are supported; batch likelihood, observed-path supervision and
-streaming use the same routing. No automatic lag or timestamp inference is
-applied. The host must still verify the feature construction against event time.
-
-
-The legacy plain-Tensor route retains the following timing:
-
-| Component at step t | Internal observation-derived context | External row U_t |
-| --- | --- | --- |
-| Initial prior at t=0 | Zero context | U_0 |
-| Emission for x_t | C_(t-1), with C_(-1)=0 | U_t |
-| Outgoing boundary t -> t+1 | C_t | U_t |
-
-For a plain external Tensor row U_t, the compatibility contract uses U_t for the emission of
-x_t and for outgoing duration/transition factors on boundary t -> t+1. The
-next emission uses U_(t+1). Thus a row derived after observing x_t cannot simply
-be reused as an exogenous input to its own emission likelihood. Lagging an
-external tensor to protect emissions also changes the information available to
-the outgoing boundary. A single row does not generally provide both pre-x_t
-emission context and a different post-x_t boundary context by one index shift.
-
-Before a market experiment, specify a component-by-component event-time table.
-Verify the chosen routing against batch and streaming behavior. Using a more
-conservative lag is a valid declared design choice; changing routing to expose
-newer information now uses the explicit `CausalContext` route described below. The
-internal causal encoder already has distinct emission-lag semantics; it is not
-interchangeable with arbitrary externally derived context.
-
-For history-derived context, evaluate the sequential predictive score
-sum_t log p(x_(t+1) | H_t), with every feature computed from its allowed prefix.
-Do not assume that a likelihood conditional on an entire externally fixed
-context trajectory has the same interpretation when later context rows encode
-earlier observations. No same-bar reconstruction score is evidence of a future
-forecast. This is a modeling requirement derived from the information boundary.
-
-### Duration conditioning: dynamic hazard versus entry-time duration
-
-The [mathematical contract](docs/hsmm-mathematical-contract.md) defines the
-current causal core as a dynamic-hazard process over state and episode age.
-For finite duration support, away from a separately configured D+ tail:
-
-```text
-h_t(i,a) = q_t(i,a) / sum_(r=a..D) q_t(i,r)
-P(continue episode i, age a+1 | i,a,H_t) = 1 - h_t(i,a)
-P(new episode j, age 1 | i,a,H_t) = h_t(i,a) * A_t(i,a,j)
-```
-
-Each reachable row must be normalized and have positive survival support.
-Context changes must not remove survival support from an already reachable age.
-When q_t changes during an episode, multiplying successive boundary factors is
-not generally equivalent to drawing one duration from q at episode entry.
-An entry-conditioned duration model and the current dynamic-hazard model are
-different hypotheses; neither the name HSMM nor a paper using that name proves
-their equivalence. Koslik's entry-time-indexed construction [7] is a relevant
-comparison, not an implementation identity.
-
-The geometric dwell-time restriction belongs to a homogeneous first-order HMM.
-With time-varying, covariate-dependent transition probabilities, a first-order
-HMM can already have non-geometric overall dwell times [7, introduction].
-Therefore explicit-age value must be tested against a context-matched
-time-varying-transition HMM, not only a static HMM.
-
-Sequence endpoints are right-censored on the causal path: a data-window end is
-not an observed regime exit. A fresh age-one start also differs from starting
-inside an unknown-age market episode. Declare warm-up/initial-age treatment and
-use identical boundary information for all candidates. See the mathematical
-contract; do not compare causal prefix and completed-segmentation likelihoods
-as if they were the same score.
-
-Multi-step duration/transition forecasts require a stated treatment of future
-context. Frozen-current-context scenarios, specified context paths and forecasts
-that integrate over unknown future context are different quantities. Future
-realized TA must not be supplied as if it were known at the forecast origin.
-
-## Optional context and fallback
-
-Context-free inference is a supported model mode. Intermittently unavailable
-context requires an explicit policy; replacing missing context by zero is not
-generally neutral because zero can be a valid input and neural biases can act.
-
-The current streaming external/non-external context mode is fixed until reset.
-Explicit `BASE_CONTEXT` now bypasses neural corrections within an external
-stream while preserving its posterior and age. `None` retains internal-mode
-semantics. CausalContext.available now supports mixed batch/time availability.
-
-Disabling context on a jointly fine-tuned model does not necessarily recover the
-original trained static HSMM: base parameters may have changed. An exact fallback
-to that reference requires an explicit parameter/stream-state preservation or
-reconstruction policy. A reset also starts a new inference stream; it is not a
-transparent way to preserve the previous filtering posterior.
-
-`fit_supervised(..., context_only=True)` now freezes base distribution
-parameters while training only their context networks, projections and delta
-scales. It restores the original trainability flags and model mode. This option
-does not reconstruct a static posterior. CausalContext.available is carried
-through the supervised objective and bypasses corrections at unavailable rows.
-Both context fields are required; nonfinite available or misaligned values are
-rejected. Use `BASE_CONTEXT` for an explicit whole-step bypass. Plain zero
-context remains an ordinary network input.
-
-The implemented availability-aware residual gate acts on finite parameter
-coordinates before the existing probability links: base plus an available-row
-context correction. Missing inputs are excluded before network evaluation;
-multiplying a NaN by zero is not safe. One mask controls all components at a row;
-independent emission/boundary masks remain outside the public API. Exact
-base-parameter fallback additionally requires preserving those parameters. Even then, a posterior conditioned on earlier context need not
-equal the posterior of a static model that never used context.
+This hypothesis does not define a second model or timing contract. Current
+external-context timing, legacy Tensor compatibility, per-row fallback and
+availability masks are defined in [the model/runtime contract](docs/model.md).
+Duration, likelihood and supervised-score semantics are defined in the
+[HSMM mathematical contract](docs/hsmm-mathematical-contract.md),
+[duration-tail contract](docs/duration-tail-contract.md) and
+[supervised training contract](docs/supervised.md). Experimental inputs still
+require the as-of and chronological controls listed above.
 
 ## Related research and limits
 
@@ -283,7 +192,7 @@ the explicit routing and frozen-base option described above. It also repairs an
 independently detected streaming defect: the optimized ergodic transition route
 must apply the structural mask, including disabled self-transitions, before
 normalization. Independent probability products and batch/streaming comparisons
-cover that case. See [the API contract](docs/causal-external-context.md).
+cover that case. See [the API contract](docs/model.md#explicit-external-component-context).
 
 ## Falsifiable questions
 

@@ -56,6 +56,33 @@ before release. The public release workflow cannot automatically read or enforce
 that private run. A green public smoke alone never means full qualification.
 No private tests are copied into this package, and no token value is required.
 
+## Source-bound repair and context evidence
+
+Current behavior is owned by [the model/runtime contract](model.md) and the
+[HSMM mathematical contract](hsmm-mathematical-contract.md). The following
+reports preserve historical results for their named source revisions; their
+pass counts do not certify the current branch head.
+
+- **Mathematical repair (2026-10-19):** the source-bound audit corrected five
+  issues: normalized non-causal likelihood, exact first-order tail-boundary
+  gradients, segment support zeros, reachable-duration support, and artifact
+  precision. The fixed snapshot added 59 regressions, matched 540 independently
+  enumerated forward/MAP cases (maximum evidence residual
+  `2.220446049250313e-16`), and passed 1,156 tests with three CUDA skips.
+  The small CPU A/B was mixed and supports no general speedup claim. No real
+  training ran. Full hashes and run identity are in the
+  [Nautilus repair record](https://github.com/awa-si/nautilus/blob/main/docs/nhsmm-correctness-repair.json).
+- **External-context timing and streaming fallback:** exact-source reports retain
+  timing checks (1,209 core tests, three CUDA skips, 30 host harness regressions),
+  base-score checks (1,215 core tests, three CUDA skips; 162 host integration/TA
+  tests plus 11 subtests), and masked-context checks. See the
+  [timing report](https://github.com/awa-si/nautilus/blob/c45d94f4a8b6c87870ee2dc8f775c9609128c027/docs/nhsmm-causal-context.json),
+  [base-score report](https://github.com/awa-si/nautilus/blob/cf3a8ef59fbbdf2484f5679307568b2c812f38bf/docs/nhsmm-context-fallback.json), and
+  [availability report](https://github.com/awa-si/nautilus/blob/5adf39f034e02c72f2c5fd42b133669233865370/docs/nhsmm-masked-context.md).
+  These are historical synthetic/integration results, not evidence of market
+  advantage.
+
+
 The canonical test_forecast_precision.py module checks rare finite/D+ end and state-change risks against 80-digit Decimal references in Float32/Float64, hard-support forecast gradients against independent probability formulas, geometric first/second derivatives, result identities, and separate duration/transition target learning.
 
 
