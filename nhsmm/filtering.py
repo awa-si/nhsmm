@@ -237,9 +237,7 @@ def _normalize_causal_frontier(
     """Return normalized [B,K,D] log mass and incremental [B] log evidence."""
     flat = log_values.flatten(1)
     log_evidence = (
-        torch.logsumexp(flat, dim=1)
-        if direct_reductions
-        else _safe_logsumexp(flat, dim=1)
+        torch.logsumexp(flat, dim=1) if direct_reductions else _safe_logsumexp(flat, dim=1)
     )
     if not torch.isfinite(log_evidence).all():
         raise ValueError("causal evidence has zero or non-finite probability mass")
@@ -266,9 +264,7 @@ def _initialize_causal_frontier(
     initial, initial_offset = _center_emission_log_probs(log_initial)
     emission, emission_offset = _center_emission_log_probs(emission_log_prob)
     scores[..., 0] = initial + emission
-    posterior, evidence = _normalize_causal_frontier(
-        scores, direct_reductions=direct_reductions
-    )
+    posterior, evidence = _normalize_causal_frontier(scores, direct_reductions=direct_reductions)
     return posterior, evidence + initial_offset + emission_offset
 
 
