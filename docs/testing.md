@@ -68,9 +68,13 @@ pass counts do not certify the current branch head.
   gradients, segment support zeros, reachable-duration support, and artifact
   precision. The fixed snapshot added 59 regressions, matched 540 independently
   enumerated forward/MAP cases (maximum evidence residual
-  `2.220446049250313e-16`), and passed 1,156 tests with three CUDA skips.
-  The small CPU A/B was mixed and supports no general speedup claim. No real
-  training ran. Full hashes and run identity are in the
+  `2.220446049250313e-16`), and passed 1,156 tests with three CUDA skips;
+  Ruff and Black passed. Public method signatures and state-dict paths were
+  unchanged, and a causal v2 reference artifact retained its exact fixed-prefix
+  score. No real training ran.
+  A three-repeat CPU A/B (`K=3,F=2,D=32,B=1,T=256`) measured median forward
+  `0.1754 -> 0.1981 s` and backward `0.1919 -> 0.1635 s`; this mixed result
+  supports no general speedup claim. Full hashes and run identity are in the
   [Nautilus repair record](https://github.com/awa-si/nautilus/blob/main/docs/nhsmm-correctness-repair.json).
 - **External-context timing and streaming fallback:** exact-source reports retain
   timing checks (1,209 core tests, three CUDA skips, 30 host harness regressions),
