@@ -19,51 +19,70 @@ def main():
     torch.set_num_threads(1)
     cases = []
     for dtype in (torch.float32, torch.float64):
-        for mode, tail in (("hmm", False), ("hsmm", False), ("hsmm", True), ("nhsmm", False)):
-            options = {"duration_tail": tail}
-            if mode != "hmm":
-                options["max_duration"] = 3
-            config = ModelConfig.for_mode(
-                mode, n_states=2, n_features=1, dropout=0.0, seed=7, **options
-            )
-            assert config.with_overrides(max_iter=20).max_iter == 20
-            model = NHSMM(config, device="cpu")
-            model.initialize_distributions()
-            model.to(dtype=dtype).eval()
-            x = torch.tensor([[0.0], [0.1], [-0.2], [0.3]], dtype=dtype)
-            with torch.inference_mode():
-                expected = filter_model_sequence(model, x)
-            with TemporaryDirectory(prefix="nhsmm-smoke-") as directory:
-                artifact = Path(directory) / "model.pt"
-                save_artifact(model, artifact)
-                restored = load_artifact(artifact, require_causal=True)
-                assert not restored.training
-                assert restored.config.model_mode == mode
-                for name, original in model.state_dict().items():
+        for n_states in (2, 4):
+            for mode, tail in (("hmm", False), ("hsmm", False), ("hsmm", True), ("nhsmm", False)):
+                options = {"duration_tail": tail}
+                if mode != "hmm":
+                    options["max_duration"] = 3
+                config = ModelConfig.for_mode(
+                    mode, n_states=n_states, n_features=1, dropout=0.0, seed=7, **options
+                )
+                assert config.with_overrides(max_iter=20).max_iter == 20
+                model = NHSMM(config, device="cpu")
+                model.initialize_distributions()
+                model.to(dtype=dtype).eval()
+                x = torch.tensor(
+                    [[-2.0], [-1.1], [0.0], [1.1], [2.0], [0.3], [-0.7], [1.8]], dtype=dtype
+                )
+                with torch.inference_mode():
+                    expected = filter_model_sequence(model, x)
+                with TemporaryDirectory(prefix="nhsmm-smoke-") as directory:
+                    artifact = Path(directory) / "model.pt"
+                    save_artifact(model, artifact)
+                    restored = load_artifact(artifact, require_causal=True)
+                    assert not restored.training
+                    assert restored.config.model_mode == mode
+                    for name, original in model.state_dict().items():
+                        torch.testing.assert_close(
+                            restored.state_dict()[name], original, rtol=0, atol=0
+                        )
+                    runtime = HSMMFilterRuntime(restored)
+                    tolerance = 2e-5 if dtype == torch.float32 else 2e-12
+                    for step, row in enumerate(x):
+                        state = runtime.step(row, timestamp=step + 1)
+                        assert torch.isfinite(state.state_posterior).all()
+                        torch.testing.assert_close(
+                            state.state_posterior[0],
+                            expected.state_posterior[0, step],
+                            rtol=0,
+                            atol=tolerance,
+                        )
+                    survival = runtime.forecast_survival((1, 4, 12))
+                    transition = runtime.forecast_transition()
                     torch.testing.assert_close(
-                        restored.state_dict()[name], original, rtol=0, atol=0
-                    )
-                runtime = HSMMFilterRuntime(restored)
-                tolerance = 2e-5 if dtype == torch.float32 else 2e-12
-                for step, row in enumerate(x):
-                    state = runtime.step(row, timestamp=step + 1)
-                    assert torch.isfinite(state.state_posterior).all()
-                    torch.testing.assert_close(
-                        state.state_posterior[0],
-                        expected.state_posterior[0, step],
+                        survival.end_within_probability[:, 0],
+                        transition.episode_end_probability,
                         rtol=0,
                         atol=tolerance,
                     )
-                runtime.reset()
-                assert runtime.state is None
-                replay = runtime.step(x[0], timestamp=1)
-                torch.testing.assert_close(
-                    replay.state_posterior[0],
-                    expected.state_posterior[0, 0],
-                    rtol=0,
-                    atol=tolerance,
+                    torch.testing.assert_close(
+                        transition.next_state_prior.sum(dim=-1),
+                        torch.ones(1, dtype=dtype),
+                        rtol=0,
+                        atol=tolerance,
+                    )
+                    runtime.reset()
+                    assert runtime.state is None
+                    replay = runtime.step(x[0], timestamp=1)
+                    torch.testing.assert_close(
+                        replay.state_posterior[0],
+                        expected.state_posterior[0, 0],
+                        rtol=0,
+                        atol=tolerance,
+                    )
+                cases.append(
+                    {"mode": mode, "dtype": str(dtype), "duration_tail": tail, "n_states": n_states}
                 )
-            cases.append({"mode": mode, "dtype": str(dtype), "duration_tail": tail})
     assert not hasattr(nhsmm, "ModelHealthThresholds")
     assert not hasattr(nhsmm, "evaluate_context_effect_replication")
     print(
