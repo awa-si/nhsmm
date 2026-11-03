@@ -300,8 +300,7 @@ def _boundary_scores(
         raise ValueError(f"duration logits must be {(B, K, D)}, got {duration.shape}")
     if transition.shape != (B, K, D, K):
         raise ValueError(f"transition logits must be {(B, K, D, K)}, got {transition.shape}")
-    tail = _tail_end_probability(model, B, duration, context=context_arg, context_mask=context_mask)
-    return duration, transition, tail
+    return duration, transition
 
 
 def _tail_end_probability(
@@ -527,7 +526,7 @@ class HSMMFilterRuntime:
                     emission,
                     int(self.model.dist.duration.max_duration),
                 )
-                duration, transition, tail = _boundary_scores(
+                duration, transition = _boundary_scores(
                     self.model,
                     external_context,
                     temperature=self.temperature,
@@ -540,7 +539,13 @@ class HSMMFilterRuntime:
                     observations=obs.clone(),
                     duration_log_prob=duration,
                     transition_log_prob=transition,
-                    tail_end_probability=tail,
+                    tail_end_probability=_tail_end_probability(
+                        self.model,
+                        filter_state.log_posterior.shape[0],
+                        filter_state.log_posterior,
+                        context=external_context,
+                        context_mask=context_mask,
+                    ),
                     encoder_state=None,
                     last_timestamp=timestamp,
                     uses_timestamps=timestamp is not None,
@@ -576,7 +581,7 @@ class HSMMFilterRuntime:
                     emission,
                     int(self.model.dist.duration.max_duration),
                 )
-                duration, transition, tail = _boundary_scores(
+                duration, transition = _boundary_scores(
                     self.model,
                     context,
                     temperature=self.temperature,
@@ -587,7 +592,13 @@ class HSMMFilterRuntime:
                     observations=obs.clone(),
                     duration_log_prob=duration,
                     transition_log_prob=transition,
-                    tail_end_probability=tail,
+                    tail_end_probability=_tail_end_probability(
+                        self.model,
+                        filter_state.log_posterior.shape[0],
+                        filter_state.log_posterior,
+                        context=context,
+                        context_mask=None,
+                    ),
                     encoder_state=encoder_state,
                     last_encoder_context=context.clone(),
                     last_timestamp=timestamp,
@@ -619,7 +630,7 @@ class HSMMFilterRuntime:
                     emission,
                     int(self.model.dist.duration.max_duration),
                 )
-                duration, transition, tail = _boundary_scores(
+                duration, transition = _boundary_scores(
                     self.model,
                     None,
                     temperature=self.temperature,
@@ -631,7 +642,13 @@ class HSMMFilterRuntime:
                     observations=obs.clone(),
                     duration_log_prob=duration,
                     transition_log_prob=transition,
-                    tail_end_probability=tail,
+                    tail_end_probability=_tail_end_probability(
+                        self.model,
+                        filter_state.log_posterior.shape[0],
+                        filter_state.log_posterior,
+                        context=None,
+                        context_mask=None,
+                    ),
                     encoder_state=None,
                     last_timestamp=timestamp,
                     uses_timestamps=timestamp is not None,
@@ -657,7 +674,7 @@ class HSMMFilterRuntime:
                 sequence.log_probs[:, 0],
                 int(self.model.dist.duration.max_duration),
             )
-            duration, transition, tail = _boundary_scores(
+            duration, transition = _boundary_scores(
                 self.model,
                 sequence.contexts[:, -1:],
                 temperature=self.temperature,
@@ -668,7 +685,13 @@ class HSMMFilterRuntime:
                 observations=sequence.sequences.clone(),
                 duration_log_prob=duration,
                 transition_log_prob=transition,
-                tail_end_probability=tail,
+                tail_end_probability=_tail_end_probability(
+                    self.model,
+                    filter_state.log_posterior.shape[0],
+                    filter_state.log_posterior,
+                    context=sequence.contexts[:, -1:],
+                    context_mask=None,
+                ),
                 encoder_state=None,
                 last_timestamp=timestamp,
                 uses_timestamps=timestamp is not None,
@@ -705,7 +728,7 @@ class HSMMFilterRuntime:
                 previous.transition_log_prob,
                 previous.tail_end_probability,
             )
-            duration, transition, tail = _boundary_scores(
+            duration, transition = _boundary_scores(
                 self.model,
                 external_context,
                 temperature=self.temperature,
@@ -718,7 +741,13 @@ class HSMMFilterRuntime:
                 observations=obs.clone(),
                 duration_log_prob=duration,
                 transition_log_prob=transition,
-                tail_end_probability=tail,
+                tail_end_probability=_tail_end_probability(
+                    self.model,
+                    filter_state.log_posterior.shape[0],
+                    filter_state.log_posterior,
+                    context=external_context,
+                    context_mask=context_mask,
+                ),
                 encoder_state=None,
                 last_timestamp=timestamp if previous.uses_timestamps else None,
                 uses_timestamps=previous.uses_timestamps,
@@ -745,7 +774,7 @@ class HSMMFilterRuntime:
                 previous.transition_log_prob,
                 previous.tail_end_probability,
             )
-            duration, transition, tail = _boundary_scores(
+            duration, transition = _boundary_scores(
                 self.model,
                 context,
                 temperature=self.temperature,
@@ -756,7 +785,13 @@ class HSMMFilterRuntime:
                 observations=obs.clone(),
                 duration_log_prob=duration,
                 transition_log_prob=transition,
-                tail_end_probability=tail,
+                tail_end_probability=_tail_end_probability(
+                    self.model,
+                    filter_state.log_posterior.shape[0],
+                    filter_state.log_posterior,
+                    context=context,
+                    context_mask=None,
+                ),
                 encoder_state=encoder_state,
                 last_encoder_context=context.clone(),
                 last_timestamp=timestamp if previous.uses_timestamps else None,
@@ -779,7 +814,7 @@ class HSMMFilterRuntime:
                 previous.transition_log_prob,
                 previous.tail_end_probability,
             )
-            duration, transition, tail = _boundary_scores(
+            duration, transition = _boundary_scores(
                 self.model,
                 None,
                 temperature=self.temperature,
@@ -791,7 +826,13 @@ class HSMMFilterRuntime:
                 observations=obs.clone(),
                 duration_log_prob=duration,
                 transition_log_prob=transition,
-                tail_end_probability=tail,
+                tail_end_probability=_tail_end_probability(
+                    self.model,
+                    filter_state.log_posterior.shape[0],
+                    filter_state.log_posterior,
+                    context=None,
+                    context_mask=None,
+                ),
                 encoder_state=None,
                 last_timestamp=timestamp if previous.uses_timestamps else None,
                 uses_timestamps=previous.uses_timestamps,
@@ -812,7 +853,7 @@ class HSMMFilterRuntime:
             previous.transition_log_prob,
             previous.tail_end_probability,
         )
-        duration, transition, tail = _boundary_scores(
+        duration, transition = _boundary_scores(
             self.model,
             sequence.contexts[:, -1:],
             temperature=self.temperature,
@@ -823,7 +864,13 @@ class HSMMFilterRuntime:
             observations=sequence.sequences.clone(),
             duration_log_prob=duration,
             transition_log_prob=transition,
-            tail_end_probability=tail,
+            tail_end_probability=_tail_end_probability(
+                self.model,
+                filter_state.log_posterior.shape[0],
+                filter_state.log_posterior,
+                context=sequence.contexts[:, -1:],
+                context_mask=None,
+            ),
             encoder_state=None,
             last_timestamp=timestamp if previous.uses_timestamps else None,
             uses_timestamps=previous.uses_timestamps,
