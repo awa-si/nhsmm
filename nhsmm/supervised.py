@@ -79,9 +79,16 @@ def supervised_log_likelihood(model, observations, labels, *, context=None, redu
         "transition",
     )
     D = model.config.max_duration
-    tail = model.dist.duration.tail_probability()
+    tail = model.dist.duration.tail_probability(
+        context=active(data.contexts),
+        **context_options(data.context_mask, canonical=False),
+    )
     if tail is not None:
-        tail = tail.view(1, 1, K).expand(B, T, K).reshape(B * T, K)
+        tail = (
+            tail.view(1, 1, K).expand(B, T, K).reshape(B * T, K)
+            if tail.ndim == 1
+            else tail.expand(B, T, K).reshape(B * T, K)
+        )
     end, continuation = _duration_log_hazard_from_log_p(q.reshape(B * T, K, D), tail)
     end, continuation = end.reshape(B, T, K, D), continuation.reshape(B, T, K, D)
     scores = []

@@ -141,14 +141,21 @@ def _forward_causal_hazard(
         return torch.stack(rows, dim=0)
 
     tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
-    tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None
+    tail_end_probability = (
+        tail_probability_fn(
+            context=self._active_context(router.context),
+            **context_options(getattr(router, "context_mask", None), canonical=False),
+        )
+        if callable(tail_probability_fn)
+        else None
+    )
     expanded_tail = None
     if tail_end_probability is not None:
+        tail = tail_end_probability.to(device=duration_logits.device, dtype=duration_logits.dtype)
         expanded_tail = (
-            tail_end_probability.to(device=duration_logits.device, dtype=duration_logits.dtype)
-            .view(1, 1, K)
-            .expand(B, T, K)
-            .reshape(B * T, K)
+            tail.view(1, 1, K).expand(B, T, K).reshape(B * T, K)
+            if tail.ndim == 1
+            else tail.expand(B, T, K).reshape(B * T, K)
         )
     log_end, log_continue = _duration_log_hazard_from_log_p(
         duration_logits.reshape(B * T, K, D), expanded_tail
@@ -360,7 +367,14 @@ def forward(
     transition_logits = self._expand_batch(transition_logits, B, "transition logits")
 
     tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
-    tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None
+    tail_end_probability = (
+        tail_probability_fn(
+            context=self._active_context(router.context),
+            **context_options(getattr(router, "context_mask", None), canonical=False),
+        )
+        if callable(tail_probability_fn)
+        else None
+    )
     if tail_end_probability is not None:
         emission_prefix = EmissionPrefix.build(router.log_probs, dim=1)
         duration_dependent_transition = self.dist.transition.max_duration is not None
@@ -380,7 +394,13 @@ def forward(
                 emit_sum = emission_prefix.segment((active, t + 1), (active, start))
                 segment_score = (
                     self._segment_duration_log_score(
-                        duration_logits[active, t], duration, tail_end_probability
+                        duration_logits[active, t],
+                        duration,
+                        (
+                            tail_end_probability
+                            if tail_end_probability.ndim == 1
+                            else tail_end_probability[active, t]
+                        ),
                     )
                     + emit_sum
                 )

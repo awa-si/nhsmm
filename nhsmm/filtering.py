@@ -489,8 +489,7 @@ def _duration_log_hazard_from_log_p(
             tail_end_probability = tail_end_probability.unsqueeze(0).expand(B, K)
         if tail_end_probability.shape != (B, K):
             raise ValueError(
-                f"tail_end_probability must be {(B, K)} or {(K,)}, "
-                f"got {tail_end_probability.shape}"
+                f"tail_end_probability must be {(B, K)} or {(K,)}, got {tail_end_probability.shape}"
             )
         _require_compatible(log_p, tail_end_probability, "tail_end_probability")
         if not torch.isfinite(tail_end_probability).all():
@@ -758,7 +757,14 @@ def filter_model_sequence(
             **context_options(sequence.context_mask, canonical=False),
         )
         tail_probability_fn = getattr(model.dist.duration, "tail_probability", None)
-        tail_end_probability = tail_probability_fn() if callable(tail_probability_fn) else None
+        tail_end_probability = (
+            tail_probability_fn(
+                context=sequence_context,
+                **context_options(sequence.context_mask, canonical=False),
+            )
+            if callable(tail_probability_fn)
+            else None
+        )
         if initial_logits.shape[0] == 1 and B > 1:
             initial_logits = initial_logits.expand(B, *initial_logits.shape[1:])
         if duration_logits.shape[0] == 1 and B > 1:
@@ -823,7 +829,7 @@ def filter_model_sequence(
                     tail_end_probability is None
                     or (
                         isinstance(tail_end_probability, torch.Tensor)
-                        and tail_end_probability.shape == (K,)
+                        and tail_end_probability.shape in ((K,), (B, T, K))
                     )
                 )
             ):
@@ -831,7 +837,13 @@ def filter_model_sequence(
                 # to each row and need not be recomputed inside the time loop.
                 # Preserve custom tail shapes on the established step path.
                 hazards = _duration_log_hazard_from_log_p(
-                    duration_logits[b, : length - 1], tail_end_probability
+                    duration_logits[b, : length - 1],
+                    (
+                        tail_end_probability[b, : length - 1]
+                        if isinstance(tail_end_probability, torch.Tensor)
+                        and tail_end_probability.ndim == 3
+                        else tail_end_probability
+                    ),
                 )
 
             for t in range(1, length):
@@ -841,7 +853,12 @@ def filter_model_sequence(
                         sequence.log_probs[b : b + 1, t],
                         duration_logits[b : b + 1, t - 1],
                         transition_logits[b : b + 1, t - 1],
-                        tail_end_probability,
+                        (
+                            tail_end_probability[b : b + 1, t - 1]
+                            if isinstance(tail_end_probability, torch.Tensor)
+                            and tail_end_probability.ndim == 3
+                            else tail_end_probability
+                        ),
                     )
                 else:
                     posterior, _ = _causal_filter_step(

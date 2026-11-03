@@ -6,7 +6,7 @@ status: active
 language: en
 owner: NHSMM
 created: 2026-10-07
-updated: 2026-10-31
+updated: 2026-11-03
 ---
 
 # Bounded duration-tail extension contract
@@ -112,6 +112,14 @@ rather than a boundary occurring at exact age `D`.
 A self-transition still starts a new episode and resets the next age bucket to `1`.
 
 ## Dynamic causal context
+
+The baseline `duration_tail=True` has a state-specific constant tail hazard. `duration_tail_context=True` opts into a separate, zero-initialized linear head over the causal boundary context. For each state its output `delta_t` modulates the baseline odds:
+
+```text
+h_t = h_base / (h_base + (1-h_base) * exp(-delta_t))
+```
+
+Zero head weights recover the baseline, and `h_base=1` remains exactly one. The setting requires a causal model, a duration tail, and `context_dim`. Unavailable boundary context uses `h_base`; unavailable placeholder values are never evaluated by the head. The tail head is absent from static checkpoints. Forward recursion, filtering, Viterbi, supervised joint scoring, and streaming use the same boundary hazard. Survival forecasts freeze the last observed boundary hazard.
 
 In the causal model, both the mass vector and `h_tail` are evaluated from the information set available at the current boundary. If context changes while an episode remains in `D+`, the next boundary may use a different tail hazard.
 

@@ -117,6 +117,7 @@ class ModelConfig:
     # HMM / distributions
     max_duration: int = 35
     duration_tail: bool = False
+    duration_tail_context: bool = False
     duration_tail_init_probability: float = 0.5
     supervised_duration_end_prior: float = 0.5
     supervised_duration_continue_prior: float = 0.5
@@ -395,6 +396,12 @@ class ModelConfig:
         )
         if self.duration_tail_init_probability > 1.0:
             raise ValueError("duration_tail_init_probability must be in (0,1]")
+        if self.duration_tail_context and not self.duration_tail:
+            raise ValueError("duration_tail_context requires duration_tail")
+        if self.duration_tail_context and self.context_dim is None:
+            raise ValueError("duration_tail_context requires context_dim")
+        if self.duration_tail_context and not self.causal:
+            raise ValueError("duration_tail_context requires causal=True")
 
         for name in (
             "transition_context_max_delta",
@@ -408,6 +415,7 @@ class ModelConfig:
             "allow_self_transitions",
             "use_context_encoder",
             "duration_tail",
+            "duration_tail_context",
             "causal",
             "use_scheduler",
             "convergence_stop",

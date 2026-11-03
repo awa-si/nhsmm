@@ -695,6 +695,13 @@ class Duration(Neural):
         self.init_mode = init_mode
         self.max_duration = max_duration
         self.tail_enabled = tail_enabled
+        self.tail_context_enabled = bool(config and config.duration_tail_context)
+        self.tail_context_head = (
+            nn.Linear(context_dim, n_states) if self.tail_context_enabled else None
+        )
+        if self.tail_context_head is not None:
+            nn.init.zeros_(self.tail_context_head.weight)
+            nn.init.zeros_(self.tail_context_head.bias)
         if tail_enabled:
             self.tail_end_probability = nn.Parameter(
                 torch.full((n_states,), float(tail_init_probability))
@@ -778,25 +785,53 @@ class Duration(Neural):
         if self.tail_end_probability is not None:
             self.tail_end_probability.clamp_(min=EPS, max=1.0)
 
-    def tail_probability(self) -> Optional[torch.Tensor]:
-        """Return the bounded-tail end probability per state when enabled.
+    def tail_probability(
+        self,
+        context: Optional[torch.Tensor] = None,
+        context_mask: Optional[torch.Tensor] = None,
+    ) -> Optional[torch.Tensor]:
+        """Return the D+ end probability, optionally at each causal boundary.
 
-        The parameter is represented directly in probability space so the
-        compatibility boundary ``h_tail=1`` is exactly representable. Values
-        are constrained to ``(0,1]`` at use time. Joint optimization also
-        projects the parameter after each update to avoid zero clamp gradients
-        outside the feasible domain.
+        A zero initialized context head preserves the static model. Odds
+        modulation keeps the exact h=1 compatibility boundary representable.
+        Unavailable context rows use the state baseline without evaluating the
+        head on their (possibly nonfinite) placeholder values.
         """
         if self.tail_end_probability is None:
             return None
         tail = self.tail_end_probability
-        # Preserve a feasible-domain derivative at the exact compatibility
-        # boundaries. clamp's endpoint derivative varies across Torch versions.
-        return torch.where(
+        base = torch.where(
             tail < EPS,
             torch.full_like(tail, EPS),
             torch.where(tail > 1.0, torch.ones_like(tail), tail),
         )
+        if not self.tail_context_enabled or context is None:
+            return base
+        ctx = self._prepare_context(context)
+        if ctx.ndim != 3 or ctx.shape[-1] != self.tail_context_head.in_features:
+            raise ValueError("tail context must have shape [B,T,context_dim]")
+        if context_mask is None:
+            if not torch.isfinite(ctx).all():
+                raise ValueError("tail context must be finite")
+            delta = self.tail_context_head(ctx)
+        else:
+            if (
+                not torch.is_tensor(context_mask)
+                or context_mask.dtype != torch.bool
+                or context_mask.shape != ctx.shape[:2]
+                or context_mask.device != ctx.device
+            ):
+                raise ValueError("context_mask must be bool [B,T] on the context device")
+            active = ctx[context_mask]
+            if not torch.isfinite(active).all():
+                raise ValueError("available tail context must be finite")
+            delta = ctx.new_zeros((*ctx.shape[:2], self.n_states))
+            delta[context_mask] = self.tail_context_head(active)
+        # h = sigmoid(logit(base)+delta), evaluated without infinite logit
+        # at base=1. The delta=0 path is algebraically the original parameter.
+        multiplier = torch.exp((-delta).clamp(-30.0, 30.0))
+        base = base.view(1, 1, self.n_states)
+        return base / (base + (1.0 - base) * multiplier)
 
     def _modulate(
         self,
