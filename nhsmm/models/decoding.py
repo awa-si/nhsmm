@@ -78,14 +78,18 @@ def _viterbi_causal_hazard(
                 canonical=False,
             ),
         )[0]
-        tail_end_probability = self.dist.duration.tail_probability(
-            context=self._active_context(router.context[b : b + 1, :L]),
-            **context_options(
-                None
-                if getattr(router, "context_mask", None) is None
-                else router.context_mask[b : b + 1, :L],
-                canonical=False,
-            ),
+        tail_end_probability = (
+            self.dist.duration.tail_probability(
+                context=self._active_context(router.context[b : b + 1, :L]),
+                **context_options(
+                    None
+                    if getattr(router, "context_mask", None) is None
+                    else router.context_mask[b : b + 1, :L],
+                    canonical=False,
+                ),
+            )
+            if getattr(self.dist.duration, "tail_context_enabled", False)
+            else self.dist.duration.tail_probability()
         )
         if tail_end_probability is not None and tail_end_probability.ndim == 3:
             tail_end_probability = tail_end_probability[0]

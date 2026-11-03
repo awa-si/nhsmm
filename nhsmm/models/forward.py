@@ -142,9 +142,13 @@ def _forward_causal_hazard(
 
     tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
     tail_end_probability = (
-        tail_probability_fn(
-            context=self._active_context(router.context),
-            **context_options(getattr(router, "context_mask", None), canonical=False),
+        (
+            tail_probability_fn(
+                context=self._active_context(router.context),
+                **context_options(getattr(router, "context_mask", None), canonical=False),
+            )
+            if getattr(self.dist.duration, "tail_context_enabled", False)
+            else tail_probability_fn()
         )
         if callable(tail_probability_fn)
         else None
@@ -368,9 +372,13 @@ def forward(
 
     tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
     tail_end_probability = (
-        tail_probability_fn(
-            context=self._active_context(router.context),
-            **context_options(getattr(router, "context_mask", None), canonical=False),
+        (
+            tail_probability_fn(
+                context=self._active_context(router.context),
+                **context_options(getattr(router, "context_mask", None), canonical=False),
+            )
+            if getattr(self.dist.duration, "tail_context_enabled", False)
+            else tail_probability_fn()
         )
         if callable(tail_probability_fn)
         else None

@@ -312,7 +312,12 @@ def _tail_end_probability(
     context_mask: Optional[torch.Tensor] = None,
 ) -> Optional[torch.Tensor]:
     fn = getattr(model.dist.duration, "tail_probability", None)
-    tail = fn(context=context, context_mask=context_mask) if callable(fn) else None
+    if not callable(fn):
+        tail = None
+    elif getattr(model.dist.duration, "tail_context_enabled", False):
+        tail = fn(context=context, context_mask=context_mask)
+    else:
+        tail = fn()
     if tail is None:
         return None
     tail = tail.to(device=reference.device, dtype=reference.dtype)

@@ -79,9 +79,13 @@ def supervised_log_likelihood(model, observations, labels, *, context=None, redu
         "transition",
     )
     D = model.config.max_duration
-    tail = model.dist.duration.tail_probability(
-        context=active(data.contexts),
-        **context_options(data.context_mask, canonical=False),
+    tail = (
+        model.dist.duration.tail_probability(
+            context=active(data.contexts),
+            **context_options(data.context_mask, canonical=False),
+        )
+        if getattr(model.dist.duration, "tail_context_enabled", False)
+        else model.dist.duration.tail_probability()
     )
     if tail is not None:
         tail = (

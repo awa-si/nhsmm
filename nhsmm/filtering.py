@@ -758,9 +758,13 @@ def filter_model_sequence(
         )
         tail_probability_fn = getattr(model.dist.duration, "tail_probability", None)
         tail_end_probability = (
-            tail_probability_fn(
-                context=sequence_context,
-                **context_options(sequence.context_mask, canonical=False),
+            (
+                tail_probability_fn(
+                    context=sequence_context,
+                    **context_options(sequence.context_mask, canonical=False),
+                )
+                if getattr(model.dist.duration, "tail_context_enabled", False)
+                else tail_probability_fn()
             )
             if callable(tail_probability_fn)
             else None
