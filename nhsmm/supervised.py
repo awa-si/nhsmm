@@ -227,6 +227,7 @@ def fit_supervised(
                     and (
                         ".context_net." in name
                         or "._proj." in name
+                        or ".tail_context_head." in name
                         or name.endswith(".delta_scale")
                     )
                 )
