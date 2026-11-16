@@ -9,7 +9,7 @@
 **Repository:** `awa-si/nhsmm`  
 **Branch:** `v3`
 **Mode:** normative machine directives  
-**AI Instruction:** Apply this file as the repository-specific AI layer after applicable Admin/project control layers; load `docs/agent-domain.md`, `docs/model.md`, `docs/testing.md` or other helpers only when material, and keep substantive probabilistic/model/API/testing contracts in their canonical owners.
+**AI Instruction:** Apply this file as the repository-specific AI layer after applicable Admin global rules and workflows; load `docs/agent-domain.md`, `docs/model.md`, `docs/testing.md` or other helpers only when material, and keep substantive probabilistic/model/API/testing contracts in their canonical owners.
 
 ---
 
@@ -25,8 +25,8 @@ agent_content_policy:
 - load_helpers: only_when_material_to_task
 
 control_plane:
-- inherit: awa-si/admin/instructions.txt|awa-si/admin/workflow.md|awa-si/admin/coding.md_when_applicable|awa-si/admin/projects/nhsmm/instructions.txt|awa-si/admin/projects/nhsmm/workflow.md
-- repository_layer_position: after_applicable_admin_and_project_layers
+- inherit: awa-si/admin/core.yaml|awa-si/admin/behavior.yaml|awa-si/admin/command.yaml|awa-si/admin/workflow.md_when_applicable|awa-si/admin/workflow/coding.md_when_applicable
+- repository_layer_position: after_applicable_admin_global_workflows
 - global_precedence_and_tool_mechanics: do_not_redefine_here
 
 role:
@@ -40,7 +40,7 @@ source_resolution:
 - model_documentation_owner: docs/model.md
 - testing_contract_owner: docs/testing.md
 - global_workflow_owner: awa-si/admin/workflow.md
-- project_workflow_delta: awa-si/admin/projects/nhsmm/workflow.md
+- repository_workflow: docs/agent-workflow.md_when_performance_or_streaming_optimization_material
 
 startup:
 - read: AGENTS.md
@@ -66,7 +66,7 @@ documentation_routing:
 
 verification_routing:
 - testing_contract_owner: docs/testing.md
-- performance_workflow_delta: awa-si/admin/projects/nhsmm/workflow.md
+- performance_workflow: docs/agent-workflow.md
 - execution_mechanics: follow_global_workflow
 
 completion:
