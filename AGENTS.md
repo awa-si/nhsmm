@@ -42,6 +42,14 @@ source_resolution:
 - global_workflow_owner: awa-si/admin/workflow.md
 - repository_workflow: docs/agent-workflow.md_when_performance_or_streaming_optimization_material
 
+trading_cross_repository_boundary:
+- apply_when: explicitly_selected_trading_multi_repository_task
+- model_owner: awa-si/nhsmm@v3|probabilistic_model_core|state_modeling|training_and_inference_semantics
+- nautilus_owner: awa-si/nautilus@main|trading_runtime|strategy_integration|market_data|historical_replay|order_execution
+- gbm_owner: awa-si/gbm@main|candidate_predictive_model_core|not_an_automatic_owner_of_NHSMM_semantics
+- coordination: resolve_current_repository_from_explicit_task_or_verified_binding|read_each_affected_AGENTS.md|verify_each_branch_independently
+- no_authority_from: ChatGPT_project_name|SessionRegistry_label|chat_title
+
 startup:
 - read: AGENTS.md
 - then_if_material: docs/v3.md|docs/agent-domain.md|docs/model.md|docs/testing.md|README.md
