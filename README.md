@@ -24,6 +24,10 @@ initialization and optimization, causal filtering and forecasts, configuration,
 and core artifacts. Framework integrations, validation policy, datasets and
 research workflows belong to the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/adapter/qlib).
 
+## NautilusTrader host migration
+
+The downstream Nautilus host is moving through **NautilusTrader rc6 (retired legacy) → 2.0.0rc9 (currently verified build) → NautilusTrader 2.x (active version-family contract)**. This is a **host integration/runtime migration**, not a revision of NHSMM v3 probabilistic semantics, causal filtering, artifacts, or training. The rc9 label identifies a validated prerelease rather than an NHSMM-specific operating mode; compatible later 2.x builds require independent host regression evidence. NHSMM core does not depend on NautilusTrader. The host owns adapters, market replay and trading execution, with [NT 2.x validation](https://github.com/awa-si/nautilus/blob/main/docs/nt2-validation.md) and [deprecated historical archive status](https://github.com/awa-si/nautilus/blob/main/docs/deprecated-archives.md) maintained separately.
+
 ## Installation
 
 ```bash
