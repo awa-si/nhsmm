@@ -194,6 +194,41 @@ must apply the structural mask, including disabled self-transitions, before
 normalization. Independent probability products and batch/streaming comparisons
 cover that case. See [the API contract](docs/model.md#explicit-external-component-context).
 
+## External research note: BTCGate-style market risk context (2026-11-23)
+
+[BTCGate](https://github.com/baxr6/BTCGate) is an external Freqtrade-oriented
+market risk and regime labeling project. It combines per-coin turbulence,
+volume anomalies, funding/open-interest and crowding observations, broader BTC
+conditions, and event-driven warnings. Its published predictive and backtest
+figures are author-reported; no independent NHSMM replication or incremental
+model benefit has been established.
+
+**Ownership boundary:** This is a candidate *host-side research input*, not a
+proposal to copy BTCGate into the NHSMM core. The NHSMM package continues to
+own probabilistic state/age inference, transitions, duration distributions and
+causal context semantics. `awa-si/nautilus` owns provider data, point-in-time
+feature construction, as-of availability, dataset identity, chronological
+evaluation, strategy admission and execution. Event locks and
+portfolio-concentration controls belong to deterministic host risk policy,
+not to the latent-state model. Direct code reuse would also require a
+GPL-3.0 licensing review (NHSMM is Apache-2.0).
+
+Candidate experiments: compare (A) the current NHSMM observations,
+(B) the same model with causally aligned turbulence, volume, funding, OI
+and optional DVOL/BTC-market context, and (C) deterministic BTCGate-like
+rules and simple volatility baselines, with matched data and evaluation
+horizons. Pre-register feature publication lags, missingness, clocks, splits,
+seeds, budgets and acceptance criteria. Evaluate predictive calibration for
+large *absolute* moves, held-out likelihood, state-duration and transition
+stability, and incremental information beyond recent volatility. Keep
+directional forecasts and net trading outcomes as separate endpoints.
+
+The currently discussed Binance Klines-only dataset is sufficient for
+price/volume candidates, but not for the complete funding/OI/DVOL/liquidation
+feature set. Missing external histories must not be silently imputed or
+backfilled from future snapshots. No implementation, training or trading
+performance claim follows from this note.
+
 ## Falsifiable questions
 
 | Claim | Evidence required | Failure or limitation |
