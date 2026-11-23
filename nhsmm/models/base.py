@@ -119,8 +119,44 @@ class DistributionSet(nn.Module):
         return type(self)(config=self.config, **self._factories)
 
 
-class NHSMM(nn.Module):
+# Only per-call optimizer controls may differ from construction configuration.
+_OPTIMIZATION_OVERRIDE_FIELDS = frozenset(
+    {
+        "n_init",
+        "lr",
+        "tol",
+        "max_iter",
+        "optimizer_temperature_mode",
+        "optimizer_target_temperature",
+        "optimizer_initialization",
+        "optimizer_batch_size",
+        "transition_refine_steps",
+        "transition_refine_lr",
+        "loss_bias",
+        "plateau_window",
+        "plateau_tol",
+        "use_scheduler",
+        "convergence_stop",
+        "convergence_mode",
+        "verbose",
+        "emission_init_mode",
+        "adam_beta1",
+        "adam_beta2",
+        "adam_eps",
+        "grad_clip_norm",
+        "scheduler_factor",
+        "scheduler_min_patience",
+        "temperature_min_ratio",
+        "temperature_steepness",
+        "convergence_patience",
+        "convergence_patience_scale",
+        "convergence_auto_patience",
+        "convergence_patience_max",
+    }
+)
 
+
+class NHSMM(nn.Module):
     def __init__(
         self,
         config: ModelConfig,
@@ -291,39 +327,7 @@ class NHSMM(nn.Module):
     def _validate_optimization_config(self, cfg: ModelConfig) -> None:
         # Only fields consumed by this optimization may differ. Component,
         # initializer, encoder and supervised-only settings belong to construction.
-        runtime_fields = {
-            "n_init",
-            "lr",
-            "tol",
-            "max_iter",
-            "optimizer_temperature_mode",
-            "optimizer_target_temperature",
-            "optimizer_initialization",
-            "optimizer_batch_size",
-            "transition_refine_steps",
-            "transition_refine_lr",
-            "loss_bias",
-            "plateau_window",
-            "plateau_tol",
-            "use_scheduler",
-            "convergence_stop",
-            "convergence_mode",
-            "verbose",
-            "emission_init_mode",
-            "adam_beta1",
-            "adam_beta2",
-            "adam_eps",
-            "grad_clip_norm",
-            "scheduler_factor",
-            "scheduler_min_patience",
-            "temperature_min_ratio",
-            "temperature_steepness",
-            "convergence_patience",
-            "convergence_patience_scale",
-            "convergence_auto_patience",
-            "convergence_patience_max",
-        }
-        structural_fields = sorted(set(self.config.to_dict()) - runtime_fields)
+        structural_fields = sorted(set(self.config.to_dict()) - _OPTIMIZATION_OVERRIDE_FIELDS)
         mismatches = [
             name for name in structural_fields if getattr(cfg, name) != getattr(self.config, name)
         ]
@@ -362,21 +366,17 @@ class NHSMM(nn.Module):
                 f"Feature dimension mismatch: expected {self.config.n_features}, got {F}"
             )
 
-        if context is BASE_CONTEXT:
+        if context is BASE_CONTEXT or (context is None and self.encoder is None):
             context_tensor = X.new_zeros((B, T, 0))
             canonical = X.new_zeros((B, 1, 0))
         elif context is None:
-            if self.encoder is None:
-                context_tensor = X.new_zeros((B, T, 0))
-                canonical = X.new_zeros((B, 1, 0))
+            if B == 0 or T == 0:
+                context_tensor = X.new_zeros((B, T, self.context_dim))
+                canonical = X.new_zeros((B, 1, self.context_dim))
             else:
-                if B == 0 or T == 0:
-                    context_tensor = X.new_zeros((B, T, self.context_dim))
-                    canonical = X.new_zeros((B, 1, self.context_dim))
-                else:
-                    context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
-                if self.config.causal:
-                    canonical = context_tensor.new_zeros((B, 1, context_tensor.shape[-1]))
+                context_tensor, canonical = self.encoder.encode(sequences=X, mask=mask)
+            if self.config.causal:
+                canonical = context_tensor.new_zeros((B, 1, context_tensor.shape[-1]))
         else:
             context_tensor = context
             canonical = (
