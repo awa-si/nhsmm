@@ -594,20 +594,13 @@ def _filter_step_normalized(
     return HSMMFilterState._from_normalized_unchecked(posterior)
 
 
-def filter_step(
+def _validated_filter_step_scores(
     previous: HSMMFilterState,
     emission_log_prob: torch.Tensor,
     log_duration: torch.Tensor,
     transition_log_prob: torch.Tensor,
-    tail_end_probability: Optional[torch.Tensor] = None,
-) -> HSMMFilterState:
-    """Advance a causal explicit-duration HSMM filter by one observation.
-
-    Duration probabilities describe total episode duration ``1..D``.
-    Transitions occur only when the previous episode ends. A self-transition
-    starts a new episode of the same latent state with age reset to one.
-    """
-
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Validate and normalize external scores before the internal filter kernel."""
     if not isinstance(previous, HSMMFilterState):
         raise TypeError("previous must be an HSMMFilterState")
     prev = previous.log_posterior
@@ -643,6 +636,26 @@ def filter_step(
         log_duration,
         dim=-1,
         name="log_duration",
+    )
+    return emission_log_prob, normalized_duration, transition_log_prob
+
+
+def filter_step(
+    previous: HSMMFilterState,
+    emission_log_prob: torch.Tensor,
+    log_duration: torch.Tensor,
+    transition_log_prob: torch.Tensor,
+    tail_end_probability: Optional[torch.Tensor] = None,
+) -> HSMMFilterState:
+    """Advance a causal explicit-duration HSMM filter by one observation.
+
+    Duration probabilities describe total episode duration ``1..D``.
+    Transitions occur only when the previous episode ends. A self-transition
+    starts a new episode of the same latent state with age reset to one.
+    """
+
+    emission_log_prob, normalized_duration, transition_log_prob = _validated_filter_step_scores(
+        previous, emission_log_prob, log_duration, transition_log_prob
     )
     return _filter_step_normalized(
         previous,
