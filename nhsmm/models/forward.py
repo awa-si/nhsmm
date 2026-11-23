@@ -51,6 +51,23 @@ def _hmm_prefix_log_posteriors(initial, emission, transition):
     return torch.log_softmax(blocks[:, 0, :], dim=-1)
 
 
+def _tail_end_probability(model, router: ContextRouter) -> Optional[torch.Tensor]:
+    """Resolve static or context-conditioned duration-tail probabilities."""
+    tail_probability_fn = getattr(model.dist.duration, "tail_probability", None)
+    return (
+        (
+            tail_probability_fn(
+                context=model._active_context(router.context),
+                **context_options(getattr(router, "context_mask", None), canonical=False),
+            )
+            if getattr(model.dist.duration, "tail_context_enabled", False)
+            else tail_probability_fn()
+        )
+        if callable(tail_probability_fn)
+        else None
+    )
+
+
 def _forward_causal_hazard(
     self,
     X: SequenceSet,
@@ -140,19 +157,7 @@ def _forward_causal_hazard(
                 rows.append(padding.unsqueeze(-1))
         return torch.stack(rows, dim=0)
 
-    tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
-    tail_end_probability = (
-        (
-            tail_probability_fn(
-                context=self._active_context(router.context),
-                **context_options(getattr(router, "context_mask", None), canonical=False),
-            )
-            if getattr(self.dist.duration, "tail_context_enabled", False)
-            else tail_probability_fn()
-        )
-        if callable(tail_probability_fn)
-        else None
-    )
+    tail_end_probability = _tail_end_probability(self, router)
     expanded_tail = None
     if tail_end_probability is not None:
         tail = tail_end_probability.to(device=duration_logits.device, dtype=duration_logits.dtype)
@@ -370,19 +375,7 @@ def forward(
     duration_logits = self._expand_batch(duration_logits, B, "duration logits")
     transition_logits = self._expand_batch(transition_logits, B, "transition logits")
 
-    tail_probability_fn = getattr(self.dist.duration, "tail_probability", None)
-    tail_end_probability = (
-        (
-            tail_probability_fn(
-                context=self._active_context(router.context),
-                **context_options(getattr(router, "context_mask", None), canonical=False),
-            )
-            if getattr(self.dist.duration, "tail_context_enabled", False)
-            else tail_probability_fn()
-        )
-        if callable(tail_probability_fn)
-        else None
-    )
+    tail_end_probability = _tail_end_probability(self, router)
     if tail_end_probability is not None:
         emission_prefix = EmissionPrefix.build(router.log_probs, dim=1)
         duration_dependent_transition = self.dist.transition.max_duration is not None
