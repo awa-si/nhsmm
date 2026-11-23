@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any, Optional
-import math
 
 import torch
 
@@ -31,6 +31,19 @@ from nhsmm.survival import (
 from nhsmm.transitions import HSMMTransitionForecast, one_step_transition_forecast
 
 
+def _tensor_cache_key(
+    value: torch.Tensor,
+) -> Optional[tuple[int, int, torch.device, torch.dtype]]:
+    """Identify a versioned tensor; inference tensors must not be cached.
+
+    Inference tensors have no mutation version counter, so caching their
+    derived values could silently reuse stale probabilities after mutation.
+    """
+    if torch.is_inference(value):
+        return None
+    return (id(value), int(value._version), value.device, value.dtype)
+
+
 class _RuntimeScoreCache:
     """Version-aware cache for static terms used by canonical runtime scorers."""
 
@@ -42,13 +55,7 @@ class _RuntimeScoreCache:
         self._emission_log_norm: Optional[torch.Tensor] = None
 
     def duration_gate_log(self, bias: torch.Tensor) -> torch.Tensor:
-        key = (
-            None
-            if torch.is_inference(bias)
-            else (id(bias), int(bias._version), bias.device, bias.dtype)
-        )
-        # Inference tensors have no version counter and can still be mutated
-        # inside inference_mode. Recompute rather than reuse unprovable cache.
+        key = _tensor_cache_key(bias)
         if self._duration_gate_log is None or key is None or key != self._duration_key:
             with torch.no_grad():
                 self._duration_gate_log = torch.sigmoid(bias).clamp_min(EPS).log()
@@ -61,11 +68,8 @@ class _RuntimeScoreCache:
         *,
         min_covar: float,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        key = (
-            None
-            if torch.is_inference(log_var)
-            else (id(log_var), int(log_var._version), log_var.device, log_var.dtype, min_covar)
-        )
+        tensor_key = _tensor_cache_key(log_var)
+        key = None if tensor_key is None else (*tensor_key, min_covar)
         if self._emission_var is None or key is None or key != self._emission_key:
             with torch.no_grad():
                 var = torch.nn.functional.softplus(log_var).clamp_min(min_covar)
@@ -196,9 +200,7 @@ def _as_observation(observation: torch.Tensor, *, n_features: int) -> torch.Tens
         observation = observation.view(1, 1, -1)
     elif observation.ndim == 2:
         observation = observation.unsqueeze(1)
-    elif observation.ndim == 3 and observation.shape[1] == 1:
-        pass
-    else:
+    elif observation.ndim != 3 or observation.shape[1] != 1:
         raise ValueError("observation must be [F], [B,F], or [B,1,F] for one streaming timestep")
 
     if observation.shape[-1] != n_features:
