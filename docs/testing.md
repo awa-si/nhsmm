@@ -158,6 +158,24 @@ Ruff lint and formatting passed. JUnit SHA-256:
 `9e0b533d74cc904a3e51370a0ff2e69196ee2cf1fe8136d659b751cc831130cd`.
 This is local CPU qualification, not CUDA or market validation.
 
+## Public filter validation boundary qualification (2026-11-23)
+
+Code commit `8d9b73f734a4def7f38684af03ee1e4604e1c800` extracts
+`_validated_filter_step_scores` from the public `filter_step` entry point.
+It retains the exact shape, dtype, device, finite-support and normalization
+checks in their existing order, returning normalized scores to the unchanged
+`_filter_step_normalized` internal kernel. No public signatures, mathematical
+operations or artifact schemas were modified.
+
+The byte-identical 26-Python-file source snapshot passed the grouped
+canonical Nautilus suite at test-owner commit
+`19a23c0356c43a2d05a809c4b9b68f19c065edd8`:
+**1,878 passed, three CUDA skips, zero failures** (398.29 seconds).
+Focused filtering/runtime/validation checks: **356 passed**.
+Ruff lint, formatting and source-byte parity passed. JUnit SHA-256:
+`f670cab7e551fe98cfda17218feabcff10c6fe20b6a7e957f6f4adc712a6f480`.
+This is local CPU evidence; CUDA and real-market qualification are separate.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
