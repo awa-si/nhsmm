@@ -15,7 +15,7 @@
 
 scope: repository_agent
 repository: awa-si/nhsmm
-branch: v3
+branch: main
 mode: normative_machine_directives
 
 agent_content_policy:
@@ -44,7 +44,7 @@ source_resolution:
 
 trading_cross_repository_boundary:
 - apply_when: explicitly_selected_trading_multi_repository_task
-- model_owner: awa-si/nhsmm@v3|probabilistic_model_core|state_modeling|training_and_inference_semantics
+- model_owner: awa-si/nhsmm@main|probabilistic_model_core|state_modeling|training_and_inference_semantics
 - nautilus_owner: awa-si/nautilus@main|trading_runtime|strategy_integration|market_data|historical_replay|order_execution
 - gbm_owner: awa-si/gbm@main|candidate_predictive_model_core|not_an_automatic_owner_of_NHSMM_semantics
 - coordination: resolve_current_repository_from_explicit_task_or_verified_binding|read_each_affected_AGENTS.md|verify_each_branch_independently

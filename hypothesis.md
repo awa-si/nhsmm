@@ -12,7 +12,7 @@ updated: 2026-10-31
 # Hypothesis: neural context for a stable HSMM
 
 Status: research hypothesis; not evidence of predictive or trading value.
-Date: 2026-10-19. Research/contract review: 2026-10-19. Model owner: `awa-si/nhsmm@v3`.
+Date: 2026-10-19. Research/contract review: 2026-10-19. Model owner: `awa-si/nhsmm@main`.
 
 This document records the model rationale and an OHLCV motivating example.
 The implemented probability and timing contract remains [docs/model.md](docs/model.md).

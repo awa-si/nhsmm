@@ -1,6 +1,6 @@
 # NHSMM repository agent workflow
 
-Canonical owner: `awa-si/nhsmm@v3`. Applicable only to this repository. Inherits applicable global Admin workflows.
+Canonical owner: `awa-si/nhsmm@main`. Applicable only to this repository. Inherits applicable global Admin workflows.
 
 scope: repository_workflow
 mode: normative_machine_directives

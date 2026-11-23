@@ -19,7 +19,7 @@ PyTorch implementation of context-aware hidden semi-Markov models with explicit 
 
 ## Scope
 
-The supported development branch is `v3`. NHSMM owns model math, distributions,
+The supported development branch is `main`. NHSMM owns model math, distributions,
 initialization and optimization, causal filtering and forecasts, configuration,
 and core artifacts. Framework integrations, validation policy, datasets and
 research workflows belong to the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/adapter/qlib).
@@ -37,7 +37,7 @@ pip install nhsmm
 Development install:
 
 ```bash
-git clone --branch v3 https://github.com/awa-si/nhsmm.git
+git clone --branch main https://github.com/awa-si/nhsmm.git
 cd nhsmm
 pip install -e ".[dev]"
 ```

@@ -5,7 +5,7 @@ NHSMM is pre-1.0 research software. Changes should preserve the documented proba
 ## Development setup
 
 ```bash
-git clone --branch v3 https://github.com/awa-si/nhsmm.git
+git clone --branch main https://github.com/awa-si/nhsmm.git
 cd nhsmm
 python -m pip install -e ".[dev]"
 ```
