@@ -168,6 +168,22 @@ Ruff lint, formatting and source-byte parity passed. JUnit SHA-256:
 `f670cab7e551fe98cfda17218feabcff10c6fe20b6a7e957f6f4adc712a6f480`.
 This is local CPU evidence; CUDA and real-market qualification are separate.
 
+## Context alignment validation cleanup (2026-11-23)
+
+The source change at `a09247709e9bf5c6158d3fe4e835a89bd57fa1b5`
+consolidates the four valid shape branches of `align_context_tensor` into
+one shared availability-mask and finite-value validation exit.
+The accepted [H], [T,H], [B,1,H] and [B,T,H] shapes, error messages,
+causal masking semantics and tensor operations are unchanged.
+
+Verified on a byte-identical 26-Python-file source snapshot against
+Nautilus owner `19a23c0356c43a2d05a809c4b9b68f19c065edd8`:
+**1,878 passed, three CUDA skips, zero failures** (426.72 seconds).
+Focused context/config tests: **173 passed, three CUDA skips**.
+Ruff lint and formatting passed. JUnit SHA-256:
+`907451498d4b4cbe26d4e019997faee10b387995a3f4a9c1ddd9b213a91ecc54`.
+These are local CPU checks, not GPU or market qualification.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
