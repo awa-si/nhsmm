@@ -19,6 +19,22 @@ from nhsmm.config import (
 )
 
 
+def _validated_categorical_observations(
+    value: torch.Tensor, n_states: int, *, device: Optional[torch.device] = None
+) -> torch.Tensor:
+    """Validate integer category labels before indexing log probabilities."""
+    value = torch.as_tensor(value, device=device)
+    if value.is_floating_point():
+        if not torch.isfinite(value).all():
+            raise ValueError("categorical observations must contain only finite values")
+        if not torch.equal(value, value.round()):
+            raise ValueError("categorical observations must be integer-valued")
+    value = value.long()
+    if ((value < 0) | (value >= n_states)).any():
+        raise ValueError(f"categorical observations must be in [0, {n_states - 1}]")
+    return value
+
+
 class Categorical(Distribution):
     has_rsample = True
     arg_constraints = {
@@ -113,16 +129,8 @@ class Categorical(Distribution):
         return nnF.gumbel_softmax(logits_exp, tau=tau, hard=hard, dim=-1)
 
     def log_prob(self, value: torch.Tensor):
-        value = torch.as_tensor(value, device=self._log_probs.device)
-        if value.is_floating_point():
-            if not torch.isfinite(value).all():
-                raise ValueError("categorical observations must contain only finite values")
-            if not torch.equal(value, value.round()):
-                raise ValueError("categorical observations must be integer-valued")
-        value = value.long()
         n_states = self._log_probs.shape[-1]
-        if ((value < 0) | (value >= n_states)).any():
-            raise ValueError(f"categorical observations must be in [0, {n_states - 1}]")
+        value = _validated_categorical_observations(value, n_states, device=self._log_probs.device)
         value, log_probs = torch.broadcast_tensors(value.unsqueeze(-1), self._log_probs)
         return log_probs.gather(-1, value[..., :1]).squeeze(-1)
 
@@ -527,16 +535,8 @@ class Neural(nn.Module, ABC):
         timestep: Optional[int] = None,
         **kwargs,
     ) -> torch.Tensor:
-        x = torch.as_tensor(x)
-        if x.is_floating_point():
-            if not torch.isfinite(x).all():
-                raise ValueError("categorical observations must contain only finite values")
-            if not torch.equal(x, x.round()):
-                raise ValueError("categorical observations must be integer-valued")
-        x = x.long()
         n_states = self._shape[-1]
-        if ((x < 0) | (x >= n_states)).any():
-            raise ValueError(f"categorical observations must be in [0, {n_states - 1}]")
+        x = _validated_categorical_observations(x, n_states)
         logits = self._modulate(
             context=context, temperature=temperature, timestep=timestep, **kwargs
         )
