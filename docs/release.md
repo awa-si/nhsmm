@@ -24,7 +24,7 @@ NHSMM uses `setuptools`/PEP 517 packaging, `setuptools_scm` for tag-derived vers
 
 The canonical workflow has only a manual `workflow_dispatch` trigger.
 
-- Dispatch on a branch such as `v3`: build/install dry-run; publishing is skipped.
+- Dispatch on a branch such as `main`: build/install dry-run; publishing is skipped.
 - Dispatch on a `v*` tag: full build/verification and PyPI publication.
 - Pushing a tag alone does not start the workflow.
 

@@ -7,7 +7,7 @@
 **Scope:** AI role, mathematical/probabilistic reasoning priorities, source routing and completion gates  
 **Status:** Canonical  
 **Repository:** `awa-si/nhsmm`  
-**Branch:** `v3`
+**Branch:** `main`
 **Mode:** normative machine directives  
 **AI Instruction:** Apply this file as the repository-specific AI layer after applicable Admin global rules and workflows; load `docs/agent-domain.md`, `docs/model.md`, `docs/testing.md` or other helpers only when material, and keep substantive probabilistic/model/API/testing contracts in their canonical owners.
 

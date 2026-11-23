@@ -60,7 +60,7 @@ the model architecture, so no new serialized field or inference kernel is needed
 Loading reconstructs the same context-free or neural structure. Freeze/reset,
 causality, provenance and source-version requirements remain in production.md.
 
-Canonical tests: tests/ml_stack/nhsmm/test_model_modes.py in Nautilus.
+Canonical tests: tests/ml_stack/nhsmm/contracts/test_model_modes.py in Nautilus.
 They check absence of neural networks in static modes, independent raw-weight
 path enumeration, supervised improvement without state collapse on a bounded
 separable fixture, artifact/stream/retraining behavior, availability fallback,

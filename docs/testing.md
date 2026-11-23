@@ -271,8 +271,8 @@ Scoped CPU qualification and operational limits: [production.md](production.md).
 
 The former 2026-10-22 cross-repository test-owner pin was superseded on
 2026-10-24 by the owner-local canonical workflow above. The public smoke workflow
-runs manually through `workflow_dispatch`; `workflow_call` lets the manually
-dispatched release workflow reuse it. It has no push or pull-request trigger.
+runs on pushes and pull requests targeting `main`, can be dispatched manually,
+and is reusable through `workflow_call` by the manually dispatched release workflow.
 
 ## Independent model-mode qualification
 
