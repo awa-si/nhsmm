@@ -91,6 +91,19 @@ includes JUnit and artifact hashes, p95/mean latency, separate Python heap
 allocations, workload dimensions and limits. No optimization speedup or
 production-market latency claim follows from these measurements.
 
+## Runtime cache cleanup verification (2026-11-23)
+
+Model source `2b4c658e2a744bed9e388812389a3893ca4e2b76` consolidates
+version-aware score-cache keys and removes a no-op observation-shape branch.
+The exact modified 26-file Python source snapshot passed **1,878 canonical
+tests** with three CUDA-unavailable skips, zero failures and 17 third-party
+warnings using Nautilus test owner `fd9b3369bb937f6ca7a4380e080abf51c7096be1`.
+JUnit SHA-256: `95c9327baa1e6cabadb08d85f9925cf75375ba97013c4621665e58f603a5985a`.
+The focused runtime/adapter suite passed 28 tests; mutation, inference-mode
+and covariance-floor cache invalidation checks passed. Ruff lint and format
+passed. No model probability or artifact contract was changed. This is local
+CPU evidence; CUDA and trading qualification remain separate.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
