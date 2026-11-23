@@ -35,34 +35,26 @@ Frozen fixtures/input reports live in tests/ml_stack/fixtures/nhsmm. Tests no
 longer require research files in this core checkout. Run CLIs from Nautilus
 with python -m and the new module name. Oracle remains OFF and opt-in.
 
-## CI ownership without a cross-repository secret
+## Local verification and canonical test ownership
 
-Local core static checks remain ruff check nhsmm scripts and
-black --check nhsmm scripts. The public smoke workflow runs only this repository:
-install the qualified CPU dependency profile, pip integrity and
-scripts/smoke_cpu.py. Release reuses that same workflow, then builds and verifies
-the wheel and sdist. The installed wheel runs the same smoke outside the checkout.
-Neither workflow reads a private repository or needs a custom Actions secret.
+NHSMM does not maintain GitHub Actions workflows. Local checks remain:
 
-doc:nhsmm.public-package-smoke covers finite/D+ Float32/64 causal batch/stream
-parity, trusted artifact save/load, exact learned weights and fresh reset.
-This is a public package integration check, not the full mathematical test suite.
+```bash
+ruff check nhsmm scripts
+black --check nhsmm scripts
+python scripts/smoke_cpu.py
+```
 
-The full canonical suite stays in private awa-si/nautilus under
-`.github/workflows/nhsmm-core.yml`. For each NHSMM code change, run that suite
-manually from the test-owner environment with the exact full 40-character core
-SHA checked out editable. Verify `git rev-parse HEAD` equals that SHA before
-testing, then run `python -m pytest -q tests/ml_stack/nhsmm`. Preserve the
-NHSMM core SHA, Nautilus test-owner SHA, source hashes and JUnit result.
+The public smoke verifies finite/D+ Float32/64 causal batch/stream parity,
+artifacts and fresh reset; it is not the full mathematical suite.
 
-The Nautilus canonical workflow is manually dispatched with the required
-`nhsmm_core_sha` input. It checks out that exact 40-character model-core
-commit, records source hashes and runs the owner suite; it is not an automatic
-Nautilus push qualification. The historical qualified core SHA
-`8c0998c77d34334a76200ebabd508b6372bc917c` does not qualify later
-code changes. The public smoke and release workflows cannot run the private
-canonical suite. No private tests are copied into this package, and no
-token value is required.
+The full canonical test suite is in `awa-si/nautilus/tests/ml_stack/nhsmm`.
+For any NHSMM source change, test the exact source against a pinned Nautilus
+test-owner SHA. Record JUnit results, source identity, CUDA skips and limits.
+Historical results do not qualify subsequent source revisions.
+
+Nautilus owns its own CI configuration independently. Removing NHSMM Actions
+does not remove or disable Nautilus CI.
 
 ## Current local canonical CPU qualification (2026-11-23)
 
@@ -341,10 +333,9 @@ scale (x or x squared); it does not claim arbitrary absolute precision.
 
 Scoped CPU qualification and operational limits: [production.md](production.md).
 
-The former 2026-10-22 cross-repository test-owner pin was superseded on
-2026-10-24 by the owner-local canonical workflow above. The public smoke workflow
-runs on pushes and pull requests targeting `main`, can be dispatched manually,
-and is reusable through `workflow_call` by the manually dispatched release workflow.
+The historical 2026-10-22 cross-repository test-owner pin was superseded
+by owner-local canonical verification. NHSMM GitHub Actions definitions were
+later retired; historical run records do not qualify new model revisions.
 
 ## Independent model-mode qualification
 

@@ -10,7 +10,7 @@ cd nhsmm
 python -m pip install -e ".[dev]"
 ```
 
-The package requires Python 3.12+ according to `pyproject.toml`. Repository smoke, package-validation, and release workflows use Python 3.12.
+The package requires Python 3.12+ according to `pyproject.toml`. Verification is now local or test-owner driven; NHSMM has no GitHub Actions CI/release workflows.
 
 ## Before opening a pull request
 
