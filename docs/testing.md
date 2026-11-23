@@ -64,6 +64,20 @@ code changes. The public smoke and release workflows cannot run the private
 canonical suite. No private tests are copied into this package, and no
 token value is required.
 
+## Current local canonical CPU qualification (2026-11-23)
+
+The exact NHSMM model core at
+`faca7a691ae914f863798dacbbfd81493b9fbef9` passed the Nautilus
+canonical suite owned by `0c4b6359ee17fe243fca9b814aa15e5276317e74`:
+**1,878 passed, three CUDA-unavailable skips, zero failures or errors**.
+The wheel-installed model files were verified byte-for-byte against all 26
+Python sources in the exact core checkout; the source-root test fixture passed.
+This is local CPU evidence, not a hosted CI run, market validation or
+live-trading qualification. The [source-bound report](https://github.com/awa-si/nautilus/blob/2fbdaf63858e52e5b3528270f9bcb8178c049387/docs/nhsmm-main-canonical-qualification-20261123.json)
+records test-owner provenance, JUnit SHA-256, environment and limitations.
+Later documentation-only commits do not alter the tested Python sources;
+any further model-code change requires renewed qualification.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
