@@ -104,6 +104,24 @@ and covariance-floor cache invalidation checks passed. Ruff lint and format
 passed. No model probability or artifact contract was changed. This is local
 CPU evidence; CUDA and trading qualification remain separate.
 
+## Base model cleanup qualification (2026-11-23)
+
+The behavior-preserving `nhsmm/models/base.py` refactor at source commit
+`32ea469488b3f6d22c2db6478d0d46efad4a6d35` consolidates identical
+encoderless/base-context initialization paths and moves the unchanged set of
+30 permitted per-call optimization overrides into a module-level frozenset.
+No public API, objective, model parameter or artifact schema changes.
+
+A byte-identical 26-Python-file source snapshot passed the full Nautilus
+canonical suite at test-owner SHA
+`19a23c0356c43a2d05a809c4b9b68f19c065edd8`:
+**1,878 passed, three CUDA-unavailable skips, zero failures** (401.32 s).
+The focused configuration/context/optimizer suite passed 436 tests with
+three CUDA skips. Ruff lint, formatting, and exact override-field parity passed.
+JUnit SHA-256:
+`51385fa49eaae72243f7bf7c9bca28b8746fcad56e9c9c88e920968f10eab847`.
+This is local CPU verification and does not qualify accelerator or market use.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
