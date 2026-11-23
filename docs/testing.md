@@ -122,6 +122,24 @@ JUnit SHA-256:
 `51385fa49eaae72243f7bf7c9bca28b8746fcad56e9c9c88e920968f10eab847`.
 This is local CPU verification and does not qualify accelerator or market use.
 
+## Distribution validation cleanup qualification (2026-11-23)
+
+The refactor in `nhsmm/distributions/default.py` at source commit
+`38ea0af0cfc379ec63e8601eca6739468922d877` consolidates duplicated
+categorical observation validation in the standalone categorical distribution
+and neural categorical wrapper. Device handling, label range/error contracts,
+probability computations, parameter shapes and artifact formats are unchanged.
+
+A byte-identical 26-Python-file snapshot passed the full Nautilus grouped
+canonical suite at owner SHA
+`19a23c0356c43a2d05a809c4b9b68f19c065edd8`:
+**1,878 passed, three CUDA skips, zero failures** (431.51 seconds).
+The focused distribution/configuration tests passed 233 cases.
+Ruff lint, formatting, and `git diff --check` passed.
+JUnit SHA-256:
+`2bf58be4e33997abf217f847cbe586579f1ed4744c8da20530ae65dcfe836e9d`.
+This is local CPU verification; accelerator and market qualification remain separate.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
