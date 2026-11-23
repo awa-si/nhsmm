@@ -137,29 +137,29 @@ def align_context_tensor(
     if tensor.ndim == 1:
         if tensor.shape[0] != H:
             raise ValueError(f"1D context must be [H]=[{H}], got {tuple(tensor.shape)}")
-        return finish(tensor.view(1, 1, H).expand(B, T, H))
-
-    if tensor.ndim == 2:
+        aligned = tensor.view(1, 1, H).expand(B, T, H)
+    elif tensor.ndim == 2:
         if tensor.shape != (T, H):
             raise ValueError(
                 f"2D context must be [T,H]=({T},{H}); "
                 "batch-specific static context must use [B,1,H]"
             )
-        return finish(tensor.unsqueeze(0).expand(B, T, H))
-
-    if tensor.ndim == 3:
+        aligned = tensor.unsqueeze(0).expand(B, T, H)
+    elif tensor.ndim == 3:
         if tensor.shape == (B, 1, H):
-            return finish(tensor.expand(B, T, H))
-        if tensor.shape == (B, T, H):
-            return finish(tensor)
+            aligned = tensor.expand(B, T, H)
+        elif tensor.shape == (B, T, H):
+            aligned = tensor
+        else:
+            raise ValueError(
+                f"3D context must be [B,1,H] or [B,T,H] for "
+                f"(B,T,H)=({B},{T},{H}), got {tuple(tensor.shape)}"
+            )
+    else:
         raise ValueError(
-            f"3D context must be [B,1,H] or [B,T,H] for "
-            f"(B,T,H)=({B},{T},{H}), got {tuple(tensor.shape)}"
+            f"Unsupported context shape {tuple(tensor.shape)}; expected [H], [T,H], [B,1,H], or [B,T,H]"
         )
-
-    raise ValueError(
-        f"Unsupported context shape {tuple(tensor.shape)}; expected [H], [T,H], [B,1,H], or [B,T,H]"
-    )
+    return finish(aligned)
 
 
 def _align_sequence_context(
