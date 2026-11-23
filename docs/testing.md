@@ -140,6 +140,24 @@ JUnit SHA-256:
 `2bf58be4e33997abf217f847cbe586579f1ed4744c8da20530ae65dcfe836e9d`.
 This is local CPU verification; accelerator and market qualification remain separate.
 
+## Shared forward tail-dispatch cleanup qualification (2026-11-23)
+
+The code change at source commit
+`15ec2d9553fb4b40ea12340869f3d6d010bc39f2` moves the identical
+static/context-conditioned duration-tail dispatch from the causal and
+noncausal forward paths into one internal helper in `nhsmm/models/forward.py`.
+Forward recursions, causal timing, log probability calculations and artifact
+contracts are unchanged.
+
+The byte-identical 26-Python-file source snapshot passed the grouped canonical
+Nautilus suite at test-owner commit
+`19a23c0356c43a2d05a809c4b9b68f19c065edd8`:
+**1,878 passed, three CUDA skips, zero failures** (397.02 seconds).
+Focused filtering/duration-tail/model-mode tests: **389 passed**.
+Ruff lint and formatting passed. JUnit SHA-256:
+`9e0b533d74cc904a3e51370a0ff2e69196ee2cf1fe8136d659b751cc831130cd`.
+This is local CPU qualification, not CUDA or market validation.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
