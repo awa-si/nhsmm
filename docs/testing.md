@@ -78,6 +78,19 @@ records test-owner provenance, JUnit SHA-256, environment and limitations.
 Later documentation-only commits do not alter the tested Python sources;
 any further model-code change requires renewed qualification.
 
+## P1 local runtime and host integration (2026-11-23)
+
+The independently selected Nautilus integration suite passed **48 tests**,
+with one GBM-free-isolation skip. A focused numerical/reference and streaming
+suite passed **56 tests**. On CPU, artifact-loaded seeded synthetic runtime
+baselines for batch size one, 96 steps and 24 warmup steps measured median
+one-step latency of 1.90 ms (K=3, F=2, D=16) and 2.96 ms
+(K=4, F=4, D=32, tail enabled). Both preserved bounded filter state.
+The [source-bound P1 evidence](https://github.com/awa-si/nautilus/blob/fd9b3369bb937f6ca7a4380e080abf51c7096be1/docs/nhsmm-p1-runtime-integration-20261123.json)
+includes JUnit and artifact hashes, p95/mean latency, separate Python heap
+allocations, workload dimensions and limits. No optimization speedup or
+production-market latency claim follows from these measurements.
+
 ## Source-bound repair and context evidence
 
 Current behavior is owned by [the model/runtime contract](model.md) and the
