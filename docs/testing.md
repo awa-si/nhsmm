@@ -55,11 +55,13 @@ SHA checked out editable. Verify `git rev-parse HEAD` equals that SHA before
 testing, then run `python -m pytest -q tests/ml_stack/nhsmm`. Preserve the
 NHSMM core SHA, Nautilus test-owner SHA, source hashes and JUnit result.
 
-The current Nautilus workflow is still pinned to the historical core SHA
-`8c0998c77d34334a76200ebabd508b6372bc917c`; its automatic Nautilus push run
-does not qualify a later NHSMM source change. Do not use it as a substitute for
-the manual exact-SHA run. The public smoke and release workflows cannot run the
-private canonical suite. No private tests are copied into this package, and no
+The Nautilus canonical workflow is manually dispatched with the required
+`nhsmm_core_sha` input. It checks out that exact 40-character model-core
+commit, records source hashes and runs the owner suite; it is not an automatic
+Nautilus push qualification. The historical qualified core SHA
+`8c0998c77d34334a76200ebabd508b6372bc917c` does not qualify later
+code changes. The public smoke and release workflows cannot run the private
+canonical suite. No private tests are copied into this package, and no
 token value is required.
 
 ## Source-bound repair and context evidence
