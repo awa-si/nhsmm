@@ -6,7 +6,7 @@ status: active
 language: en
 owner: NHSMM
 created: 2026-09-26
-updated: 2026-10-31
+updated: 2026-11-24
 ---
 
 # Model verification
@@ -55,6 +55,44 @@ Historical results do not qualify subsequent source revisions.
 
 Nautilus owns its own CI configuration independently. Removing NHSMM Actions
 does not remove or disable Nautilus CI.
+
+## Static HSMM external likelihood check (2026-11-24)
+
+The causal, finite-support static HSMM likelihood at core
+`d47128d645cba83bc6a538181937cc875b0bdbdf` was checked against
+[LaMa 3.1.0](https://cran.r-project.org/package=LaMa)
+(`forward_hsmm`) with fixed, untrained Float64 parameters: K=3, D=8,
+state-specific duration PMFs, duration-independent embedded transitions
+with zero diagonal, explicit initial probabilities and Gaussian emission
+densities. Both implementations received the same parameters and
+emission densities; no optimizer or parameter fitting was compared.
+
+The observations were BTCUSDT 1h completed bars from 2025-12-01 through
+2026-01-11, verified and transformed using the Nautilus research reader
+at `efc8d8f6febde003c31743536e481f3e636bfa42`.
+The close/bar-clock SHA-256 was
+`419bb42fb74d80c526e8eb0f6fd4620f61dfcc311ccbf20a1723142bd4e16b34`.
+Train-only standardized log-close returns produced 335 train, 168
+validation and 504 historical-test observations. For each split, lengths
+8, 9, 24 and the full length were compared (12 likelihoods). With
+LaMa `eps=0`, the maximum absolute log-likelihood difference was
+`3.98e-13`; full-sequence NHSMM/LaMa values were
+`-492.020926500353/-492.020926500353` (train),
+`-268.388063654549/-268.388063654549` (validation) and
+`-652.320056313805/-652.320056313805` (historical test).
+With LaMa's default `eps=1e-10`, the maximum difference was
+`6.28e-10`. AWA comparison jobs:
+NHSMM `2143dd03e6d749598fab637ff4141856`,
+LaMa with `eps=0` `da8821c4df9547e7b93f7a4b6edc7112`,
+difference calculation `b6638dea9685491d83b6f4b213138da9`.
+
+This establishes numerical agreement of the **causal static HSMM
+likelihood in the shared model subclass** on those fixed inputs. LaMa's
+direct `forward_hsmm` call did not evaluate prefixes shorter than D=8
+(`subscript out of bounds`). This check does not establish external
+agreement for duration-dependent or time-varying transitions, dynamic
+duration hazards, the non-causal completed-segment objective, gradients,
+training, decoding or predictive quality. No model code was changed.
 
 ## Opt-in Rust HMM likelihood verification (2026-11-24)
 
