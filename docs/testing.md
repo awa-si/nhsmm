@@ -625,3 +625,42 @@ Nautilus-owned training suite (262 tests) and full model suite (1,698 passed,
 six skipped: three CUDA unavailable, three opt-in Rust library unavailable).
 Ruff and Black passed. Test-owner revision:
 `efc8d8f6febde003c31743536e481f3e636bfa42`.
+
+## Opt-in Rust dynamic HSMM likelihood verification (2026-11-24)
+
+A user-built Rust cdylib implements a log-domain expanded state-age
+forward recursion and its first-order adjoint for one CPU Float64 causal
+finite/D+ HSMM sequence. The native binary remains outside the wheel;
+the opt-in Python wrapper and source probe are in the core repository.
+
+With K=3, D=8 and the verified BTCUSDT 1h split above, eleven actual-head
+prefixes/full sequences (T=2,3,8,24,168,335,504 across finite/D+ cases)
+matched the PyTorch state-age likelihood within 2.27e-13 absolute and all
+five input-tensor gradients (initial, emission, transition, end and
+continuation log scores) within 5.22e-15 absolute. The integrated
+`fit()` comparison on 335 train rows, 20 Adam updates, constant
+temperature and zero dropout reached exactly the same final score
+(`-460.4056754886496`); the maximum parameter difference was
+2.14e-15 and the largest target-history difference 1.14e-13.
+The API check verified opt-in/disable restoration, unchanged state_dict,
+single-row support, rejection of batch and Float32, and explicit rejection
+of higher-order derivatives. A wheel build included the wrapper but
+excluded the native library and research source.
+
+The same-host integrated 20-update fit A/B took 17.96 s (PyTorch) and
+0.57 s (Rust), about 31.7x in this one workload. An isolated 335-row
+likelihood-plus-backward A/B with eight alternating repetitions measured
+Torch mean/p50/p95 599.91/587.05/774.58 ms and Rust
+4.59/3.09/12.20 ms. The latter comparison excludes head evaluation,
+hazard transformation and optimizer work; it is not an end-to-end estimate.
+An observational 800-update Rust fit with validation checks every 20
+updates took 27.64 s while the canonical suite was concurrently active.
+The best validation log likelihood was -221.659 at update 180; the final
+update-800 validation score was -224.379 despite further training-score
+improvement. A single historical-test evaluation of the
+validation-selected checkpoint scored -438.739. This is one split and one
+seed, not predictive-quality evidence.
+
+No CUDA, batching, Float32, h=1 tail-boundary gradient or second derivatives
+are established. The canonical suite on the exact source snapshot:
+1,698 passed, six skipped (three CUDA-unavailable, three opt-in Rust HMM library unavailable), zero failures; Nautilus test owner `efc8d8f6febde003c31743536e481f3e636bfa42`, AWA job `451b619d5880425e8b885d35a23e0b03`..

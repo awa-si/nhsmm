@@ -36,6 +36,11 @@ def raw_sequence_scores(model, sequence, temperature=None):
 
 
 def observation_log_likelihood(model, sequence, temperature=None):
+    hsmm_kernel = getattr(model, "_research_hsmm_rust", None)
+    if hsmm_kernel is not None:
+        from nhsmm.models.research_hsmm_rust import research_hsmm_likelihood
+
+        return research_hsmm_likelihood(model, sequence, temperature, hsmm_kernel[1])
     kernel = getattr(model, "_research_hmm_rust", None)
     if kernel is not None:
         from nhsmm.models.research_hmm_rust import research_hmm_likelihood

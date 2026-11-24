@@ -65,6 +65,7 @@ semantics are documented in their canonical owners below.
 
 - [Model and runtime contract](docs/model.md)
 - [Opt-in Rust HMM likelihood experiment](docs/model.md#opt-in-rust-hmm-likelihood-experiment)
+- [Opt-in Rust dynamic HSMM likelihood experiment](docs/model.md#opt-in-rust-dynamic-hsmm-likelihood-experiment)
 - [HSMM mathematical contract](docs/hsmm-mathematical-contract.md)
 - [Bounded duration-tail contract](docs/duration-tail-contract.md)
 - [Configuration](docs/configuration.md)

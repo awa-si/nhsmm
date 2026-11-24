@@ -705,6 +705,46 @@ The code and source-checked BTC research probes live in `research/`;
 they require a separately supplied dataset loader and do not add a
 market-data dependency to NHSMM.
 
+## Opt-in Rust dynamic HSMM likelihood experiment
+
+`NHSMM.enable_research_hsmm_rust(library_path)` selects a user-built native
+kernel for the **causal generative likelihood** used by `log_likelihood()`
+and `fit()/optimize()`. `disable_research_hsmm_rust()` restores PyTorch.
+The setting is runtime-only: config, state_dict and artifacts do not carry it.
+Filtering, decoding, supervised objectives and direct `forward()` calls
+continue to use PyTorch. The library is not included in wheels.
+
+The research boundary accepts one nonempty, unpadded causal HSMM/NHSMM
+sequence with D>=2, on CPU in Float64. It accepts time- and age-dependent
+transition and duration laws, finite durations or a D+ tail, and gradients
+through the distribution and context heads. It rejects batches, Float32,
+noncausal mode and higher-order derivatives. At the exact D+ end-probability
+boundary h=1, gradients require a separate boundary correction; this
+research path rejects that case while gradients are enabled. Unsupported
+calls fail explicitly rather than falling back silently. Compile from the
+source checkout with a local Rust toolchain:
+
+```bash
+rustc --edition=2024 -C opt-level=3 --crate-type cdylib research/nhsmm_native_hsmm_probe.rs -o /tmp/libnhsmm_hsmm.so
+```
+
+```python
+model = NHSMM(config, device="cpu")  # causal HSMM/NHSMM, D>=2
+model.initialize_distributions()
+model = model.double()
+model.enable_research_hsmm_rust("/tmp/libnhsmm_hsmm.so")
+# model.fit(one_cpu_float64_sequence, context=causal_context)
+model.disable_research_hsmm_rust()
+```
+
+The Rust routine propagates and differentiates the expanded state-age chain
+in the log domain. The Python boundary keeps the existing emission centering,
+hazard transformation and head gradients. The ABI trusts validated contiguous
+buffers from the opt-in wrapper. Numerical and timing evidence is recorded in
+[verification](testing.md#opt-in-rust-dynamic-hsmm-likelihood-verification-2026-11-24);
+these CPU research results do not qualify a production backend or a
+cross-workload speedup.
+
 ## Duration survival derivative stability
 
 doc:nhsmm.duration-survival-derivatives

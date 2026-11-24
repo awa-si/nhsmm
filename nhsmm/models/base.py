@@ -213,6 +213,24 @@ class NHSMM(nn.Module):
         """Return to the default PyTorch likelihood path."""
         self._research_hmm_rust = None
 
+    def enable_research_hsmm_rust(self, library_path: str) -> None:
+        """Opt in to a user-built CPU Float64 HSMM likelihood/VJP kernel.
+
+        Research only: one unpadded causal D>=2 sequence and first-order
+        gradients. Runtime choice is not serialized; unsupported inputs fail.
+        """
+        if self.config.model_mode not in {"hsmm", "nhsmm"} or not self.config.causal:
+            raise ValueError("research Rust HSMM requires causal mode=hsmm/nhsmm")
+        if self.config.max_duration < 2:
+            raise ValueError("research Rust HSMM requires max_duration >= 2")
+        from nhsmm.models.research_hsmm_rust import load_kernel
+
+        self._research_hsmm_rust = load_kernel(library_path)
+
+    def disable_research_hsmm_rust(self) -> None:
+        """Return to the default PyTorch likelihood path."""
+        self._research_hsmm_rust = None
+
     def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
         if encoder is None and not self.config.use_context_encoder:
             self.encoder = None
