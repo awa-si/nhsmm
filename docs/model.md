@@ -655,6 +655,56 @@ Tail-enabled, invalid duration-support and supervised-prefix paths retain their
 existing state-age implementation. The optimizer and artifact schema are
 unchanged.
 
+
+## Opt-in Rust HMM likelihood experiment
+
+`NHSMM.enable_research_hmm_rust(library_path)` replaces only the
+generative observation likelihood used by `log_likelihood()` and
+`optimize()`. The default remains PyTorch; `disable_research_hmm_rust()`
+restores it. The choice is runtime-only and does not enter ModelConfig,
+state_dict, or an artifact. Loaded artifacts start on the default path.
+Forward tensors, causal filtering, Viterbi, supervised objectives, HSMM
+and neural context paths do not use this kernel.
+
+The experiment accepts one nonempty, unpadded static causal ergodic
+finite D=1 HMM sequence on CPU in Float64, with finite initial,
+transition and emission log scores. It supplies first-order gradients
+to Adam; higher derivatives are rejected. Unsupported batches,
+dtypes, structural hard support and model modes raise rather than
+switching back implicitly. The Rust library is user-built and not
+shipped in the package:
+
+```bash
+rustc --edition=2024 -O --crate-type=cdylib research/nhsmm_native_hmm_probe.rs -o /tmp/libnhsmm_hmm.so
+```
+
+```python
+import torch
+from nhsmm import ModelConfig, NHSMM
+model = NHSMM(ModelConfig.for_mode("hmm", n_states=3, n_features=1), device="cpu")
+model.initialize_distributions(jitter=0)
+model.to(dtype=torch.float64)
+model.enable_research_hmm_rust("/tmp/libnhsmm_hmm.so")
+# model.optimize(one_cpu_float64_sequence)
+model.disable_research_hmm_rust()
+```
+
+The native implementation retains per-row emission centering, restores
+log-evidence offsets, and preserves the zero-gradient duration graph.
+The ABI trusts validated contiguous buffers from the Python boundary.
+On one source-checked 335-row BTC 1h sequence (K=3, F=1, one CPU
+thread), a same-process 80-update Adam A/B measured 55.529 s for the
+default likelihood and 1.065 s for the opt-in path (52.1x); maximum
+final parameter difference was 1.60e-13. This is one run, not a
+cross-workload or repeat-run latency distribution. For the
+same 335-row likelihood-plus-backward probe, the default path had
+mean/p50/p95 523.16/429.77/723.75 ms (12 repeats), and the opt-in
+path 5.19/5.19/6.17 ms (40 repeats). These timings include model
+emissions and Python dispatch but not an Adam update.
+The code and source-checked BTC research probes live in `research/`;
+they require a separately supplied dataset loader and do not add a
+market-data dependency to NHSMM.
+
 ## Duration survival derivative stability
 
 doc:nhsmm.duration-survival-derivatives

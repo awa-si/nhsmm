@@ -34,3 +34,9 @@ NHSMMModel now calls the public fit method. Its native TrainerR research command
 is python -m adapter.qlib.nhsmm_lab. No Qlib or Nautilus dependency is added here.
 NHSMM and GBM share lifecycle verbs, not tensor/target/state semantics or artifact
 formats. See the host's docs/model-api.md for the cross-model contract.
+
+
+For the restricted CPU Float64 classical HMM likelihood experiment,
+`model.enable_research_hmm_rust(library_path)` opts into a user-built
+Rust kernel and `model.disable_research_hmm_rust()` restores PyTorch.
+See [scope and build steps](model.md#opt-in-rust-hmm-likelihood-experiment).

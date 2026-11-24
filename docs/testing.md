@@ -56,6 +56,22 @@ Historical results do not qualify subsequent source revisions.
 Nautilus owns its own CI configuration independently. Removing NHSMM Actions
 does not remove or disable Nautilus CI.
 
+## Opt-in Rust HMM likelihood verification (2026-11-24)
+
+The core checkout's Python sources were copied byte-for-byte into the
+source snapshot used by Nautilus `tests/ml_stack/nhsmm` at test-owner
+`efc8d8f6febde003c31743536e481f3e636bfa42`. With the research
+cdylib built from this checkout and explicitly enabled in the test environment, the canonical CPU suite passed
+**1,701 tests, 3 CUDA-unavailable skips, 0 failures** (254.95 s; AWA
+job `d1456a9cf9c3476da4e3b34bc7b2b280`). Focused checks cover
+single-row and 19-row score/gradient/4-update parameter agreement,
+state_dict/config invariance, unsupported input rejection, second-
+derivative rejection and disabling the option. The source snapshot was
+not a wheel installation; no CUDA or broader native shape coverage was
+claimed. A local no-isolation wheel build included
+`nhsmm/models/research_hmm_rust.py` and excluded the research
+scripts and native library; wheel installation was not exercised.
+
 ## Finite HMM generative forward specialization (2026-11-24)
 
 The finite causal D=1 forward path without a duration tail was compared with

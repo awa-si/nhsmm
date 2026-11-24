@@ -196,6 +196,23 @@ class NHSMM(nn.Module):
         self.initialize_encoder(encoder=encoder)
         self.to(device=self.device, dtype=DTYPE)
 
+    def enable_research_hmm_rust(self, library_path: str) -> None:
+        """Opt in to a user-built Rust CPU Float64 HMM likelihood kernel.
+
+        Research only: one finite static D=1 sequence and first-order gradients.
+        This runtime choice is not serialized in config, state_dict or artifacts.
+        Unsupported inputs fail explicitly at the likelihood boundary.
+        """
+        if self.config.model_mode != "hmm":
+            raise ValueError("research Rust HMM is only available for mode=hmm")
+        from nhsmm.models.research_hmm_rust import load_kernel
+
+        self._research_hmm_rust = load_kernel(library_path)
+
+    def disable_research_hmm_rust(self) -> None:
+        """Return to the default PyTorch likelihood path."""
+        self._research_hmm_rust = None
+
     def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
         if encoder is None and not self.config.use_context_encoder:
             self.encoder = None
