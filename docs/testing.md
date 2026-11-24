@@ -94,6 +94,52 @@ agreement for duration-dependent or time-varying transitions, dynamic
 duration hazards, the non-causal completed-segment objective, gradients,
 training, decoding or predictive quality. No model code was changed.
 
+## Dynamic causal HSMM external likelihood check (2026-11-24)
+
+The causal finite-support HSMM at model-code revision
+`d47128d645cba83bc6a538181937cc875b0bdbdf` was checked against
+[LaMa 3.1.0](https://cran.r-project.org/package=LaMa) using its
+inhomogeneous `forward()` engine on 24 expanded `(state, episode age)`
+states (K=3, D=8). The independent R mapping built a transition matrix
+for each boundary `t -> t+1` from the exported `q_t(k,d)` and
+`A_t(i,a,j)`: continuation uses remaining-duration survival;
+episode end uses the age-specific hazard times the destination
+probability, including self-resets to age one. Emission density for each
+expanded age is the original state's density. The initial mass is at
+age one. Every expanded transition row summed to one within `1e-12`.
+The last episode remains right-censored. This is an independent forward
+recursion, but it uses NHSMM's exported component probabilities.
+
+The same verified BTCUSDT 1h splits and bar-clock/close digest recorded
+in the static check above were used. Two fixed-parameter checks passed:
+
+- Controlled time-varying duration PMFs and time- and age-dependent
+  transitions, including self-transitions, were evaluated at prefix
+  lengths 2, 3, 6, 8, 9, 24 and the full split length. Across 21
+  likelihoods the maximum absolute difference was `4.55e-13`.
+- The actual untrained NHSMM distribution heads were evaluated with
+  `causal=True`, `context_dim=1`, `seed=17`, `dropout=0`, Float64,
+  no duration tail, and explicit `CausalContext`. Emission context
+  `E_t` used the previous standardized return (zero at the first row);
+  outgoing-boundary context `U_t` used the current return. The heads'
+  duration and transition probabilities varied by up to `0.0209`
+  and `0.0507` respectively within a split. Across the same 21
+  lengths the maximum absolute difference was `6.82e-13`.
+  Full-sequence log likelihoods were
+  `-495.671623710473` (train, 335 rows),
+  `-266.071789772465` (validation, 168 rows) and
+  `-604.040753525867` (historical test, 504 rows).
+  AWA NHSMM job `475a3559bbbd4c63abe2c33f6a9f6400`;
+  LaMa `forward()` job `4ee09f88aaaa43988d72b8d8d3d218d9`.
+
+These results establish numerical agreement of the **dynamic causal
+finite-support likelihood** for the tested parameter and context paths.
+The R state expansion is a model-to-HMM mapping, not a second
+implementation of NHSMM's duration/transition heads. It does not
+establish their parameter gradients, optimization/training, D+ tail,
+non-causal completed-segment likelihood, decoding, streaming behavior
+or predictive quality. No model code was changed.
+
 ## Opt-in Rust HMM likelihood verification (2026-11-24)
 
 The core checkout's Python sources were copied byte-for-byte into the
