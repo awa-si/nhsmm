@@ -183,6 +183,40 @@ this check does not independently validate head parameterization,
 gradients, training, decoding, streaming or predictive quality.
 No model code was changed.
 
+## Dynamic D+ gradient and one-step update check (2026-11-24)
+
+At the same model-code revision, LaMa 3.1.0 independently evaluated
+the causal D+ likelihood after perturbing nine actual NHSMM parameters
+one at a time: initial logit, duration logit and context weight,
+duration/age-dependent transition logit and context weight, Gaussian
+emission mean and log variance, and tail base and context weight.
+For each perturbation the NHSMM heads re-exported initial, duration,
+transition, emission and tail probabilities; the independent R
+state-age expansion and LaMa `forward()` recomputed the score.
+Central differences used a parameter step of `1e-4` and were
+compared with PyTorch autograd on 24 train and 168 validation BTCUSDT
+1h rows (18 scalar derivatives). The maximum absolute error was
+`3.42e-7`; the maximum relative error was `1.61e-6`
+(the latter on a gradient of magnitude `0.00243`).
+AWA export/autograd job `6bb369f0a38d4d808cf85fd0c5fe00ec`;
+LaMa evaluation `f7b64bd57d8442bb9fe5394aca67a170`.
+
+One explicit `torch.optim.Adam(lr=1e-3)` step minimizing the public
+negative log likelihood on the 24-row train prefix changed 40 model
+parameters. NHSMM log likelihood rose from `-39.442418262996554`
+to `-39.341631417656735`. LaMa independently reproduced the
+before/after likelihoods with absolute differences of `4.26e-14`
+and `3.55e-14`; the external improvement was `0.100786845339897`.
+AWA NHSMM step job `8f8ad72401d8404497f0391c3849875c`;
+LaMa step job `95275ce047584baeb6a2c1c378e34d8e`.
+
+This tests selected first derivatives of the complete causal D+
+likelihood through actual heads and verifies the likelihood after one
+explicit Adam update. Finite differences are approximate. The
+repository's full `fit()` orchestration, convergence, other parameter
+coordinates, second derivatives and out-of-sample quality were not
+externally validated. No model code was changed.
+
 ## Opt-in Rust HMM likelihood verification (2026-11-24)
 
 The core checkout's Python sources were copied byte-for-byte into the
