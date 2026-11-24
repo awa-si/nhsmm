@@ -92,7 +92,8 @@ direct `forward_hsmm` call did not evaluate prefixes shorter than D=8
 (`subscript out of bounds`). This check does not establish external
 agreement for duration-dependent or time-varying transitions, dynamic
 duration hazards, the non-causal completed-segment objective, gradients,
-training, decoding or predictive quality. No model code was changed.
+training, decoding or predictive quality. The D+ tail is checked separately below.
+No model code was changed.
 
 ## Dynamic causal HSMM external likelihood check (2026-11-24)
 
@@ -139,6 +140,47 @@ implementation of NHSMM's duration/transition heads. It does not
 establish their parameter gradients, optimization/training, D+ tail,
 non-causal completed-segment likelihood, decoding, streaming behavior
 or predictive quality. No model code was changed.
+
+## Dynamic D+ tail external likelihood check (2026-11-24)
+
+The canonical `ModelConfig.for_mode("nhsmm")` causal model with K=3,
+D=8, `duration_tail=True` and `duration_tail_context=True` was
+checked against the independent LaMa 3.1.0 `forward()` engine on
+24 expanded state-age states. It used the same verified BTCUSDT 1h
+splits and source digest as the static check above, Float64, fixed
+untrained model parameters, explicit `CausalContext` with previous
+return for emission and current return for the outgoing boundary,
+seed 17 and zero dropout. The tail-context head weight was set to
+0.18 to exercise a genuinely varying tail hazard; no fit was run.
+The resulting per-boundary D+ end probability ranged from
+approximately 0.263 to 0.722 across the three splits. The package's
+no-self-transition constraint was active.
+
+For ages below D, the independent R state expansion used the
+remaining-duration survival ratio and end hazard. At age D it used
+the exported context-dependent D+ end probability for an episode
+reset and its complement for continuation in the same age bucket.
+It applied the exported age-dependent destination probabilities on
+end branches. Every transition row summed to one within `1e-12`.
+LaMa independently propagated the expanded chain and scored the
+same emitted densities; the active last episode was right-censored.
+
+At lengths 2, 3, 6, 8, 9, 24 and the full split length, the maximum
+absolute log-likelihood difference across **21 comparisons** was
+`2.84e-13`. Full-sequence NHSMM log likelihoods were
+`-505.640479223667` (train, 335 rows),
+`-271.868521308586` (validation, 168 rows) and
+`-639.747969664247` (historical test, 504 rows).
+AWA jobs: NHSMM `7f9b71db135e4704a5fea7bc85cef4df`,
+LaMa `dce4febd672b461f85b76432e1c5f3c3`,
+difference calculation `d88f2ef175a241738b2575857fbebc0b`.
+
+This establishes numerical agreement of the **causal dynamic D+
+likelihood** for the tested head outputs and context schedule.
+The external engine shares exported NHSMM component probabilities;
+this check does not independently validate head parameterization,
+gradients, training, decoding, streaming or predictive quality.
+No model code was changed.
 
 ## Opt-in Rust HMM likelihood verification (2026-11-24)
 
