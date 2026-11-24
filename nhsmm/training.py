@@ -58,6 +58,35 @@ def optimize_model(
     cfg.__post_init__()
     model._require_generative_context(context)
     model._validate_optimization_config(cfg)
+    # The built-in, encoder-free laws are deterministic in train/eval
+    # mode when dropout is disabled. A constant schedule makes the
+    # accumulated pre-step likelihood the exact target score.
+    from nhsmm.distributions import Initial, Duration, Transition, Emission
+    from nhsmm.models.base import NHSMM, DistributionSet
+
+    reuse_target_ll = (
+        cfg.optimizer_temperature_mode == "constant"
+        and model.config.dropout == 0.0
+        and type(model) is NHSMM
+        and getattr(model._target_training_score, "__func__", None) is NHSMM._target_training_score
+        and getattr(model._backward_training_loss, "__func__", None)
+        is NHSMM._backward_training_loss
+        and model.encoder is None
+        and type(model.dist) is DistributionSet
+        and all(
+            type(getattr(model.dist, name)) is component
+            for name, component in (
+                ("initial", Initial),
+                ("duration", Duration),
+                ("transition", Transition),
+                ("emission", Emission),
+            )
+        )
+        and not any(
+            getattr(module, "_inference_context_weight", None) is not None
+            for module in model.modules()
+        )
+    )
     minimum = (
         cfg.optimizer_target_temperature
         if cfg.optimizer_temperature_mode == "constant"
@@ -178,8 +207,10 @@ def optimize_model(
                 )
                 if not bool(torch.isfinite(ll)) or not bool(torch.isfinite(loss)):
                     raise FloatingPointError("non-finite accumulated training objective")
-                target_ll = model._target_training_score(
-                    X, context, target, cfg.optimizer_batch_size
+                target_ll = (
+                    ll.detach()
+                    if reuse_target_ll
+                    else model._target_training_score(X, context, target, cfg.optimizer_batch_size)
                 )
                 if not bool(torch.isfinite(target_ll)):
                     raise FloatingPointError("non-finite training target score")

@@ -602,3 +602,26 @@ nine declared profiles pass; geometric controls retain HMM.
 The unchanged core's canonical source pair is NHSMM 8c0998c / Nautilus 37028d7
 (1852 passes, three CUDA skips). The later host-only scorer/replay correction
 has 134 targeted rechecks; it does not replace or rerun the full canonical gate.
+
+## Deterministic training-score reuse (2026-11-24)
+
+For the built-in, encoder-free model with zero dropout and a constant
+temperature schedule, `fit()` uses the accumulated pre-update likelihood
+as its convergence/telemetry target score. The final post-update score is
+still recomputed. Stochastic, annealed, custom-distribution and
+method-overridden paths retain separate target evaluation. The public
+configuration, artifact and state-dict schemas are unchanged.
+
+On the verified BTCUSDT 1h train split above (335 rows, K=3, D=8,
+dynamic D+ tail, Float64, one thread, 20 Adam updates), the unmodified
+implementation and a temporary score-reuse prototype produced identical
+parameter tensors, optimization history, final score
+(`-460.4056754886496`) and summary. The same-host prototype comparison
+measured 26.10 s versus 14.54 s; a later source-level run measured 18.96 s
+on the optimized path, so these timings are workload-specific and variable.
+Instrumentation confirmed 41 versus 21 causal forward calls in 20 updates,
+including the final score. The final source snapshot passed the
+Nautilus-owned training suite (262 tests) and full model suite (1,698 passed,
+six skipped: three CUDA unavailable, three opt-in Rust library unavailable).
+Ruff and Black passed. Test-owner revision:
+`efc8d8f6febde003c31743536e481f3e636bfa42`.
