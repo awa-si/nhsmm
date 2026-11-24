@@ -137,9 +137,10 @@ These results establish numerical agreement of the **dynamic causal
 finite-support likelihood** for the tested parameter and context paths.
 The R state expansion is a model-to-HMM mapping, not a second
 implementation of NHSMM's duration/transition heads. It does not
-establish their parameter gradients, optimization/training, D+ tail,
+establish their parameter gradients, optimization/training,
 non-causal completed-segment likelihood, decoding, streaming behavior
-or predictive quality. No model code was changed.
+or predictive quality. The D+ tail is checked separately below.
+No model code was changed.
 
 ## Dynamic D+ tail external likelihood check (2026-11-24)
 
