@@ -646,6 +646,15 @@ The optimized ergodic transition path applies structural support constraints
 before normalization, preserving disabled self-transition semantics and batch
 parity. No model field, optimizer, artifact format or mathematical duration law changes.
 
+Finite causal D=1 generative forward scoring without a duration tail uses
+the direct HMM boundary reduction. It retains per-row emission centering,
+normalized incremental evidence, outgoing t-1 transition context, ragged
+padding, and the public [B,T,K,1] raw forward shape. A zero-valued duration
+connection preserves the general path's zero gradients for duration parameters.
+Tail-enabled, invalid duration-support and supervised-prefix paths retain their
+existing state-age implementation. The optimizer and artifact schema are
+unchanged.
+
 ## Duration survival derivative stability
 
 doc:nhsmm.duration-survival-derivatives

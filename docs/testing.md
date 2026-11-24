@@ -56,6 +56,33 @@ Historical results do not qualify subsequent source revisions.
 Nautilus owns its own CI configuration independently. Removing NHSMM Actions
 does not remove or disable Nautilus CI.
 
+## Finite HMM generative forward specialization (2026-11-24)
+
+The finite causal D=1 forward path without a duration tail was compared with
+the previous general state-age path at core base
+f195a004599fcb7178c76a19b678b59718f433bb. The new
+nhsmm/models/forward.py SHA-256 was
+f64e00e5f668d9e3e17a4133c0f909afca8c4b1d6628c510a7790b3876c2bd20.
+The 26 Python source files in the Nautilus test snapshot matched the working
+core checkout; the test owner was Nautilus
+d2fb4e83e86d22d30784f20dcc9ab7ca81fc0511. The canonical CPU suite
+passed 1,698 tests, with three CUDA-unavailable skips and zero failures
+(232.67 s). JUnit SHA-256:
+8a4cd2703681b9aaff2008c59dbe1779273860c48de1e28cbdf257fdfd5f22ff.
+Focused bit-exact forward and emission-offset tests passed 100 cases.
+Separate Float32/Float64 ragged and full-path gradient comparisons passed;
+the 335-row BTCUSDT 1h training slice gave identical -500.43743896484375
+log likelihood and identical gradients for every model parameter at fixed
+weights.
+
+An isolated single-thread CPU comparison on that same 335-row BTC slice,
+after one warmup per path and eight alternating timed repetitions, measured
+forward plus backward median 0.4698 s (general) versus 0.3591 s
+(specialized), a 23.6% reduction. Means were 0.4801 and 0.4073 s;
+nearest-rank p95 values were 0.6843 and 0.7110 s. This is a local
+fixed-parameter kernel result, not a full-fit, accelerator, or market-quality
+claim. The optimizer, state dict, and artifact schema are unchanged.
+
 ## Current local canonical CPU qualification (2026-11-23)
 
 The exact NHSMM model core at

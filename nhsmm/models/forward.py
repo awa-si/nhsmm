@@ -10,6 +10,7 @@ from nhsmm.config import NEG_INF
 from nhsmm.filtering import (
     _causal_filter_step,
     _center_emission_log_probs,
+    _normalize_causal_frontier,
     _duration_log_hazard_from_log_p,
     _initialize_causal_frontier,
     _safe_logsumexp,
@@ -158,6 +159,23 @@ def _forward_causal_hazard(
         return torch.stack(rows, dim=0)
 
     tail_end_probability = _tail_end_probability(self, router)
+    if (
+        not normalized
+        and D == 1
+        and tail_end_probability is None
+        and boundary_inputs is None
+        and bool(torch.isfinite(duration_logits).all())
+    ):
+        matrices = (
+            transition_logits[..., 0, :] if duration_dependent_transition else transition_logits
+        )
+        alpha = _hmm_causal_prefix_serial(
+            initial_logits[:, 0], router.log_probs, matrices, X.lengths
+        )
+        # D=1 duration mass is identically one. Retain its zero-gradient
+        # connection so optimizers see the same parameters as the general path.
+        return alpha + duration_logits.sum() * 0.0
+
     expanded_tail = None
     if tail_end_probability is not None:
         tail = tail_end_probability.to(device=duration_logits.device, dtype=duration_logits.dtype)
@@ -199,6 +217,63 @@ def _forward_causal_hazard(
 
         return _CausalPrefixAdjoint.apply(*args)
     return _causal_prefix_serial(*args, normalized=normalized)
+
+
+def _hmm_causal_prefix_serial(initial, emission, transition, lengths):
+    """Finite D=1 causal forward with the general step's reduction order."""
+    B, T, K = emission.shape
+    emission_steps = emission.unbind(dim=1)
+    transition_steps = transition.unbind(dim=1)
+
+    def step(previous, current_emission, current_transition):
+        reset_scores = previous.unsqueeze(-1) + current_transition.unsqueeze(2)
+        predicted = _safe_logsumexp(reset_scores, dim=(1, 2))
+        centered, offset = _center_emission_log_probs(current_emission)
+        posterior, evidence = _normalize_causal_frontier((predicted + centered).unsqueeze(-1))
+        return posterior, evidence + offset
+
+    if bool((lengths == T).all()):
+        frontier, cumulative_log_z = _initialize_causal_frontier(initial, emission_steps[0], 1)
+        alpha_steps = [frontier + cumulative_log_z[:, None, None]]
+        for t in range(1, T):
+            frontier, step_log_z = step(frontier, emission_steps[t], transition_steps[t - 1])
+            cumulative_log_z = cumulative_log_z + step_log_z
+            alpha_steps.append(frontier + cumulative_log_z[:, None, None])
+        return torch.stack(alpha_steps, dim=1)
+
+    frontier = emission.new_full((B, K, 1), float("-inf"))
+    cumulative_log_z = emission.new_zeros(B)
+    alpha_steps = []
+    valid0 = lengths > 0
+    active = torch.nonzero(valid0, as_tuple=False).squeeze(-1)
+    initial_frontier, initial_log_z = _initialize_causal_frontier(
+        initial[valid0], emission_steps[0][valid0], 1
+    )
+    frontier[valid0] = initial_frontier
+    cumulative_log_z[valid0] = initial_log_z
+    first = emission.new_full((B, K, 1), float("-inf"))
+    alpha_steps.append(first.index_copy(0, active, initial_frontier + initial_log_z[:, None, None]))
+
+    for t in range(1, T):
+        valid = t < lengths
+        if not bool(valid.any()):
+            alpha_steps.extend(
+                [emission.new_full((B, K, 1), float("-inf"))] * (T - len(alpha_steps))
+            )
+            break
+        active = torch.nonzero(valid, as_tuple=False).squeeze(-1)
+        next_frontier, step_log_z = step(
+            frontier[active],
+            emission_steps[t].index_select(0, active),
+            transition_steps[t - 1].index_select(0, active),
+        )
+        frontier[active] = next_frontier
+        cumulative_log_z[active] = cumulative_log_z[active] + step_log_z
+        alpha_t = emission.new_full((B, K, 1), float("-inf"))
+        alpha_steps.append(
+            alpha_t.index_copy(0, active, next_frontier + cumulative_log_z[active, None, None])
+        )
+    return torch.stack(alpha_steps, dim=1)
 
 
 def _causal_prefix_serial(
