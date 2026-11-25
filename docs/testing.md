@@ -753,8 +753,8 @@ window; EWMA is seed-invariant. Across the nine model runs, the
 maximum absolute error between the independently reconstructed
 sequential density score and the package's whole-sequence likelihood
 was 2.84e-14. Mean NHSMM event AUC was 0.696, 0.477 and 0.707 by
-window (EWMA 0.561, 0.604 and 0.584). Mean fit time across nine
-Rust runs totaled 75.24 s, excluding model creation and evaluation.
+window (EWMA 0.561, 0.604 and 0.584). Total fit time across nine
+Rust runs was 75.24 s, excluding model creation and evaluation.
 
 The repeated result does **not** establish a consistent NHSMM advantage
 over EWMA. EWMA wins density log score in all three windows and Brier
