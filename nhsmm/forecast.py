@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import torch
+
+if TYPE_CHECKING:
+    from .runtime import HSMMFilterRuntime
 
 
 @dataclass(frozen=True)
@@ -91,7 +95,11 @@ def forecast(
         cov = cov.expand(batch, *cov.shape[1:])
     features = model.config.n_features
     if loc.shape != (batch, 1, states, features) or cov.shape != (
-        batch, 1, states, features, features
+        batch,
+        1,
+        states,
+        features,
+        features,
     ):
         raise ValueError("unexpected Gaussian emission shape")
     if not torch.isfinite(loc).all() or not torch.isfinite(cov).all():
@@ -105,8 +113,7 @@ def forecast(
     mean = (prior.unsqueeze(-1) * selected_mean).sum(dim=1)
     centered = selected_mean - mean.unsqueeze(1)
     covariance = (
-        prior[..., None, None]
-        * (selected_cov + centered.unsqueeze(-1) * centered.unsqueeze(-2))
+        prior[..., None, None] * (selected_cov + centered.unsqueeze(-1) * centered.unsqueeze(-2))
     ).sum(dim=1)
     return Forecast(
         feature_indices=tuple(indices.tolist()),

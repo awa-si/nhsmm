@@ -66,9 +66,9 @@ def main():
                     )
                     torch.testing.assert_close(
                         prediction.mean,
-                        (
-                            prediction.next_state_prior.unsqueeze(-1) * prediction.component_mean
-                        ).sum(dim=1),
+                        (prediction.next_state_prior.unsqueeze(-1) * prediction.component_mean).sum(
+                            dim=1
+                        ),
                         rtol=0,
                         atol=tolerance,
                     )

@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import torch
+
+if TYPE_CHECKING:
+    from nhsmm.forecast import Forecast
 
 from nhsmm.config import EPS
 from nhsmm.context import (
