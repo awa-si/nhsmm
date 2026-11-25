@@ -771,6 +771,85 @@ AWA jobs: fold one `28422f4c24744067aee469518f08dc09`,
 fold two `cc3dd2041b064f85aab94100c74deb0c`,
 fold three `6d56c3859b9e493faa07052649170e71`.
 
+## Fresh-period PyTorch forecast comparison (2026-11-25)
+
+This replaces the split-reset forecast protocol in the two preliminary
+risk sections above for assessing a live one-hour forecast. Their
+numerical Rust/LaMa likelihood checks remain valid. Four previously
+unused, nonoverlapping BTCUSDT 1h 28-day periods were fixed before
+examining their scores: 2026-02-01..28, 2026-04-01..28,
+2026-07-01..28 and 2026-10-01..28. The Nautilus
+`adapter.kline_reader.KlineReader` at test-owner
+`efc8d8f6febde003c31743536e481f3e636bfa42` verified 24
+published-hash-matching bars on every UTC day, 672 contiguous
+exclusive-close hourly bars per period and finite positive closes.
+The dataset identity was
+`1158b60ab26a76b5913acc4723051bda536833cda55857ef7f5b2c13b746f53b`.
+The four clock/close SHA-256 digests, in period order, were
+`7fda710402a1c642e85d04fc5f4d2c0c41b1688637d7a927d4fdd074430eb3f1`,
+`6ff4ad87e132a2c962a040af4952bba612025af8517b68ecb31eb94a92f8a643`,
+`e17dc95c140b306fdd1f01802bd2ddd19767c1d53d22948d92ee09e9d7dd86bb`
+and `942257c5489c6e1a4294739f19346b3016b0586db6d89afcc674245ba59b3c92`.
+Each period yielded 671 returns, `10000*diff(log(close))`, split into
+335 train, 168 validation and 168 test observations. Each fold's
+standardization and absolute-return event threshold (train 90th
+percentile) used train only.
+
+The evaluation used **the default PyTorch model path, not Rust**.
+K=3 HMM (D=1), static causal D+ HSMM (D=8) and causal dynamic D+
+NHSMM (D=8, context dimension one, contextual tail) each received
+50 Adam updates at learning rate 0.01, seeds 17/23/41, one
+initialization, zero dropout and constant temperature. No
+validation/test-specific hyperparameter or checkpoint choice was
+made. The dynamic tail-context weight began at 0.18, as in the
+previous research fit. Emission context used the previous standardized
+return, and outgoing-boundary context used the current return.
+For each period, one state-age filter processed all 671 observations
+continuously; no reset occurred at the train/validation/test cuts.
+The EWMA baseline (fixed 0.94 decay, train mean and variance) also
+carried its variance state across the same cuts. A static train
+Gaussian was the second baseline. The event and probability were
+scored at each test hour **before** the realized return was fed into
+the filter. Across all 36 model fits, reconstructed sequential log
+density matched the package's full-sequence likelihood within
+3.41e-13 absolute.
+
+| Test period (events/168) | HMM event log loss | Static HSMM | Dynamic NHSMM | EWMA | Train Gaussian |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| February (6) | 0.18835 | **0.17095** | 0.17372 | 0.27444 | 0.19608 |
+| April (7) | 0.19673 | **0.17466** | 0.18779 | 0.19853 | 0.21313 |
+| July (7) | 0.19510 | **0.17810** | 0.17953 | 0.23091 | 0.20862 |
+| October (15) | 0.29941 | 0.30027 | **0.29566** | 0.32748 | 0.30701 |
+| Mean of periods | 0.21990 | **0.20600** | 0.20918 | 0.25784 | 0.23121 |
+
+The three seed scores were averaged for each model and period;
+baselines are seed-invariant. Mean Brier scores by method in the same
+order were 0.05168, **0.04957**, 0.05077, 0.05198 and 0.05391.
+Mean density log scores (higher is better) were -1.16699,
+**-1.14820**, -1.15581, -1.27555 and -1.23707. Static HSMM
+beat dynamic NHSMM in event log loss in three of four periods; dynamic
+won in October. Within-period seed ranges were much narrower than
+the variation across periods. There were only 35 test events total.
+These are research observations, not proof of generalization across
+assets or evidence of trading utility. Fixed 50-update comparisons
+also do not establish that either model was optimally trained.
+
+Source preparation script in the AWA workspace:
+`hsmm_lama/fresh_prepare.py` (SHA-256
+`38e0d5131d98dda8f2cb6859e9ce57434679eeaf6a024d923b25f4d7df3adf35`);
+model evaluation: `hsmm_lama/fresh/evaluate.py` (SHA-256
+`03d84a7d662a61ae08c59739c175d1a99ee9669fcac851e8e9ac825e428373ea`).
+Each completed model/seed result is saved as
+`hsmm_lama/fresh/result_period{1..4}_{hmm|hsmm|nhsmm}_seed{17|23|41}_u50.json`
+in workspace storage. AWA source preparation job
+`b2e1c8473bc54a69b4812e6f471017c2`; completion jobs for
+the multi-period model runs include
+`36be1cb308bb4146a8a0f2e6eb06eb4d`,
+`24596bdcf98345da98a8b923969cc531`,
+`0684590fb24a450097a13a1daea3ceef`,
+`434253126670461b899d311774a432e5` and
+`94a410c6efa949c08160586d4163be23`.
+
 No CUDA, batching, Float32, h=1 tail-boundary gradient or second derivatives
 are established. The canonical suite on the exact source snapshot:
 1,698 passed, six skipped (three CUDA-unavailable, three opt-in Rust HMM library unavailable), zero failures; Nautilus test owner `efc8d8f6febde003c31743536e481f3e636bfa42`, AWA job `451b619d5880425e8b885d35a23e0b03`.
