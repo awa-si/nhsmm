@@ -38,7 +38,9 @@ formats. See the host's docs/model-api.md for the cross-model contract.
 
 For the opt-in CPU Float64 HMM or causal HSMM/NHSMM likelihood experiment,
 `model.enable_research_rust(library_path)` opts into a user-built
-mode-specific Rust kernel and `model.disable_research_rust()` restores PyTorch.
+mode-specific Rust kernel when available; unsupported valid inputs use PyTorch.
+`model.disable_research_rust()` restores PyTorch. Native binaries are supplied
+separately; no Rust library is shipped in the wheel.
 See [scope and build steps](model.md#opt-in-rust-likelihood-switch).
 
 The general causal one-step observation API is

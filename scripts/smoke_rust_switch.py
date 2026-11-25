@@ -1,5 +1,6 @@
 """Focused CPU smoke for the research Rust mode switch, without a native library."""
 
+import warnings
 from unittest.mock import patch
 
 import torch
@@ -26,13 +27,17 @@ def main() -> None:
                 return_value=result,
             ) as likelihood,
         ):
-            model.enable_research_rust("/unused/research.so")
+            assert model.enable_research_rust("/unused/research.so")
             loader.assert_called_once_with("/unused/research.so")
             sequence = object()
             assert observation_log_likelihood(model, sequence) is result
             likelihood.assert_called_once_with(model, sequence, None, native_function)
         model.disable_research_rust()
         assert model._research_rust is None
+        with warnings.catch_warnings(record=True) as recorded:
+            warnings.simplefilter("always")
+            assert not model.enable_research_rust("/missing/nhsmm-research.so")
+        assert len(recorded) == 1 and "using PyTorch" in str(recorded[0].message)
         x = torch.zeros(3, 1)
         assert torch.isfinite(model.log_likelihood(x)).all()
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import replace
 from copy import deepcopy
+import warnings
 from typing import Optional, List, Tuple, Any, Literal, Dict, Union
 
 import torch
@@ -189,6 +190,7 @@ class NHSMM(nn.Module):
         self.hidden_dim = self.config.hidden_dim
 
         self.dist: Optional[DistributionSet] = None
+        self._research_rust = None
         self.duration_logits_bias = nn.Parameter(
             torch.ones(self.config.n_states, self.config.max_duration)
         )
@@ -196,22 +198,33 @@ class NHSMM(nn.Module):
         self.initialize_encoder(encoder=encoder)
         self.to(device=self.device, dtype=DTYPE)
 
-    def enable_research_rust(self, library_path: str) -> None:
-        """Opt in to the mode-specific user-built Rust likelihood kernel.
+    def enable_research_rust(self, library_path: str) -> bool:
+        """Prefer a mode-specific user-built Rust likelihood kernel when available.
 
         HMM uses the static D=1 kernel; causal HSMM/NHSMM uses the D>=2
-        kernel. The choice is runtime-only and unsupported inputs fail at the
-        corresponding likelihood boundary. No native kernel is bundled.
+        kernel. Unsupported valid inputs use PyTorch. A missing or incompatible
+        library also leaves PyTorch active and returns False. Kernel failures
+        and invalid numerical scores still raise. No native kernel is bundled.
         """
         mode = self.config.model_mode
         if mode == "hmm":
             from nhsmm.models.research_hmm_rust import load_kernel
-        elif mode in {"hsmm", "nhsmm"} and self.config.causal and self.config.max_duration >= 2:
+        elif mode in {"hsmm", "nhsmm"}:
+            if not self.config.causal or self.config.max_duration < 2:
+                self._research_rust = None
+                return False
             from nhsmm.models.research_hsmm_rust import load_kernel
         else:
-            raise ValueError("research Rust requires HMM or causal HSMM/NHSMM with D>=2")
+            raise ValueError("unknown model mode for research Rust")
 
-        self._research_rust = (mode, load_kernel(library_path))
+        try:
+            kernel = load_kernel(library_path)
+        except (OSError, AttributeError) as exc:
+            self._research_rust = None
+            warnings.warn(f"research Rust unavailable; using PyTorch: {exc}", RuntimeWarning, stacklevel=2)
+            return False
+        self._research_rust = (mode, kernel)
+        return True
 
     def disable_research_rust(self) -> None:
         """Return to the default PyTorch likelihood path."""

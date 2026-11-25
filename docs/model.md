@@ -671,8 +671,13 @@ unchanged.
 `NHSMM.enable_research_rust(library_path)` selects the HMM kernel for
 `model_mode="hmm"` and the HSMM kernel for causal `"hsmm"` or `"nhsmm"`
 with D>=2. They remain specialized native implementations with separate
-library files. `disable_research_rust()` returns to PyTorch. The switch does
-not affect `forecast()`.
+library files. A successfully loaded library is preferred for supported
+likelihood calls; `enable_research_rust()` returns a boolean indicating whether
+it loaded. Missing or incompatible libraries and valid inputs outside native
+scope use PyTorch. Native status errors, invalid scores and unsupported
+higher-order gradients remain errors. `disable_research_rust()` selects PyTorch.
+Without a separately supplied library the default is PyTorch; wheels do not
+bundle native code. The switch does not affect `forecast()`.
 
 ### HMM likelihood experiment
 
@@ -687,9 +692,9 @@ and neural context paths do not use this kernel.
 The experiment accepts one nonempty, unpadded static causal ergodic
 finite D=1 HMM sequence on CPU in Float64, with finite initial,
 transition and emission log scores. It supplies first-order gradients
-to Adam; higher derivatives are rejected. Unsupported batches,
-dtypes, structural hard support and model modes raise rather than
-switching back implicitly. The Rust library is user-built and not
+to Adam; higher derivatives are rejected. Batches, unsupported dtypes
+and static-law mismatches use the PyTorch likelihood. Invalid scores and
+native kernel errors remain visible. The Rust library is user-built and not
 shipped in the package:
 
 ```bash
@@ -735,11 +740,10 @@ continue to use PyTorch. The library is not included in wheels.
 The research boundary accepts one nonempty, unpadded causal HSMM/NHSMM
 sequence with D>=2, on CPU in Float64. It accepts time- and age-dependent
 transition and duration laws, finite durations or a D+ tail, and gradients
-through the distribution and context heads. It rejects batches, Float32,
-noncausal mode and higher-order derivatives. At the exact D+ end-probability
-boundary h=1, gradients require a separate boundary correction; this
-research path rejects that case while gradients are enabled. Unsupported
-calls fail explicitly rather than falling back silently. Compile from the
+through the distribution and context heads. Batches, Float32 and the exact
+D+ end-probability boundary h=1 with gradients use PyTorch. Higher-order
+native gradients, invalid numerical scores and native kernel failures remain
+errors. Compile from the
 source checkout with a local Rust toolchain:
 
 ```bash
