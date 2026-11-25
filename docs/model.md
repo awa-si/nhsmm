@@ -666,11 +666,19 @@ existing state-age implementation. The optimizer and artifact schema are
 unchanged.
 
 
-## Opt-in Rust HMM likelihood experiment
+## Opt-in Rust likelihood switch
 
-`NHSMM.enable_research_hmm_rust(library_path)` replaces only the
+`NHSMM.enable_research_rust(library_path)` selects the HMM kernel for
+`model_mode="hmm"` and the HSMM kernel for causal `"hsmm"` or `"nhsmm"`
+with D>=2. They remain specialized native implementations with separate
+library files. `disable_research_rust()` returns to PyTorch. The switch does
+not affect `forecast()`.
+
+### HMM likelihood experiment
+
+`NHSMM.enable_research_rust(library_path)` replaces only the
 generative observation likelihood used by `log_likelihood()` and
-`optimize()`. The default remains PyTorch; `disable_research_hmm_rust()`
+`optimize()`. The default remains PyTorch; `disable_research_rust()`
 restores it. The choice is runtime-only and does not enter ModelConfig,
 state_dict, or an artifact. Loaded artifacts start on the default path.
 Forward tensors, causal filtering, Viterbi, supervised objectives, HSMM
@@ -694,9 +702,9 @@ from nhsmm import ModelConfig, NHSMM
 model = NHSMM(ModelConfig.for_mode("hmm", n_states=3, n_features=1), device="cpu")
 model.initialize_distributions(jitter=0)
 model.to(dtype=torch.float64)
-model.enable_research_hmm_rust("/tmp/libnhsmm_hmm.so")
+model.enable_research_rust("/tmp/libnhsmm_hmm.so")
 # model.optimize(one_cpu_float64_sequence)
-model.disable_research_hmm_rust()
+model.disable_research_rust()
 ```
 
 The native implementation retains per-row emission centering, restores
@@ -715,11 +723,11 @@ The code and source-checked BTC research probes live in `research/`;
 they require a separately supplied dataset loader and do not add a
 market-data dependency to NHSMM.
 
-## Opt-in Rust dynamic HSMM likelihood experiment
+### Dynamic HSMM likelihood experiment
 
-`NHSMM.enable_research_hsmm_rust(library_path)` selects a user-built native
+`NHSMM.enable_research_rust(library_path)` selects a user-built native
 kernel for the **causal generative likelihood** used by `log_likelihood()`
-and `fit()/optimize()`. `disable_research_hsmm_rust()` restores PyTorch.
+and `fit()/optimize()`. `disable_research_rust()` restores PyTorch.
 The setting is runtime-only: config, state_dict and artifacts do not carry it.
 Filtering, decoding, supervised objectives and direct `forward()` calls
 continue to use PyTorch. The library is not included in wheels.
@@ -742,9 +750,9 @@ rustc --edition=2024 -C opt-level=3 --crate-type cdylib research/nhsmm_native_hs
 model = NHSMM(config, device="cpu")  # causal HSMM/NHSMM, D>=2
 model.initialize_distributions()
 model = model.double()
-model.enable_research_hsmm_rust("/tmp/libnhsmm_hsmm.so")
+model.enable_research_rust("/tmp/libnhsmm_hsmm.so")
 # model.fit(one_cpu_float64_sequence, context=causal_context)
-model.disable_research_hsmm_rust()
+model.disable_research_rust()
 ```
 
 The Rust routine propagates and differentiates the expanded state-age chain

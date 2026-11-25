@@ -36,10 +36,10 @@ NHSMM and GBM share lifecycle verbs, not tensor/target/state semantics or artifa
 formats. See the host's docs/model-api.md for the cross-model contract.
 
 
-For the restricted CPU Float64 classical HMM likelihood experiment,
-`model.enable_research_hmm_rust(library_path)` opts into a user-built
-Rust kernel and `model.disable_research_hmm_rust()` restores PyTorch.
-See [scope and build steps](model.md#opt-in-rust-hmm-likelihood-experiment).
+For the opt-in CPU Float64 HMM or causal HSMM/NHSMM likelihood experiment,
+`model.enable_research_rust(library_path)` opts into a user-built
+mode-specific Rust kernel and `model.disable_research_rust()` restores PyTorch.
+See [scope and build steps](model.md#opt-in-rust-likelihood-switch).
 
 The general causal one-step observation API is
 `runtime.forecast(mask, next_context=None)`, where boolean [F] `mask` selects
