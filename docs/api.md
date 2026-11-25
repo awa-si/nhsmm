@@ -40,3 +40,8 @@ For the restricted CPU Float64 classical HMM likelihood experiment,
 `model.enable_research_hmm_rust(library_path)` opts into a user-built
 Rust kernel and `model.disable_research_hmm_rust()` restores PyTorch.
 See [scope and build steps](model.md#opt-in-rust-hmm-likelihood-experiment).
+
+The causal one-step return API is `forecast_return(runtime, tail_threshold=...,
+zero_return=..., tail_center=..., next_context=...)`. It yields separate
+next-bar direction and tail-risk probabilities. See [model contract](model.md#one-step-return-prediction)
+for context timing, Gaussian scope, and training-only unit conversion.
