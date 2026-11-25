@@ -417,6 +417,15 @@ class HSMMFilterRuntime:
         self._score_cache = _RuntimeScoreCache()
 
     @torch.inference_mode()
+    def forecast(
+        self, mask: torch.Tensor, *, next_context: Optional[torch.Tensor] = None
+    ) -> "Forecast":
+        """Forecast selected features of the next observation from the causal filter."""
+        from nhsmm.forecast import forecast
+
+        return forecast(self, mask, next_context=next_context)
+
+    @torch.inference_mode()
     def forecast_survival(self, horizons: HorizonInput) -> HSMMSurvivalForecast:
         """Forecast current-episode survival using only the current information set."""
 

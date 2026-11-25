@@ -289,7 +289,28 @@ Use reset when intentionally starting a new independent stream or changing runti
 
 ## Forecasts
 
-After at least one observation has been processed:
+After at least one observation has been processed, the general causal forecast
+selects next-observation features through a boolean target mask of shape [F]:
+
+```python
+forecast = runtime.forecast(torch.tensor([True, False, True]))
+# forecast.next_state_prior: [B,K]
+# forecast.component_mean: [B,K,2]
+# forecast.component_covariance: [B,K,2,2]
+# forecast.mean: [B,2]; forecast.covariance: [B,2,2]
+```
+
+True selects a feature to forecast; False excludes it from the returned
+marginal distribution. The mask does not supply future observations, condition
+on a known future feature, or represent padding or context availability. The
+returned mixture weights and Gaussian components preserve the predictive law;
+the mean and covariance are its moments. This first version predicts one step
+and requires Gaussian emissions and a causal model. If the model needs external
+emission context for the next step, pass `next_context` known at the forecast
+origin. It never extrapolates unknown future context or maps latent states to
+trading signals. Call `runtime.step` with observed data through t first.
+
+The specific episode and transition forecasts remain available:
 
 ```python
 survival = runtime.forecast_survival(horizons)
