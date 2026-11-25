@@ -21,8 +21,10 @@ def main() -> None:
         result = torch.tensor([13.0])
         with (
             patch(f"{module}.load_kernel", return_value=(object(), native_function)) as loader,
-            patch(f"{module}.research_{'hmm' if mode == 'hmm' else 'hsmm'}_likelihood",
-                  return_value=result) as likelihood,
+            patch(
+                f"{module}.research_{'hmm' if mode == 'hmm' else 'hsmm'}_likelihood",
+                return_value=result,
+            ) as likelihood,
         ):
             model.enable_research_rust("/unused/research.so")
             loader.assert_called_once_with("/unused/research.so")
