@@ -814,6 +814,16 @@ the filter. Across all 36 model fits, reconstructed sequential log
 density matched the package's full-sequence likelihood within
 3.41e-13 absolute.
 
+A separate prefix-causality probe repeated the February dynamic NHSMM
+seed-17 fit. For prefix lengths 1, 2, 24, 335, 503, 504, 600 and 671,
+the sum of the full-run online density contributions up to that point
+matched a fresh package likelihood call receiving **only that prefix**
+within 2.27e-13 absolute. The event forecast at hour t was computed
+from the predictive state mixture before x_t was consumed; no Viterbi
+path or forward-backward smoothed posterior was used for the forecast.
+AWA probe job `396e9c36f2244cf3a0449737051fb71a`.
+
+
 | Test period (events/168) | HMM event log loss | Static HSMM | Dynamic NHSMM | EWMA | Train Gaussian |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | February (6) | 0.18835 | **0.17095** | 0.17372 | 0.27444 | 0.19608 |
