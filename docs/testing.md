@@ -6,7 +6,7 @@ status: active
 language: en
 owner: NHSMM
 created: 2026-09-26
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 # Model verification
@@ -677,6 +677,44 @@ independently reimplement the neural heads or establish forecast quality.
 AWA jobs: NHSMM export `d8e8271a198a4a02bf99bb4aa1648e42`;
 LaMa comparison `0ce0204347ee4361b9bb657ca4b397e3`
 and difference calculation `d0e4fe2df3b941249f1b09f4351dabad`.
+
+## Preliminary one-hour risk forecast (2026-11-25)
+
+The validation-selected dynamic D+ checkpoint at update 180 above was
+reproduced from seed 17 and assessed on the same verified BTCUSDT 1h
+train (335), validation (168) and historical-test (504) splits. This
+is an observational research check, with no new fit or test tuning.
+The forecast issued before observing standardized return z_t was
+P(|z_t| > 1.508653), where the threshold is the train-only 90th
+percentile of |z|. The expanded state-age filter propagated the
+exported duration PMFs, age-dependent transitions and context-dependent
+D+ tail hazards. The predicted state mixture used the model's
+Gaussian emission means/variances at t. Its sequential density
+log scores summed to the package's full-sequence likelihood within
+1.14e-13 absolute on each split.
+
+For comparison, a Gaussian EWMA variance forecast used the train
+mean and variance with fixed decay 0.94 and updated variance only
+after each observation. A second baseline used the train Gaussian
+mean and variance without updates. All three methods restarted at
+each split, matching the model's splitwise context reset. Validation
+selected the NHSMM checkpoint by likelihood; neither baseline was
+selected by the historical test.
+
+| Historical test (504 hours; 26 threshold events) | NHSMM | EWMA | Train Gaussian |
+| --- | ---: | ---: | ---: |
+| Mean density log score (higher is better) | -0.8705 | -1.0436 | -1.1466 |
+| Event log loss (lower is better) | 0.2135 | 0.2624 | 0.2383 |
+| Event AUC (higher is better) | 0.5979 | 0.5435 | 0.5000 |
+| Event Brier score (lower is better) | 0.05205 | 0.05096 | 0.05529 |
+
+The NHSMM wins on density score and event log loss here, while EWMA
+has the lower Brier score. With just 26 test events, one chronological
+split and one seed, this is not a robust predictive superiority or
+trading-utility claim. The event threshold is a standardized return
+magnitude, not a price-level risk or trading P&L. AWA export job
+`da2298c029e748cf93946044e2d6ef3f`; forecast evaluation job
+`eca2c613d7bd47018bed2a38e3b72515`.
 
 No CUDA, batching, Float32, h=1 tail-boundary gradient or second derivatives
 are established. The canonical suite on the exact source snapshot:
