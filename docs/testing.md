@@ -716,6 +716,61 @@ magnitude, not a price-level risk or trading P&L. AWA export job
 `da2298c029e748cf93946044e2d6ef3f`; forecast evaluation job
 `eca2c613d7bd47018bed2a38e3b72515`.
 
+## Rolling one-hour risk forecast with Rust training (2026-11-25)
+
+An observational expanding-window evaluation reused the 1,007 verified
+BTCUSDT 1h standardized returns above. Three chronological, disjoint
+168-hour test windows followed training/validation cutoffs
+335/503, 503/671 and 671/839 (exclusive indices in the concatenated
+series); test index ranges were [503,671), [671,839), [839,1007).
+Each fold used its own train-only mean, standard deviation and 90th
+percentile of absolute standardized return. The event was exceeding
+that threshold in the next 1h return. The forecasting filter used
+only observations available before the scored return and reset at
+each validation/test split as in the preceding single-split check.
+
+For each fold, NHSMM K=3, D=8, causal dynamic D+ with context-dependent
+tail was fit from scratch for 180 Adam updates using the opt-in Rust
+likelihood/first-gradient path, seeds 17, 23 and 41, zero dropout,
+constant temperature and fixed learning rate 0.001. Update count and
+learning rate were held fixed for all nine runs. Gaussian EWMA used
+decay 0.94 and train mean/variance; the static Gaussian used the same
+train estimates. Neither baseline was tuned to the test windows.
+A first attempt at learning rate 0.01 completed seed 17 in fold one,
+then seed 23 reached exact D+ hazard h=1, a deliberately unsupported
+Rust training derivative. That partial attempt was discarded and
+**all nine runs restarted** at 0.001. No per-window/seed fallback or
+checkpoint selection was applied.
+
+| Test window (events) | NHSMM Brier | EWMA Brier | NHSMM event log loss | EWMA event log loss | NHSMM density log score | EWMA density log score |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 (8/168) | 0.04791 | 0.04830 | 0.20869 | 0.22867 | -1.10497 | -1.07951 |
+| 2 (6/168) | 0.04045 | 0.03475 | 0.19273 | 0.18793 | -1.01222 | -0.83369 |
+| 3 (12/168) | 0.06880 | 0.06762 | 0.26751 | 0.25953 | -1.14863 | -1.06704 |
+
+NHSMM entries are the mean of three seed-specific scores within each
+window; EWMA is seed-invariant. Across the nine model runs, the
+maximum absolute error between the independently reconstructed
+sequential density score and the package's whole-sequence likelihood
+was 2.84e-14. Mean NHSMM event AUC was 0.696, 0.477 and 0.707 by
+window (EWMA 0.561, 0.604 and 0.584). Mean fit time across nine
+Rust runs totaled 75.24 s, excluding model creation and evaluation.
+
+The repeated result does **not** establish a consistent NHSMM advantage
+over EWMA. EWMA wins density log score in all three windows and Brier
+in two; NHSMM wins event log loss in only the first. These are 26
+events in total, all on one asset and one contiguous historical period.
+The 504-hour period had already been inspected in the preceding
+single-split check, so these windows are not a fresh independent
+holdout. The smaller learning rate means these scores are not directly
+comparable to the update-180 checkpoint at learning rate 0.01.
+The evaluation script in the AWA workspace was
+`hsmm_lama/rust_dynamic/rolling_forecast.py`
+(SHA-256 `5fd7640fbc135ccce0178939ca458015d9cea690bb751f705c209e4e1c5f0ae7`).
+AWA jobs: fold one `28422f4c24744067aee469518f08dc09`,
+fold two `cc3dd2041b064f85aab94100c74deb0c`,
+fold three `6d56c3859b9e493faa07052649170e71`.
+
 No CUDA, batching, Float32, h=1 tail-boundary gradient or second derivatives
 are established. The canonical suite on the exact source snapshot:
 1,698 passed, six skipped (three CUDA-unavailable, three opt-in Rust HMM library unavailable), zero failures; Nautilus test owner `efc8d8f6febde003c31743536e481f3e636bfa42`, AWA job `451b619d5880425e8b885d35a23e0b03`.
