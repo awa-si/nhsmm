@@ -221,7 +221,9 @@ class NHSMM(nn.Module):
             kernel = load_kernel(library_path)
         except (OSError, AttributeError) as exc:
             self._research_rust = None
-            warnings.warn(f"research Rust unavailable; using PyTorch: {exc}", RuntimeWarning, stacklevel=2)
+            warnings.warn(
+                f"research Rust unavailable; using PyTorch: {exc}", RuntimeWarning, stacklevel=2
+            )
             return False
         self._research_rust = (mode, kernel)
         return True

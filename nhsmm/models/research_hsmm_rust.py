@@ -63,7 +63,9 @@ def research_hsmm_likelihood(model, seq, temperature, fn):
         or em.dtype != torch.float64
         or em.device.type != "cpu"
     ):
-        raise NativeInputUnsupported("research Rust HSMM requires one unpadded CPU Float64 sequence")
+        raise NativeInputUnsupported(
+            "research Rust HSMM requires one unpadded CPU Float64 sequence"
+        )
     kw = dict(temperature=temperature, T=t, soft_dmax=model.duration_logits_bias)
     mask = seq.context_mask
     pi = model.dist.initial.log_matrix(
@@ -79,7 +81,9 @@ def research_hsmm_likelihood(model, seq, temperature, fn):
         context=model._active_context(seq.contexts), **kw, **context_options(mask, canonical=False)
     )[0]
     if pi.shape != (cfg.n_states,) or q.shape != (t, cfg.n_states, cfg.max_duration):
-        raise NativeInputUnsupported("research Rust HSMM requires initial [K] and duration [T,K,D] laws")
+        raise NativeInputUnsupported(
+            "research Rust HSMM requires initial [K] and duration [T,K,D] laws"
+        )
     hfn = getattr(model.dist.duration, "tail_probability", None)
     h = None
     if callable(hfn):
