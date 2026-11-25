@@ -310,17 +310,6 @@ emission context for the next step, pass `next_context` known at the forecast
 origin. It never extrapolates unknown future context or maps latent states to
 trading signals. Call `runtime.step` with observed data through t first.
 
-The specific episode and transition forecasts remain available:
-
-```python
-survival = runtime.forecast_survival(horizons)
-transition = runtime.forecast_transition()
-```
-
-These forecasts use only the runtime's current information set.
-
-They are separate from `HSMMFilterState.age_posterior`.
-
 ## Causal semantics
 
 The streaming runtime is a filtering path, not a retrospective smoother.
@@ -792,30 +781,11 @@ it does not add these tensors to persistent streaming state.
 
 Explicit unknown-age initialization and boundary-aware fitting: [stationary entry](stationary-entry.md), [supervision](supervised.md#boundary-aware-regularized-static-fitting).
 
-## One-step return prediction
+## One-step observation prediction
 
-`forecast_return(runtime, tail_threshold=..., zero_return=..., tail_center=...,
-next_context=...)` forecasts the **next** univariate Gaussian observation after
-`runtime.step(x_t)`. It combines the runtime's causal next-state prior with the
-emission distributions for the next bar. It returns `expected_return`,
-`return_variance`, `probability_up = P(x_{t+1} > zero_return)`, and
-`probability_tail = P(|x_{t+1} - tail_center| > tail_threshold)`, each `[B]`,
-plus the `[B,K]` next-state prior. The two probabilities are separate outputs
-from one predictive mixture. This API supports causal one-feature Gaussian
-models in HMM, HSMM, and NHSMM modes; other emission families raise an error.
-
-For externally supplied context, `next_context` must be known at forecast time
-and have shape `[B,1,context_dim]` (or `[B,context_dim]`). For the lag-one
-return setup, use the just-observed `x_t` as the next emission context. A causal
-internal encoder supplies its saved next-emission context through the runtime.
-The function does not synthesize future features. Missing context is an error.
-
-All thresholds and returns use **model observation units**. If training used
-`z_t = (r_t - train_mean) / train_std`, call with `zero_return =
--train_mean/train_std`, and for the event `|r_{t+1}| > L`, use
-`tail_center = zero_return` and `tail_threshold = L/train_std`. Convert the
-predicted mean to raw returns with `train_mean + train_std * expected_return`;
-convert variance with `train_std**2 * return_variance`. Fit these scaling
-constants and the risk threshold on training data only. Predictions made after
-a completed bar apply to the next bar. `NHSMM.predict()` is Viterbi decoding
-and must not be used for live prediction.
+`runtime.forecast(mask, next_context=...)` exposes the next-observation
+Gaussian mixture in model observation units. For a univariate return model,
+select `torch.tensor([True])`. Direction and tail-event probabilities are
+computed by the caller from the returned mixture components using thresholds
+and scaling fitted on training data only. The method itself does not encode
+trading thresholds, TA labels, a holding horizon, or a stop-loss event.

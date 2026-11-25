@@ -47,7 +47,3 @@ target features. It returns Gaussian-mixture components, state weights, mean,
 and covariance for the next observation. It does not consume future observations
 or infer trading labels from the mask. See [model contract](model.md#forecasts).
 
-The restricted convenience return API is `forecast_return(runtime, tail_threshold=...,
-zero_return=..., tail_center=..., next_context=...)`. It yields separate
-next-bar direction and tail-risk probabilities. See [model contract](model.md#one-step-return-prediction)
-for context timing, Gaussian scope, and training-only unit conversion.

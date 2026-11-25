@@ -23,12 +23,6 @@ from nhsmm.filtering import (
     _require_compatible,
     initialize_filter,
 )
-from nhsmm.survival import (
-    HSMMSurvivalForecast,
-    HorizonInput,
-    active_episode_survival_forecast,
-)
-from nhsmm.transitions import HSMMTransitionForecast, one_step_transition_forecast
 
 
 def _tensor_cache_key(
@@ -424,32 +418,6 @@ class HSMMFilterRuntime:
         from nhsmm.forecast import forecast
 
         return forecast(self, mask, next_context=next_context)
-
-    @torch.inference_mode()
-    def forecast_survival(self, horizons: HorizonInput) -> HSMMSurvivalForecast:
-        """Forecast current-episode survival using only the current information set."""
-
-        if self.state is None:
-            raise RuntimeError("runtime must process at least one observation before forecasting")
-        return active_episode_survival_forecast(
-            self.state.filter_state,
-            self.state.duration_log_prob,
-            horizons,
-            self.state.tail_end_probability,
-        )
-
-    @torch.inference_mode()
-    def forecast_transition(self) -> HSMMTransitionForecast:
-        """Forecast the next boundary/state transition using only the current information set."""
-
-        if self.state is None:
-            raise RuntimeError("runtime must process at least one observation before forecasting")
-        return one_step_transition_forecast(
-            self.state.filter_state,
-            self.state.duration_log_prob,
-            self.state.transition_log_prob,
-            self.state.tail_end_probability,
-        )
 
     @torch.inference_mode()
     def step(

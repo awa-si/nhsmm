@@ -53,7 +53,15 @@ def forecast(
     if mask.ndim != 1 or mask.shape[0] != model.config.n_features or not mask.any():
         raise ValueError("mask must select at least one of F observation features")
 
-    prior = runtime.forecast_transition().next_state_prior
+    from .transitions import one_step_transition_forecast
+
+    state = runtime.state
+    prior = one_step_transition_forecast(
+        state.filter_state,
+        state.duration_log_prob,
+        state.transition_log_prob,
+        state.tail_end_probability,
+    ).next_state_prior
     batch, states = prior.shape
     if next_context is None:
         next_context = runtime.state.last_encoder_context

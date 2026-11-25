@@ -57,17 +57,18 @@ def main():
                             rtol=0,
                             atol=tolerance,
                         )
-                    survival = runtime.forecast_survival((1, 4, 12))
-                    transition = runtime.forecast_transition()
+                    prediction = runtime.forecast(torch.tensor([True]))
                     torch.testing.assert_close(
-                        survival.end_within_probability[:, 0],
-                        transition.episode_end_probability,
+                        prediction.next_state_prior.sum(dim=-1),
+                        torch.ones(1, dtype=dtype),
                         rtol=0,
                         atol=tolerance,
                     )
                     torch.testing.assert_close(
-                        transition.next_state_prior.sum(dim=-1),
-                        torch.ones(1, dtype=dtype),
+                        prediction.mean,
+                        (
+                            prediction.next_state_prior.unsqueeze(-1) * prediction.component_mean
+                        ).sum(dim=1),
                         rtol=0,
                         atol=tolerance,
                     )
@@ -83,6 +84,30 @@ def main():
                 cases.append(
                     {"mode": mode, "dtype": str(dtype), "duration_tail": tail, "n_states": n_states}
                 )
+    multivariate = NHSMM(
+        ModelConfig.for_mode("hsmm", n_states=2, n_features=3, max_duration=3, seed=11),
+        device="cpu",
+    )
+    multivariate.initialize_distributions()
+    multivariate.eval()
+    runtime = HSMMFilterRuntime(multivariate)
+    runtime.step(torch.tensor([0.1, -0.2, 0.3]))
+    full = runtime.forecast(torch.tensor([True, True, True]))
+    partial = runtime.forecast(torch.tensor([True, False, True]))
+    assert partial.feature_indices == (0, 2)
+    assert partial.component_mean.shape == (1, 2, 2)
+    torch.testing.assert_close(partial.next_state_prior, full.next_state_prior)
+    torch.testing.assert_close(partial.component_mean, full.component_mean[..., [0, 2]])
+    torch.testing.assert_close(partial.mean, full.mean[..., [0, 2]])
+    torch.testing.assert_close(partial.covariance, full.covariance[:, [0, 2]][:, :, [0, 2]])
+    for invalid in (torch.tensor([False, False, False]), torch.tensor([True, False])):
+        try:
+            runtime.forecast(invalid)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid forecast mask was accepted")
+
     assert not hasattr(nhsmm, "ModelHealthThresholds")
     assert not hasattr(nhsmm, "evaluate_context_effect_replication")
     print(
