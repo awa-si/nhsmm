@@ -387,9 +387,17 @@ class HSMMFilterRuntime:
         temperature: Optional[float] = None,
         *,
         initial_prior: Optional[HSMMFilterState] = None,
+        regime_projection: Optional[torch.Tensor] = None,
     ) -> None:
         self.model = model
         self.temperature = temperature
+        from nhsmm.forecast import validate_regime_projection
+
+        self.regime_projection = (
+            None
+            if regime_projection is None
+            else validate_regime_projection(model, regime_projection)
+        )
         self._initial_prior = None
         if initial_prior is not None:
             if not isinstance(initial_prior, HSMMFilterState):
@@ -414,13 +422,11 @@ class HSMMFilterRuntime:
         self._score_cache = _RuntimeScoreCache()
 
     @torch.inference_mode()
-    def forecast(
-        self, mask: torch.Tensor, *, next_context: Optional[torch.Tensor] = None
-    ) -> "Forecast":
-        """Forecast selected features of the next observation from the causal filter."""
+    def forecast(self) -> "Forecast":
+        """Forecast the next market regime using a calibrated projection."""
         from nhsmm.forecast import forecast
 
-        return forecast(self, mask, next_context=next_context)
+        return forecast(self)
 
     @torch.inference_mode()
     def step(

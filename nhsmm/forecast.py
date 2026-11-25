@@ -1,4 +1,4 @@
-"""Causal one-step predictive observation distribution."""
+"""Causal one-step forecast of calibrated market-regime probabilities."""
 
 from __future__ import annotations
 
@@ -11,53 +11,52 @@ if TYPE_CHECKING:
     from .runtime import HSMMFilterRuntime
 
 
+REGIMES = ("unknown", "chaotic", "bull", "bear", "range")
+
+
 @dataclass(frozen=True)
 class Forecast:
-    """Gaussian mixture for selected features of the next observation.
+    """Next-step regime probabilities [B,5] in REGIMES order.
 
-    ``component_mean`` is [B,K,M], ``component_covariance`` is [B,K,M,M],
-    and ``next_state_prior`` is [B,K]. ``mean`` and ``covariance`` are the
-    mixture moments [B,M] and [B,M,M]. Feature indices refer to model input.
+    These are a projection of the next latent-state prior through a separately
+    calibrated [K,5] state-to-regime probability matrix. The projection must be
+    fitted using labels available only in the training window.
     """
 
-    feature_indices: tuple[int, ...]
-    next_state_prior: torch.Tensor
-    component_mean: torch.Tensor
-    component_covariance: torch.Tensor
-    mean: torch.Tensor
-    covariance: torch.Tensor
+    probabilities: torch.Tensor
+    labels: tuple[str, ...] = REGIMES
+
+
+def validate_regime_projection(model: object, projection: torch.Tensor) -> torch.Tensor:
+    """Freeze a row-stochastic latent-state to market-regime projection."""
+    if not isinstance(projection, torch.Tensor) or not projection.is_floating_point():
+        raise TypeError("regime_projection must be a floating tensor")
+    if projection.shape != (model.config.n_states, len(REGIMES)):
+        raise ValueError("regime_projection must be [K,5] in REGIMES order")
+    parameter = next(model.parameters())
+    if projection.device != parameter.device or projection.dtype != parameter.dtype:
+        raise ValueError("regime_projection must match model device and dtype")
+    if not torch.isfinite(projection).all() or (projection < 0).any():
+        raise ValueError("regime_projection must contain finite nonnegative probabilities")
+    if not torch.allclose(
+        projection.sum(-1), torch.ones_like(projection[:, 0]), rtol=0, atol=1e-6
+    ):
+        raise ValueError("each regime_projection row must sum to one")
+    return projection.detach().clone()
 
 
 @torch.inference_mode()
-def forecast(
-    runtime: "HSMMFilterRuntime",
-    mask: torch.Tensor,
-    *,
-    next_context: torch.Tensor | None = None,
-) -> Forecast:
-    """Predict masked features at t+1, conditioned on observations through t.
-
-    ``mask`` is a one-dimensional boolean target selector of length F: True
-    means forecast this feature. It is unrelated to padding/context availability.
-    The future observation is never supplied. External next-step context must
-    already be known at the forecast origin; unknown future context is not
-    estimated. This first version supports Gaussian emissions only.
-    """
+def forecast(runtime: "HSMMFilterRuntime") -> Forecast:
+    """Predict t+1 regimes using only observations accepted through t."""
     from .runtime import HSMMFilterRuntime
+    from .transitions import one_step_transition_forecast
 
     if not isinstance(runtime, HSMMFilterRuntime) or runtime.state is None:
         raise ValueError("runtime must have processed an observation")
-    model = runtime.model
-    if not model.config.causal:
+    if not runtime.model.config.causal:
         raise ValueError("forecast requires a causal model")
-    if model.dist.emission.emission_type != "gaussian":
-        raise ValueError("forecast requires Gaussian emissions")
-    if not isinstance(mask, torch.Tensor) or mask.dtype != torch.bool:
-        raise TypeError("mask must be a boolean tensor")
-    if mask.ndim != 1 or mask.shape[0] != model.config.n_features or not mask.any():
-        raise ValueError("mask must select at least one of F observation features")
-
-    from .transitions import one_step_transition_forecast
+    if runtime.regime_projection is None:
+        raise ValueError("forecast requires a training-calibrated regime_projection")
 
     state = runtime.state
     prior = one_step_transition_forecast(
@@ -66,60 +65,7 @@ def forecast(
         state.transition_log_prob,
         state.tail_end_probability,
     ).next_state_prior
-    batch, states = prior.shape
-    if next_context is None:
-        next_context = runtime.state.last_encoder_context
-        if next_context is None and (
-            model.config.context_dim is not None or model.config.use_context_encoder
-        ):
-            raise ValueError("next_context is required for this model")
-    else:
-        if runtime.state.last_encoder_context is not None:
-            raise ValueError("internal encoder context is owned by the runtime")
-        if model.config.context_dim is None:
-            raise ValueError("next_context requires an external-context model")
-        if not isinstance(next_context, torch.Tensor):
-            raise TypeError("next_context must be a tensor")
-        if next_context.ndim == 2:
-            next_context = next_context.unsqueeze(1)
-        if next_context.shape != (batch, 1, model.config.context_dim):
-            raise ValueError("next_context must be [B,1,context_dim]")
-        if next_context.device != prior.device or next_context.dtype != prior.dtype:
-            raise ValueError("next_context must match runtime device and dtype")
-        if not torch.isfinite(next_context).all():
-            raise ValueError("next_context must be finite")
-
-    loc, cov = model.dist.emission(context=next_context)
-    if loc.shape[0] == 1 and batch > 1:
-        loc = loc.expand(batch, *loc.shape[1:])
-        cov = cov.expand(batch, *cov.shape[1:])
-    features = model.config.n_features
-    if loc.shape != (batch, 1, states, features) or cov.shape != (
-        batch,
-        1,
-        states,
-        features,
-        features,
-    ):
-        raise ValueError("unexpected Gaussian emission shape")
-    if not torch.isfinite(loc).all() or not torch.isfinite(cov).all():
-        raise ValueError("invalid Gaussian emission parameters")
-
-    indices = mask.nonzero(as_tuple=True)[0].to(device=prior.device)
-    selected_mean = loc[:, 0].index_select(-1, indices)
-    selected_cov = cov[:, 0].index_select(-2, indices).index_select(-1, indices)
-    if (selected_cov.diagonal(dim1=-2, dim2=-1) <= 0).any():
-        raise ValueError("invalid Gaussian emission covariance")
-    mean = (prior.unsqueeze(-1) * selected_mean).sum(dim=1)
-    centered = selected_mean - mean.unsqueeze(1)
-    covariance = (
-        prior[..., None, None] * (selected_cov + centered.unsqueeze(-1) * centered.unsqueeze(-2))
-    ).sum(dim=1)
-    return Forecast(
-        feature_indices=tuple(indices.tolist()),
-        next_state_prior=prior,
-        component_mean=selected_mean,
-        component_covariance=selected_cov,
-        mean=mean,
-        covariance=covariance,
-    )
+    projection = runtime.regime_projection
+    if projection.device != prior.device or projection.dtype != prior.dtype:
+        raise ValueError("regime_projection no longer matches the runtime device and dtype")
+    return Forecast(probabilities=prior @ projection)

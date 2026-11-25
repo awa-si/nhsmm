@@ -43,9 +43,10 @@ mode-specific Rust kernel when available; unsupported valid inputs use PyTorch.
 separately; no Rust library is shipped in the wheel.
 See [scope and build steps](model.md#opt-in-rust-likelihood-switch).
 
-The general causal one-step observation API is
-`runtime.forecast(mask, next_context=None)`, where boolean [F] `mask` selects
-target features. It returns Gaussian-mixture components, state weights, mean,
-and covariance for the next observation. It does not consume future observations
-or infer trading labels from the mask. See [model contract](model.md#forecasts).
+The causal one-step market-regime API is `runtime.forecast()`. Construct the
+runtime with a training-calibrated [K,5] `regime_projection` in the order
+`unknown, chaotic, bull, bear, range`. It returns [B,5] regime probabilities.
+Without a calibrated projection, it raises rather than guessing the meaning of
+unlabeled latent states. No future observation is consumed. See
+[model contract](model.md#forecasts).
 

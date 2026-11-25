@@ -289,26 +289,25 @@ Use reset when intentionally starting a new independent stream or changing runti
 
 ## Forecasts
 
-After at least one observation has been processed, the general causal forecast
-selects next-observation features through a boolean target mask of shape [F]:
+After at least one observation has been processed, the causal market-regime
+forecast projects the next latent-state prior through an independently
+calibrated [K,5] conditional regime matrix:
 
 ```python
-forecast = runtime.forecast(torch.tensor([True, False, True]))
-# forecast.next_state_prior: [B,K]
-# forecast.component_mean: [B,K,2]
-# forecast.component_covariance: [B,K,2,2]
-# forecast.mean: [B,2]; forecast.covariance: [B,2,2]
+runtime = HSMMFilterRuntime(model, regime_projection=train_only_projection)
+runtime.step(observation)
+forecast = runtime.forecast()
+# forecast.labels: ("unknown", "chaotic", "bull", "bear", "range")
+# forecast.probabilities: [B,5], rows sum to one
 ```
 
-True selects a feature to forecast; False excludes it from the returned
-marginal distribution. The mask does not supply future observations, condition
-on a known future feature, or represent padding or context availability. The
-returned mixture weights and Gaussian components preserve the predictive law;
-the mean and covariance are its moments. This first version predicts one step
-and requires Gaussian emissions and a causal model. If the model needs external
-emission context for the next step, pass `next_context` known at the forecast
-origin. It never extrapolates unknown future context or maps latent states to
-trading signals. Call `runtime.step` with observed data through t first.
+The projection is P(Nautilus regime | latent state), estimated from aligned
+training-window labels and causal filtered posteriors. It is external to the
+core artifact and must be preserved with the same model and label provenance by
+the host. Without it, forecast raises; state indices alone do not identify
+market regimes. `unknown` represents the host's unclassified regime, not a
+residual confidence threshold. This is a one-step distribution, not a duration
+or trading signal. The user must revalidate the projection after refitting.
 
 ## Causal semantics
 
@@ -793,11 +792,9 @@ it does not add these tensors to persistent streaming state.
 
 Explicit unknown-age initialization and boundary-aware fitting: [stationary entry](stationary-entry.md), [supervision](supervised.md#boundary-aware-regularized-static-fitting).
 
-## One-step observation prediction
+## One-step market-regime prediction
 
-`runtime.forecast(mask, next_context=...)` exposes the next-observation
-Gaussian mixture in model observation units. For a univariate return model,
-select `torch.tensor([True])`. Direction and tail-event probabilities are
-computed by the caller from the returned mixture components using thresholds
-and scaling fitted on training data only. The method itself does not encode
-trading thresholds, TA labels, a holding horizon, or a stop-loss event.
+`runtime.forecast()` returns the next market-regime probabilities under the
+training-calibrated mapping. It does not encode TA entry, holding horizon,
+stop-loss events, or the next observation's return. The host owns the Nautilus
+label reduction and chronological calibration.
