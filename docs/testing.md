@@ -661,6 +661,23 @@ improvement. A single historical-test evaluation of the
 validation-selected checkpoint scored -438.739. This is one split and one
 seed, not predictive-quality evidence.
 
+A repeatable 180-update fit from the same seed reproduced the
+validation-selected checkpoint. Its exported duration, age-dependent
+transition, emission and context-dependent D+ tail probabilities were
+mapped independently to a 24-state expanded chain in LaMa 3.1.0.
+Across train, validation and historical-test prefixes T=2,3,6,8,9,24
+and each full split (21 comparisons), the maximum absolute likelihood
+difference between the Rust-enabled NHSMM and LaMa was 5.12e-13.
+Full-sequence log likelihoods were -384.870257529883 (335 train),
+-221.659113280174 (168 validation) and -438.739386605504
+(504 historical test). The tail end probability ranged from
+1.93e-5 to 0.998 across splits. This checks the trained checkpoint's
+forward likelihood using exported component probabilities; it does not
+independently reimplement the neural heads or establish forecast quality.
+AWA jobs: NHSMM export `d8e8271a198a4a02bf99bb4aa1648e42`;
+LaMa comparison `0ce0204347ee4361b9bb657ca4b397e3`
+and difference calculation `d0e4fe2df3b941249f1b09f4351dabad`.
+
 No CUDA, batching, Float32, h=1 tail-boundary gradient or second derivatives
 are established. The canonical suite on the exact source snapshot:
-1,698 passed, six skipped (three CUDA-unavailable, three opt-in Rust HMM library unavailable), zero failures; Nautilus test owner `efc8d8f6febde003c31743536e481f3e636bfa42`, AWA job `451b619d5880425e8b885d35a23e0b03`..
+1,698 passed, six skipped (three CUDA-unavailable, three opt-in Rust HMM library unavailable), zero failures; Nautilus test owner `efc8d8f6febde003c31743536e481f3e636bfa42`, AWA job `451b619d5880425e8b885d35a23e0b03`.
