@@ -80,11 +80,11 @@ October 20 development cohort. It is not a fresh holdout result. Reserved
 market cohorts remain unopened; no market refit or optimizer invocation is
 admitted by that replay.
 
-Public smoke/release perform package checks without a private checkout or
-custom Actions secret. The complete canonical suite runs in its private test
-owner against an explicitly pinned public core SHA. Require its successful
-matching-source evidence before release; public smoke alone is not that gate.
-See [CI ownership](testing.md#ci-ownership-without-a-cross-repository-secret).
+Public smoke/release checks are narrower than the full model-core suite.
+Canonical synthetic model tests now live in NHSMM and run in five mandatory
+AWA workspace groups. Require successful evidence bound to the exact source
+revision before any release; smoke alone is insufficient.
+See [local and workspace verification ownership](testing.md#local-verification-and-canonical-test-ownership).
 Hosted outcomes and the broader dependency-version matrix remain separate
 from local evidence. No tag or PyPI publication follows from this qualification.
 

@@ -37,8 +37,11 @@ source_resolution:
 - current_repository_state: authoritative
 - stale_docs_examples_history_or_generic_hsmm_assumptions: non_authoritative_when_current_code_available
 - domain_contract_helper: docs/agent-domain.md
+- documentation_index: docs/README.md
 - model_documentation_owner: docs/model.md
 - testing_contract_owner: docs/testing.md
+- synthetic_model_test_owner: tests/ml_stack/nhsmm|docs/synthetic-test-ownership.md
+- mandatory_workspace_test_groups: scripts/nhsmm_test_groups.py|five_groups_only
 - global_workflow_owner: awa-si/admin/workflow.md
 - repository_workflow: docs/agent-workflow.md_when_performance_or_streaming_optimization_material
 

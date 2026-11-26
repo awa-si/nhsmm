@@ -32,10 +32,10 @@ all surviving core behavior tests are retained. Run the full model suite for
 changes to shared inference, distributions, context, configuration or artifacts.
 Do not hide failures with deselections or changed tolerances; report CUDA skips.
 
-Oracle/benchmark helpers now live in Nautilus adapter.qlib.nhsmm_research.
-Frozen fixtures/input reports live in tests/ml_stack/fixtures/nhsmm. Tests no
-longer require research files in this core checkout. Run CLIs from Nautilus
-with python -m and the new module name. Oracle remains OFF and opt-in.
+Market-specific oracle/benchmark tooling and historical trading fixtures remain
+in Nautilus (`adapter/qlib/nhsmm_research` and `tests/ml_stack/fixtures/nhsmm`).
+Model-owned synthetic tests do not require these host assets. Historical
+market-data comparisons remain separate host qualifications.
 
 ## Local verification and canonical test ownership
 
@@ -50,9 +50,11 @@ python scripts/smoke_cpu.py
 The public smoke verifies finite/D+ Float32/64 causal batch/stream parity,
 artifacts and fresh reset; it is not the full mathematical suite.
 
-The canonical synthetic model-core test suite is in this repository.
-Nautilus host integration tests remain separately owned and must run against
-a pinned NHSMM revision. Record JUnit results, source identity, CUDA skips and limits.
+The canonical synthetic model-core test suite is in this repository. See
+[synthetic test ownership](synthetic-test-ownership.md) for its five mandatory
+parallel AWA workspace groups. The 2026-11-26 source-bound copy passed
+1,582 cases with six optional/environment skips. Nautilus host integration
+tests remain separate and require a pinned NHSMM revision. Record JUnit results, source identity, CUDA skips and limits.
 Historical results do not qualify subsequent source revisions.
 
 Nautilus owns its own CI configuration independently. Removing NHSMM Actions
@@ -927,9 +929,9 @@ bar boundary even with a same-state transition; duration output does not
 estimate HMM-state or named-regime persistence.
 
 
-## Mandatory parallel AWA workspace tests (2026-11-26)
+## Cross-repository workspace verification (2026-11-26)
 
-The full Nautilus-owned `--test-group nhsmm` is split into exactly five
+The host-owned Nautilus `--test-group nhsmm` is split into exactly five
 mandatory, disjoint workspace execution groups by
 `awa-si/nautilus/scripts/nhsmm_test_groups.py`: `filtering-a`,
 `filtering-b`, `reference`, `training`, and `support`. The selection

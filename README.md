@@ -64,13 +64,15 @@ semantics are documented in their canonical owners below.
 ## Documentation
 
 - [Model and runtime contract](docs/model.md)
-- [Opt-in Rust HMM likelihood experiment](docs/model.md#opt-in-rust-hmm-likelihood-experiment)
-- [Opt-in Rust dynamic HSMM likelihood experiment](docs/model.md#opt-in-rust-dynamic-hsmm-likelihood-experiment)
+- [Rust backend: automatic native selection, strict Rust and Python fallback](docs/model.md#native-rust-likelihood-backend-preferred-when-compatible)
+- [Calibrated five-regime forecast and latent-episode duration](docs/model.md#calibrated-next-step-market-regime-forecast)
 - [HSMM mathematical contract](docs/hsmm-mathematical-contract.md)
 - [Bounded duration-tail contract](docs/duration-tail-contract.md)
 - [Configuration](docs/configuration.md)
 - [HMM, HSMM and NHSMM modes](docs/model-modes.md)
 - [Supervised state paths](docs/supervised.md)
+- [Documentation map and owner boundaries](docs/README.md)
+- [Synthetic model-owned tests and five workspace groups](docs/synthetic-test-ownership.md)
 - [Verification policy and source-bound evidence](docs/testing.md)
 - [CPU qualification and operational limits](docs/production.md)
 - [Release procedure](docs/release.md)

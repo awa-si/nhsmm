@@ -59,7 +59,7 @@ The caller owns initialization, seeds, split/data provenance and external-contex
 availability. Dropout-free settings are recommended for deterministic verification.
 
 The canonical independent probability-product, gradient, marginalization and
-artifact tests are in Nautilus `tests/ml_stack/nhsmm/training/test_supervised_paths.py`.
+artifact tests are in NHSMM `tests/ml_stack/nhsmm/training/test_supervised_paths.py`.
 The synthetic native ML-stack ladder is owned by Nautilus
 `adapter/qlib/nhsmm_research/supervised_ladder.py`. It establishes controlled
 supervised learning behavior; it does not establish market regimes, eliminate
@@ -119,8 +119,8 @@ HMM filtering with SGD but optimizes next-observation prediction, not this
 supervised prefix-state score. No parameters, architecture or market-performance
 claim are imported from that paper. PyTorch 2.14 logsumexp documentation:
 https://docs.pytorch.org/docs/2.14/generated/torch.logsumexp.html.
-Independent prefix enumeration/gradient tests live in the canonical Nautilus
-model suite. Classification improvements require separate empirical evidence.
+Independent synthetic prefix enumeration/gradient tests live in the
+NHSMM-owned model suite. Classification improvements require separate empirical evidence.
 
 
 ## Small-HMM gradient cost

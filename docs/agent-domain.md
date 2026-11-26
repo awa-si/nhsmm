@@ -22,7 +22,9 @@ repository_map:
 - validation: awa-si/nautilus/adapter/qlib/nhsmm_validation/
 - experiments_consumers: awa-si/nautilus/adapter/qlib
 - retained_control_tooling: awa-si/nautilus/adapter/qlib/nhsmm_research/
-- tests: awa-si/nautilus@main/tests/ml_stack/nhsmm (canonical external owner)
+- model_core_synthetic_tests: tests/ml_stack/nhsmm (canonical internal owner)
+- model_core_workspace_groups: scripts/nhsmm_test_groups.py
+- nautilus_integration_tests: awa-si/nautilus/tests/ (market|qlib|adapter|regime_calibration)
 - public_exports: nhsmm/__init__.py|package___init__.py_files
 
 configuration_contract:
