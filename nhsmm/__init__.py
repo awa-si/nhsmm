@@ -7,7 +7,7 @@ from .inference import load_inference_model, prepare_inference
 from .artifact import build_artifact, load_artifact, save_artifact
 from .filtering import HSMMFilterState
 from .runtime import HSMMFilterRuntime, HSMMRuntimeState
-from .forecast_return import ReturnForecast, forecast_return
+from .forecast import Forecast
 
 __all__ = [
     "BASE_CONTEXT",
@@ -22,8 +22,7 @@ __all__ = [
     "HSMMFilterState",
     "HSMMFilterRuntime",
     "HSMMRuntimeState",
-    "ReturnForecast",
-    "forecast_return",
+    "Forecast",
     "load_inference_model",
     "prepare_inference",
     "build_artifact",

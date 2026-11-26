@@ -289,16 +289,25 @@ Use reset when intentionally starting a new independent stream or changing runti
 
 ## Forecasts
 
-After at least one observation has been processed:
+After at least one observation has been processed, the causal market-regime
+forecast projects the next latent-state prior through an independently
+calibrated [K,5] conditional regime matrix:
 
 ```python
-survival = runtime.forecast_survival(horizons)
-transition = runtime.forecast_transition()
+runtime = HSMMFilterRuntime(model, regime_projection=train_only_projection)
+runtime.step(observation)
+forecast = runtime.forecast()
+# forecast.labels: ("unknown", "chaotic", "bull", "bear", "range")
+# forecast.probabilities: [B,5], rows sum to one
 ```
 
-These forecasts use only the runtime's current information set.
-
-They are separate from `HSMMFilterState.age_posterior`.
+The projection is P(Nautilus regime | latent state), estimated from aligned
+training-window labels and causal filtered posteriors. It is external to the
+core artifact and must be preserved with the same model and label provenance by
+the host. Without it, forecast raises; state indices alone do not identify
+market regimes. `unknown` represents the host's unclassified regime, not a
+residual confidence threshold. This is a one-step distribution, not a duration
+or trading signal. The user must revalidate the projection after refitting.
 
 ## Causal semantics
 
@@ -656,11 +665,24 @@ existing state-age implementation. The optimizer and artifact schema are
 unchanged.
 
 
-## Opt-in Rust HMM likelihood experiment
+## Opt-in Rust likelihood switch
 
-`NHSMM.enable_research_hmm_rust(library_path)` replaces only the
+`NHSMM.enable_research_rust(library_path)` selects the HMM kernel for
+`model_mode="hmm"` and the HSMM kernel for causal `"hsmm"` or `"nhsmm"`
+with D>=2. They remain specialized native implementations with separate
+library files. A successfully loaded library is preferred for supported
+likelihood calls; `enable_research_rust()` returns a boolean indicating whether
+it loaded. Missing or incompatible libraries and valid inputs outside native
+scope use PyTorch. Native status errors, invalid scores and unsupported
+higher-order gradients remain errors. `disable_research_rust()` selects PyTorch.
+Without a separately supplied library the default is PyTorch; wheels do not
+bundle native code. The switch does not affect `forecast()`.
+
+### HMM likelihood experiment
+
+`NHSMM.enable_research_rust(library_path)` replaces only the
 generative observation likelihood used by `log_likelihood()` and
-`optimize()`. The default remains PyTorch; `disable_research_hmm_rust()`
+`optimize()`. The default remains PyTorch; `disable_research_rust()`
 restores it. The choice is runtime-only and does not enter ModelConfig,
 state_dict, or an artifact. Loaded artifacts start on the default path.
 Forward tensors, causal filtering, Viterbi, supervised objectives, HSMM
@@ -669,9 +691,9 @@ and neural context paths do not use this kernel.
 The experiment accepts one nonempty, unpadded static causal ergodic
 finite D=1 HMM sequence on CPU in Float64, with finite initial,
 transition and emission log scores. It supplies first-order gradients
-to Adam; higher derivatives are rejected. Unsupported batches,
-dtypes, structural hard support and model modes raise rather than
-switching back implicitly. The Rust library is user-built and not
+to Adam; higher derivatives are rejected. Batches, unsupported dtypes
+and static-law mismatches use the PyTorch likelihood. Invalid scores and
+native kernel errors remain visible. The Rust library is user-built and not
 shipped in the package:
 
 ```bash
@@ -684,9 +706,9 @@ from nhsmm import ModelConfig, NHSMM
 model = NHSMM(ModelConfig.for_mode("hmm", n_states=3, n_features=1), device="cpu")
 model.initialize_distributions(jitter=0)
 model.to(dtype=torch.float64)
-model.enable_research_hmm_rust("/tmp/libnhsmm_hmm.so")
+model.enable_research_rust("/tmp/libnhsmm_hmm.so")
 # model.optimize(one_cpu_float64_sequence)
-model.disable_research_hmm_rust()
+model.disable_research_rust()
 ```
 
 The native implementation retains per-row emission centering, restores
@@ -705,11 +727,11 @@ The code and source-checked BTC research probes live in `research/`;
 they require a separately supplied dataset loader and do not add a
 market-data dependency to NHSMM.
 
-## Opt-in Rust dynamic HSMM likelihood experiment
+### Dynamic HSMM likelihood experiment
 
-`NHSMM.enable_research_hsmm_rust(library_path)` selects a user-built native
+`NHSMM.enable_research_rust(library_path)` selects a user-built native
 kernel for the **causal generative likelihood** used by `log_likelihood()`
-and `fit()/optimize()`. `disable_research_hsmm_rust()` restores PyTorch.
+and `fit()/optimize()`. `disable_research_rust()` restores PyTorch.
 The setting is runtime-only: config, state_dict and artifacts do not carry it.
 Filtering, decoding, supervised objectives and direct `forward()` calls
 continue to use PyTorch. The library is not included in wheels.
@@ -717,11 +739,10 @@ continue to use PyTorch. The library is not included in wheels.
 The research boundary accepts one nonempty, unpadded causal HSMM/NHSMM
 sequence with D>=2, on CPU in Float64. It accepts time- and age-dependent
 transition and duration laws, finite durations or a D+ tail, and gradients
-through the distribution and context heads. It rejects batches, Float32,
-noncausal mode and higher-order derivatives. At the exact D+ end-probability
-boundary h=1, gradients require a separate boundary correction; this
-research path rejects that case while gradients are enabled. Unsupported
-calls fail explicitly rather than falling back silently. Compile from the
+through the distribution and context heads. Batches, Float32 and the exact
+D+ end-probability boundary h=1 with gradients use PyTorch. Higher-order
+native gradients, invalid numerical scores and native kernel failures remain
+errors. Compile from the
 source checkout with a local Rust toolchain:
 
 ```bash
@@ -732,9 +753,9 @@ rustc --edition=2024 -C opt-level=3 --crate-type cdylib research/nhsmm_native_hs
 model = NHSMM(config, device="cpu")  # causal HSMM/NHSMM, D>=2
 model.initialize_distributions()
 model = model.double()
-model.enable_research_hsmm_rust("/tmp/libnhsmm_hsmm.so")
+model.enable_research_rust("/tmp/libnhsmm_hsmm.so")
 # model.fit(one_cpu_float64_sequence, context=causal_context)
-model.disable_research_hsmm_rust()
+model.disable_research_rust()
 ```
 
 The Rust routine propagates and differentiates the expanded state-age chain
@@ -771,30 +792,9 @@ it does not add these tensors to persistent streaming state.
 
 Explicit unknown-age initialization and boundary-aware fitting: [stationary entry](stationary-entry.md), [supervision](supervised.md#boundary-aware-regularized-static-fitting).
 
-## One-step return prediction
+## One-step market-regime prediction
 
-`forecast_return(runtime, tail_threshold=..., zero_return=..., tail_center=...,
-next_context=...)` forecasts the **next** univariate Gaussian observation after
-`runtime.step(x_t)`. It combines the runtime's causal next-state prior with the
-emission distributions for the next bar. It returns `expected_return`,
-`return_variance`, `probability_up = P(x_{t+1} > zero_return)`, and
-`probability_tail = P(|x_{t+1} - tail_center| > tail_threshold)`, each `[B]`,
-plus the `[B,K]` next-state prior. The two probabilities are separate outputs
-from one predictive mixture. This API supports causal one-feature Gaussian
-models in HMM, HSMM, and NHSMM modes; other emission families raise an error.
-
-For externally supplied context, `next_context` must be known at forecast time
-and have shape `[B,1,context_dim]` (or `[B,context_dim]`). For the lag-one
-return setup, use the just-observed `x_t` as the next emission context. A causal
-internal encoder supplies its saved next-emission context through the runtime.
-The function does not synthesize future features. Missing context is an error.
-
-All thresholds and returns use **model observation units**. If training used
-`z_t = (r_t - train_mean) / train_std`, call with `zero_return =
--train_mean/train_std`, and for the event `|r_{t+1}| > L`, use
-`tail_center = zero_return` and `tail_threshold = L/train_std`. Convert the
-predicted mean to raw returns with `train_mean + train_std * expected_return`;
-convert variance with `train_std**2 * return_variance`. Fit these scaling
-constants and the risk threshold on training data only. Predictions made after
-a completed bar apply to the next bar. `NHSMM.predict()` is Viterbi decoding
-and must not be used for live prediction.
+`runtime.forecast()` returns the next market-regime probabilities under the
+training-calibrated mapping. It does not encode TA entry, holding horizon,
+stop-loss events, or the next observation's return. The host owns the Nautilus
+label reduction and chronological calibration.

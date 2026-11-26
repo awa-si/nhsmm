@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from nhsmm.filtering import _center_emission_log_probs
+from nhsmm.models.research_rust import NativeInputUnsupported
 
 
 def load_kernel(path: str | Path):
@@ -60,15 +61,15 @@ def research_hmm_likelihood(model, sequence, temperature, function):
         or config.transition_type != "ergodic"
         or not config.allow_self_transitions
     ):
-        raise ValueError("research Rust HMM requires a static causal ergodic D=1 model")
+        raise NativeInputUnsupported("research Rust HMM requires a static causal ergodic D=1 model")
     if len(sequence.sequences) != 1 or len(sequence.lengths) != 1:
-        raise ValueError("research Rust HMM requires exactly one sequence")
+        raise NativeInputUnsupported("research Rust HMM requires exactly one sequence")
     emission = sequence.log_probs[0]
     t, k = emission.shape
     if t < 1 or int(sequence.lengths[0]) != t or k != config.n_states:
-        raise ValueError("research Rust HMM requires one nonempty unpadded sequence")
+        raise NativeInputUnsupported("research Rust HMM requires one nonempty unpadded sequence")
     if emission.device.type != "cpu" or emission.dtype != torch.float64:
-        raise ValueError("research Rust HMM requires CPU Float64 emissions")
+        raise NativeInputUnsupported("research Rust HMM requires CPU Float64 emissions")
 
     initial_law = model.dist.initial.log_matrix(temperature=temperature, T=t)
     transition_law = model.dist.transition.log_matrix(temperature=temperature, T=t)
@@ -84,7 +85,7 @@ def research_hmm_likelihood(model, sequence, temperature, function):
         )
         or not bool(torch.all(duration == 0))
     ):
-        raise ValueError("research Rust HMM requires static D=1 laws")
+        raise NativeInputUnsupported("research Rust HMM requires static D=1 laws")
     initial = initial_law[0, 0]
     transition = transition_law[0, 0, :, 0, :]
     if any(

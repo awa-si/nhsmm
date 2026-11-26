@@ -46,7 +46,7 @@ def main():
     model = NHSMM(config, device="cpu").to(dtype=torch.float64)
     model.initialize_distributions(jitter=0)
     models = (copy.deepcopy(model), copy.deepcopy(model))
-    models[1].enable_research_hmm_rust(args.rust_lib)
+    models[1].enable_research_rust(args.rust_lib)
 
     initial = []
     for m in models:

@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import torch
+
+if TYPE_CHECKING:
+    from nhsmm.forecast import Forecast
 
 from nhsmm.config import EPS
 from nhsmm.context import (
@@ -23,12 +26,6 @@ from nhsmm.filtering import (
     _require_compatible,
     initialize_filter,
 )
-from nhsmm.survival import (
-    HSMMSurvivalForecast,
-    HorizonInput,
-    active_episode_survival_forecast,
-)
-from nhsmm.transitions import HSMMTransitionForecast, one_step_transition_forecast
 
 
 def _tensor_cache_key(
@@ -390,9 +387,17 @@ class HSMMFilterRuntime:
         temperature: Optional[float] = None,
         *,
         initial_prior: Optional[HSMMFilterState] = None,
+        regime_projection: Optional[torch.Tensor] = None,
     ) -> None:
         self.model = model
         self.temperature = temperature
+        from nhsmm.forecast import validate_regime_projection
+
+        self.regime_projection = (
+            None
+            if regime_projection is None
+            else validate_regime_projection(model, regime_projection)
+        )
         self._initial_prior = None
         if initial_prior is not None:
             if not isinstance(initial_prior, HSMMFilterState):
@@ -417,30 +422,11 @@ class HSMMFilterRuntime:
         self._score_cache = _RuntimeScoreCache()
 
     @torch.inference_mode()
-    def forecast_survival(self, horizons: HorizonInput) -> HSMMSurvivalForecast:
-        """Forecast current-episode survival using only the current information set."""
+    def forecast(self) -> "Forecast":
+        """Forecast the next market regime using a calibrated projection."""
+        from nhsmm.forecast import forecast
 
-        if self.state is None:
-            raise RuntimeError("runtime must process at least one observation before forecasting")
-        return active_episode_survival_forecast(
-            self.state.filter_state,
-            self.state.duration_log_prob,
-            horizons,
-            self.state.tail_end_probability,
-        )
-
-    @torch.inference_mode()
-    def forecast_transition(self) -> HSMMTransitionForecast:
-        """Forecast the next boundary/state transition using only the current information set."""
-
-        if self.state is None:
-            raise RuntimeError("runtime must process at least one observation before forecasting")
-        return one_step_transition_forecast(
-            self.state.filter_state,
-            self.state.duration_log_prob,
-            self.state.transition_log_prob,
-            self.state.tail_end_probability,
-        )
+        return forecast(self)
 
     @torch.inference_mode()
     def step(

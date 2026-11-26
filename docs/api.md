@@ -36,12 +36,17 @@ NHSMM and GBM share lifecycle verbs, not tensor/target/state semantics or artifa
 formats. See the host's docs/model-api.md for the cross-model contract.
 
 
-For the restricted CPU Float64 classical HMM likelihood experiment,
-`model.enable_research_hmm_rust(library_path)` opts into a user-built
-Rust kernel and `model.disable_research_hmm_rust()` restores PyTorch.
-See [scope and build steps](model.md#opt-in-rust-hmm-likelihood-experiment).
+For the opt-in CPU Float64 HMM or causal HSMM/NHSMM likelihood experiment,
+`model.enable_research_rust(library_path)` opts into a user-built
+mode-specific Rust kernel when available; unsupported valid inputs use PyTorch.
+`model.disable_research_rust()` restores PyTorch. Native binaries are supplied
+separately; no Rust library is shipped in the wheel.
+See [scope and build steps](model.md#opt-in-rust-likelihood-switch).
 
-The causal one-step return API is `forecast_return(runtime, tail_threshold=...,
-zero_return=..., tail_center=..., next_context=...)`. It yields separate
-next-bar direction and tail-risk probabilities. See [model contract](model.md#one-step-return-prediction)
-for context timing, Gaussian scope, and training-only unit conversion.
+The causal one-step market-regime API is `runtime.forecast()`. Construct the
+runtime with a training-calibrated [K,5] `regime_projection` in the order
+`unknown, chaotic, bull, bear, range`. It returns [B,5] regime probabilities.
+Without a calibrated projection, it raises rather than guessing the meaning of
+unlabeled latent states. No future observation is consumed. See
+[model contract](model.md#forecasts).
+

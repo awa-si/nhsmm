@@ -13,6 +13,7 @@ import torch
 
 from nhsmm.context import context_options
 from nhsmm.filtering import _center_emission_log_probs, _duration_log_hazard_from_log_p
+from nhsmm.models.research_rust import NativeInputUnsupported
 
 
 def load_kernel(path):
@@ -53,7 +54,7 @@ def research_hsmm_likelihood(model, seq, temperature, fn):
         or len(seq.sequences) != 1
         or len(seq.lengths) != 1
     ):
-        raise ValueError("research Rust HSMM requires one causal D>=2 sequence")
+        raise NativeInputUnsupported("research Rust HSMM requires one causal D>=2 sequence")
     t = int(seq.lengths[0])
     em = seq.log_probs[0]
     if (
@@ -62,7 +63,9 @@ def research_hsmm_likelihood(model, seq, temperature, fn):
         or em.dtype != torch.float64
         or em.device.type != "cpu"
     ):
-        raise ValueError("research Rust HSMM requires one unpadded CPU Float64 sequence")
+        raise NativeInputUnsupported(
+            "research Rust HSMM requires one unpadded CPU Float64 sequence"
+        )
     kw = dict(temperature=temperature, T=t, soft_dmax=model.duration_logits_bias)
     mask = seq.context_mask
     pi = model.dist.initial.log_matrix(
@@ -78,7 +81,9 @@ def research_hsmm_likelihood(model, seq, temperature, fn):
         context=model._active_context(seq.contexts), **kw, **context_options(mask, canonical=False)
     )[0]
     if pi.shape != (cfg.n_states,) or q.shape != (t, cfg.n_states, cfg.max_duration):
-        raise ValueError("research Rust HSMM requires initial [K] and duration [T,K,D] laws")
+        raise NativeInputUnsupported(
+            "research Rust HSMM requires initial [K] and duration [T,K,D] laws"
+        )
     hfn = getattr(model.dist.duration, "tail_probability", None)
     h = None
     if callable(hfn):
@@ -92,7 +97,7 @@ def research_hsmm_likelihood(model, seq, temperature, fn):
         )
         if h is not None:
             if torch.is_grad_enabled() and bool((h == 1).any()):
-                raise ValueError("research Rust HSMM excludes exact h=1 boundary")
+                raise NativeInputUnsupported("research Rust HSMM excludes exact h=1 boundary")
             if h.ndim == 1:
                 h = h[None].expand(t, -1)
             else:
@@ -100,11 +105,11 @@ def research_hsmm_likelihood(model, seq, temperature, fn):
     end, cont = _duration_log_hazard_from_log_p(q, h)
     d = end.shape[-1]
     if end.shape != (t, cfg.n_states, d) or cont.shape != end.shape or d != cfg.max_duration:
-        raise ValueError("research Rust HSMM requires end/continuation [T,K,D] laws")
+        raise NativeInputUnsupported("research Rust HSMM requires end/continuation [T,K,D] laws")
     if a.ndim == 3:
         a = a.unsqueeze(2).expand(t, cfg.n_states, d, cfg.n_states)
     if a.shape != (t, cfg.n_states, d, cfg.n_states):
-        raise ValueError("unsupported transition shape")
+        raise NativeInputUnsupported("unsupported transition shape")
     centered, offset = _center_emission_log_probs(em)
     tensors = (pi, centered, a, end, cont)
     if any(
