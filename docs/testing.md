@@ -923,3 +923,25 @@ persistence estimate. Focused test ownership:
 For HMM D=1, the current latent episode necessarily terminates at each
 bar boundary even with a same-state transition; duration output does not
 estimate HMM-state or named-regime persistence.
+
+
+## Mandatory parallel AWA workspace tests (2026-11-26)
+
+The full Nautilus-owned `--test-group nhsmm` is split into exactly five
+mandatory, disjoint workspace execution groups by
+`awa-si/nautilus/scripts/nhsmm_test_groups.py`: `filtering-a`,
+`filtering-b`, `reference`, `training`, and `support`. The selection
+includes canonical model-core tests **and** Nautilus NHSMM integration/research
+tests that the existing `conftest.py` assigns to NHSMM. Launch up to five
+AWA `exec_group` containers concurrently from the Nautilus workspace,
+with an exact NHSMM source revision, individual exits and a mandatory
+all-groups-pass aggregation. Unknown ownership fails closed; no excluded
+slow cases are allowed. See Nautilus `docs/nhsmm-parallel-tests.md`.
+
+The 2026-11-26 five-group AWA run passed 1,919 test cases, with seven documented
+skips; the revision-bound result receipt is in Nautilus
+`docs/nhsmm-parallel-tests-results-20261126.md`.
+
+This is a **workspace-only execution contract**, not GitHub Actions.
+GitHub Actions workflows must not be changed or triggered without a
+separate explicit instruction.
