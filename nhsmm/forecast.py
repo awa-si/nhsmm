@@ -38,9 +38,7 @@ def validate_regime_projection(model: object, projection: torch.Tensor) -> torch
         raise ValueError("regime_projection must match model device and dtype")
     if not torch.isfinite(projection).all() or (projection < 0).any():
         raise ValueError("regime_projection must contain finite nonnegative probabilities")
-    if not torch.allclose(
-        projection.sum(-1), torch.ones_like(projection[:, 0]), rtol=0, atol=1e-6
-    ):
+    if not torch.allclose(projection.sum(-1), torch.ones_like(projection[:, 0]), rtol=0, atol=1e-6):
         raise ValueError("each regime_projection row must sum to one")
     return projection.detach().clone()
 
