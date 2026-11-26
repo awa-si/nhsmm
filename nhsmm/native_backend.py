@@ -53,8 +53,16 @@ def native_library_path(mode: str) -> Path | None:
         with tempfile.TemporaryDirectory(dir=cache) as temporary:
             candidate = Path(temporary) / target.name
             subprocess.run(
-                [rustc, "--edition=2024", "-C", "opt-level=3", "--crate-type=cdylib",
-                 str(source), "-o", str(candidate)],
+                [
+                    rustc,
+                    "--edition=2024",
+                    "-C",
+                    "opt-level=3",
+                    "--crate-type=cdylib",
+                    str(source),
+                    "-o",
+                    str(candidate),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=120,
