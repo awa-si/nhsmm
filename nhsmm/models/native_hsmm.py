@@ -60,9 +60,7 @@ def native_hsmm_likelihood(model, seq, temperature, fn):
         or em.dtype != torch.float64
         or em.device.type != "cpu"
     ):
-        raise NativeInputUnsupported(
-            "native Rust HSMM requires one unpadded CPU Float64 sequence"
-        )
+        raise NativeInputUnsupported("native Rust HSMM requires one unpadded CPU Float64 sequence")
     kw = dict(temperature=temperature, T=t, soft_dmax=model.duration_logits_bias)
     mask = seq.context_mask
     pi = model.dist.initial.log_matrix(
