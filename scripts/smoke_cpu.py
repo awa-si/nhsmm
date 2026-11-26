@@ -13,6 +13,7 @@ import torch
 import nhsmm
 from nhsmm import HSMMFilterRuntime, ModelConfig, NHSMM, load_artifact, save_artifact
 from nhsmm.filtering import filter_model_sequence
+from nhsmm.forecast import REGIMES
 
 
 def main():
@@ -46,7 +47,10 @@ def main():
                         torch.testing.assert_close(
                             restored.state_dict()[name], original, rtol=0, atol=0
                         )
-                    runtime = HSMMFilterRuntime(restored)
+                    projection = torch.nn.functional.one_hot(
+                        torch.arange(n_states) % len(REGIMES), len(REGIMES)
+                    ).to(dtype=dtype)
+                    runtime = HSMMFilterRuntime(restored, regime_projection=projection)
                     tolerance = 2e-5 if dtype == torch.float32 else 2e-12
                     for step, row in enumerate(x):
                         state = runtime.step(row, timestamp=step + 1)
@@ -57,18 +61,11 @@ def main():
                             rtol=0,
                             atol=tolerance,
                         )
-                    prediction = runtime.forecast(torch.tensor([True]))
+                    prediction = runtime.forecast()
+                    assert prediction.labels == REGIMES
                     torch.testing.assert_close(
-                        prediction.next_state_prior.sum(dim=-1),
+                        prediction.probabilities.sum(dim=-1),
                         torch.ones(1, dtype=dtype),
-                        rtol=0,
-                        atol=tolerance,
-                    )
-                    torch.testing.assert_close(
-                        prediction.mean,
-                        (prediction.next_state_prior.unsqueeze(-1) * prediction.component_mean).sum(
-                            dim=1
-                        ),
                         rtol=0,
                         atol=tolerance,
                     )
@@ -90,23 +87,18 @@ def main():
     )
     multivariate.initialize_distributions()
     multivariate.eval()
-    runtime = HSMMFilterRuntime(multivariate)
+    projection = torch.tensor([[1, 0, 0, 0, 0], [0, 0, 1, 0, 0]], dtype=torch.float32)
+    runtime = HSMMFilterRuntime(multivariate, regime_projection=projection)
     runtime.step(torch.tensor([0.1, -0.2, 0.3]))
-    full = runtime.forecast(torch.tensor([True, True, True]))
-    partial = runtime.forecast(torch.tensor([True, False, True]))
-    assert partial.feature_indices == (0, 2)
-    assert partial.component_mean.shape == (1, 2, 2)
-    torch.testing.assert_close(partial.next_state_prior, full.next_state_prior)
-    torch.testing.assert_close(partial.component_mean, full.component_mean[..., [0, 2]])
-    torch.testing.assert_close(partial.mean, full.mean[..., [0, 2]])
-    torch.testing.assert_close(partial.covariance, full.covariance[:, [0, 2]][:, :, [0, 2]])
-    for invalid in (torch.tensor([False, False, False]), torch.tensor([True, False])):
-        try:
-            runtime.forecast(invalid)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("invalid forecast mask was accepted")
+    prediction = runtime.forecast()
+    assert prediction.probabilities.shape == (1, len(REGIMES))
+    assert prediction.probabilities[0, 0] + prediction.probabilities[0, 2] > 0.999
+    try:
+        HSMMFilterRuntime(multivariate, regime_projection=torch.zeros(2, len(REGIMES)))
+    except ValueError as exc:
+        assert "sum to one" in str(exc)
+    else:
+        raise AssertionError("invalid regime projection was accepted")
 
     assert not hasattr(nhsmm, "ModelHealthThresholds")
     assert not hasattr(nhsmm, "evaluate_context_effect_replication")
