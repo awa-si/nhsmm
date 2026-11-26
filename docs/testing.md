@@ -11,18 +11,20 @@ updated: 2026-11-25
 
 # Model verification
 
-Canonical model, mathematical reference, distribution, training, runtime, artifact
-and validation-snapshot tests have migrated to the [Nautilus ML stack](https://github.com/awa-si/nautilus/tree/main/tests/ml_stack/nhsmm).
-There is no duplicate tests/ tree in this model package. Model implementation
-remains here; this core never imports the host.
+Synthetic model-core tests are now model-owned in `tests/ml_stack/nhsmm`.
+See [synthetic test ownership and transitional compatibility](synthetic-test-ownership.md).
+The core tests contain no Nautilus imports or market data requirements.
 
-Install this source checkout editable in the research environment, then run from
-Nautilus:
+Run the core tests directly from the NHSMM workspace:
 
 ```bash
-python -m pytest -q tests/ml_stack/nhsmm
-python -m pytest -q tests/ml_stack/nhsmm/reference
+python scripts/nhsmm_test_groups.py --verify
+python -B -m pytest -q -p no:cacheprovider tests/ml_stack/nhsmm
 ```
+
+For the full mandatory workspace gate, run each of the five
+`scripts/nhsmm_test_groups.py --group GROUP` selections concurrently
+and require all five groups to pass.
 
 The independent probability-space HSMM reference moved unchanged. Assertions,
 numerical tolerances, gradient/likelihood/filtering/Viterbi/finite-D+ checks, and
@@ -48,9 +50,9 @@ python scripts/smoke_cpu.py
 The public smoke verifies finite/D+ Float32/64 causal batch/stream parity,
 artifacts and fresh reset; it is not the full mathematical suite.
 
-The full canonical test suite is in `awa-si/nautilus/tests/ml_stack/nhsmm`.
-For any NHSMM source change, test the exact source against a pinned Nautilus
-test-owner SHA. Record JUnit results, source identity, CUDA skips and limits.
+The canonical synthetic model-core test suite is in this repository.
+Nautilus host integration tests remain separately owned and must run against
+a pinned NHSMM revision. Record JUnit results, source identity, CUDA skips and limits.
 Historical results do not qualify subsequent source revisions.
 
 Nautilus owns its own CI configuration independently. Removing NHSMM Actions

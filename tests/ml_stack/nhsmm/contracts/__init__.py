@@ -1,0 +1,1 @@
+"""NHSMM contracts verification tests."""
