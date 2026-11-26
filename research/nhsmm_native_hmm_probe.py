@@ -47,7 +47,8 @@ def main():
     model = NHSMM(config, device="cpu").to(dtype=torch.float64)
     model.initialize_distributions(jitter=0)
     base, native = copy.deepcopy(model), copy.deepcopy(model)
-    native.enable_research_rust(args.rust_lib)
+    base.set_backend("python")
+    native.set_backend("rust", library_path=args.rust_lib)
 
     def graph(m):
         m.zero_grad(set_to_none=True)

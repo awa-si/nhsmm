@@ -1,8 +1,4 @@
-"""Opt-in, research-only Rust likelihood for one static finite CPU HMM.
-
-The ABI intentionally requires a user-built library; it is not bundled in
-NHSMM wheels and is not an inference/production backend.
-"""
+"""Native first-order likelihood for one static finite CPU HMM."""
 
 from __future__ import annotations
 
@@ -13,7 +9,7 @@ import numpy as np
 import torch
 
 from nhsmm.filtering import _center_emission_log_probs
-from nhsmm.models.research_rust import NativeInputUnsupported
+from nhsmm.models.native_errors import NativeInputUnsupported
 
 
 def load_kernel(path: str | Path):
@@ -38,18 +34,18 @@ class _RustHMM(torch.autograd.Function):
             *(ctypes.c_void_p(a.ctypes.data) for a in (*arrays, likelihood, *grads)),
         )
         if status != 0:
-            raise ValueError(f"research Rust HMM kernel failed with status {status}")
+            raise ValueError(f"Rust HMM kernel failed with status {status}")
         ctx.save_for_backward(*(torch.from_numpy(g) for g in grads))
         return initial.new_tensor(likelihood[0])
 
     @staticmethod
     def backward(ctx, upstream):
         if torch.is_grad_enabled():
-            raise RuntimeError("research Rust HMM kernel supports first-order gradients only")
+            raise RuntimeError("Rust HMM kernel supports first-order gradients only")
         return (*(upstream * g for g in ctx.saved_tensors), None)
 
 
-def research_hmm_likelihood(model, sequence, temperature, function):
+def native_hmm_likelihood(model, sequence, temperature, function):
     """Fail closed outside the measured single-sequence Float64 D=1 scope."""
     config = model.config
     if (

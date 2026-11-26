@@ -1,4 +1,4 @@
-"""Shared scope signal for optional research-only native likelihoods."""
+"""Shared scope signal for native likelihood fallback."""
 
 
 class NativeInputUnsupported(ValueError):

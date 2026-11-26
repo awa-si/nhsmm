@@ -665,26 +665,28 @@ existing state-age implementation. The optimizer and artifact schema are
 unchanged.
 
 
-## Opt-in Rust likelihood switch
+## Native likelihood backend
 
-`NHSMM.enable_research_rust(library_path)` selects the HMM kernel for
-`model_mode="hmm"` and the HSMM kernel for causal `"hsmm"` or `"nhsmm"`
-with D>=2. They remain specialized native implementations with separate
-library files. A successfully loaded library is preferred for supported
-likelihood calls; `enable_research_rust()` returns a boolean indicating whether
-it loaded. Missing or incompatible libraries and valid inputs outside native
-scope use PyTorch. Native status errors, invalid scores and unsupported
-higher-order gradients remain errors. `disable_research_rust()` selects PyTorch.
-Without a separately supplied library the default is PyTorch; wheels do not
-bundle native code. The switch does not affect `forecast()`.
+The default `backend="auto"` prefers a native Rust likelihood for supported
+inputs. NHSMM packages the Rust sources and compiles the applicable cdylib into
+the user cache on first use when `rustc` is available. A compatible prebuilt
+library can be selected with `NHSMM_NATIVE_HMM_LIB` or
+`NHSMM_NATIVE_HSMM_LIB`. If a compiler/library is unavailable or a valid input
+falls outside the native scope, `auto` uses the Python likelihood. Native
+status failures and invalid numerical scores remain errors.
 
-### HMM likelihood experiment
+`model.set_backend("python")` forces Python;
+`model.set_backend("rust", library_path="/path/to/library")` requires a native
+library and raises if it is unavailable or the input is unsupported. A call to
+`set_backend("auto")` resets discovery. The selection is runtime-only and is not
+serialized in model artifacts. HMM D=1 and causal HSMM/NHSMM D>=2 use separate
+kernels. Filtering, decoding, supervised objectives, direct forward and
+`forecast()` remain Python/PyTorch paths. No compiled binary is shipped.
 
-`NHSMM.enable_research_rust(library_path)` replaces only the
-generative observation likelihood used by `log_likelihood()` and
-`optimize()`. The default remains PyTorch; `disable_research_rust()`
-restores it. The choice is runtime-only and does not enter ModelConfig,
-state_dict, or an artifact. Loaded artifacts start on the default path.
+### HMM likelihood scope
+
+The native backend replaces only the generative observation likelihood used by
+`log_likelihood()` and `optimize()`. Loaded artifacts use automatic selection.
 Forward tensors, causal filtering, Viterbi, supervised objectives, HSMM
 and neural context paths do not use this kernel.
 
@@ -693,11 +695,10 @@ finite D=1 HMM sequence on CPU in Float64, with finite initial,
 transition and emission log scores. It supplies first-order gradients
 to Adam; higher derivatives are rejected. Batches, unsupported dtypes
 and static-law mismatches use the PyTorch likelihood. Invalid scores and
-native kernel errors remain visible. The Rust library is user-built and not
-shipped in the package:
+native kernel errors remain visible. The packaged source can be built manually:
 
 ```bash
-rustc --edition=2024 -O --crate-type=cdylib research/nhsmm_native_hmm_probe.rs -o /tmp/libnhsmm_hmm.so
+rustc --edition=2024 -O --crate-type=cdylib nhsmm/native/hmm.rs -o /tmp/libnhsmm_hmm.so
 ```
 
 ```python
@@ -706,9 +707,9 @@ from nhsmm import ModelConfig, NHSMM
 model = NHSMM(ModelConfig.for_mode("hmm", n_states=3, n_features=1), device="cpu")
 model.initialize_distributions(jitter=0)
 model.to(dtype=torch.float64)
-model.enable_research_rust("/tmp/libnhsmm_hmm.so")
+model.set_backend("rust", library_path="/tmp/libnhsmm_hmm.so")
 # model.optimize(one_cpu_float64_sequence)
-model.disable_research_rust()
+model.set_backend("python")
 ```
 
 The native implementation retains per-row emission centering, restores
@@ -716,10 +717,10 @@ log-evidence offsets, and preserves the zero-gradient duration graph.
 The ABI trusts validated contiguous buffers from the Python boundary.
 On one source-checked 335-row BTC 1h sequence (K=3, F=1, one CPU
 thread), a same-process 80-update Adam A/B measured 55.529 s for the
-default likelihood and 1.065 s for the opt-in path (52.1x); maximum
+Python likelihood and 1.065 s for the native path (52.1x); maximum
 final parameter difference was 1.60e-13. This is one run, not a
 cross-workload or repeat-run latency distribution. For the
-same 335-row likelihood-plus-backward probe, the default path had
+same 335-row likelihood-plus-backward probe, the Python path had
 mean/p50/p95 523.16/429.77/723.75 ms (12 repeats), and the opt-in
 path 5.19/5.19/6.17 ms (40 repeats). These timings include model
 emissions and Python dispatch but not an Adam update.
@@ -727,14 +728,13 @@ The code and source-checked BTC research probes live in `research/`;
 they require a separately supplied dataset loader and do not add a
 market-data dependency to NHSMM.
 
-### Dynamic HSMM likelihood experiment
+### Dynamic HSMM likelihood scope
 
-`NHSMM.enable_research_rust(library_path)` selects a user-built native
-kernel for the **causal generative likelihood** used by `log_likelihood()`
-and `fit()/optimize()`. `disable_research_rust()` restores PyTorch.
-The setting is runtime-only: config, state_dict and artifacts do not carry it.
+The native backend selects a Rust kernel for the **causal generative likelihood**
+used by `log_likelihood()` and `fit()/optimize()`.
+The selection is runtime-only: config, state_dict and artifacts do not carry it.
 Filtering, decoding, supervised objectives and direct `forward()` calls
-continue to use PyTorch. The library is not included in wheels.
+continue to use PyTorch. Compiled libraries are not included in wheels.
 
 The research boundary accepts one nonempty, unpadded causal HSMM/NHSMM
 sequence with D>=2, on CPU in Float64. It accepts time- and age-dependent
@@ -746,22 +746,22 @@ errors. Compile from the
 source checkout with a local Rust toolchain:
 
 ```bash
-rustc --edition=2024 -C opt-level=3 --crate-type cdylib research/nhsmm_native_hsmm_probe.rs -o /tmp/libnhsmm_hsmm.so
+rustc --edition=2024 -C opt-level=3 --crate-type cdylib nhsmm/native/hsmm.rs -o /tmp/libnhsmm_hsmm.so
 ```
 
 ```python
 model = NHSMM(config, device="cpu")  # causal HSMM/NHSMM, D>=2
 model.initialize_distributions()
 model = model.double()
-model.enable_research_rust("/tmp/libnhsmm_hsmm.so")
+model.set_backend("rust", library_path="/tmp/libnhsmm_hsmm.so")
 # model.fit(one_cpu_float64_sequence, context=causal_context)
-model.disable_research_rust()
+model.set_backend("python")
 ```
 
 The Rust routine propagates and differentiates the expanded state-age chain
 in the log domain. The Python boundary keeps the existing emission centering,
 hazard transformation and head gradients. The ABI trusts validated contiguous
-buffers from the opt-in wrapper. Numerical and timing evidence is recorded in
+buffers from the native wrapper. Numerical and timing evidence is recorded in
 [verification](testing.md#opt-in-rust-dynamic-hsmm-likelihood-verification-2026-11-24);
 these CPU research results do not qualify a production backend or a
 cross-workload speedup.

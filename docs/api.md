@@ -37,11 +37,13 @@ formats. See the host's docs/model-api.md for the cross-model contract.
 
 
 For the opt-in CPU Float64 HMM or causal HSMM/NHSMM likelihood experiment,
-`model.enable_research_rust(library_path)` opts into a user-built
-mode-specific Rust kernel when available; unsupported valid inputs use PyTorch.
-`model.disable_research_rust()` restores PyTorch. Native binaries are supplied
-separately; no Rust library is shipped in the wheel.
-See [scope and build steps](model.md#opt-in-rust-likelihood-switch).
+The default backend is `auto`: it uses the native HMM or HSMM likelihood when
+`rustc` can build the packaged Rust source, or when a compatible library is
+supplied through `NHSMM_NATIVE_HMM_LIB` / `NHSMM_NATIVE_HSMM_LIB`. Missing native
+support and valid out-of-scope inputs use Python. Use `model.set_backend("python")`
+to force Python, or `model.set_backend("rust", library_path=...)` to require Rust.
+This choice affects the generative likelihood, not filtering or `forecast()`.
+See [scope and build steps](model.md#native-likelihood-backend).
 
 The causal one-step market-regime API is `runtime.forecast()`. Construct the
 runtime with a training-calibrated [K,5] `regime_projection` in the order

@@ -65,6 +65,9 @@ include-package-data = true
 [tool.setuptools.packages.find]
 include = ["nhsmm*"]
 
+[tool.setuptools.package-data]
+nhsmm = ["native/*.rs"]
+
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
 local_scheme = "no-local-version"

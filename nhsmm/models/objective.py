@@ -9,7 +9,7 @@ import torch
 
 from nhsmm.filtering import _center_emission_log_probs, _safe_logsumexp
 from nhsmm.models.boundary import tail_boundary_score
-from nhsmm.models.research_rust import NativeInputUnsupported
+from nhsmm.models.native_errors import NativeInputUnsupported
 
 
 def raw_sequence_scores(model, sequence, temperature=None):
@@ -37,21 +37,22 @@ def raw_sequence_scores(model, sequence, temperature=None):
 
 
 def observation_log_likelihood(model, sequence, temperature=None):
-    native = getattr(model, "_research_rust", None)
+    native = model._native_kernel()
     if native is not None:
         mode, kernel = native
         if mode != model.config.model_mode:
-            raise ValueError("model mode changed after research Rust activation")
+            raise ValueError("model mode changed after native backend selection")
         try:
             if mode == "hmm":
-                from nhsmm.models.research_hmm_rust import research_hmm_likelihood
+                from nhsmm.models.native_hmm import native_hmm_likelihood
 
-                return research_hmm_likelihood(model, sequence, temperature, kernel[1])
-            from nhsmm.models.research_hsmm_rust import research_hsmm_likelihood
+                return native_hmm_likelihood(model, sequence, temperature, kernel[1])
+            from nhsmm.models.native_hsmm import native_hsmm_likelihood
 
-            return research_hsmm_likelihood(model, sequence, temperature, kernel[1])
+            return native_hsmm_likelihood(model, sequence, temperature, kernel[1])
         except NativeInputUnsupported:
-            pass
+            if model.backend == "rust":
+                raise
     numerator = raw_sequence_scores(model, sequence, temperature)
     if model.config.causal:
         return numerator

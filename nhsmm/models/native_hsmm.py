@@ -1,7 +1,4 @@
-"""Opt-in, research-only Rust likelihood and first-order VJP for one CPU HSMM.
-
-The native library is user-built, never included in NHSMM wheels or artifacts.
-"""
+"""Native first-order likelihood and VJP for one CPU HSMM."""
 
 from __future__ import annotations
 
@@ -13,7 +10,7 @@ import torch
 
 from nhsmm.context import context_options
 from nhsmm.filtering import _center_emission_log_probs, _duration_log_hazard_from_log_p
-from nhsmm.models.research_rust import NativeInputUnsupported
+from nhsmm.models.native_errors import NativeInputUnsupported
 
 
 def load_kernel(path):
@@ -34,18 +31,18 @@ class _RustHSMM(torch.autograd.Function):
         grads = [np.empty_like(v) for v in arrays]
         code = fn(t, k, d, *(ctypes.c_void_p(v.ctypes.data) for v in (*arrays, score, *grads)))
         if code:
-            raise ValueError(f"research Rust HSMM kernel status {code}")
+            raise ValueError(f"Rust HSMM kernel status {code}")
         ctx.save_for_backward(*(torch.from_numpy(v) for v in grads))
         return pi.new_tensor(score[0])
 
     @staticmethod
     def backward(ctx, upstream):
         if torch.is_grad_enabled():
-            raise RuntimeError("research Rust HSMM supports first-order gradients only")
+            raise RuntimeError("Rust HSMM supports first-order gradients only")
         return (*(upstream * g for g in ctx.saved_tensors), None)
 
 
-def research_hsmm_likelihood(model, seq, temperature, fn):
+def native_hsmm_likelihood(model, seq, temperature, fn):
     cfg = model.config
     if (
         cfg.model_mode not in {"hsmm", "nhsmm"}

@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import replace
 from copy import deepcopy
-import warnings
 from typing import Optional, List, Tuple, Any, Literal, Dict, Union
 
 import torch
@@ -190,7 +189,10 @@ class NHSMM(nn.Module):
         self.hidden_dim = self.config.hidden_dim
 
         self.dist: Optional[DistributionSet] = None
-        self._research_rust = None
+        self.backend: Literal["auto", "rust", "python"] = "auto"
+        self._native_library_path: Optional[str] = None
+        self._native_checked = False
+        self._native_path: Optional[str] = None
         self.duration_logits_bias = nn.Parameter(
             torch.ones(self.config.n_states, self.config.max_duration)
         )
@@ -198,39 +200,52 @@ class NHSMM(nn.Module):
         self.initialize_encoder(encoder=encoder)
         self.to(device=self.device, dtype=DTYPE)
 
-    def enable_research_rust(self, library_path: str) -> bool:
-        """Prefer a mode-specific user-built Rust likelihood kernel when available.
+    def set_backend(
+        self,
+        backend: Literal["auto", "rust", "python"],
+        *,
+        library_path: Optional[str] = None,
+    ) -> None:
+        """Choose automatic native preference, strict Rust, or the Python path.
 
-        HMM uses the static D=1 kernel; causal HSMM/NHSMM uses the D>=2
-        kernel. Unsupported valid inputs use PyTorch. A missing or incompatible
-        library also leaves PyTorch active and returns False. Kernel failures
-        and invalid numerical scores still raise. No native kernel is bundled.
+        Automatic mode tries a packaged-source Rust build and falls back to
+        Python when unavailable or outside native input scope. Strict Rust
+        raises instead. The selection is runtime-only, not model state.
         """
+        if backend not in {"auto", "rust", "python"}:
+            raise ValueError("backend must be auto, rust or python")
+        if library_path is not None and backend == "python":
+            raise ValueError("library_path is incompatible with backend=python")
+        self.backend = backend
+        self._native_library_path = library_path
+        self._native_checked = False
+        self._native_path = None
+
+    def _native_kernel(self):
+        if self.backend == "python":
+            return None
         mode = self.config.model_mode
-        if mode == "hmm":
-            from nhsmm.models.research_hmm_rust import load_kernel
-        elif mode in {"hsmm", "nhsmm"}:
-            if not self.config.causal or self.config.max_duration < 2:
-                self._research_rust = None
-                return False
-            from nhsmm.models.research_hsmm_rust import load_kernel
-        else:
-            raise ValueError("unknown model mode for research Rust")
+        if not self.config.causal or (mode != "hmm" and self.config.max_duration < 2):
+            if self.backend == "rust":
+                raise RuntimeError("Rust requires a causal HMM or D>=2 HSMM/NHSMM")
+            return None
+        from nhsmm.native_backend import load_native_kernel, native_library_path
 
+        if not self._native_checked:
+            path = self._native_library_path or native_library_path(mode)
+            self._native_path = str(path) if path is not None else None
+            self._native_checked = True
+        if self._native_path is None:
+            if self.backend == "rust":
+                raise RuntimeError("Rust kernel unavailable; install rustc or supply library_path")
+            return None
         try:
-            kernel = load_kernel(library_path)
-        except (OSError, AttributeError) as exc:
-            self._research_rust = None
-            warnings.warn(
-                f"research Rust unavailable; using PyTorch: {exc}", RuntimeWarning, stacklevel=2
-            )
-            return False
-        self._research_rust = (mode, kernel)
-        return True
-
-    def disable_research_rust(self) -> None:
-        """Return to the default PyTorch likelihood path."""
-        self._research_rust = None
+            return mode, load_native_kernel(mode, self._native_path)
+        except (OSError, AttributeError, ValueError) as exc:
+            if self.backend == "rust":
+                raise RuntimeError(f"Rust kernel unavailable: {exc}") from exc
+            self._native_path = None
+            return None
 
     def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
         if encoder is None and not self.config.use_context_encoder:
