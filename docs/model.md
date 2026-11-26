@@ -726,8 +726,8 @@ Explicit unknown-age initialization and boundary-aware fitting: [stationary entr
 ## Calibrated next-step market-regime forecast
 
 The high-level forecasting interface is **only**
-`HSMMFilterRuntime.forecast()`, returning an immutable `Forecast`
-with `probabilities[B,5]` in the fixed `REGIMES` order:
+`HSMMFilterRuntime.forecast(duration_horizons=(1, 3, 6))`, returning
+an immutable `Forecast` with `probabilities[B,5]` in the fixed `REGIMES` order:
 `unknown`, `chaotic`, `bull`, `bear`, `range`.
 This forecasts the next market-regime label after the last completed
 observation; it does not predict a return, trade direction, tail
@@ -747,3 +747,19 @@ training-only UTC bounds and persistence with the specific model.
 See the host's `docs/nhsmm-regime-forecast.md` and
 `adapter/nhsmm/regime_calibration.py`. A model artifact by itself has
 no regime projection and cannot generate semantic regime forecasts.
+
+The same Forecast includes `duration`, an `HSMMSurvivalForecast` with
+`horizons[H]`, `survival_probability[B,H]` and
+`end_within_probability[B,H]`. Horizons are **bars**, not hours or
+days; convert with the actual bar cadence. Survival means the
+current **latent episode** remains active h boundaries in the future.
+It does **not** imply the observed market regime label persists:
+multiple latent states can map to the same named regime. The current
+duration law is held fixed (no invented future exogenous context).
+This is the existing `forecast_survival` estimator included alongside
+the five named next-step regime probabilities.
+
+For a classical HMM with fixed D=1, episode survival beyond one bar is
+identically zero by model construction: the current episode ends at each
+step, even if self-transition immediately re-enters the same latent state.
+Do not report this quantity as HMM state or named-regime persistence.

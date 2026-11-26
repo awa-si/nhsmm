@@ -207,3 +207,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Reviewed precompiled NHSMM Rust likelihood kernels (Linux x86-64 glibc).
+# All other local shared-library outputs remain ignored.
+!src/native/linux_x86_64_glibc/libnhsmm_hmm.so
+!src/native/linux_x86_64_glibc/libnhsmm_hsmm.so
+!nhsmm/native/prebuilt/linux_x86_64_glibc/libnhsmm_hmm.so
+!nhsmm/native/prebuilt/linux_x86_64_glibc/libnhsmm_hsmm.so

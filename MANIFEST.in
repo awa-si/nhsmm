@@ -1,0 +1,3 @@
+recursive-include nhsmm/native *.rs
+recursive-include nhsmm/native/prebuilt *.so *.json
+recursive-include src/native *.so README.md

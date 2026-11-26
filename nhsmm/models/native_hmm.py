@@ -85,12 +85,19 @@ def native_hmm_likelihood(model, sequence, temperature, function):
     initial = initial_law[0, 0]
     transition = transition_law[0, 0, :, 0, :]
     if any(
-        tensor.device.type != "cpu"
-        or tensor.dtype != torch.float64
-        or not bool(torch.isfinite(tensor).all())
+        tensor.device.type != "cpu" or tensor.dtype != torch.float64
         for tensor in (initial, transition, emission)
     ):
-        raise ValueError("native Rust HMM requires finite CPU Float64 log scores")
+        raise NativeInputUnsupported("native Rust HMM requires CPU Float64 log scores")
+    if any(
+        bool(torch.isnan(tensor).any()) or bool(torch.isposinf(tensor).any())
+        for tensor in (initial, transition, emission)
+    ):
+        raise ValueError("native Rust HMM log scores must not contain NaN or +inf")
+    if any(bool(torch.isneginf(tensor).any()) for tensor in (initial, transition, emission)):
+        # A structural zero is legitimate in the PyTorch log semiring. The
+        # measured Rust HMM ABI requires strictly finite log scores.
+        raise NativeInputUnsupported("native Rust HMM excludes hard-zero log support")
     # No transition is traversed for T=1; match the ordinary path's absent gradient.
     if t == 1:
         transition = transition.detach()

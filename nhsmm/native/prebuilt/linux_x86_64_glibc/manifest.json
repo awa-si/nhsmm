@@ -1,0 +1,25 @@
+{
+  "abi": "native likelihood v1; one CPU Float64 sequence, first derivatives",
+  "arch": "x86_64",
+  "endianness": "little",
+  "kernels": {
+    "hmm": {
+      "binary": "libnhsmm_hmm.so",
+      "binary_sha256": "6c8c35901a8cdda3fc8a70f4a1777410dadb8aa683fdbfe75fefd9b0c30853e3",
+      "size": 320928,
+      "source_sha256": "5687fcde0516baf913761cfb445acc11294406aab850e8a31889cdcbd78908b3",
+      "symbol": "hmm_forward_backward"
+    },
+    "hsmm": {
+      "binary": "libnhsmm_hsmm.so",
+      "binary_sha256": "2c4bda1cce5581936a4db76c146008229ac2dd60748c99167362bd19f7be312e",
+      "size": 323360,
+      "source_sha256": "199dfbc0b2ac9d8ce50e1625d16cdcdd41e21e7a4c91ef15539846f4a2114613",
+      "symbol": "hsmm_forward_backward"
+    }
+  },
+  "min_glibc": "2.34",
+  "origin": "verified AWA local compiled artifacts, 2026-11-26; source/build reproducibility not independently attested",
+  "schema": "nhsmm-prebuilt-rust-v1",
+  "target": "linux-x86_64-gnu"
+}

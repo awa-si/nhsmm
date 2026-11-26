@@ -889,3 +889,37 @@ The source checkout was verified with the pinned canonical Nautilus
 test owner; research/core smoke and platform-specific compiler paths
 must be reported separately. No full multi-platform suite or
 cross-workload production performance certification is claimed here.
+
+
+## Packaged precompiled native kernels and episode-duration forecast (2026-11-26)
+
+The source tree includes stripped precompiled Linux x86-64 GNU/glibc
+HMM and HSMM cdylibs in `src/native/linux_x86_64_glibc/` and package
+resource copies at `nhsmm/native/prebuilt/linux_x86_64_glibc/`.
+The manifest pins source and binary SHA-256 and a glibc >=2.34
+minimum. Loader selection checks architecture, glibc and digests
+before loading. An explicit library override still takes priority;
+otherwise a valid prebuilt binary avoids a local Rust build.
+On unsupported systems or failed integrity checks, the existing
+source-build path or Python fallback applies. Strict Rust mode
+still rejects missing compatible native kernels. ABI symbols and
+CPU likelihood/first-derivative parity require focused validation.
+
+The wheel must carry a Linux platform tag rather than `py3-none-any`;
+the source distribution also carries the packaged resources. Binary
+provenance is a locally available previous compiled artifact and
+differential tests, not independently attested reproducible rebuilding.
+These packages are not manylinux-certified.
+
+`forecast()` now returns both five calibrated next-market-regime
+probabilities and selected-horizon **current latent-episode**
+survival/end probabilities. The latter use the existing
+`active_episode_survival_forecast` path, with current duration
+parameters held fixed. It is not a semantic market-regime
+persistence estimate. Focused test ownership:
+`tests/ml_stack/nhsmm/runtime/test_regime_forecast.py` and
+`tests/ml_stack/nhsmm/runtime/test_native_prebuilt.py` in Nautilus.
+
+For HMM D=1, the current latent episode necessarily terminates at each
+bar boundary even with a same-state transition; duration output does not
+estimate HMM-state or named-regime persistence.

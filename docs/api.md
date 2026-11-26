@@ -48,3 +48,9 @@ five next-step market-regime probabilities ordered
 training-calibrated state-to-regime matrix, supplied explicitly to the
 runtime. No latent state is named bull/bear without calibration.
 See [forecast contract](model.md#calibrated-next-step-market-regime-forecast).
+
+`runtime.forecast(duration_horizons=(1, 3, 6))` also returns
+`forecast.duration.survival_probability` and `end_within_probability`
+for the **current latent episode** at selected future bar horizons.
+These are latent-episode duration probabilities, not the duration of
+the five named market regimes; see the model contract.

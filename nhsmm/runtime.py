@@ -444,11 +444,11 @@ class HSMMFilterRuntime:
         )
 
     @torch.inference_mode()
-    def forecast(self):
-        """One-step five-regime probabilities; an admitted projection is mandatory."""
+    def forecast(self, *, duration_horizons: HorizonInput = (1, 3, 6)):
+        """Five named next-step regimes plus current-episode survival by horizon."""
         from nhsmm.forecast import forecast
 
-        return forecast(self)
+        return forecast(self, duration_horizons=duration_horizons)
 
     @torch.inference_mode()
     def forecast_transition(self) -> HSMMTransitionForecast:
