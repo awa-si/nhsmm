@@ -189,6 +189,10 @@ class NHSMM(nn.Module):
         self.hidden_dim = self.config.hidden_dim
 
         self.dist: Optional[DistributionSet] = None
+        self.backend: Literal["auto", "rust", "python"] = "auto"
+        self._native_library_path: Optional[str] = None
+        self._native_checked = False
+        self._native_path: Optional[str] = None
         self.duration_logits_bias = nn.Parameter(
             torch.ones(self.config.n_states, self.config.max_duration)
         )
@@ -196,40 +200,56 @@ class NHSMM(nn.Module):
         self.initialize_encoder(encoder=encoder)
         self.to(device=self.device, dtype=DTYPE)
 
-    def enable_research_hmm_rust(self, library_path: str) -> None:
-        """Opt in to a user-built Rust CPU Float64 HMM likelihood kernel.
+    def set_backend(
+        self,
+        backend: Literal["auto", "rust", "python"],
+        *,
+        library_path: Optional[str] = None,
+    ) -> None:
+        """Choose automatic native preference, strict Rust, or the Python path.
 
-        Research only: one finite static D=1 sequence and first-order gradients.
-        This runtime choice is not serialized in config, state_dict or artifacts.
-        Unsupported inputs fail explicitly at the likelihood boundary.
+        Automatic mode tries a packaged-source Rust build and falls back to
+        Python when unavailable or outside native input scope. Strict Rust
+        raises instead. The selection is runtime-only, not model state.
         """
-        if self.config.model_mode != "hmm":
-            raise ValueError("research Rust HMM is only available for mode=hmm")
-        from nhsmm.models.research_hmm_rust import load_kernel
+        if not isinstance(backend, str) or backend not in {"auto", "rust", "python"}:
+            raise ValueError("backend must be auto, rust or python")
+        if library_path is not None and (
+            not isinstance(library_path, str) or not library_path.strip()
+        ):
+            raise ValueError("library_path must be a nonempty path string")
+        if library_path is not None and backend == "python":
+            raise ValueError("library_path is incompatible with backend=python")
+        self.backend = backend
+        self._native_library_path = library_path
+        self._native_checked = False
+        self._native_path = None
 
-        self._research_hmm_rust = load_kernel(library_path)
+    def _native_kernel(self):
+        if self.backend == "python":
+            return None
+        mode = self.config.model_mode
+        if not self.config.causal or (mode != "hmm" and self.config.max_duration < 2):
+            if self.backend == "rust":
+                raise RuntimeError("Rust requires a causal HMM or D>=2 HSMM/NHSMM")
+            return None
+        from nhsmm.native_backend import load_native_kernel, native_library_path
 
-    def disable_research_hmm_rust(self) -> None:
-        """Return to the default PyTorch likelihood path."""
-        self._research_hmm_rust = None
-
-    def enable_research_hsmm_rust(self, library_path: str) -> None:
-        """Opt in to a user-built CPU Float64 HSMM likelihood/VJP kernel.
-
-        Research only: one unpadded causal D>=2 sequence and first-order
-        gradients. Runtime choice is not serialized; unsupported inputs fail.
-        """
-        if self.config.model_mode not in {"hsmm", "nhsmm"} or not self.config.causal:
-            raise ValueError("research Rust HSMM requires causal mode=hsmm/nhsmm")
-        if self.config.max_duration < 2:
-            raise ValueError("research Rust HSMM requires max_duration >= 2")
-        from nhsmm.models.research_hsmm_rust import load_kernel
-
-        self._research_hsmm_rust = load_kernel(library_path)
-
-    def disable_research_hsmm_rust(self) -> None:
-        """Return to the default PyTorch likelihood path."""
-        self._research_hsmm_rust = None
+        if not self._native_checked:
+            path = self._native_library_path or native_library_path(mode)
+            self._native_path = str(path) if path is not None else None
+            self._native_checked = True
+        if self._native_path is None:
+            if self.backend == "rust":
+                raise RuntimeError("Rust kernel unavailable; install rustc or supply library_path")
+            return None
+        try:
+            return mode, load_native_kernel(mode, self._native_path)
+        except (OSError, AttributeError, ValueError) as exc:
+            if self.backend == "rust":
+                raise RuntimeError(f"Rust kernel unavailable: {exc}") from exc
+            self._native_path = None
+            return None
 
     def initialize_encoder(self, encoder: Optional[nn.Module] = None) -> None:
         if encoder is None and not self.config.use_context_encoder:

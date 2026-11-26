@@ -863,3 +863,29 @@ the multi-period model runs include
 No CUDA, batching, Float32, h=1 tail-boundary gradient or second derivatives
 are established. The canonical suite on the exact source snapshot:
 1,698 passed, six skipped (three CUDA-unavailable, three opt-in Rust HMM library unavailable), zero failures; Nautilus test owner `efc8d8f6febde003c31743536e481f3e636bfa42`, AWA job `451b619d5880425e8b885d35a23e0b03`.
+
+
+## Native-default backend and five-regime forecast focused gate (2026-11-26)
+
+Following the old opt-in prototypes, the model now defaults to
+`set_backend("auto")`: compatible HMM/HSMM first-order likelihoods
+prefer Rust; missing compiler, unsupported inputs and failed library
+loads fall back to PyTorch. Strict `rust` mode raises; `python`
+always uses PyTorch. Both Rust source files are packaged in the wheel
+and sdist, but prebuilt libraries are not bundled.
+
+New focused cases live in Nautilus
+`tests/ml_stack/nhsmm/runtime/test_regime_forecast.py` and the
+migrated HMM reference test. Host-owned supervised label calibration,
+model-bound persistence and refit invalidation are tested in
+`tests/test_nhsmm_regime_calibration.py`.
+
+The high-level `forecast()` produces only
+`unknown/chaotic/bull/bear/range` next-step probabilities.
+The trained projection is not inferred from latent state indices and
+must be re-calibrated after model changes.
+
+The source checkout was verified with the pinned canonical Nautilus
+test owner; research/core smoke and platform-specific compiler paths
+must be reported separately. No full multi-platform suite or
+cross-workload production performance certification is claimed here.

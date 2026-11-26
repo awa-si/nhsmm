@@ -36,12 +36,15 @@ NHSMM and GBM share lifecycle verbs, not tensor/target/state semantics or artifa
 formats. See the host's docs/model-api.md for the cross-model contract.
 
 
-For the restricted CPU Float64 classical HMM likelihood experiment,
-`model.enable_research_hmm_rust(library_path)` opts into a user-built
-Rust kernel and `model.disable_research_hmm_rust()` restores PyTorch.
-See [scope and build steps](model.md#opt-in-rust-hmm-likelihood-experiment).
+The likelihood backend defaults to `auto`, preferring compatible
+packaged-source native Rust kernels and falling back to PyTorch for
+unsupported inputs or absent toolchains. Choose `model.set_backend("python")`
+to force PyTorch or `model.set_backend("rust")` for strict Rust.
+See [backend scope](model.md#native-rust-likelihood-backend-preferred-when-compatible).
 
-The causal one-step return API is `forecast_return(runtime, tail_threshold=...,
-zero_return=..., tail_center=..., next_context=...)`. It yields separate
-next-bar direction and tail-risk probabilities. See [model contract](model.md#one-step-return-prediction)
-for context timing, Gaussian scope, and training-only unit conversion.
+The single high-level forecast is `HSMMFilterRuntime.forecast()`:
+five next-step market-regime probabilities ordered
+`unknown/chaotic/bull/bear/range`. It requires a Nautilus
+training-calibrated state-to-regime matrix, supplied explicitly to the
+runtime. No latent state is named bull/bear without calibration.
+See [forecast contract](model.md#calibrated-next-step-market-regime-forecast).
