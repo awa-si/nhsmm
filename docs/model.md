@@ -721,7 +721,7 @@ Python likelihood and 1.065 s for the native path (52.1x); maximum
 final parameter difference was 1.60e-13. This is one run, not a
 cross-workload or repeat-run latency distribution. For the
 same 335-row likelihood-plus-backward probe, the Python path had
-mean/p50/p95 523.16/429.77/723.75 ms (12 repeats), and the opt-in
+mean/p50/p95 523.16/429.77/723.75 ms (12 repeats), and the native
 path 5.19/5.19/6.17 ms (40 repeats). These timings include model
 emissions and Python dispatch but not an Adam update.
 The code and source-checked BTC research probes live in `research/`;

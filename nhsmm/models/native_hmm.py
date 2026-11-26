@@ -57,15 +57,15 @@ def native_hmm_likelihood(model, sequence, temperature, function):
         or config.transition_type != "ergodic"
         or not config.allow_self_transitions
     ):
-        raise NativeInputUnsupported("research Rust HMM requires a static causal ergodic D=1 model")
+        raise NativeInputUnsupported("native Rust HMM requires a static causal ergodic D=1 model")
     if len(sequence.sequences) != 1 or len(sequence.lengths) != 1:
-        raise NativeInputUnsupported("research Rust HMM requires exactly one sequence")
+        raise NativeInputUnsupported("native Rust HMM requires exactly one sequence")
     emission = sequence.log_probs[0]
     t, k = emission.shape
     if t < 1 or int(sequence.lengths[0]) != t or k != config.n_states:
-        raise NativeInputUnsupported("research Rust HMM requires one nonempty unpadded sequence")
+        raise NativeInputUnsupported("native Rust HMM requires one nonempty unpadded sequence")
     if emission.device.type != "cpu" or emission.dtype != torch.float64:
-        raise NativeInputUnsupported("research Rust HMM requires CPU Float64 emissions")
+        raise NativeInputUnsupported("native Rust HMM requires CPU Float64 emissions")
 
     initial_law = model.dist.initial.log_matrix(temperature=temperature, T=t)
     transition_law = model.dist.transition.log_matrix(temperature=temperature, T=t)
@@ -81,7 +81,7 @@ def native_hmm_likelihood(model, sequence, temperature, function):
         )
         or not bool(torch.all(duration == 0))
     ):
-        raise NativeInputUnsupported("research Rust HMM requires static D=1 laws")
+        raise NativeInputUnsupported("native Rust HMM requires static D=1 laws")
     initial = initial_law[0, 0]
     transition = transition_law[0, 0, :, 0, :]
     if any(
@@ -90,7 +90,7 @@ def native_hmm_likelihood(model, sequence, temperature, function):
         or not bool(torch.isfinite(tensor).all())
         for tensor in (initial, transition, emission)
     ):
-        raise ValueError("research Rust HMM requires finite CPU Float64 log scores")
+        raise ValueError("native Rust HMM requires finite CPU Float64 log scores")
     # No transition is traversed for T=1; match the ordinary path's absent gradient.
     if t == 1:
         transition = transition.detach()

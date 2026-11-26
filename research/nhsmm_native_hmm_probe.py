@@ -1,4 +1,4 @@
-"""Research-only PyTorch versus opt-in Rust HMM likelihood and gradient probe."""
+"""Python versus explicit Rust HMM likelihood and gradient probe."""
 
 from __future__ import annotations
 

@@ -212,8 +212,12 @@ class NHSMM(nn.Module):
         Python when unavailable or outside native input scope. Strict Rust
         raises instead. The selection is runtime-only, not model state.
         """
-        if backend not in {"auto", "rust", "python"}:
+        if not isinstance(backend, str) or backend not in {"auto", "rust", "python"}:
             raise ValueError("backend must be auto, rust or python")
+        if library_path is not None and (
+            not isinstance(library_path, str) or not library_path.strip()
+        ):
+            raise ValueError("library_path must be a nonempty path string")
         if library_path is not None and backend == "python":
             raise ValueError("library_path is incompatible with backend=python")
         self.backend = backend

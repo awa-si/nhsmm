@@ -36,7 +36,6 @@ NHSMM and GBM share lifecycle verbs, not tensor/target/state semantics or artifa
 formats. See the host's docs/model-api.md for the cross-model contract.
 
 
-For the opt-in CPU Float64 HMM or causal HSMM/NHSMM likelihood experiment,
 The default backend is `auto`: it uses the native HMM or HSMM likelihood when
 `rustc` can build the packaged Rust source, or when a compatible library is
 supplied through `NHSMM_NATIVE_HMM_LIB` / `NHSMM_NATIVE_HSMM_LIB`. Missing native
